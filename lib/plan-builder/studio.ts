@@ -271,7 +271,7 @@ export type StudioStatusInput = {
 };
 
 /**
- * 머리줄 부제(지금 무엇을 하고 있는지) — 예: '대화 중 · 질문 6/14', '사업 방향 정리 중', '사업계획서 만드는 중 · 6/10장',
+ * 머리줄 부제(지금 무엇을 하고 있는지) — 예: '대화 중 · 질문 7/14'(지금 묻는 질문 번호), '사업 방향 정리 중', '사업계획서 만드는 중 · 6/10장',
  * '홈페이지 · 공개 전', '개업 준비 3/9'. AI 를 부르지 않고 이미 있는 상태(journeySteps · 작성 진행 · 홈페이지 공개 여부)로만 정한다.
  * 여정 점검 2026-10-23: 사업 방향을 정리하는 중에 '사업 방향 정리됨', 다시 쓰는 중에 '완성', 개업 준비 칸에서 '홈페이지 · 공개 전'이 보였다 —
  * 사업안 유무 · 다시 쓰기 · 보고 있는 칸을 함께 본다. 계획서 상태 말은 사업 목록 카드와 같게('문서 완성' · '수정 내용 반영 필요').
@@ -287,7 +287,8 @@ export function studioStatusText(input: StudioStatusInput): string {
     /* 질문을 다 답해 정리를 시작했다 — 대화 단계는 정리가 끝날 때까지(studioChatComplete) 이어진다 */
     if (input.designRunning && !input.design) return "사업 방향 정리 중";
     if (!intake || intake.total <= 0) return "대화 중";
-    return intake.complete ? "대화 중 · 마무리" : `대화 중 · 질문 ${Math.min(intake.answered, intake.total)}/${intake.total}`;
+    /* 지금 묻는 질문 번호(답한 수 + 1) — 대화 칸의 '질문 11 / 14'와 같은 기준(10개 답했으면 11번째를 묻는 중) */
+    return intake.complete ? "대화 중 · 마무리" : `대화 중 · 질문 ${Math.min(intake.answered + 1, intake.total)}/${intake.total}`;
   }
   if (state("document") !== "done") {
     if (documents && documents.done > 0) return `사업계획서 · ${documents.done}/${documents.total}장`;

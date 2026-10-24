@@ -30,7 +30,13 @@ function StudioEntryLink({ withActions }: { withActions: boolean }) {
   return href ? <Link className={studio.entryLink} href={href} data-with-actions={withActions || undefined}>작업실에서 보기</Link> : null;
 }
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true }: {
+/**
+ * 머리줄을 화면이 직접 그릴 때(작업실 PC 의 한 줄 머리줄) 넘겨받는 메뉴 — 서랍은 여기서 그대로 연다.
+ * button 은 메뉴 단추(서랍을 닫으면 초점이 돌아오는 단추), open 은 다른 곳(사업명 ⌄)에서 서랍을 여는 것.
+ */
+export type ChromeMenu = { button: (className: string, size?: number) => ReactNode; open: () => void; isOpen: boolean };
+
+export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true, topBar }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new" | "inquiries"; backHref?: string; showRail?: boolean;
   /** 화면 안에서 한 단계 되돌리기(예: 내 문의 상세 → 목록) — 있으면 머리말 뒤로 단추가 주소 이동 대신 이것을 부른다 */
   onBack?: () => void;
@@ -38,6 +44,8 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
   documentToc?: DocumentToc;
   /** 머리줄 제목을 이 화면의 h1로 둔다. 본문이 따로 h1을 갖는 화면(계획서의 사업명)은 false. */
   titleHeading?: boolean;
+  /** 머리줄을 대신 그린다(작업실 PC) — 서랍 · 저장 실패 안내 · 본문 바로가기 자리는 그대로 */
+  topBar?: (menu: ChromeMenu) => ReactNode;
 }) {
   /* 작업실 칸 안이면 머리줄·서랍·왼쪽 메뉴는 작업실이 한 번만 그린다 — 여기서는 칸 단추 줄(actions)과 본문만 */
   const pane = useStudioPane();
@@ -69,6 +77,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     const active = document.activeElement;
     if (!active || active === document.body) toggle.current?.focus({ preventScroll: true });
   }, [open]);
+  const menuButton = (className: string, size = 24) => <button ref={toggle} type="button" className={className} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls={open ? "app-drawer" : undefined} onClick={() => setOpen(!open)}><Menu size={size} /></button>;
   if (pane) return <>
     {actions && <div className={studio.paneToolbar}>{actions}</div>}
     {children}
@@ -92,7 +101,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
       <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
     </aside>}
     <div className={styles.appSurface} data-app-surface="" inert={open}>
-      <header className={styles.header}>
+      {topBar ? topBar({ button: menuButton, open: () => setOpen(true), isOpen: open }) : <header className={styles.header}>
         {onBack
           ? <button type="button" className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} onClick={onBack} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></button>
           : <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>}
@@ -102,9 +111,9 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
         {STUDIO_ENABLED && <Suspense fallback={null}><StudioEntryLink withActions={!!actions} /></Suspense>}
         {actions && <div className={styles.headerActions}>{actions}</div>}
         <div className={`${styles.headerMenu} ${showRail ? drawer.narrowOnly : ""}`}>
-          <button ref={toggle} type="button" className={styles.menuToggle} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls={open ? "app-drawer" : undefined} onClick={() => setOpen(!open)}><Menu size={24} /></button>
+          {menuButton(styles.menuToggle)}
         </div>
-      </header>
+      </header>}
       {sync === "offline" && <div className={styles.syncNotice} role="status">변경한 내용을 서버에 저장하지 못했어요.<button onClick={()=>void pushToServer()}>다시 저장</button></div>}
       {/* 본문 바로가기(SkipLink)가 데려오는 자리 — 머리줄 바로 아래 */}
       <span id="plan-content" tabIndex={-1} className="plan-content-anchor" />

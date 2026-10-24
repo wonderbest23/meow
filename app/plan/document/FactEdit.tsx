@@ -75,20 +75,93 @@ export function highlightFacts(html: string, facts: Pick<EditableFact, "question
   return root.innerHTML;
 }
 
+/*
+ * 대화 칸의 '이렇게 바꿀게요' 카드(채팅 수정 제안)가 아직 열려 있으면 — 바꾸기 전 · 바꿀 값을 계획서 본문에서도 미리 보여 준다(작업실 PC 새 화면 2026-10-24).
+ * 제안은 사업 답변(사실)을 바꾸는 것이라, 지금 답의 글(18,000원)을 본문에서 찾아 그 옆에 바꿀 글(19,000원)을 붙인다. 적용 전이라 저장은 하지 않는다.
+ */
+export type PendingFactChange = { questionId: string; label: string; before: string; after: string; needles: string[] };
+export function pendingFactChanges(snapshot: IntakeSnapshot | null): PendingFactChange[] {
+  const job = snapshot?.intake.job;
+  if (!snapshot || job?.kind !== "edit" || job.status !== "complete" || !job.proposal?.length || job.proposalStatus) return [];
+  return job.proposal.flatMap(change => {
+    const question = snapshot.questions.find(item => item.id === change.questionId);
+    const current = snapshot.intake.answers[change.questionId];
+    if (!question || current?.status !== "answered") return [];
+    const before = summaryAnswerText(question, current.value, snapshot.candidateIdeas).trim();
+    const after = summaryAnswerText(question, change.value, snapshot.candidateIdeas).trim();
+    return before && after && before !== after ? [{ questionId: change.questionId, label: question.label, before, after, needles: factNeedles(before) }] : [];
+  });
+}
+
+/**
+ * 본문 HTML 에서 바뀔 글을 <span data-plan-change><s>지금</s><ins>바꿀 값</ins></span> 로 감싼다. 찾은 곳이 없으면 null.
+ * 문장 속 금액은 사실 고치기와 같은 규칙(앞말로 어느 사실인지 가림)으로, 표 칸은 그 줄 첫 칸(예: '상자 가격')을 앞말로 본다.
+ */
+export function previewFactChanges(html: string, changes: PendingFactChange[]): string | null {
+  if (typeof DOMParser === "undefined" || !html || !changes.length) return null;
+  const doc = new DOMParser().parseFromString(`<div>${html}</div>`, "text/html");
+  doc.querySelectorAll("script, style, iframe, object, embed").forEach(node => node.remove());
+  doc.querySelectorAll("*").forEach(element => [...element.attributes].forEach(attribute => { if (/^on/i.test(attribute.name) || /^\s*javascript:/i.test(attribute.value)) element.removeAttribute(attribute.name); }));
+  const root = doc.body.firstElementChild!;
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const texts: Text[] = [];
+  while (walker.nextNode()) texts.push(walker.currentNode as Text);
+  /* 블록 사이 줄바꿈 글자는 뺀다 — 편집기 모양(pre-wrap)으로 고정 글을 그리면 빈 줄(28px)로 보였다 */
+  for (const node of texts) if (!node.textContent?.trim() && node.parentElement?.matches("div, table, thead, tbody, tfoot, tr, colgroup, ul, ol, blockquote")) node.remove();
+  const after = new Map(changes.map(change => [change.questionId, change.after]));
+  let found = false;
+  for (const node of texts) {
+    const text = node.textContent ?? "";
+    const parent = node.parentElement;
+    if (!parent || parent.closest("figure, svg, pre, code")) continue;
+    const cell = parent.closest("td, th");
+    let before: string | null;
+    if (cell) {
+      const first = cell.parentElement?.firstElementChild;
+      before = first && first !== cell ? `${first.textContent ?? ""} ` : null;
+    } else {
+      const block = parent.closest("p, li, h1, h2, h3, h4, h5, h6, blockquote, div") ?? root;
+      const range = doc.createRange();
+      range.setStart(block, 0); range.setEnd(node, 0);
+      before = range.toString();
+    }
+    const ranges = findFactRanges(text, changes, before);
+    if (!ranges.length) continue;
+    found = true;
+    const fragment = doc.createDocumentFragment();
+    let cursor = 0;
+    for (const [start, end, id] of ranges) {
+      if (start > cursor) fragment.append(text.slice(cursor, start));
+      const wrap = doc.createElement("span");
+      wrap.setAttribute("data-plan-change", id);
+      const was = doc.createElement("s"); was.textContent = text.slice(start, end);
+      const next = doc.createElement("ins"); next.textContent = after.get(id) ?? "";
+      const hint = doc.createElement("span"); hint.className = "plan-change-hint"; hint.textContent = " → 바꿀 값 ";
+      wrap.append(was, hint, next);
+      fragment.append(wrap);
+      cursor = end;
+    }
+    if (cursor < text.length) fragment.append(text.slice(cursor));
+    node.replaceWith(fragment);
+  }
+  return found ? root.innerHTML : null;
+}
+
 /** The intake snapshot behind a document, and the two writes the document may make: change one answer, re-apply the plan. */
 export function useFactEdit(planId: string | null, active: boolean) {
   const [snapshot, setSnapshot] = useState<IntakeSnapshot | null>(null);
   const [owner, setOwner] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ message: string; href?: string; label?: string } | null>(null);
-  const load = useCallback(async () => {
+  /* quiet — 대화 수정 미리보기를 위해 뒤에서 다시 읽을 때는 실패해도 안내를 띄우지 않는다(다음 차례에 다시 읽는다) */
+  const load = useCallback(async (quiet = false) => {
     if (!planId) return;
     try {
       const response = await fetch(`/api/plan/chat?planId=${encodeURIComponent(planId)}`, { headers: HEADERS, cache: "no-store" });
       const value = readIntakePayload(await readChatResponse(response));
       if (!response.ok || !value?.plan || value.plan.planId !== planId || !value.ownerScope) throw new Error(value?.message || "사업 정보를 불러오지 못했어요.");
-      setSnapshot(value.plan); setOwner(value.ownerScope); setError(null);
-    } catch (caught) { setError({ message: caught instanceof Error ? caught.message : "사업 정보를 불러오지 못했어요." }); }
+      setSnapshot(value.plan); setOwner(value.ownerScope); if (!quiet) setError(null);
+    } catch (caught) { if (!quiet) setError({ message: caught instanceof Error ? caught.message : "사업 정보를 불러오지 못했어요." }); }
   }, [planId]);
   useEffect(() => { if (active) void load(); }, [active, load]);
   const post = useCallback(async (command: Record<string, unknown>) => {

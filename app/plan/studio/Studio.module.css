@@ -22,19 +22,19 @@
 .rightCol { background:var(--app-bg); }
 .chatCol:not([data-visible]), .rightCol:not([data-visible]) { visibility:hidden; pointer-events:none; }
 
-/* PC — 왼쪽 대화 칸(420~460px, 따로 스크롤) + 오른쪽 탭 */
+/*
+ * PC — 대표 승인 시안(2026-10-24): 옅은 회색 바탕 위에 왼쪽 대화 칸(카드 없음, 따로 스크롤) + 오른쪽 흰 카드 하나.
+ * 대화 칸 폭(--studio-chat-w)은 머리줄 왼쪽 칸과 같은 값을 쓴다 — 머리줄의 사업명 줄과 아래 대화 칸이 한 줄로 맞는다.
+ * 바탕색은 대화 화면 모듈(.page)의 흰 바탕보다 앞서게 main.page 로 한 단계 좁힌다(CSS 순서와 상관없다).
+ */
 @media (min-width:1024px) {
-  .studio { grid-template-columns:clamp(420px,32vw,460px) minmax(0,1fr); grid-template-rows:minmax(0,1fr); }
-  .chatCol { grid-row:1; grid-column:1; border-right:1px solid var(--app-line); background:var(--app-surface); }
-  .rightCol { grid-row:1; grid-column:2; }
+  main.page { --studio-chat-w:clamp(360px,29vw,460px); --studio-shell:#f5f6f8; background:var(--studio-shell); }
+  .studio { grid-template-columns:var(--studio-chat-w) minmax(0,1fr); grid-template-rows:minmax(0,1fr); background:transparent; }
+  .chatCol { grid-row:1; grid-column:1; background:transparent; }
+  .rightCol { grid-row:1; grid-column:2; background:transparent; padding:0 10px 10px 0; }
+  /* 오른쪽 카드 — 칸 내용은 카드 안에서 스크롤한다. 위 여백 0: 계획서 · 홈페이지 칸이 카드 안 맨 위에 자기 얇은 줄을 그린다 */
+  .panes { background:#fff; border:1px solid #e3e7ec; border-radius:14px; overflow:hidden; box-shadow:0 1px 3px rgba(16,24,40,.05), 0 8px 24px -12px rgba(16,24,40,.08); }
 }
-
-.wideTabs { display:flex; align-items:center; gap:4px; flex-shrink:0; padding:14px 24px 10px; overflow-x:auto; scrollbar-width:none; }
-.wideTabs::-webkit-scrollbar { display:none; }
-/* 고르지 않은 탭 글자 — 바탕(--app-bg)에서 4.5:1 이 넘게 #4e5968(--app-muted 는 4.1:1 이었다, 점검 2026-10-23) */
-.wideTabs button { flex-shrink:0; min-height:44px; padding:0 18px; border:0; border-radius:12px; background:transparent; color:#4e5968; font-size:15px; font-weight:600; white-space:nowrap; transition:background .15s,color .15s; }
-.wideTabs button:hover { color:var(--app-text); }
-.wideTabs button[aria-selected=true] { background:var(--app-surface); color:var(--app-text); font-weight:700; box-shadow:0 1px 3px #191f2814; }
 
 /* '준비' 안의 작은 전환 — 시작하기 / 유지보수 */
 .prepSwitch { display:flex; gap:6px; flex-shrink:0; padding:10px 16px 0; }
@@ -82,26 +82,90 @@
 
 .studio :is(button,a):focus-visible { outline:3px solid #8bb9ff; outline-offset:2px; }
 
-/*
- * 2단계 머리줄 오른쪽 — PC: 대화 칸 단추 · 진행 단계 칩 · 오른쪽 칸 단추, 휴대폰: 보이는 칸의 단추만.
- * 머리줄(BusinessAppChrome)의 단추 자리 안에 들어간다 — 그 화면 모듈의 클래스는 덮어쓰지 않고 여기 클래스만 꾸민다.
- */
+/* 칸 단추 자리 — 휴대폰은 머리줄(BusinessAppChrome)의 단추 자리, PC 는 한 줄 머리줄의 오른쪽 끝 */
 .headerSlot { display:flex; align-items:center; gap:8px; min-width:0; flex-shrink:0; }
+
 /*
- * 진행 단계 — 누르는 단추가 아닌 글자 길잡이(대화 ✓ — 계획서 ✓ — ● 홈페이지 — 개업 준비). 탭(흰 바탕 단추)과 다르게
- * 바탕 없이 작은 글자 · 점 · 이음줄만 쓴다. 지금 단계는 진한 글자와 파란 점.
+ * PC 한 줄 머리줄(52px) — 왼쪽 칸은 대화 칸 폭, 오른쪽은 탭 · 가운데 알약 · 진행 · 칸 단추.
+ * 시안의 옅은 글자(#8b95a1)는 회색 바탕에서 3:1 이 안 돼 글자는 #5f6b7c(4.9:1) 이상으로 쓴다.
  */
-/* 글자색은 흰 머리줄에서 4.5:1 이 넘게 — 다음 단계 #5f6b7c(5.4:1), 완료 표시 ✓ #1b64da(점검 2026-10-23: --app-muted 4.3:1 · 파란 ✓ 3.7:1) */
-.progress { display:flex; align-items:center; gap:8px; margin:0 4px 0 0; padding:0; list-style:none; flex-shrink:0; }
-.step { display:inline-flex; align-items:center; gap:5px; color:#5f6b7c; font-size:13px; font-weight:500; line-height:1.2; white-space:nowrap; cursor:default; }
-.step + .step::before { content:""; width:14px; height:1px; margin-right:3px; background:var(--app-line-strong, var(--app-line)); }
-.stepDot { width:6px; height:6px; border-radius:50%; background:var(--app-line-strong, #c9d0da); flex-shrink:0; }
-.stepMark { flex-shrink:0; color:#1b64da; }
-.step[data-state=done] { color:var(--app-body, var(--app-text)); }
-.step[data-state=current] { color:var(--app-text); font-weight:700; }
-.step[data-state=current] .stepDot { width:8px; height:8px; background:var(--app-primary); box-shadow:0 0 0 3px #3182f629; }
-/* 좁은 PC(1024~1180px) — 이음줄을 줄여 사업명 자리를 남긴다 */
-@media (max-width:1180px) { .progress { gap:5px; } .step + .step::before { width:8px; margin-right:1px; } }
+.topBar { height:52px; flex-shrink:0; display:grid; grid-template-columns:var(--studio-chat-w, 420px) minmax(0,1fr); background:var(--studio-shell, #f5f6f8); color:#191f28; position:relative; z-index:3; letter-spacing:-0.01em; }
+.topBar :is(button,a):focus-visible { outline:3px solid #8bb9ff; outline-offset:2px; }
+.tbLeft { display:flex; align-items:center; gap:8px; min-width:0; padding:0 10px; }
+.tbRight { display:flex; align-items:center; gap:12px; min-width:0; padding:0 10px 0 0; }
+.iconButton { width:32px; height:32px; flex-shrink:0; display:inline-grid; place-items:center; border:0; border-radius:8px; background:transparent; color:#4e5968; text-decoration:none; }
+.iconButton:hover { background:#e9ecf0; color:#191f28; }
+.iconButton svg { display:block; }
+.mark { width:24px; height:24px; flex-shrink:0; border-radius:6px; display:block; }
+.biz { flex:1; min-width:0; line-height:1.2; }
+.topBar .bizTitle { margin:0; min-width:0; font:inherit; }
+.bizName { max-width:100%; display:inline-flex; align-items:center; gap:3px; padding:0; border:0; background:transparent; color:#191f28; font-size:14.5px; font-weight:700; line-height:1.25; }
+.bizName span { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bizName svg { flex-shrink:0; color:#8b95a1; }
+.bizName:hover span { text-decoration:underline; text-underline-offset:3px; text-decoration-color:#c9d0da; }
+.bizStatus { margin:3px 0 0; display:flex; align-items:center; gap:6px; min-width:0; font-size:11.5px; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bizStatus i { width:6px; height:6px; flex-shrink:0; border-radius:50%; background:#3182f6; }
+.bizStatus i[data-live] { box-shadow:0 0 0 3px rgba(49,130,246,.18); }
+
+/* 탭 — 회색 받침 위 흰 알약(고른 탭). 끝난 단계는 ✓ */
+.seg { display:inline-flex; align-items:center; gap:2px; flex-shrink:0; padding:3px; border-radius:10px; background:#e9ecf0; }
+.seg button { position:relative; height:28px; padding:0 11px; display:inline-flex; align-items:center; gap:5px; border:0; border-radius:7px; background:transparent; color:#4e5968; font-size:13px; font-weight:500; white-space:nowrap; transition:background .15s,color .15s; }
+.seg button:hover { color:#191f28; }
+.seg button[aria-selected=true] { background:#fff; color:#191f28; font-weight:650; box-shadow:0 1px 2px rgba(16,24,40,.08), 0 0 0 .5px rgba(16,24,40,.05); }
+.seg .dot { top:3px; right:3px; box-shadow:0 0 0 2px #e9ecf0; }
+
+/*
+ * 가운데 알약 자리 — 남는 폭 가운데. 칸이 올린 것이 없으면 빈 자리.
+ * 알약(장 고르기 · 페이지 주소)이 먼저다 — 1280px 에서 '1장 사업 …'으로 잘리고 1024px 에서는 폭이 0에 가까웠다(점검 2026-10-24).
+ * 최소 170px 을 지키고, 모자라면 진행 막대 · 보조 단추 이름 · 탭 여백이 먼저 줄어든다(아래 좁은 PC 규칙).
+ */
+.centerWrap { flex:1 1 170px; min-width:170px; display:flex; justify-content:center; }
+.centerWrap:empty { min-width:0; }
+.centerWrap > * { min-width:0; max-width:100%; }
+
+.tbActs { display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:auto; }
+/* 진행 막대 — 네 칸(끝남 파랑 · 지금 단계 반쯤 · 남음 회색)과 끝난 수 */
+.progress { display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 8px; flex-shrink:0; font-size:12px; font-weight:600; color:#4e5968; white-space:nowrap; cursor:default; }
+.progressBars { display:inline-flex; gap:3px; }
+.progressBars b { width:14px; height:5px; border-radius:3px; background:#d5dbe2; }
+.progressBars b[data-state=done] { background:#3182f6; }
+.progressBars b[data-state=current] { background:linear-gradient(90deg,#3182f6 0 40%,#d5dbe2 40%); }
+.saved { display:inline-flex; align-items:center; gap:4px; padding:0 4px; font-size:12px; color:#5f6b7c; white-space:nowrap; }
+
+/* 대화만 할 때 — 탭 대신 단계 안내(1 대화 — 2 계획서 — 3 홈페이지 — 4 개업 준비)와 잠김 안내 */
+.stepper { display:flex; align-items:center; gap:8px; margin:0; padding:0; list-style:none; flex-shrink:0; font-size:12.5px; color:#5f6b7c; white-space:nowrap; }
+.stepper li { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px 0 8px; border-radius:999px; }
+.stepper li + li { margin-left:24px; position:relative; }
+.stepper li + li::before { content:""; position:absolute; left:-20px; top:50%; width:16px; height:1px; background:#cfd5dc; }
+.stepper i { width:18px; height:18px; display:grid; place-items:center; border-radius:50%; background:#e3e7ec; color:#5f6b7c; font-style:normal; font-size:11px; font-weight:700; }
+.stepper li[data-state=current] { background:#fff; color:#191f28; font-weight:650; box-shadow:0 0 0 1px #e3e7ec; }
+.stepper li[data-state=current] i { background:#3182f6; color:#fff; }
+.stepper li[data-state=done] i { background:#e8f3ff; color:#1b64da; }
+.lockNote { margin:0 0 0 6px; display:inline-flex; align-items:center; gap:5px; min-width:0; font-size:12px; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lockNote svg { flex-shrink:0; }
+/*
+ * 좁은 PC — 가운데 알약 자리를 남기도록 차례로 줄인다.
+ * 1360px 이하: 진행 막대를 숨기고(끝난 단계는 탭의 ✓ 로 보인다), 칸이 올린 보조 단추(이름표 aria-label 과 아이콘이 있는 것 —
+ * 내려받기 · 저장)는 아이콘만, 파란 단추의 앞말(<small> '다음 단계')은 뺀다. 칸 단추 모듈의 클래스는 덮어쓰지 않고 구조로 고른다.
+ * 1180px 이하: 탭 여백 · 글자를 줄이고 잠김 안내를 숨긴다.
+ */
+@media (max-width:1280px) { .tbRight { gap:8px; } .seg button { padding:0 9px; } .stepper li + li { margin-left:16px; } .stepper li + li::before { left:-14px; width:12px; } }
+@media (max-width:1360px) {
+  .progress { display:none; }
+  .tbActs .headerSlot button[aria-label]:has(> svg) { width:36px; min-height:36px; padding:0; gap:0; }
+  .tbActs .headerSlot button[aria-label]:has(> svg) > span { position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .tbActs .headerSlot :is(button,a) small { display:none; }
+}
+@media (max-width:1180px) {
+  .lockNote { display:none; }
+  .seg { padding:2px; }
+  .tbRight { gap:6px; }
+  .seg button { height:28px; padding:0 5px; gap:3px; font-size:12.5px; }
+  .centerWrap { min-width:160px; }
+  .tbLeft { gap:6px; }
+  .tbActs { gap:6px; }
+  .tbActs .headerSlot :is(button,a):not([aria-label]) { padding:0 10px; }
+}
 
 /*
  * 머리줄 부제(지금 하는 일, 12px) — 머리줄 모듈(chat/page.module.css)의 --app-muted 는 흰 바탕에서 4.3:1 이라 작업실에서만 진하게.
@@ -116,36 +180,65 @@
 .srOnly { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
 
 /* 탭의 완료 표시(휴대폰 탭 줄 — 머리줄 진행 단계 대신) · 숨은 칸의 새 소식 점 */
-.narrowTabs button, .wideTabs button { position:relative; }
+.narrowTabs button { position:relative; }
 .narrowTabs button { display:inline-flex; align-items:center; justify-content:center; gap:3px; }
 .tabCheck { flex-shrink:0; color:#1b64da; }
 .dot { position:absolute; top:7px; right:7px; width:8px; height:8px; border-radius:50%; background:#f04452; box-shadow:0 0 0 2px var(--app-raised); }
-.wideTabs .dot { top:9px; right:6px; box-shadow:0 0 0 2px var(--app-bg); }
 
 /* 앱(키보드가 뜨면 화면이 줄어듦) — 낮은 화면에서 입력 중이면 탭 줄을 접어 입력창 자리를 남긴다 */
 @media (max-height:520px) {
   .studio:has(textarea:focus, input:focus) .narrowTabs { display:none; }
 }
-@media (prefers-reduced-motion:reduce) { .narrowTabs button, .wideTabs button { transition:none; } }
+@media (prefers-reduced-motion:reduce) { .narrowTabs button, .seg button { transition:none; } }
 
-/* PC 대화 중 오른쪽 칸 — 지금까지 답한 내용(StudioIntakeSummary). 읽기만, 고치기는 왼쪽 대화가 맡는다 */
-.liveSummary { width:100%; max-width:720px; margin:0 auto; padding:28px 28px 40px; display:flex; flex-direction:column; gap:16px; }
-.liveSummary header { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-.liveSummary h3 { margin:0; font-size:20px; font-weight:700; color:var(--app-text); }
-.liveSummary header p { margin:0; font-size:14px; color:var(--app-muted); }
-.liveSummary dl { margin:0; display:flex; flex-direction:column; gap:10px; }
-.liveSummary dl > div { padding:14px 18px; border:1px solid var(--app-line); border-radius:12px; background:var(--app-surface); scroll-margin:16px 0 24px; transition:background-color .6s ease, border-color .6s ease, box-shadow .6s ease; }
-/* 방금 대화에서 반영된 줄 — 잠깐 파랗게 밝혔다가 원래대로 */
-.liveSummary dl > div[data-fresh] { background:#eef5ff; border-color:#a9c9fb; box-shadow:0 0 0 3px rgba(49,130,246,.12); transition:none; }
-.liveSummary dt { display:flex; align-items:center; gap:8px; margin:0 0 6px; font-size:13px; font-weight:600; color:var(--app-muted); }
-.liveSummary dt small { padding:1px 6px; border-radius:6px; background:var(--app-raised); font-size:11px; font-weight:600; }
-.liveSummary dd { margin:0; font-size:15px; line-height:1.65; color:var(--app-text); white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
+/*
+ * PC 대화 중 오른쪽 칸 — 지금까지 정한 내용(StudioIntakeSummary). 읽기만, 고치기는 왼쪽 대화가 맡는다.
+ * 카드 위 얇은 줄은 칸이 스크롤해도 위에 붙어 있다. 본문은 가운데 760px.
+ */
+.liveSummary { width:100%; display:flex; flex-direction:column; color:#191f28; letter-spacing:-0.01em; }
+.sumStrip { position:sticky; top:0; z-index:1; height:42px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid #eef0f3; background:#fff; font-size:12.5px; color:#4e5968; }
+.sumStrip > svg { flex-shrink:0; color:#8b95a1; }
+.sumStrip h3 { margin:0; font-size:13px; font-weight:650; color:#191f28; white-space:nowrap; }
+.sumStripMeta { display:inline-flex; gap:8px; white-space:nowrap; }
+.sumStripMeta > span { color:#b0b8c1; }
+.sumStripNote { margin-left:auto; font-size:12px; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sumBody { width:100%; max-width:760px; margin:0 auto; padding:30px 28px 48px; }
+.sumHead { border-radius:10px; scroll-margin:56px 0 24px; }
+.sumTitle { margin:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:22px; font-weight:750; line-height:1.4; letter-spacing:-0.02em; word-break:keep-all; overflow-wrap:anywhere; }
+.sumLead { margin:6px 0 0; font-size:14px; line-height:1.6; color:#4e5968; }
+.sumGroup { margin-top:22px; }
+.sumGroup h4 { margin:0 0 6px; font-size:12px; font-weight:700; letter-spacing:.02em; color:#5f6b7c; }
+.liveSummary dl { margin:0; border-top:1px solid #eef0f3; }
+.sumStats + dl { margin-top:8px; border-top:0; }
+.liveSummary dl > div { display:grid; grid-template-columns:132px minmax(0,1fr) auto; gap:16px; align-items:baseline; padding:10px 6px; border-bottom:1px solid #eef0f3; scroll-margin:56px 0 24px; }
+.liveSummary dt { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0; font-size:13px; color:#5f6b7c; }
+.liveSummary dt small { padding:1px 6px; border-radius:5px; background:#f1f3f6; font-size:11px; font-weight:600; color:#4e5968; }
+.liveSummary dd { margin:0; font-size:14px; line-height:1.55; color:#191f28; white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
+/* 방금 대화에서 정한 줄 — 옅은 파랑 바탕 · '방금 정함'(다음 답까지), 처음 반영될 때 잠깐 테두리로 밝힌다 */
+.liveSummary dl > div[data-fresh] { border-radius:8px; border-bottom-color:transparent; background:linear-gradient(90deg,#eef5ff,#f7fbff); animation:studioFresh 1.8s ease-out; }
+.liveSummary dl > div[data-fresh] dd { font-weight:650; }
+.sumHead[data-fresh] { animation:studioFresh 1.8s ease-out; }
+@keyframes studioFresh { from { box-shadow:0 0 0 3px rgba(49,130,246,.28); } to { box-shadow:0 0 0 3px rgba(49,130,246,0); } }
+.sumTag { padding:2px 6px; border-radius:5px; background:#e8f3ff; color:#1b64da; font-size:11px; font-weight:650; letter-spacing:0; white-space:nowrap; }
+.sumTitle .sumTag { font-size:11.5px; }
+.sumStats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
+.sumStats > div { min-width:0; padding:10px 12px; border:1px solid #eef0f3; border-radius:10px; background:#fbfcfd; scroll-margin:56px 0 24px; }
+.sumStats > div[data-fresh] { border-color:#b7d3fb; background:#f4f9ff; animation:studioFresh 1.8s ease-out; }
+.sumStatLabel { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:12px; color:#5f6b7c; }
+.sumStats strong { display:block; margin-top:2px; font-size:18px; font-weight:750; letter-spacing:-0.02em; overflow-wrap:anywhere; }
+.sumStats strong small { margin-left:4px; font-size:11.5px; font-weight:500; color:#5f6b7c; }
+.sumTodo { margin:0; padding:0; list-style:none; display:grid; grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); gap:8px; }
+.sumTodo li { padding:9px 10px; border:1px dashed #d5dbe2; border-radius:10px; font-size:12.5px; line-height:1.35; color:#5f6b7c; word-break:keep-all; }
+.sumTodo li[data-now] { border:1px solid #b7d3fb; background:#f4f9ff; color:#1b64da; font-weight:650; }
+.sumTodo li small { display:block; margin-top:2px; font-size:11px; font-weight:500; }
+.sumFoot { margin:18px 0 0; display:flex; align-items:center; gap:6px; font-size:12.5px; line-height:1.6; color:#5f6b7c; word-break:keep-all; }
+.sumFoot svg { flex-shrink:0; color:#8b95a1; }
 .liveSummaryEmpty { margin:0; padding:24px 18px; border:1px dashed var(--app-line); border-radius:12px; font-size:15px; line-height:1.7; color:var(--app-muted); text-align:center; word-break:keep-all; }
-.liveSummaryNote { margin:0; font-size:14px; line-height:1.7; color:var(--app-muted); word-break:keep-all; }
+@media (prefers-reduced-motion:reduce) { .liveSummary dl > div[data-fresh], .sumHead[data-fresh], .sumStats > div[data-fresh] { animation:none; } }
 /* 칸 본문의 작은 것은 가운데에 두지만(.paneBody > :not([data-embedded])) 요약은 위에서부터 읽는다 */
 .paneBody > .liveSummary { margin-block:0; }
 
 /* 대화를 마쳐 탭 줄이 처음 나타날 때 — 위에서 살짝 내려오며 나타난다(대화만 할 때는 탭 줄을 숨긴다) */
-.narrowTabs[data-appear], .wideTabs[data-appear] { animation: studioTabsIn .32s ease-out both; }
+.narrowTabs[data-appear], .seg[data-appear] { animation: studioTabsIn .32s ease-out both; }
 @keyframes studioTabsIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .narrowTabs[data-appear], .wideTabs[data-appear] { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .narrowTabs[data-appear], .seg[data-appear] { animation: none; } }
