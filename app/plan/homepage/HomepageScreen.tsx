@@ -58,6 +58,14 @@ const readWide = () => window.matchMedia(WIDE_QUERY).matches;
 const serverWide = () => false;
 /* 새 배치에서 카드 본문(미리보기 + 설정)을 굴리는 상자 */
 const PRO_SCROLL_ID = "hp-studio-scroll";
+/* 가운데 알약의 짧은 주소 — 'jakeun-gyumoro-sijak-b788' → 'jakeun…-b788'(앞 낱말 · 끝 꼬리). 짧으면 그대로 */
+function shortSlug(slug: string): string {
+  if (slug.length <= 14) return slug;
+  const dash = slug.lastIndexOf("-");
+  const tail = dash > 0 && slug.length - dash <= 7 ? slug.slice(dash) : slug.slice(-5);
+  const head = slug.slice(0, Math.min(slug.indexOf("-") > 0 ? slug.indexOf("-") : 6, 8));
+  return `${head}…${tail}`;
+}
 
 /*
  * 섹션을 넣고 빼고 끌어서 순서를 바꾸는 편집기.
@@ -709,6 +717,7 @@ export function HomepageScreen() {
         : `홈페이지는 사업계획서와 함께 열어요. 둘 다 ${price.toLocaleString("ko-KR")}원.`,
       confirmLabel: planPaid ? "결제하고 홈페이지 고치기" : "함께 결제하기",
       cancelLabel: "나중에 하기",
+      wide: true,
     });
     if (ok) go(blockedHref("pay"));
   };
@@ -750,17 +759,21 @@ export function HomepageScreen() {
     document.getElementById(PRO_SCROLL_ID)?.scrollTo({ top: 0, behavior });
     document.querySelector<HTMLElement>(`#${PRO_SCROLL_ID} .hk-phone, #${PRO_SCROLL_ID} [data-hp-phone]`)?.scrollTo({ top: 0, behavior });
   };
-  /* 가운데 알약 — '⟳ 첫 화면 /launch/…' + 휴대폰/컴퓨터. 바뀔 때만 새로 만든다(등록이 되풀이되지 않게) */
+  /*
+   * 가운데 알약 — '⟳ 첫 화면 /launch/…-b788' + 휴대폰/컴퓨터. 바뀔 때만 새로 만든다(등록이 되풀이되지 않게).
+   * 주소는 가운데를 줄여(앞 몇 글자 … 끝 꼬리) 1440 에서도 끝에서 잘리지 않게 한다 — 전체 주소는 title · 낭독기 이름에(점검 2026-10-24)
+   */
   const centerNode = useMemo(() => {
     if (!studioPro || !hasCenter) return null;
+    const fullUrl = stripPath ? `${stripHost}${stripPath}` : "";
     return <span className={styles.pill}>
-      <button type="button" className={styles.pillHome} onClick={scrollPreviewTop} title="첫 화면 맨 위부터 보기" aria-label={`첫 화면 맨 위부터 보기${stripPath ? ` (${stripPath})` : ""}`}>
-        <RotateCw size={14} aria-hidden /><span className={styles.pillLabel}>첫 화면</span>{stripPath && <span className={styles.pillPath}>{stripPath}</span>}
+      <button type="button" className={styles.pillHome} onClick={scrollPreviewTop} title={fullUrl ? `첫 화면 맨 위부터 보기 — ${fullUrl}` : "첫 화면 맨 위부터 보기"} aria-label={`첫 화면 맨 위부터 보기${fullUrl ? ` (${fullUrl})` : ""}`}>
+        <RotateCw size={14} aria-hidden /><span className={styles.pillLabel}>첫 화면</span>{stripSlug && <span className={styles.pillPath} aria-hidden="true">/launch/{shortSlug(stripSlug)}</span>}
       </button>
       <span className={styles.pillRule} aria-hidden="true" />
       {deviceSwitch}
     </span>;
-  }, [studioPro, hasCenter, stripPath, previewView]); // eslint-disable-line react-hooks/exhaustive-deps -- deviceSwitch·scrollPreviewTop 은 previewView 로만 바뀐다
+  }, [studioPro, hasCenter, stripPath, stripHost, previewView]); // eslint-disable-line react-hooks/exhaustive-deps -- deviceSwitch·scrollPreviewTop 은 previewView 로만 바뀐다
   useStudioHeaderCenter(centerNode);
   /* '내 주소 연결' — 아래 설정의 '내 도메인 연결' 칸을 펼쳐 데려간다(앱 안에서는 그 칸이 없어 단추도 없다) */
   const [inApp, setInApp] = useState(false);

@@ -460,9 +460,11 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
  * "채팅으로 수정하기" turn: a short intro with examples, the AI's tidy-up while it runs, then the proposed changes
  * to confirm or cancel. Requests outside this business never reach the AI (server-side filter).
  */
-export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss, pro = false }: { snapshot: IntakeSnapshot; disabled: boolean; onSend: (text: string) => void; onApply: () => void; onDismiss: () => void;
+export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss, pro = false, chapters }: { snapshot: IntakeSnapshot; disabled: boolean; onSend: (text: string) => void; onApply: () => void; onDismiss: () => void;
   /** 작업실 PC: 카드 위 작업 기록('바꿀 곳 N군데를 찾았어요') · 머리의 군데 수 · 지금 → 바꿀 글 화살표. 예시 칩은 입력창 위 추천 줄이 맡는다 */
-  pro?: boolean }) {
+  pro?: boolean;
+  /** 작업실 PC: 계획서 칸이 이 제안의 바뀔 글을 찾은 장('1장 사업 개요') — 바뀌는 곳 아래 작은 회색 칩. 계획서 칸을 안 열었으면 없다 */
+  chapters?: string[] }) {
   const job = snapshot.intake.job?.kind === "edit" ? snapshot.intake.job : null;
   const running = !!job && ["queued", "running"].includes(job.status);
   const pending = !!job && job.status === "complete" && !!job.proposal?.length && !job.proposalStatus;
@@ -482,6 +484,7 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss, p
         const after = question ? summaryAnswerText(question, change.value, snapshot.candidateIdeas) : String(change.value);
         return <p key={change.questionId}><span>{question?.label ?? change.questionId}</span>{before && <s>{before}</s>}{pro && before && <ArrowRight size={13} className={styles.changeArrow} aria-hidden="true" />}<strong>{after}</strong></p>;
       })}
+      {pro && !!chapters?.length && <ul className={styles.changeChapters} aria-label="계획서에서 바뀌는 장">{chapters.map(chapter => <li key={chapter}>{chapter}</li>)}</ul>}
       <div className={styles.chipRow}><button type="button" className={`${styles.chip} ${styles.chipStrong}`} disabled={disabled} onClick={onApply}>바꾸기</button><button type="button" className={styles.chip} disabled={disabled} onClick={onDismiss}>취소</button></div>
     </div>}
     {!running && !pending && !pro && <div className={styles.chipRow}>{examples.map(text => <button key={text} type="button" className={styles.chip} disabled={disabled} onClick={() => onSend(text)}>{text}</button>)}</div>}

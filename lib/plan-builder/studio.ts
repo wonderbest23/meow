@@ -272,7 +272,7 @@ export type StudioStatusInput = {
 
 /**
  * 머리줄 부제(지금 무엇을 하고 있는지) — 예: '대화 중 · 질문 7/14'(지금 묻는 질문 번호), '사업 방향 정리 중', '사업계획서 만드는 중 · 6/10장',
- * '홈페이지 · 공개 전', '개업 준비 3/9'. AI 를 부르지 않고 이미 있는 상태(journeySteps · 작성 진행 · 홈페이지 공개 여부)로만 정한다.
+ * '사업계획서 · 문서 완성', '홈페이지 · 공개 전', '개업 준비 · 3/9'. AI 를 부르지 않고 이미 있는 상태(journeySteps · 작성 진행 · 홈페이지 공개 여부)로만 정한다.
  * 여정 점검 2026-10-23: 사업 방향을 정리하는 중에 '사업 방향 정리됨', 다시 쓰는 중에 '완성', 개업 준비 칸에서 '홈페이지 · 공개 전'이 보였다 —
  * 사업안 유무 · 다시 쓰기 · 보고 있는 칸을 함께 본다. 계획서 상태 말은 사업 목록 카드와 같게('문서 완성' · '수정 내용 반영 필요').
  */
@@ -299,14 +299,15 @@ export function studioStatusText(input: StudioStatusInput): string {
   const launchName = journeyLabel("launch", !!input.operating);
   const launchDone = state("launch") === "done";
   const launchRunning = !!launch?.configured && !launchDone;
-  const launchText = launchDone ? `${launchName} 완료` : launchRunning ? `${launchName} ${launch!.done}/${launch!.total}` : `${launchName} · 시작 전`;
+  const launchText = launchDone ? `${launchName} · 완료` : launchRunning ? `${launchName} · ${launch!.done}/${launch!.total}` : `${launchName} · 시작 전`;
   const documentText = input.stale ? "수정 내용 반영 필요" : "문서 완성";
   const homepageText = homepage === "draft" ? "홈페이지 · 공개 전" : homepage === "published" ? "홈페이지 · 공개 중" : "홈페이지 · 만들기 전";
   /* 보고 있는 칸의 진행 — 유지보수 칸에서 '개업 준비 · 시작 전'이 보였다(감사 r36). 유지보수는 그 칸이 하는 일을 말한다 */
   if (tab === "operations") return `${JOURNEY_LABELS.care} · 실적과 개선 기록`;
   if (tab === "launch") return launchText;
   if (tab === "homepage") return homepageText;
-  if (tab === "plan") return documentText;
+  /* 칸 이름을 앞에 — '사업계획서 · 문서 완성'(승인 시안). 홈페이지 · 개업 준비 글은 이미 칸 이름으로 시작한다 */
+  if (tab === "plan") return `${JOURNEY_LABELS.document} · ${documentText}`;
   /* 전체 진행(휴대폰 대화 탭 등) — 고칠 것이 남았으면 먼저, 그다음 지금 하는 단계 */
   if (input.stale) return documentText;
   if (homepage === "draft") return homepageText;

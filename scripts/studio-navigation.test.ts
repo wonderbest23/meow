@@ -224,8 +224,8 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo") }), "홈페이지 · 공개 전");
   assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "todo", "active") }), "홈페이지 공개 중 · 다음은 개업 준비", "공개 뒤에는 진행 단계 칩의 지금 단계(개업 준비)와 같게");
   assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "done", "active") }), "홈페이지 · 공개 중", "개업 준비까지 마쳤으면 공개 상태만");
-  assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "active", "active"), launch: { done: 3, total: 9, configured: true } }), "개업 준비 3/9");
-  assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "active", "active"), launch: { done: 3, total: 9, configured: true }, operating: true }), "운영 개선 3/9");
+  assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "active", "active"), launch: { done: 3, total: 9, configured: true } }), "개업 준비 · 3/9");
+  assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "active", "active"), launch: { done: 3, total: 9, configured: true }, operating: true }), "운영 개선 · 3/9");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo") }), "문서 완성", "사업 목록 카드와 같은 말");
   // 여정 점검 2026-10-23 — 사업안 유무 · 다시 쓰기 · 보고 있는 칸
   assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo"), design: false, designRunning: true }), "사업 방향 정리 중", "정리하는 중에 '정리됨'이 아니다");
@@ -235,7 +235,10 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true, generation: { done: 0, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 0/10장", "다시 쓰는 중");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "launch" }), "개업 준비 · 시작 전", "개업 준비 칸에서 홈페이지 상태를 말하지 않는다");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "operations" }), "유지보수 · 실적과 개선 기록", "유지보수 칸에서 개업 준비 진행을 말하지 않는다");
-  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "plan" }), "문서 완성");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "plan" }), "사업계획서 · 문서 완성", "보고 있는 칸 이름을 앞에(승인 시안)");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), stale: true, tab: "plan" }), "사업계획서 · 수정 내용 반영 필요");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "homepage" }), "홈페이지 · 공개 전", "홈페이지 글은 이미 칸 이름으로 시작한다");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "launch" }), "개업 준비 · 2/9");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), tab: "homepage" }), "홈페이지 · 만들기 전");
 
   /* 작업실의 대화 완료 — 첫 답(coach.ready)만으로는 끝나지 않는다: 사업안 · 계획서 장 · 쓰는 중 · 핵심 질문 모두 답함 중 하나 */
@@ -377,7 +380,7 @@ console.log("studio navigation ok");
   assert.match(studio, /\{!wide && !chatOnly && <div className=\{styles\.narrowTabs\}/);
   // PC 는 한 줄 머리줄 — 대화만 할 때는 탭 대신 단계 안내(1 대화 — 2 계획서 …)와 잠김 안내
   assert.match(studio, /\{missing \? null : chatOnly \? <>\n\s*<ol className=\{styles\.stepper\}/);
-  assert.match(studio, /질문을 마치면 사업계획서부터 차례로 열려요/);
+  assert.doesNotMatch(studio, /질문을 마치면 사업계획서부터 차례로 열려요|답할 때마다 저장돼요/, "질문 중 머리줄에 군더더기 안내를 두지 않는다");
 }
 
 // 새 PC 작업실(대표 승인 시안 2026-10-24) — 한 줄 머리줄 · 가운데 알약 · 오른쪽 카드 · 지금까지 정한 내용
@@ -406,6 +409,8 @@ console.log("studio navigation ok");
   // 지금까지 정한 내용 — 남는 돈은 가격과 한 건 비용을 둘 다 숫자로 답했을 때만 계산한다(지어내지 않는다)
   const summary = read("../app/plan/studio/StudioIntakeSummary.tsx");
   assert.match(summary, /if \(price !== undefined && unitCost !== undefined\) \{/);
-  assert.match(summary, /질문을 다 마치면 30~40초 동안 사업 방향을 한 장으로 정리하고, 사업계획서를 만들 수 있어요\./);
+  // 군더더기 안내는 두지 않는다(대표 요청 2026-10-24) — 빈 상태는 가운데 한 줄만
+  assert.doesNotMatch(summary, /30~40초|왼쪽에서 답하면 여기에 바로 정리돼요/);
+  assert.match(summary, /답하면 여기에 정리돼요/);
   assert.match(summary, /\{item\.now && <small>지금 묻는 중<\/small>\}/);
 }

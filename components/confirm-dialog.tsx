@@ -17,6 +17,8 @@ type ConfirmOptions = {
   cancelLabel?: string | null;
   /** 지우기·탈퇴처럼 되돌릴 수 없는 일 — 확인 단추를 빨갛게 */
   danger?: boolean;
+  /** 단추 글이 긴 안내(예: '결제하고 홈페이지 고치기') — 넓은 화면에서 창을 넓히고 단추 글을 한 줄로 */
+  wide?: boolean;
   /** 글 입력칸(링크 주소 입력, 복사할 주소 보여 주기) — window.prompt 대신 */
   input?: { label: string; value: string; readOnly?: boolean; type?: "text" | "url" };
 };
@@ -31,7 +33,7 @@ function ConfirmSheet({ options, onDone }: { options: ConfirmOptions; onDone: (o
   }, []);
   const finish = (ok: boolean) => onDone(ok, ok ? field.current?.value : undefined);
   const cancelLabel = options.cancelLabel === undefined ? "취소" : options.cancelLabel;
-  return <dialog ref={ref} className={styles.dialog} aria-labelledby={options.title ? "confirm-dialog-title" : undefined} aria-describedby="confirm-dialog-message"
+  return <dialog ref={ref} className={styles.dialog} data-wide={options.wide || undefined} aria-labelledby={options.title ? "confirm-dialog-title" : undefined} aria-describedby="confirm-dialog-message"
     onCancel={event => { event.preventDefault(); finish(false); }}
     onClick={event => { if (event.target === event.currentTarget) finish(false); }}>
     <form method="dialog" onSubmit={event => { event.preventDefault(); finish(true); }}>

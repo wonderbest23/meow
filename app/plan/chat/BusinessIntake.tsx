@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
@@ -33,7 +33,7 @@ import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/dom
 import { LANDING_IDEA_PARAM, clearLandingIdea, readLandingIdea, stashLandingIdea, withoutLandingIdea } from "../../../lib/plan-builder/landing-idea";
 import { ENTRY_PARAM, isEntryMode, STUDIO_PATH, studioHref, type StudioTab } from "../../../lib/plan-builder/studio";
 import { homepageHref } from "../../../lib/plan-builder/journey";
-import { useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
+import { useStudioEditPreviewChapters, useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
 import { QueuedStudioRequests, StudioEditTurns } from "./intake-ui/StudioEditTurns";
 import { planSectionEditMessage } from "../../../lib/plan-builder/studio-plan-edit";
 import { WorkLog } from "./intake-ui/WorkLog";
@@ -105,6 +105,48 @@ const HOMEPAGE_SUGGESTIONS = [
   { label: "영업시간 안내 넣기", fill: "영업시간 안내를 넣어 줘" },
   { label: "예약 단추 문구 바꾸기", fill: "예약 단추 문구를 더 분명하게 바꿔 줘" },
 ];
+/*
+ * 작업실 PC: 입력창 위 '추천' 칩 줄 — 두 줄까지 감싸 보이고, 셋째 줄로 넘어가는 칩은 통째로 숨긴다.
+ * 예전엔 한 줄로 옆으로 밀게 했더니 마지막 칩이 '주 고…'처럼 칩 중간에서 잘려 보였다(새 배치 점검 2026-10-24).
+ * 칸 폭이 바뀔 때마다 다시 잰다. 한 칩이 한 줄보다 길면 그 칩만 말줄임(title 에 전체 문장).
+ */
+type SuggestionChip = { label: string; fill?: string; pick?: () => void };
+function SuggestRow({ chips, onPick }: { chips: SuggestionChip[]; onPick: (chip: SuggestionChip) => void }) {
+  const row = useRef<HTMLDivElement>(null);
+  const labels = chips.map(chip => chip.label).join("\u0000");
+  useLayoutEffect(() => {
+    const node = row.current;
+    if (!node) return;
+    let width = -1;
+    const fit = () => {
+      if (node.clientWidth === width) return;
+      width = node.clientWidth;
+      const items = [...node.children] as HTMLElement[];
+      const label = items.find(item => !(item instanceof HTMLButtonElement));
+      const buttons = items.filter((item): item is HTMLButtonElement => item instanceof HTMLButtonElement);
+      items.forEach(item => { item.hidden = false; });
+      /* 줄마다 가운데 높이가 같다(align-items:center) — 서로 다른 가운데 높이 수가 줄 수 */
+      const measure = () => {
+        const middles = items.filter(item => !item.hidden).map(item => item.offsetTop + item.offsetHeight / 2);
+        const lines: number[] = [];
+        for (const middle of [...middles].sort((a, b) => a - b)) if (!lines.some(value => Math.abs(value - middle) < 8)) lines.push(middle);
+        return (item: HTMLElement) => lines.findIndex(value => Math.abs(value - (item.offsetTop + item.offsetHeight / 2)) < 8);
+      };
+      let lineOf = measure();
+      /* 좁은 칸(1024px)에서 첫 칩이 다음 줄로 넘어가 '추천' 글자만 한 줄을 차지하면 글자를 숨긴다(무리 이름은 aria-label 에 남는다) */
+      if (label && buttons[0] && lineOf(buttons[0]) > lineOf(label)) { label.hidden = true; lineOf = measure(); }
+      buttons.forEach(button => { if (lineOf(button) >= 2) button.hidden = true; });
+    };
+    fit();
+    const observer = new ResizeObserver(fit);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [labels]);
+  return <div ref={row} className={styles.suggestRow} role="group" aria-label="추천">
+    <span className={styles.suggestLabel}><Sparkles size={13} aria-hidden="true" />추천</span>
+    {chips.map(chip => <button key={chip.label} type="button" className={styles.suggestChip} title={chip.fill ?? chip.label} onClick={() => onPick(chip)}>{chip.label}</button>)}
+  </div>;
+}
 /* 작업실 PC: '고칠 곳 고르기'를 누르면 보이는 안내 — 계획서 칸의 장마다 있는 '대화로 고치기'가 입력창을 그 장 고치기로 연다 */
 const PICK_HINT = "오른쪽 계획서에서 장 제목 옆 '대화로 고치기'를 누르면 그 장을 고칠 수 있어요.";
 
@@ -187,6 +229,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
    */
   const queuedAnswers = useRef<Array<{ input: CommandInput; captured?: Pick<PendingRequest, "answer" | "text" | "intro" | "composer"> }>>([]);
   const plan = preview ?? savedPlan;
+  /* 작업실 PC: '이렇게 바꿀게요' 카드의 장 칩 — 계획서 칸이 이 제안(작업 id)에서 찾은 장 이름 */
+  const editChapters = useStudioEditPreviewChapters(pro && plan?.intake.job?.kind === "edit" ? plan.intake.job.id : null);
   // Keep the conversation primary at completion, without shifting the panes.
   // 채팅에 집중: 오른쪽 요약은 늘 끌어서 줄일 수 있는 최소 너비로 시작한다(소유자 결정 2026-10-07). 끌어서 넓혀도 다음에 열면 다시 최소.
   const split = useChatSplit({ key: "oneulstart:intake-split:answering", defaultShare: 100, minChatPx: 300, minSidePx: 300, maxShare: 85, remember: false });
@@ -1461,13 +1505,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   useEffect(() => { if (editTarget) setPickHint(false); }, [editTarget]);
   /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로 */
   const priceAnswer = plan?.intake.answers.price;
-  const suggestionChips: Array<{ label: string; fill?: string; pick?: () => void }> = !pro || !studioComposer || editWorking ? []
+  const suggestionChips: SuggestionChip[] = !pro || !studioComposer || editWorking ? []
     : homepageSuggest ? [{ label: "홈페이지를 대화로 고치기", pick: () => enterEditTarget({ target: "homepage", label: "홈페이지" }) }]
     : visibleComposerText(studioText) ? []
     : editTarget?.target === "homepage" ? HOMEPAGE_SUGGESTIONS
     : (studioRoute === "chat" || studioRoute === "section") && !!plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy ? editExamples(priceAnswer?.status === "answered" ? priceAnswer.value : null).map(text => ({ label: text, fill: text }))
     : [];
-  const pickSuggestion = (chip: { fill?: string; pick?: () => void }) => {
+  const pickSuggestion = (chip: SuggestionChip) => {
     if (chip.pick) { chip.pick(); return; }
     if (!chip.fill) return;
     setStudioText(chip.fill); setInputHint(""); focusComposer();
@@ -1517,16 +1561,15 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
               : !lastIntake ? <section className={styles.empty}>
                 <div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>
                 <h1>아직 이어서 할 사업이 없어요</h1>
-                <p>새 사업을 기획해 보세요. 다른 기기에서 만든 사업이 있다면 로그인하면 그대로 보여요.</p>
+                <p>다른 기기에서 만든 사업은 로그인하면 보여요.</p>
                 <Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link>
                 <Link href={`/account?next=${encodeURIComponent("/plan/chat")}`} className={styles.textLink}>로그인하고 이어가기</Link>
               </section>
               : <section className={styles.empty}>
                 <div className={styles.emptyIcon} aria-hidden="true">{lastIntake?.signedIn ? <LogIn size={28} strokeWidth={1.8} /> : <FolderOpen size={28} strokeWidth={1.8} />}</div>
-                <h1>{lastIntake?.signedIn ? "로그인이 풀려서 사업을 불러오지 못했어요" : "이 브라우저에서 저장한 사업을 찾지 못했어요"}</h1>
-                <p>{lastIntake?.signedIn
-                  ? "작성하던 사업은 계정에 그대로 저장돼 있어요. 다시 로그인하면 이어서 할 수 있어요."
-                  : "로그인하지 않고 만든 사업은 그 브라우저에만 저장돼요. 로그인해서 만든 사업이라면 로그인하면 그대로 보여요. 다른 브라우저·앱에서 열었거나 방문 기록을 지웠다면 처음 만든 곳에서 열어 주세요."}</p>
+                {/* 제목이 이미 말하는 내용을 긴 설명으로 되풀이하지 않는다 — 한 줄로 다음 할 일만(대표 요청 2026-10-24) */}
+                <h1>{lastIntake?.signedIn ? "로그인이 풀렸어요" : "사업을 찾지 못했어요"}</h1>
+                <p>{lastIntake?.signedIn ? "다시 로그인하면 이어서 할 수 있어요." : "로그인하거나 처음 만든 브라우저에서 열어 주세요."}</p>
                 <Link href={`/account?next=${encodeURIComponent(lastIntake?.planId ? `/plan/chat?planId=${encodeURIComponent(lastIntake.planId)}` : "/plan/chat")}`} className={styles.primaryButton}>로그인하고 이어가기<ArrowRight size={18} aria-hidden="true" /></Link>
                 <Link href="/plan/chat?new=1" className={styles.textLink}>새 사업 기획</Link>
               </section>) : <>
@@ -1540,7 +1583,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
             {!locked && memoPending && <button type="button" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</button>}
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview}>
               {/* 쓰는 동안 받아 둔 요청을 보내 채팅 수정 화면이 되어도 마무리 말(계획서 보기 · 홈페이지 만들기)을 먼저 남기고 그 아래에 제안 카드 */}
-              {editTurn && !replyTurn ? <>{studioTurn}<EditChatTurn pro={pro} snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction preparing={preparing} payNote={payNote} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : locked && !replyTurn ? <>{studioTurn ?? <DocumentLockedTurn pro={pro} planId={plan.planId} chatEdit={COACH_EDIT_CHAT} onChatEdit={embedded ? () => { follow.current = true; focusComposer(); } : undefined} />}{nextStep === "prepare" && !studioRun && <NextStepAction preparing={preparing} payNote={payNote} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || zeroPriceConfirmation || sectorConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat cardLabel={questionCardLabel} cardFoot={questionCardFoot} question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={answerBlocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onCarry={carryDraft} onComposer={focusComposer} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</button></section> : <section className={styles.complete}>
+              {editTurn && !replyTurn ? <>{studioTurn}<EditChatTurn pro={pro} chapters={editChapters} snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction preparing={preparing} payNote={payNote} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : locked && !replyTurn ? <>{studioTurn ?? <DocumentLockedTurn pro={pro} planId={plan.planId} chatEdit={COACH_EDIT_CHAT} onChatEdit={embedded ? () => { follow.current = true; focusComposer(); } : undefined} />}{nextStep === "prepare" && !studioRun && <NextStepAction preparing={preparing} payNote={payNote} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || zeroPriceConfirmation || sectorConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat cardLabel={questionCardLabel} cardFoot={questionCardFoot} question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={answerBlocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onCarry={carryDraft} onComposer={focusComposer} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</button></section> : <section className={styles.complete}>
                 {designRunning || designStarting ? <DesignProgress snapshot={plan} announce /> : <>
                 {pro && (nextStep === "prepare" || nextStep === "open") && <WorkLog items={[designLogItem(plan)]} />}
                 <ChatSpeaker />
@@ -1580,10 +1623,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
         {(plan || newEntry) && showComposer && <footer className={styles.composer} aria-label="대화 입력창">
           {/* 작업실 PC: 입력창 바로 위 — 기다리는 요청('다음 요청' 줄)과 '추천' 칩 줄(누르면 입력창에 글만 채운다) */}
           {dockQueue && <QueuedStudioRequests dock items={queuedRequests} generating={generating} onCancel={cancelQueued} onEdit={editQueued} />}
-          {suggestionChips.length > 0 && <div className={styles.suggestRow} role="group" aria-label="추천">
-            <span className={styles.suggestLabel}><Sparkles size={13} aria-hidden="true" />추천</span>
-            {suggestionChips.map(chip => <button key={chip.label} type="button" className={styles.suggestChip} onClick={() => pickSuggestion(chip)}>{chip.label}</button>)}
-          </div>}
+          {suggestionChips.length > 0 && <SuggestRow chips={suggestionChips} onPick={pickSuggestion} />}
           <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); if (studioRoute) submitStudio(); else submitComposer(); }}>
             {questionTarget && <div className={styles.composerTarget} data-question-target><span title={questionTarget}><Target size={13} aria-hidden="true" /><span className={styles.composerTargetLabel}>{questionTarget}</span></span></div>}
             {/* 작업실: 무엇을 고치는지 칩으로 — ✕ 로 그만두면 예전 입력창으로 돌아간다. 쓰는 중이면 다 쓴 뒤 반영한다고 알린다 */}

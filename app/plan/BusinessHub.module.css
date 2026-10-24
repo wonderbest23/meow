@@ -124,4 +124,5 @@
 .embeddedRoot[data-embedded] .scroll { flex: 1; min-height: 0; }
 /* 탭 줄·사업명 줄이 없으니 위 여백을 줄인다. PC 작업실의 오른쪽 칸은 화면보다 좁아(약 560~1000px) 좌우 여백도 900px 이하 화면 값으로 */
 .embeddedRoot[data-embedded] .content { padding-top: 24px; }
-@media (min-width: 1024px) { .embeddedRoot[data-embedded] .content { padding: 24px 28px 96px; } }
+/* PC 작업실 카드는 950px 안팎까지 넓어져 표·문단이 끝에서 끝까지 늘었다 — 읽는 폭을 760px 로 두고 가운데에(계획서 · 요약 칸과 같은 폭) */
+@media (min-width: 1024px) { .embeddedRoot[data-embedded] .content { box-sizing: content-box; max-width: 760px; padding: 24px 28px 96px; } }

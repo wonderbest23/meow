@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft, Lock as LockIcon } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -17,7 +17,7 @@ import { useGenerationProgress } from "../GenerationProgress";
 import frame from "../chat/page.module.css";
 import hub from "../BusinessHub.module.css";
 import styles from "./Studio.module.css";
-import { StudioNavContext, StudioPaneContext, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget, type StudioNav, type StudioPane } from "./StudioContext";
+import { StudioNavContext, StudioPaneContext, type StudioComposeRequest, type StudioEditHandler, type StudioEditPreviewChapters, type StudioEditTarget, type StudioNav, type StudioPane } from "./StudioContext";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan } from "../../../lib/plan-builder/plan-store";
 import { journeySteps, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type JourneyState, type JourneyStepId } from "../../../lib/plan-builder/journey";
 import { journeyPrepLabel, JOURNEY_LABELS, JOURNEY_SHORT_LABELS } from "../../../lib/plan-builder/journey-steps";
@@ -488,6 +488,25 @@ export default function Studio() {
     else pendingCompose.current = request;
   }, [showTab]);
 
+  /*
+   * 계획서 칸 → 대화 칸: 열린 채팅 수정 제안이 닿는 장 이름(PC). 상태가 아니라 ref + 알림으로 둔다 — 바뀔 때 작업실 전체가 아니라
+   * 그 값을 읽는 대화 칸 카드만 다시 그린다. 같은 값이 다시 오면 알리지 않는다.
+   */
+  const editPreview = useRef<StudioEditPreviewChapters | null>(null);
+  const editPreviewListeners = useRef(new Set<() => void>());
+  const setEditPreviewChapters = useCallback((preview: StudioEditPreviewChapters | null) => {
+    const next = preview?.chapters.length ? preview : null;
+    const prev = editPreview.current;
+    if (prev === next || (prev && next && prev.jobId === next.jobId && prev.chapters.join("\n") === next.chapters.join("\n"))) return;
+    editPreview.current = next;
+    editPreviewListeners.current.forEach(listener => listener());
+  }, []);
+  const subscribeEditPreviewChapters = useCallback((listener: () => void) => {
+    editPreviewListeners.current.add(listener);
+    return () => { editPreviewListeners.current.delete(listener); };
+  }, []);
+  const editPreviewChapters = useCallback(() => editPreview.current, []);
+
   /* ── 깔때기 — 작업실을 열었다 · 다른 탭을 봤다(측정만, 실패해도 조용히) ── */
   const opened = useRef(false);
   useEffect(() => {
@@ -568,8 +587,11 @@ export default function Studio() {
       editHandler,
       composeInChat,
       onComposeRequest,
+      setEditPreviewChapters: wide ? setEditPreviewChapters : undefined,
+      subscribeEditPreviewChapters: wide ? subscribeEditPreviewChapters : undefined,
+      editPreviewChapters: wide ? editPreviewChapters : undefined,
     };
-  }, [planId, openTarget, confirmLeave, router, setHeaderActions, wide, setHeaderCenter, markActivity, showTab, setDesignRunning, registerEditHandler, editHandler, composeInChat, onComposeRequest]);
+  }, [planId, openTarget, confirmLeave, router, setHeaderActions, wide, setHeaderCenter, markActivity, showTab, setDesignRunning, registerEditHandler, editHandler, composeInChat, onComposeRequest, setEditPreviewChapters, subscribeEditPreviewChapters, editPreviewChapters]);
 
   /*
    * 이 사업의 다른 화면으로 가는 링크는 이동 대신 탭 바꾸기 — 대화·계획서 안의 고정 링크를 하나하나 고치지 않아도 된다.
@@ -710,7 +732,6 @@ export default function Studio() {
             <i aria-hidden="true">{chip.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>{chip.label}<span className={styles.srOnly}>{chipState(chip) && ` (${chipState(chip).trim()})`}</span>
           </li>)}
         </ol>
-        <p className={styles.lockNote}><LockIcon size={13} aria-hidden="true" />질문을 마치면 사업계획서부터 차례로 열려요</p>
       </> : <div className={styles.seg} data-appear={tabsAppear || undefined} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, RIGHT_TABS, rightTab, item => item as RightTab)}>
         {RIGHT_TABS.map(item => {
           const selected = rightTab === item;
@@ -723,7 +744,8 @@ export default function Studio() {
       </div>}
       <div className={styles.centerWrap}>{!missing && !chatOnly && centerSlot(rightTab)}</div>
       <div className={styles.tbActs}>
-        {chatOnly && !missing ? <span className={styles.saved}><Check size={13} strokeWidth={2.5} aria-hidden="true" />답할 때마다 저장돼요</span> : progress}
+        {/* 질문 중에는 저장·잠김 안내 글을 두지 않는다 — 단계 표시만으로 충분하다(대표 요청 2026-10-24) */}
+        {chatOnly && !missing ? null : progress}
         {relogin}
         {headerSlot(rightTab)}
       </div>
