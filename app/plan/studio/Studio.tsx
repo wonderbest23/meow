@@ -362,6 +362,8 @@ export default function Studio() {
    * 이때는 탭 줄을 숨기고 대화만 보인다(PC 는 오른쪽에 지금까지 정한 내용만). 방향이 정해져 칸이 하나라도 열리면 탭이 나타난다.
    */
   const chatOnly = !isSamplePlan(planId) && !chatComplete && RIGHT_TABS.every(id => !!locks[id]);
+  /* 대화 없이 만든 사업 — 서버에 대화 기록(coach)이 없다. 대화 칸은 '찾지 못했어요' 대신 읽기 전용 안내(오른쪽 칸은 그대로 열린다) */
+  const noChat = !!plan && !isSamplePlan(planId) && !pending && !readCoach(plan.answers);
   /* 탭 줄이 처음 나타나는 순간(대화만 하던 중 → 칸이 열림)에만 내려오는 효과를 준다 — 다시 열거나 키보드가 접힐 때마다 반복되지 않게 */
   const [tabsAppear, setTabsAppear] = useState(false);
   const wasChatOnly = useRef(chatOnly);
@@ -737,7 +739,7 @@ export default function Studio() {
    * PC 한 줄 머리줄 — 왼쪽은 대화 칸 폭(바로 아래 대화 칸과 같은 줄), 오른쪽은 탭(대화만 할 때는 단계 안내) · 가운데 알약 · 진행 · 칸 단추.
    * 사업명 ⌄ 은 서랍(내 사업 → 사업 → 목차)을 연다 — 다른 사업으로 옮기는 곳도 거기다. 작업 기록(되돌리기)은 아직 없어 단추도 두지 않는다.
    */
-  const topBar = wide ? (menu: ChromeMenu) => <header className={styles.topBar}>
+  const topBar = wide ? (menu: ChromeMenu) => <header className={styles.topBar} data-missing={missing || undefined}>
     <div className={styles.tbLeft}>
       <Link className={styles.iconButton} href="/plan" aria-label="내 사업 목록으로" title="내 사업 목록"><ChevronLeft size={20} aria-hidden="true" /></Link>
       {/* eslint-disable-next-line @next/next/no-img-element -- 사이트 머리말과 같은 정적 로고 */}
@@ -781,7 +783,8 @@ export default function Studio() {
       <BusinessAppChrome title={businessTitle} subtitle={missing ? undefined : statusText} actions={headerSide} showRail={false} backHref="/plan" active={fresh ? "new" : "plans"} topBar={topBar}>
         {/* 주소의 사업을 찾지 못했으면 칸마다 따로 알리지 않고(왼쪽·오른쪽 두 번 보였다) 작업실에서 한 번만 */}
         {/* 로그인이 풀려 못 찾았으면 '다시 로그인하기'(팝업, 끝나면 이 주소로 돌아온다) — 사업이 사라진 게 아니다 */}
-        {missing ? <div className={hub.scroll}><div className={hub.content}>{signedOut
+        {/* 가운데 — 내 사업 화면용 오른쪽 여백(96px)이 없는 작업실 전용 틀(1280 에서 28px 왼쪽으로 쏠렸다 — PC 점검 2026-10-24) */}
+        {missing ? <div className={styles.missingNote}><div className={hub.content}>{signedOut
           ? <MissingBusinessBody title="로그인이 풀렸어요" detail="다시 로그인하면 이 사업을 이어서 볼 수 있어요." action={<button type="button" className={hub.primary} onClick={() => openLogin()}>다시 로그인하기</button>} />
           : <MissingBusinessBody />}</div></div> : <div className={styles.studio} data-wide={wide || undefined}>
           {!wide && !chatOnly && <div className={styles.narrowTabs} data-appear={tabsAppear || undefined} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, NARROW_TABS, narrowSelected, item => narrowTarget(item as NarrowTab))}>
@@ -798,12 +801,19 @@ export default function Studio() {
           <Pane id="chat" planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} refresh={refreshSeq.chat ?? 0} className={styles.chatCol} role={wide || chatOnly ? undefined : "tabpanel"} labelledBy={labelledBy("chat")} headingRef={headingRef("chat")}>
             {/* PC 에서 오른쪽에 보이는 열린 칸 — 대화 칸이 '홈페이지를 대화로 고치기' 같은 제안을 고른다(막힌 칸이면 null) */}
             {/* 예시 사업은 서버에 대화가 없어 대화 칸이 '사업을 찾지 못했어요 · 내 사업으로'를 보였다(감사 2026-10-23) — 읽기 전용 안내와 새 대화 길로 */}
+            {/* PC 는 이 단추 하나만 — 오른쪽 계획서의 같은 단추는 PC 작업실에서 숨긴다(같은 단추 두 번 — PC 점검 2026-10-24). 대화 칸은 탭을 바꿔도 늘 보인다 */}
+            {/* 대화 없이 만든 사업(예전 편집 화면 등)도 서버에 대화가 없어 '사업을 찾지 못했어요'가 보였다 — 오른쪽 칸은 그대로 쓰니 읽기 전용 안내만 */}
             {isSamplePlan(planId)
-              ? <div className={hub.scroll}><div className={hub.content}><section className={hub.empty}>
+              ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
                 <h2>예시 사업이에요</h2>
-                <Link className={hub.primary} href={newChatHref()}>대화로 내 사업 시작하기<ChevronRight size={18} aria-hidden="true" /></Link>
+                <Link className={hub.primary} href={newChatHref()}><span className={styles.nowrap}>대화로 내 사업 시작하기</span><ChevronRight size={18} aria-hidden="true" /></Link>
               </section></div></div>
-              : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !locks[rightTab] ? rightTab : null} />}
+              : noChat
+                ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
+                  <h2>대화 기록이 없는 사업이에요</h2>
+                  <p>{wide ? "계획서와 홈페이지는 오른쪽에서 볼 수 있어요." : "계획서와 홈페이지는 위 탭에서 볼 수 있어요."}</p>
+                </section></div></div>
+                : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !locks[rightTab] ? rightTab : null} />}
           </Pane>
 
           <div className={styles.rightCol} data-visible={rightVisible || undefined} inert={!rightVisible}>

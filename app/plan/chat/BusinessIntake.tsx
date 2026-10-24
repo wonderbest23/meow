@@ -1241,7 +1241,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   </div> : null;
   /* 작업실 대화 칸의 작성 진행 카드(팝업 대신) · 끝난 뒤 마무리 말 — 작업실 밖에서는 둘 다 없다. 멈춘 이유를 알면 카드 바로 아래에 */
   const studioRun = embedded && plan && generation.state && (generating || runStalled)
-    ? <div ref={runCard}><GenerationCard state={generation.state} onRetry={startPrepare} retryDisabled={blocked || aiBusy || preparing} onOpen={() => showPlan(plan.planId)} note={pro ? null : STUDIO_RUN_NOTE} />{regenFailure}</div> : null;
+    ? <div ref={runCard}><GenerationCard state={generation.state} onRetry={startPrepare} retryDisabled={blocked || aiBusy || preparing} onOpen={() => showPlan(plan.planId)} note={pro ? null : STUDIO_RUN_NOTE} compact={pro} />{regenFailure}</div> : null;
   /* 진행 카드가 처음 나타나면(방금 '사업계획서 만들기'를 눌렀다) 따라 내려가 카드 전체를 보인다 — 그 뒤 진행으로 카드 키가 바뀌면 ResizeObserver 가 따라간다 */
   const runShown = !!studioRun;
   useEffect(() => {

@@ -921,7 +921,9 @@
 /* position:relative — 안의 낭독기용 글(srOnly, position:absolute)이 대화 칸 밖 기준으로 붙어 바깥 칸을 밀어 올리지 않게(r37 점검) */
 .messageMeta { position: relative; display: flex; align-items: center; gap: 2px; margin: -10px 0 12px; color: #8b95a1; font-size: 11.5px; }
 .messageMeta time { margin-right: 4px; font-variant-numeric: tabular-nums; }
-.metaButton { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; }
+.metaButton { position: relative; display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; }
+/* 휴대폰은 손가락 자리 44px — 보이는 크기는 그대로, 둘레만 넓힌다 */
+@media (max-width: 1023px) { .metaButton::after { content: ""; position: absolute; inset: -6px; } }
 .metaButton:hover { background: #e9ecf0; color: #4e5968; }
 /* 작업 기록 — 파란 체크 + 한 줄, 목록이 있으면 눌러서 2열로 펼친다 */
 .workLog { display: flex; flex-direction: column; gap: 2px; margin: 0 0 12px; }
@@ -980,7 +982,7 @@ button.workLogRow:hover { background: #e9ecf0; }
 .page[data-embedded][data-studio-pro] .changeChapters > li { padding: 2px 8px; border: 1px solid #e5e8eb; border-radius: 6px; background: #f2f4f6; color: #4e5968; font-size: 11.5px; font-weight: 500; line-height: 18px; white-space: nowrap; }
 .page[data-embedded][data-studio-pro] .changeCard > small { display: block; margin: 0 14px 8px; color: #8b95a1; font-size: 11.5px; }
 .page[data-embedded][data-studio-pro] .changeCard .chipRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 4px 14px 12px; }
-.page[data-embedded][data-studio-pro] .changeCard .chip, .page[data-embedded][data-studio-pro] .studioEditTurn .chip { min-height: 30px; padding: 0 12px; border: 1px solid #e3e7ec; border-radius: 7px; background: #fff; color: #191f28; font-size: 12.5px; font-weight: 600; }
+.page[data-embedded][data-studio-pro] .changeCard .chip, .page[data-embedded][data-studio-pro] .studioEditTurn .chip { min-height: 32px; padding: 0 12px; border: 1px solid #e3e7ec; border-radius: 7px; background: #fff; color: #191f28; font-size: 12.5px; font-weight: 600; }
 .page[data-embedded][data-studio-pro] .changeCard .chip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip:hover:not(:disabled) { background: #f7f9fb; border-color: #c9d3de; }
 .page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong, .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong { border-color: #3182f6; background: #3182f6; color: #fff; box-shadow: 0 1px 2px rgba(27, 100, 218, .3); }
 .page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong:hover:not(:disabled) { border-color: #1b64da; background: #1b64da; }
@@ -994,13 +996,14 @@ button.workLogRow:hover { background: #e9ecf0; }
 .queueBadge { flex: none; padding: 2px 6px; border-radius: 5px; background: #e8f3ff; color: #1b64da; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .queueText { flex: 1; min-width: 0; overflow: hidden; color: #191f28; white-space: nowrap; text-overflow: ellipsis; }
 .page .queueText { overflow-wrap: normal; }
-.queueButton { display: inline-grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; }
+.queueButton { display: inline-grid; flex: none; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; }
 .queueButton:hover { background: #eef1f4; color: #4e5968; }
 .queueNote { margin: -2px 0 0 4px !important; color: #8b95a1; font-size: 11.5px; }
 /* 두 줄까지 감싼다 — 셋째 줄로 넘치는 칩은 SuggestRow 가 통째로 숨긴다(칩 중간에서 글자가 잘리지 않게) */
 .suggestRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .suggestLabel { display: inline-flex; flex: none; align-items: center; gap: 4px; margin-right: 2px; color: #8b95a1; font-size: 12px; white-space: nowrap; }
-.suggestChip { flex: none; max-width: 100%; height: 30px; padding: 0 12px; border: 1px solid #e3e7ec; border-radius: 999px; background: #fff; color: #4e5968; font-size: 12.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 긴 추천도 끝까지 읽히게 두 줄까지(…20시간으로 바… 처럼 잘렸다 — PC 점검 2026-10-24). PC 누르는 자리 32px */
+.suggestChip { flex: 0 1 auto; max-width: 100%; min-height: 32px; padding: 6px 12px; border: 1px solid #e3e7ec; border-radius: 16px; background: #fff; color: #4e5968; font-size: 12.5px; font-weight: 550; line-height: 1.35; text-align: left; word-break: keep-all; overflow-wrap: anywhere; text-wrap: balance; }
 .suggestChip:hover { border-color: #c9d3de; color: #191f28; }
 .suggestRow > [hidden] { display: none; }
 /* 둘째 줄 칩이 첫 칩과 같은 왼쪽 선에서 시작하게 — '추천' 글자 폭만큼 줄 전체를 들이고 글자만 내어 둔다(r37 점검) */
@@ -1024,7 +1027,7 @@ button.workLogRow:hover { background: #e9ecf0; }
 .pickMenu button { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: #333d4b; font-size: 13.5px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pickMenu button:hover, .pickMenu button:focus-visible { background: #f2f4f6; outline: none; }
 .composerBar { display: flex; align-items: center; gap: 4px; min-height: 32px; }
-.composerAction { display: inline-flex; align-items: center; gap: 4px; min-width: 0; height: 30px; margin-left: -4px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #8b95a1; font-size: 12px; white-space: nowrap; }
+.composerAction { display: inline-flex; align-items: center; gap: 4px; min-width: 0; height: 32px; margin-left: -4px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #8b95a1; font-size: 12px; white-space: nowrap; }
 .composerAction:hover { background: #f2f4f6; color: #4e5968; }
 .composerAction[aria-pressed="true"] { background: #e8f3ff; color: #1b64da; }
 .page[data-embedded][data-studio-pro] .sendButton { flex: 0 0 32px; width: 32px; height: 32px; margin-left: auto; background: #3182f6; }
@@ -1032,7 +1035,7 @@ button.workLogRow:hover { background: #e9ecf0; }
 .page[data-embedded][data-studio-pro] .sendButton svg { width: 18px; height: 18px; }
 .page[data-embedded][data-studio-pro] .resumeNotice { width: auto; max-width: 100%; margin: 0 0 14px; padding: 0; border-radius: 0; background: none; align-items: flex-start; }
 .page[data-embedded][data-studio-pro] .resumeNotice p { font-size: 14.5px; line-height: 1.65; color: #191f28; }
-.page[data-embedded][data-studio-pro] .resumeNotice button { width: 28px; height: 28px; color: #8b95a1; }
+.page[data-embedded][data-studio-pro] .resumeNotice button { width: 32px; height: 32px; color: #8b95a1; }
 .page[data-embedded][data-studio-pro] .lockedTurn .chipRow, .page[data-embedded][data-studio-pro] .editTurn .chipRow { margin: -4px 0 14px; }
 .page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong { border-color: #3182f6; background: #3182f6; color: #fff; }
 .page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong:hover { border-color: #1b64da; background: #1b64da; }

@@ -197,7 +197,7 @@ export function GenerationDialog({ planId, open, state, onClose }: { planId: str
  * 오른쪽 계획서 칸에서 장이 채워지는 동안 왼쪽 대화에서는 다 쓴 장 · 쓰는 장 · 기다리는 장과 남은 시간을 본다.
  * 멈췄으면(일부 장을 못 씀) '남은 장 이어서 쓰기'로 다시 시작한다 — 이미 쓴 장은 다시 쓰지 않는다.
  */
-export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, note }: {
+export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, note, compact = false }: {
   state: GenerationState;
   onRetry: () => void;
   retryDisabled?: boolean;
@@ -205,6 +205,11 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
   onOpen?: () => void;
   /** 쓰는 중 안내를 바꾼다 — null 이면 쓰는 중 안내를 두지 않는다(작업실 PC: 오른쪽 계획서 칸이 '창을 닫아도 계속 써요'를 한 번만 말한다) */
   note?: string | null;
+  /**
+   * 한 줄 상태만 — 작업실 PC 는 머리줄 · 오른쪽 계획서 칸이 이미 장마다 진행을 보여 대화 칸까지 세 번 보였다(PC 점검 2026-10-24).
+   * 쓰는 중이면 '사업계획서 만드는 중 · 3/10 항목' 한 줄(쓴 부분 보기 단추 없음 — 계획서는 바로 오른쪽에 있다). 멈췄으면 다시 쓰기 카드 그대로.
+   */
+  compact?: boolean;
 }) {
   const total = state.total, done = state.done;
   const stalled = generationStalled(state);
@@ -215,6 +220,9 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
   // 남은 시간은 장이 하나 끝날 때마다 다시 잰다(렌더 중에 시계를 읽지 않게 효과에서)
   const [eta, setEta] = useState<string | null>(null);
   useEffect(() => { setEta(generationEta(state, Date.now())); }, [state]);
+  if (compact && !stalled) return <section className={`${styles.card} ${styles.cardLine}`} aria-label="사업계획서 작성 진행" data-generation-card data-state="running">
+    <p className={styles.cardCurrent} role="status"><i aria-hidden="true" />사업계획서 만드는 중<span className={styles.cardCount}>{done}/{total || "–"} 항목</span></p>
+  </section>;
   return <section className={styles.card} aria-label="사업계획서 작성 진행" data-generation-card data-state={stalled ? "stalled" : "running"}>
     <header>
       {/* 단위는 항목 — 머리줄 '만드는 중 · 2/10 항목' · 대화 '10개 항목을 썼어요'와 같은 말(r37 점검) */}

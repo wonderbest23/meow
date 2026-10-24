@@ -97,7 +97,7 @@
 .tableZoom > header { display:flex; align-items:center; gap:10px; height:56px; padding:0 6px 0 16px; border-bottom:1px solid var(--app-line); background:#fff; }
 .tableZoom > header strong { font-size:16px; }
 .tableZoomModes { display:flex; gap:4px; margin-left:auto; padding:3px; border-radius:10px; background:#f2f4f6; }
-.tableZoomModes button { height:32px; padding:0 10px; border:0; border-radius:8px; background:transparent; color:#6b7684; font-size:13px; font-weight:600; }
+.tableZoomModes button { min-height:44px; padding:0 10px; border:0; border-radius:8px; background:transparent; color:#6b7684; font-size:13px; font-weight:600; }
 .tableZoomModes button[aria-pressed=true] { background:#fff; color:#191f28; box-shadow:0 1px 2px rgba(16,24,40,.12); }
 .tableZoomClose { display:grid; place-items:center; width:44px; height:44px; border:0; background:transparent; color:var(--app-text); }
 .tableZoomBody { overflow:auto; height:calc(100dvh - 56px); padding:16px; }
@@ -133,7 +133,7 @@
 .dialog { width:min(440px,calc(100% - 32px)); max-height:80dvh; padding:24px; border:0; border-radius:8px; color:var(--app-text); box-shadow:0 16px 70px #191f2826; }
 .dialog::backdrop { background:#191f2870; }
 .dialogHeader { display:flex; align-items:center; gap:16px; justify-content:space-between; margin-bottom:24px; }
-.dialogHeader h2 { font-size:21px; margin:0; font-weight:700; }.dialogHeader button { display:grid; place-items:center; width:40px; height:40px; border:0; background:var(--app-raised); border-radius:8px; flex-shrink:0; }
+.dialogHeader h2 { font-size:21px; margin:0; font-weight:700; }.dialogHeader button { display:grid; place-items:center; width:44px; height:44px; border:0; background:var(--app-raised); border-radius:8px; flex-shrink:0; }
 .downloads { display:grid; gap:10px; }.downloads > button { display:flex; align-items:center; gap:16px; padding:20px 16px; background:var(--app-raised); border:0; border-radius:8px; color:var(--app-accent); text-align:left; }
 .downloads > button span { flex:1; min-width:0; }.downloads strong { display:block; font-size:16px; color:var(--app-text); }.downloads small { display:block; margin-top:5px; font-size:13px; color:var(--app-muted); }.downloads svg { flex-shrink:0; }.downloads p { font-size:13px; line-height:1.7; }
 @media(max-width:1100px) { .sidebar { flex-basis:190px; }.article { padding:32px 28px 48px; } }
@@ -276,7 +276,7 @@
 .factCard > strong { font-size:14px; }
 .factCard > p { margin:0; font-size:12px; line-height:1.6; color:#6b7280; }
 .factChips { display:flex; flex-wrap:wrap; gap:6px; }
-.factChips button { display:inline-flex; align-items:baseline; gap:6px; max-width:100%; padding:6px 12px; border:1px solid #f2c94c; border-radius:16px; background:#fff; color:#111418; font-size:13px; line-height:18px; text-align:left; cursor:pointer; }
+.factChips button { display:inline-flex; align-items:center; gap:6px; max-width:100%; min-height:44px; padding:6px 12px; border:1px solid #f2c94c; border-radius:16px; background:#fff; color:#111418; font-size:13px; line-height:18px; text-align:left; cursor:pointer; }
 .factChips button small { color:#8a6d00; font-size:11px; white-space:nowrap; }
 .factReflect { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:4px; padding-top:10px; border-top:1px dashed #f2c94c; }
 .factReflect .primary { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:38px; padding:8px 16px; border:0; border-radius:8px; font-size:14px; font-weight:600; line-height:1; }
@@ -464,10 +464,10 @@
 .chapterHeadingTop { display:flex; align-items:center; justify-content:space-between; gap:4px 8px; flex-wrap:wrap; }
 .chapterHeadingTop > span { color:var(--app-accent); font-size:11px; font-weight:600; }
 .chapterActions { display:flex; align-items:center; gap:2px; flex-wrap:wrap; margin-right:-8px; }
-.chapterAction { display:inline-flex; align-items:center; gap:4px; min-height:36px; padding:4px 8px; border:0; border-radius:8px; background:none; color:var(--app-muted); font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; }
+.chapterAction { display:inline-flex; align-items:center; gap:4px; min-height:44px; padding:4px 8px; border:0; border-radius:8px; background:none; color:var(--app-muted); font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; }
 .chapterAction:hover { background:var(--app-raised); color:var(--app-accent); }
 .chapterAction:focus-visible { outline:2px solid var(--app-accent); outline-offset:1px; }
-.chapterChatEdit { display:inline-flex; align-items:center; gap:6px; margin-left:auto; min-height:38px; padding:7px 12px; border:1px solid var(--app-line-strong); border-radius:8px; background:var(--app-panel-fill); color:var(--app-accent); font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; }
+.chapterChatEdit { display:inline-flex; align-items:center; gap:6px; margin-left:auto; min-height:44px; min-width:44px; justify-content:center; padding:7px 12px; border:1px solid var(--app-line-strong); border-radius:8px; background:var(--app-panel-fill); color:var(--app-accent); font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; }
 @media (min-width:901px) { .chapterChatEdit { display:none; } }
 @media (max-width:400px) { .chapterAction { font-size:12px; padding:4px 6px; } }
 
@@ -497,7 +497,7 @@
   .page[data-embedded] .chapterChatEdit { font-size:0; gap:0; padding:8px 10px; }
 }
 /* 붙어 있는 도구 줄에 가리지 않게 — 목차·#sec- 링크·새 항목 알림으로 옮겨 갈 때 제목이 도구 줄 아래에서 보인다 */
-.page[data-embedded] :is(.chapter, .section) { scroll-margin-top:64px; }
+.page[data-embedded] :is(.chapter, .section, .writing) { scroll-margin-top:64px; }
 
 /*
  * ── 작업실 PC 새 화면(1024px 이상, data-studio-pc — 작업실 새 화면 2026-10-24 승인 시안) ──
@@ -513,10 +513,10 @@
 .page .stripSeg button { position:relative; height:24px; padding:0 9px; border:0; border-radius:6px; background:transparent; color:#4e5968; font-size:12px; font-weight:500; white-space:nowrap; }
 .page .stripSeg button::after { content:""; position:absolute; inset:-9px -1px; }
 .page .stripSeg button[aria-pressed=true] { background:#fff; color:#191f28; font-weight:650; box-shadow:0 1px 2px rgba(16,24,40,.08), 0 0 0 .5px rgba(16,24,40,.05); }
-.page .stripButton { display:inline-flex; flex:none; align-items:center; gap:6px; height:30px; padding:0 10px; border:0; border-radius:8px; background:transparent; color:#4e5968; font-size:13px; font-weight:600; white-space:nowrap; }
+.page .stripButton { display:inline-flex; flex:none; align-items:center; gap:6px; height:32px; padding:0 10px; border:0; border-radius:8px; background:transparent; color:#4e5968; font-size:13px; font-weight:600; white-space:nowrap; }
 .page .stripButton:hover:not(:disabled) { background:#f2f4f6; color:#191f28; }
 .stripActions { display:flex; flex:none; align-items:center; gap:6px; }
-.page .stripActions :is(button, .nextButton) { min-height:30px; padding:4px 12px; border-radius:8px; font-size:13px; font-weight:600; white-space:nowrap; }
+.page .stripActions :is(button, .nextButton) { min-height:32px; padding:4px 12px; border-radius:8px; font-size:13px; font-weight:600; white-space:nowrap; }
 .stripActions .secondary { background:#fff; color:#191f28; border:1px solid #e3e7ec; }
 
 /* 장 고르기 알약 — 작업실 머리줄 가운데(작업실이 그린다) 또는 칸 위 얇은 줄 안 */
@@ -547,7 +547,7 @@
 .chapterPitch { margin:14px 0 0; font-size:15px; line-height:1.85; color:#333d4b; word-break:keep-all; overflow-wrap:anywhere; }
 /* 대화로 고치는 중 — 장 머리 왼쪽 파란 줄 + 작은 표시 */
 .chapter[data-changing] .chapterLead::before { content:""; position:absolute; left:-22px; top:2px; bottom:0; width:3px; border-radius:3px; background:#cfe2fd; }
-.page[data-studio-pc] .chapterAction { min-height:28px; font-size:12.5px; }
+.page[data-studio-pc] .chapterAction { min-height:32px; font-size:12.5px; }
 .changingBadge { display:inline-flex; align-items:center; gap:5px; padding:3px 9px 3px 7px; border-radius:999px; background:#e8f3ff; color:#1b64da; font-size:11.5px; font-weight:650; white-space:nowrap; }
 .changingBadge i { width:6px; height:6px; border-radius:50%; background:#3182f6; }
 .page[data-studio-pc] .section { margin:0 0 24px; }
@@ -575,13 +575,13 @@
 .page[data-embedded][data-studio-pc] .completionNotice { box-sizing:border-box; width:calc(100% - 64px); max-width:700px; margin:20px auto 0; padding:14px 16px; border:1px solid #c3ded0; border-radius:12px; }
 /* 붙어 있는 얇은 줄(42px) 아래로 */
 .page[data-studio-pc] .arrival { top:54px; }
-.page[data-studio-pc] :is(.chapter, .section) { scroll-margin-top:56px; }
+.page[data-studio-pc] :is(.chapter, .section, .writing) { scroll-margin-top:56px; }
 
 /* 아래 가운데 떠 있는 장 넘기기 — 칸을 내려도 바닥에 붙어 있고, 끝에서는 글 아래 제자리에 */
 .pager { position:sticky; bottom:16px; z-index:3; display:flex; align-items:center; gap:4px; width:fit-content; max-width:calc(100% - 32px); margin:8px auto 16px; padding:4px; border:1px solid #e3e7ec; border-radius:999px; background:#fff; box-shadow:0 0 0 6px rgba(255,255,255,.85), 0 4px 16px rgba(16,24,40,.1); font-size:12.5px; color:#4e5968; }
-.page .pagerIcon { display:grid; place-items:center; flex:none; width:28px; height:28px; padding:0; border:0; border-radius:999px; background:transparent; color:#4e5968; }
+.page .pagerIcon { display:grid; place-items:center; flex:none; width:32px; height:32px; padding:0; border:0; border-radius:999px; background:transparent; color:#4e5968; }
 .page .pagerIcon:hover:not(:disabled) { background:#f2f4f6; }
-.page .pagerNext { display:inline-flex; align-items:center; gap:4px; min-width:0; height:28px; padding:0 10px 0 12px; border:0; border-radius:999px; background:#f2f4f6; color:#191f28; font-size:12.5px; font-weight:600; }
+.page .pagerNext { display:inline-flex; align-items:center; gap:4px; min-width:0; height:32px; padding:0 10px 0 12px; border:0; border-radius:999px; background:#f2f4f6; color:#191f28; font-size:12.5px; font-weight:600; }
 .page .pagerNext:hover { background:#e9ecf0; }
 .pagerNext > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:240px; }
 .pagerNext > svg { flex:none; }
@@ -591,3 +591,6 @@
 /* 목록 한 줄은 짧아 pretty 가 손대지 않는다 — 두 줄이면 줄 길이를 고르게 */
 .body :global(.tiptap) li { text-wrap: balance; }
 .body :global(.tiptap) li > p { text-wrap: inherit; }
+
+/* PC(1024px 이상)는 누르는 자리 32px 이면 된다 — 휴대폰 44px 로 키운 직접 고치기 칩을 PC 에서는 예전 크기 가까이 */
+@media (min-width:1024px) { .factChips button { min-height:32px; } }
