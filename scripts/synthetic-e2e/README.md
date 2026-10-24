@@ -2,7 +2,7 @@
 
 실제 AI·운영 DB·문자 없이 사업 만들기 전 과정을 돌려 보는 도구입니다.
 
-- `preview-fake.mts` — 코드를 임시 폴더로 복사해(.env 제외) 미리보기 서버를 띄웁니다. 메모리 DB, 가짜 Anthropic(`fake-anthropic.mjs`: 요청의 JSON 스키마에 맞는 합성 답), 합성 로그인(쿠키 `syn_uid`)은 **복사본에만** 들어갑니다. `inject/`의 개발용 경로(Workflow 대신 섹션 생성, 주간 리포트 발송기)도 복사본에만 넣습니다.
+- `preview-fake.mts` — 코드를 임시 폴더로 복사해(.env 제외) 미리보기 서버를 띄웁니다. 메모리 DB, 가짜 Anthropic(`fake-anthropic.mjs`: 요청의 JSON 스키마에 맞는 합성 답), 합성 로그인(쿠키 `syn_uid`)과 개발용 경로(`/api/dev/synthetic-login`·`synthetic-generate`·`synthetic-weekly`: 합성 로그인, Workflow 대신 섹션 생성, 주간 리포트 발송기)는 저장소에 들어 있지만 `SYNTHETIC_AUTH=1`·`PERSISTENCE_MODE=demo-memory`·`APP_ENV`(prelaunch·local)가 모두 맞을 때만 켜집니다(`lib/synthetic-preview.ts`). 운영에서는 404입니다. 운영과 같은 빌드로 띄우는 방법은 `docs/cloud-preview.md`를 보세요.
 - `drive.mts <origin> [biz,biz]` — 합성 사업 10개를 상담 13문항 → 사업 방향 정리 → 계획서까지 진행
 - `ui-check.mts`, `homepage-check.mts`, `auto-design.mts`, `live-doc.mts` — 사업 관리·홍보 키트, 홈페이지 공개·문의, 자동 정리, 실시간 생성 화면 점검
 

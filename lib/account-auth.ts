@@ -12,6 +12,7 @@ import { claimGuestPlanState } from "./plan-builder/plan-server-store";
 import { readPlanQuarantine } from "./plan-builder/quarantine.server";
 import { projectReadTable } from "./plan-builder/quarantine-tables";
 import { planAccountLinkingEnabled } from "./plan-builder/account-linking";
+import { SYNTHETIC_UID_COOKIE, syntheticPreviewEnabled, syntheticPreviewUser } from "./synthetic-preview";
 
 function authConfiguration() {
   const url = process.env.SUPABASE_URL?.trim();
@@ -98,6 +99,8 @@ export async function clearAccountSession() {
 }
 
 export async function getAuthenticatedUser(): Promise<User | null> {
+  // 합성 미리보기(SYNTHETIC_AUTH=1 + 메모리 DB + APP_ENV prelaunch·local)에서만 syn_uid 쿠키를 사용자로 본다. 운영은 이 줄을 지나친다.
+  if (syntheticPreviewEnabled()) return syntheticPreviewUser((await cookies()).get(SYNTHETIC_UID_COOKIE)?.value) ?? null;
   if (!authConfigured()) return null;
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(AUTH_ACCESS_COOKIE)?.value;

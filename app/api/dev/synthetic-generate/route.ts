@@ -1,12 +1,13 @@
-// 안전 미리보기 복사본 전용 — Cloudflare Workflow 대신 같은 섹션 생성 함수를 차례로 부른다(가짜 AI)
+// 합성 미리보기 전용(lib/synthetic-preview.ts) — Cloudflare Workflow 대신 같은 섹션 생성 함수를 차례로 부른다(가짜 AI). 운영에서는 404.
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { loadPlanState, savePlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
 import { generateAndSaveSection, generatePlanOutline } from "../../../../lib/plan-builder/section-service";
 import { coachDocumentRevision, readCoach } from "../../../../lib/plan-builder/coach";
+import { syntheticPreviewEnabled, syntheticPreviewNotFound } from "../../../../lib/synthetic-preview";
 
 export async function POST(request: Request) {
-  if (process.env.SYNTHETIC_AUTH !== "1" || process.env.PERSISTENCE_MODE !== "demo-memory") return new Response(null, { status: 404 });
+  if (!syntheticPreviewEnabled()) return syntheticPreviewNotFound();
   const { planId } = await request.json() as { planId: string };
   const identity = await requireGuestIdentity();
   const state = await loadPlanState(identity.hash);

@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { checkSchemaReadiness } from "./schema-readiness";
+import { syntheticPreviewEnabled } from "./synthetic-preview";
 
 export type PersistenceMode = "supabase" | "demo-memory";
 
@@ -19,7 +20,8 @@ function configuration() {
   if (requestedMode === "supabase" && (!url || !key)) {
     throw new Error("Supabase persistence was requested, but its server credentials are missing.");
   }
-  if (process.env.NODE_ENV === "production" && (!url || !key || requestedMode === "demo-memory")) {
+  // 합성 미리보기(lib/synthetic-preview.ts)만 운영 빌드에서 메모리 DB 를 쓴다 — 운영과 같은 화면을 가짜 데이터로 점검하려고
+  if (process.env.NODE_ENV === "production" && (!url || !key || requestedMode === "demo-memory") && !syntheticPreviewEnabled()) {
     throw new Error("Production requires Supabase persistence. Demo memory is not durable.");
   }
 
