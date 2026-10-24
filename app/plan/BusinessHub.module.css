@@ -142,4 +142,4 @@
 .content[data-empty-list] > .empty { flex: 1 0 auto; width: 100%; min-height: 0; padding-block: 24px; }
 .content[data-empty-list] > .samples { margin-top: auto; }
 /* 설명 없이 제목 바로 아래 단추면 제목→단추 24px(제목 아래 8 + 16) */
-.empty h1 + .primary { margin-top: 16px; }
+.empty :is(h1, h2) + .primary { margin-top: 16px; }

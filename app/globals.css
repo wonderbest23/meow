@@ -16348,7 +16348,7 @@ button.account-kakao-btn svg { display: inline-block !important; }
 @media (max-width: 640px) {
   .hk-mock-bar { flex-wrap: wrap; }
   .hk-mock-actions { flex: 1 0 100%; flex-wrap: wrap; }
-  .hk-mock-actions button { flex: 1; min-height: 40px; padding-inline: 8px; }
+  .hk-mock-actions button { flex: 1; min-height: 44px; padding-inline: 8px; }
 }
 .hk-dots { display: inline-flex; gap: 7px; flex: none; }
 .hk-fold-save { margin-top: 14px; display: flex; justify-content: flex-end; }
@@ -17262,6 +17262,8 @@ body .support-chat-widget > button.support-chat-toggle.support-chat-toggle {
   .bw-editor-right { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
   .bw-editor-left .bw-editor-views { display: none; }
   .bw-editor-left > .bw-editor-pick, .bw-editor-left > .bw-editor-preview { flex: 1 1 0; justify-content: center; }
+  /* 손가락 자리 44px — 34px 이었다(휴대폰 점검 2026-10-24) */
+  .bw-editor-left > .bw-editor-pick, .bw-editor-left > .bw-editor-preview { min-height: 44px; }
 }
 
 /* 관리자 1:1 상담 목록 — 글자가 8~12px 라 읽기 어려웠다(시간 8px, 미리보기 10px) */

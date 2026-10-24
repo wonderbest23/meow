@@ -69,7 +69,7 @@
 .product:focus-visible { outline: 2px solid #3182f6; outline-offset: 2px; }
 .product[data-badge="first"], .product[data-badge="need"] { border-color: #9cc0f5; box-shadow: 0 0 0 1px #9cc0f5 inset; }
 .product > strong { font-size: 17px; line-height: 1.3; }
-.tagline { font-size: 13px; line-height: 1.5; color: var(--app-muted, #6d7b8e); text-wrap: pretty; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tagline { font-size: 13px; line-height: 1.5; color: var(--app-muted, #6d7b8e); text-wrap: balance; word-break: keep-all; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .meta { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; background: var(--app-soft, #f2f5f9); color: var(--app-body, #465365); font-size: 12px; }
 .buy { margin-top: auto; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 10px; border-top: 1px dashed var(--app-line, #e1e7ef); }
 .buy b { font-size: 15px; color: var(--app-text, #202632); }
@@ -168,3 +168,8 @@
 
 /* 태블릿·폰(손가락) — 분류 단추를 44px 이상으로 */
 @media (pointer: coarse) { .tabs button { min-height: 44px; } }
+
+/* 유지보수 화면 — 위 기간 기록(폼)과 붙어 보였다. 다른 묶음이라 40px 띄운다(PC 점검 2026-10-24) */
+.root:not(:first-child) { margin-top: 40px; }
+/* 홈페이지 화면 작은 카드 설명이 끝 몇 글자만 다음 줄로 넘지 않게 */
+.card2 small { text-wrap: pretty; }

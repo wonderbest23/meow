@@ -772,7 +772,8 @@ export function HomepageScreen() {
     const fullUrl = stripPath ? `${stripHost}${stripPath}` : "";
     return <span className={styles.pill}>
       <button type="button" className={styles.pillHome} onClick={scrollPreviewTop} title={fullUrl ? `첫 화면 맨 위부터 보기 — ${fullUrl}` : "첫 화면 맨 위부터 보기"} aria-label={`첫 화면 맨 위부터 보기${fullUrl ? ` (${fullUrl})` : ""}`}>
-        <RotateCw size={14} aria-hidden /><span className={styles.pillLabel}>첫 화면</span>{stripSlug && <span className={styles.pillPath} aria-hidden="true">/launch/{shortSlug(stripSlug)}</span>}
+        {/* 주소는 바로 아래 주소 줄에 한 번만 보인다(PC 점검 2026-10-24: 알약과 주소 줄에 두 번) — 알약은 페이지 이름과 휴대폰/컴퓨터만 */}
+        <RotateCw size={14} aria-hidden /><span className={styles.pillLabel}>첫 화면</span>
       </button>
       <span className={styles.pillRule} aria-hidden="true" />
       {deviceSwitch}
@@ -788,7 +789,8 @@ export function HomepageScreen() {
     fold?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   };
   const strip = studioPro ? <div className={styles.strip}>
-    <span className={styles.stripUrl} title={`${stripHost}${stripPath}`}><Globe size={14} aria-hidden /><b>{stripHost}</b><span>{stripPath}</span></span>
+    {/* 좁은 PC(1180px 이하)는 주소 가운데를 줄여(앞 몇 글자 … 끝 꼬리) 끝이 잘리지 않게 — 전체 주소는 title 에 */}
+    <span className={styles.stripUrl} title={`${stripHost}${stripPath}`}><Globe size={14} aria-hidden /><b>{stripHost}</b><span className={styles.stripPathFull}>{stripPath}</span>{stripSlug && <span className={styles.stripPathShort} aria-hidden="true">/launch/{shortSlug(stripSlug)}</span>}</span>
     <span className={styles.stripBadge} data-live={livePublished || undefined}>{stripBadge}</span>
     <span className={styles.stripGap} />
     {/* 휴대폰/컴퓨터 — 보통은 머리줄 가운데 알약에. 알약을 못 그리거나 머리줄 가운데가 비좁은 PC(1120px 이하)면 여기에 */}

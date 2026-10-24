@@ -24,6 +24,7 @@ import type { QuestionSuggestions } from "./AnswerSuggestions";
 import { editExamples } from "../../../../lib/plan-builder/edit-examples";
 import { MessageMeta, WorkLog } from "./WorkLog";
 import { editFoundItem, marginLogItem } from "./work-log";
+import { splitSectionEditMessage } from "../../../../lib/plan-builder/studio-plan-edit";
 
 export function EntryChoices({ disabled, onStart, initialMessage, coach = false }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null; coach?: boolean }) {
   const choices = [
@@ -477,7 +478,7 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss, p
     {running && <JobProgress snapshot={snapshot} announce variant="chat" />}
     {pending && pro && <WorkLog items={[editFoundItem(job!.proposal!.length)]} />}
     {pending && <div className={styles.changeCard} data-edit-proposal>
-      <b>{pro && <PencilLine size={14} className={styles.changeIcon} aria-hidden="true" />}이렇게 바꿀게요{pro && <span className={styles.changeCount}>{job!.proposal!.length}군데</span>}</b>
+      <b>{pro && <PencilLine size={14} className={styles.changeIcon} aria-hidden="true" />}이렇게 바꿀게요</b>{/* 군데 수는 바로 위 작업 기록(바꿀 곳 N군데를 찾았어요)이 말한다 — 머리에서 또 말하지 않는다(PC 점검 2026-10-24) */}
       {job!.proposal!.map(change => {
         const question = snapshot.questions.find(item => item.id === change.questionId);
         const current = snapshot.intake.answers[change.questionId];
@@ -509,11 +510,12 @@ export function DocumentLockedTurn({ planId, chatEdit, onChatEdit, pro = false }
   </section>;
   return <section className={styles.lockedTurn} aria-label="사업계획서 완성" data-document-locked>
     <div className={styles.assistantMessage}><p>{text}</p></div>
+    {/* 다른 화면으로 가는 칩은 끝에 ›(휴대폰 점검 2026-10-24) */}
     {/* 다 만든 뒤 할 일은 '계획서 보기'가 먼저다 — 예전엔 세 단추가 같은 무게라 무엇을 누를지 몰랐다(여정 점검 2026-10-22) */}
     <div className={styles.chipRow}>
-      <Link className={`${styles.chip} ${styles.chipStrong}`} href={`/plan/document?planId=${id}`}>계획서 보기</Link>
-      {chatEdit && (onChatEdit ? <button type="button" className={styles.chip} onClick={onChatEdit}>대화로 고치기</button> : <Link className={styles.chip} href={`/plan/chat?planId=${id}&edit=chat`}>대화로 고치기</Link>)}
-      <Link className={styles.chip} href={`/plan/document?planId=${id}&edit=facts`}>직접 고치기</Link>
+      <Link className={`${styles.chip} ${styles.chipStrong}`} href={`/plan/document?planId=${id}`}>계획서 보기<ChevronRight size={16} aria-hidden="true" /></Link>
+      {chatEdit && (onChatEdit ? <button type="button" className={styles.chip} onClick={onChatEdit}>대화로 고치기</button> : <Link className={styles.chip} href={`/plan/chat?planId=${id}&edit=chat`}>대화로 고치기<ChevronRight size={16} aria-hidden="true" /></Link>)}
+      <Link className={styles.chip} href={`/plan/document?planId=${id}&edit=facts`}>직접 고치기<ChevronRight size={16} aria-hidden="true" /></Link>
     </div>
   </section>;
 }
@@ -530,7 +532,7 @@ export function GenerationFinishedTurn({ planId, onPlan, onHomepage, pro = false
     <div className={styles.chipRow}>
       <button type="button" className={`${styles.chip} ${styles.chipStrong}`} onClick={onPlan}>계획서 보기</button>
       <button type="button" className={styles.chip} onClick={onHomepage}>홈페이지 만들기</button>
-      <Link className={styles.chip} href={`/plan/document?planId=${encodeURIComponent(planId)}&edit=facts`}>직접 고치기</Link>
+      <Link className={styles.chip} href={`/plan/document?planId=${encodeURIComponent(planId)}&edit=facts`}>직접 고치기<ChevronRight size={16} aria-hidden="true" /></Link>
     </div>
   </section>;
 }
@@ -620,10 +622,13 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
       if (message.role === "user" && appliedEdit(message.id)) return <div key={message.id} className={styles.chatTurn}>
         <p className={styles.changeNote} data-change-note>바꾼 내용 · {labelled ? `${labelled.label}: ${bubbleAnswerText(labelled, text)}` : text}</p>
       </div>;
+      /* '이 장 고치기'로 보낸 말 — 저장된 머리표 '[1장 사업 개요]'는 말풍선 위 작은 꼬리표로, 말풍선에는 본문만(PC 점검 2026-10-24) */
+      const sectionEdit = message.role === "user" && !labelled ? splitSectionEditMessage(text) : null;
       return <div key={message.id} className={styles.chatTurn}>
         {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{questionPromptText(question.prompt)}</p></div>}
+        {sectionEdit?.tag && <p className={styles.bubbleTag}>{sectionEdit.tag}</p>}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role}>
-          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={questionPromptText(text.replace(/(?:아래 )?"계획서 (?:다시 작성하기|에 반영하기)"/, "\"계획서에 반영하기\""))} /></> : <p>{bubbleAnswerText(labelled, text)}</p>}
+          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={questionPromptText(text.replace(/(?:아래 )?"계획서 (?:다시 작성하기|에 반영하기)"/, "\"계획서에 반영하기\""))} /></> : <p>{sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)}</p>}
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
         {pro && message.role === "assistant" && <MessageMeta text={text} at={message.at} />}

@@ -80,7 +80,7 @@ const DOC_TOP_HASH = "doc-top";
 
 /** 쓰는 중 — 지금 쓰는 장 이름 뒤에 깜빡이는 커서, 아래로 글줄이 차오르는 듯한 자리 */
 function WritingStatus({ done, total, current }: { done: number; total: number; current: string | null }) {
-  return <div className={styles.writing} role="status" aria-live="polite">
+  return <div className={styles.writing} role="status" aria-live="polite" data-writing-card="">
     <div className={styles.writingHead}><strong>사업계획서를 작성하고 있어요</strong><span>{done} / {total}</span></div>
     <progress value={done} max={total || 1} aria-label="작성한 항목" />
     {current && <p className={styles.writingNow}>지금 쓰는 중 · <b>{current}</b><i className={styles.caret} aria-hidden="true" /></p>}
@@ -264,7 +264,16 @@ export default function DocumentWorkspace(props: Props) {
         setArrival(null);
         if (index !== chapter) setChapter(index);
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }), 120);
+        /*
+         * 새 장이 진행 카드 가까이(칸 높이 안)면 카드 맨 위로 — 장 머리로 가면 카드 제목이 칸 위 얇은 줄 밑에 반쯤 가렸다(PC 점검 2026-10-24).
+         * 멀리 아래면 예전처럼 새 장으로(카드는 화면 위로 다 지나간다).
+         */
+        window.setTimeout(() => {
+          const target = document.getElementById(id);
+          const card = rootRef.current?.querySelector<HTMLElement>("[data-writing-card]");
+          const near = !!card && !!target && target.getBoundingClientRect().top - card.getBoundingClientRect().top < (scroll.current?.clientHeight ?? window.innerHeight) * 0.6;
+          (near ? card : target)?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+        }, 120);
         return;
       }
       if (index === chapter) continue;
@@ -386,13 +395,14 @@ export default function DocumentWorkspace(props: Props) {
     {factsUnapplied && facts.snapshot && <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" className={styles.primary} onConfirm={() => void reflectFacts()} />}
   </> : isSample ? <>
     {/* 예시 계획서 — 예전엔 누를 수 없는 회색 '예시 · 읽기 전용'만 있어 고장 난 것처럼 보였고 다음으로 갈 길이 없었다. 예시라는 표시는 문서 제목 위에 있다 */}
-    <Link className={styles.nextButton} href="/plan/chat?new=1">내 사업 시작하기</Link>
+    {/* 다른 화면으로 가는 단추라 끝에 › — PC 작업실은 늘 보이는 대화 칸에 같은 단추가 있어 여기서는 뺀다(PC 점검 2026-10-24) */}
+    {!studioPc && <Link className={styles.nextButton} href="/plan/chat?new=1">내 사업 시작하기<ChevronRight size={20} aria-hidden="true" /></Link>}
   </> : <>
     {/* 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다 · 내려받기는 문서 위 '작성 완료' 옆으로 옮겼다(대표 요청 2026-10-17) */}
     {editButton}
     {showNext && planId && <NextStepButton planId={planId} homepage={homepage} />}
   </>;
-  const hasActions = factMode || isSample || !summaryMode || Boolean(showNext && planId);
+  const hasActions = factMode || (isSample ? !studioPc : !summaryMode || Boolean(showNext && planId));
   const singleAction = !factMode && !(!summaryMode && showNext && planId);
   /*
    * 작업실 안(머리줄이 있는 작업실) — '다음 단계'와 '내려받기'는 작업실 머리줄 오른쪽으로 올린다(넓은 화면).
@@ -537,7 +547,7 @@ export default function DocumentWorkspace(props: Props) {
               {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} pc={studioPc} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
-                            {props.writing && arrival && arrival.index !== chapter && !continuous && <button type="button" className={styles.arrival} onClick={() => { setChapter(arrival.index); const id = arrival.id; setArrival(null); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })); }}>새 항목이 써졌어요 · <b>{arrival.title}</b> 보기 →</button>}
+                            {props.writing && arrival && arrival.index !== chapter && !continuous && <button type="button" className={styles.arrival} onClick={() => { setChapter(arrival.index); const id = arrival.id; setArrival(null); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })); }}>새 항목이 써졌어요 · <b>{arrival.title}</b> 보기<ChevronRight size={18} aria-hidden="true" /></button>}
               {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onReflect={() => void reflectFacts()} />}
               {props.notice && !props.writing && !factMode && <div className={`${styles.notice} ${styles.noticeRow}`} role="status"><span>{props.notice}</span>{factEditable && facts.snapshot?.documentStatus === "stale"
                 /* 반영 단추는 바로 '다시 쓸까요?' 확인창을 연다 — 예전엔 고치기 화면만 열려 같은 단추를 또 찾아 눌러야 했다 */

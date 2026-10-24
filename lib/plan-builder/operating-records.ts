@@ -139,6 +139,18 @@ export function oldInput(period: OperatingPeriod): PeriodInput {
   return { start: period.start, end: period.end, metrics: { ...period.metrics }, feedback: period.feedback, keep: period.keep, change: period.change, nextAction: period.nextAction, successCriterion: period.successCriterion };
 }
 export function periodLabel(period: Pick<PeriodInput, "start" | "end">) { return `${period.start} ~ ${period.end}`; }
+/**
+ * 좁은 선택칸용 짧은 기간 — '2026-10-18 ~ 2026-10-24' → '10.18 ~ 10.24'(360px 에서 끝이 잘렸다 · 휴대폰 점검 2026-10-24).
+ * 시작·끝 해가 다르거나 올해가 아니면 해를 붙인다('2025.12.29 ~ 2026.01.04').
+ */
+export function periodShortLabel(period: Pick<PeriodInput, "start" | "end">, thisYear = new Date().getFullYear()) {
+  const parts = (value: string) => /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const a = parts(period.start), b = parts(period.end);
+  if (!a || !b) return periodLabel(period);
+  const withYear = a[1] !== b[1] || Number(a[1]) !== thisYear;
+  const one = (m: RegExpExecArray) => withYear ? `${m[1]}.${m[2]}.${m[3]}` : `${m[2]}.${m[3]}`;
+  return `${one(a)} ~ ${one(b)}`;
+}
 export function metricValue(value: number | null, unit: string) { return value === null ? "미입력" : `${value.toLocaleString("ko-KR")}${unit}`; }
 export function reportMarkdown(report: OperatingReport) {
   const { period, baseline } = report;

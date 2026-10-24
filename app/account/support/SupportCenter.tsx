@@ -164,7 +164,7 @@ export default function SupportCenter() {
    * 다른 화면과 같은 틀(← 고객센터 ☰ · 왼쪽 메뉴)에 담는다(대표 요청 2026-10-15) — 예전엔 사이트 머리말을 따로 그려
    * 앱에서 로고가 아이폰 상태바에 겹쳤고, 큰 제목·'← 마이페이지'가 머리말과 겹쳤다.
    */
-  return <AppFrame title="고객센터" backHref="/plan/me"><div className={`${styles.page} ${styles.inFrame} plan-ui`}>
+  return <AppFrame title="고객센터" backHref="/plan/me"><div className={`${styles.page} ${styles.inFrame} plan-ui`} data-fill={loggedOut && !loading ? "" : undefined}>
     <h1 className={styles.srTitle}>고객센터</h1>
     <div className={styles.content}>
       {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <section className={styles.empty}><h2>로그인 후 문의를 남겨 주세요</h2><Link className={styles.primary} href={loginHref}><LogIn size={19} />로그인하기<ChevronRight size={18} aria-hidden="true" /></Link></section> : <>

@@ -37,3 +37,6 @@
 /* 아주 좁은 폰 — 보조 단추는 아이콘만(이름은 aria-label 로 남는다) */
 @media (max-width:360px) { .btn:not(.primary) .label { display:none; } }
 @media (prefers-reduced-motion:reduce) { .btn { transition:none; } }
+
+/* 휴대폰(칸 안 단추 줄)은 누르는 자리 44px(휴대폰 점검 2026-10-24) */
+@media (max-width: 1023px) { .btn { min-height:44px; } }

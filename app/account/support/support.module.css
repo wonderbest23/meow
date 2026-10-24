@@ -66,3 +66,8 @@
 .inFrame { min-height: auto; background: transparent; }
 .inFrame .content { margin-top: 12px; }
 .srTitle { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* 로그아웃 안내 하나만 — 머리줄 아래 남은 높이의 한가운데(예전엔 화면 높이 기준 최소 높이라 큰 화면에서 위로 쏠렸다) */
+.inFrame[data-fill] { display: flex; flex-direction: column; }
+.inFrame[data-fill] .content { flex: 1; display: flex; flex-direction: column; justify-content: center; margin-block: 0; }
+.inFrame[data-fill] .empty { min-height: 0; padding-block: 24px; }

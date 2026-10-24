@@ -27,3 +27,10 @@
   .preview { padding: 20px; }
   .preview .check { font-size: 14px; }
 }
+
+/* 체크 줄은 누르는 자리 — PC 36px · 휴대폰 44px. 설명은 legend 바로 아래 8px(PC 점검 2026-10-24) */
+.panel .check { align-items: center; min-height: 44px; }
+.panel .check input { margin: 0; }
+@media (min-width: 1024px) { .panel .check { min-height: 36px; } }
+.panel.panel fieldset > legend { margin-bottom: 0; }
+.panel.panel fieldset > legend + p { margin-top: 8px; }

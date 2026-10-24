@@ -1,2 +1,5 @@
 .scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: var(--app-raised); }
 .inner { min-height: 100%; }
+/* 빈 화면 하나만 있는 본문(data-fill) — 남은 높이를 다 채워 그 가운데에 놓게 한다(고객센터 로그아웃 1920 에서 위로 쏠림 · PC 점검 2026-10-24) */
+.inner:has(> [data-fill]) { display: flex; flex-direction: column; }
+.inner > [data-fill] { flex: 1 0 auto; }

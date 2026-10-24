@@ -142,7 +142,8 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   useStudioHeaderActions(headerNode);
 
   return <div className={styles.launch}>
-    {sample && <p className={styles.notice} role="note">예시라 저장되지 않아요. <a className={styles.textLink} href={newChatHref()}>대화로 내 사업 시작하기<ChevronRight size={18} aria-hidden="true" /></a></p>}
+    {/* PC 작업실은 늘 보이는 대화 칸에 같은 단추가 있다 — 여기 링크는 휴대폰·작업실 밖에서만(같은 단추 두 번 · PC 점검 2026-10-24) */}
+    {sample && <p className={styles.notice} role="note">예시라 저장되지 않아요. <a className={`${styles.textLink} ${studioHeader ? styles.studioNarrowOnly : ""}`} href={newChatHref()}>대화로 내 사업 시작하기<ChevronRight size={18} aria-hidden="true" /></a></p>}
     {config === "confirm" ? <div className={styles.setup}>
       {/* 작업실 안에서는 탭 이름(개업 준비)과 같아 숨긴다(CSS) */}
       <span className={`${styles.eyebrow} ${styles.tabEyebrow}`}>{journeyLabel("launch", readCoach(plan.answers)?.stage === "operating")}</span>
@@ -164,7 +165,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
         <p>이제 운영 중인 사업이에요. 시작할 때 남긴 기록을 유지하면서 운영 개선 과정으로 바꿀 수 있어요.</p>
         <button className={styles.secondary} disabled={busy} onClick={() => void switchToImprovement()}>운영 개선으로 전환</button>
       </div>}
-      <div className={styles.progressHeading}><span>{done} / {steps.length}{skipped ? ` · ${skipped}개 나중에` : ""}</span><button className={styles.textLink} onClick={() => { setConfig(0); top(); }}>진행 방식 변경</button></div>
+      <div className={styles.progressHeading}>{/* 바로 아래 단계 번호(2 / 10)와 같은 꼴이라 헷갈렸다 — 위는 마친 개수만(PC 점검 2026-10-24) */}<span>{done}개 마침{skipped ? ` · ${skipped}개 나중에` : ""}</span><button className={styles.textLink} onClick={() => { setConfig(0); top(); }}>진행 방식 변경</button></div>
       <progress value={done} max={steps.length} aria-label="실행 준비 완료" />
       {current ? <>
         <span className={styles.eyebrow}>{steps.findIndex(s => s.id === current.id) + 1} / {steps.length}</span>
@@ -195,7 +196,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
         <Link className={styles.textLink} href={businessChatHref(plan.id, aiPrompt)} onClick={async e => { e.preventDefault(); if (await saveStep(record?.status ?? "pending", false, true)) router.push(businessChatHref(plan.id, aiPrompt)); }}>이 내용으로 AI와 구체화하기</Link>
         <div className={styles.stepActions}><button className={styles.secondary} disabled={busy} onClick={() => void saveStep("skipped", true)}>나중에 할게요</button><button className={styles.primary} disabled={busy} onClick={() => void saveStep("done", true)}>{busy ? "저장 중…" : "준비했어요 · 다음"}</button></div>
         <button className={styles.textLink} disabled={busy} onClick={() => void saveStep("pending", false)}>진행 중으로 저장</button>
-      </> : <div className={styles.finish}><h2 ref={heading} tabIndex={-1}>{state.purpose === "ideas" ? "아이디어를 정리했어요" : "선택한 준비 과정을 확인했어요"}</h2><p>{skipped ? `${skipped}개는 나중에 하기로 남겼어요. 아래 과정에서 언제든 이어갈 수 있어요.` : "필요한 단계는 다시 열어 수정할 수 있어요."}</p><p>이 기록은 준비 상태이며, 실제 계약·등록·연결 완료를 대신하지 않아요.</p><Link className={styles.primary} href={businessChatHref(plan.id, "현재 사업의 다음 개선 방향을 함께 정하고 싶어요.")}>대화로 다음 방향 정하기</Link></div>}
+      </> : <div className={styles.finish}><h2 ref={heading} tabIndex={-1}>{state.purpose === "ideas" ? "아이디어를 정리했어요" : "선택한 준비 과정을 확인했어요"}</h2><p>{skipped ? `${skipped}개는 나중에 하기로 남겼어요. 아래 과정에서 언제든 이어갈 수 있어요.` : "필요한 단계는 다시 열어 수정할 수 있어요."}</p><p>이 기록은 준비 상태이며, 실제 계약·등록·연결 완료를 대신하지 않아요.</p><Link className={styles.primary} href={businessChatHref(plan.id, "현재 사업의 다음 개선 방향을 함께 정하고 싶어요.")}>대화로 다음 방향 정하기<ChevronRight size={18} aria-hidden="true" /></Link></div>}
       <details><summary>전체 과정과 지난 기록</summary><div className={styles.stepList}>{steps.map(step => <button key={step.id} disabled={busy} onClick={() => void selectStep(step.id)}><span>{step.title}</span><small>{step.decided && !state.records[step.id] ? "대화에서 정함" : { done: "준비 완료", skipped: "나중에", pending: "진행 전", review: "다시 확인" }[launchStatus(state, step)]}</small></button>)}</div></details>
     </>}
     {message && <p role="status">{message}</p>}

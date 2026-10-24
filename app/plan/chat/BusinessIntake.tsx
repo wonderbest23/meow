@@ -1241,7 +1241,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   </div> : null;
   /* 작업실 대화 칸의 작성 진행 카드(팝업 대신) · 끝난 뒤 마무리 말 — 작업실 밖에서는 둘 다 없다. 멈춘 이유를 알면 카드 바로 아래에 */
   const studioRun = embedded && plan && generation.state && (generating || runStalled)
-    ? <div ref={runCard}><GenerationCard state={generation.state} onRetry={startPrepare} retryDisabled={blocked || aiBusy || preparing} onOpen={() => showPlan(plan.planId)} note={pro ? null : STUDIO_RUN_NOTE} />{regenFailure}</div> : null;
+    ? <div ref={runCard}><GenerationCard state={generation.state} onRetry={startPrepare} retryDisabled={blocked || aiBusy || preparing} onOpen={() => showPlan(plan.planId)} note={pro ? null : STUDIO_RUN_NOTE} compact={pro} />{regenFailure}</div> : null;
   /* 진행 카드가 처음 나타나면(방금 '사업계획서 만들기'를 눌렀다) 따라 내려가 카드 전체를 보인다 — 그 뒤 진행으로 카드 키가 바뀌면 ResizeObserver 가 따라간다 */
   const runShown = !!studioRun;
   useEffect(() => {
@@ -1557,7 +1557,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
       .sort((a, b) => b.order - a.order)[0]?.id ?? null : null;
   // 지난 답을 고칠 때는 카드 머리를 예전 '답변 수정 · 현재 질문으로' 줄이 맡는다
   const questionCard = pro && !!plan && !!question;
-  const questionCardLabel = questionCard && !draft.editingId ? plan.coreComplete ? "더 알려 주면 좋은 질문" : `질문 ${questionNumber} / ${plan.coreTotal}` : undefined;
+  /* 질문 번호는 칸 맨 위 진행 줄('사업 방향 정하기 ▬ 10 / 14')이 한 번만 말한다 — 카드·머리줄까지 세 번 보였다(PC 점검 2026-10-24) */
+  const questionCardLabel = questionCard && !draft.editingId && plan.coreComplete ? "더 알려 주면 좋은 질문" : undefined;
   const questionCardFoot = questionCard ? <div className={styles.questionCardFoot}>
     <span>{question?.id === "industry" ? "업종 이름을 아래에 적으면 찾아 드려요" : "보기에 없으면 아래에 바로 적어 주세요"}</span>
     {previousAnswerId && <button type="button" className={styles.questionCardBack} disabled={answerBlocked} onClick={() => editQuestion(previousAnswerId)}><Undo2 size={13} aria-hidden="true" />앞 질문 고치기</button>}
