@@ -13,17 +13,7 @@ for (const entry of ["app", "components", "lib", "data", "public", "package.json
     filter: path => !/^\.env(?:\.|$)|^\.dev\.vars|^\.git$/.test(basename(path)) });
 }
 await cp(join(root, "scripts/prelaunch-next.config.ts"), join(directory, "next.config.ts"));
-await cp(join(root, "scripts/synthetic-e2e/inject"), directory, { recursive: true });
-// 복사본에만: 합성 로그인(쿠키 syn_uid) — 실제 저장소·운영 코드는 그대로
-{
-  const { readFile, writeFile: wf } = await import("node:fs/promises");
-  const authPath = join(directory, "lib/account-auth.ts");
-  const src = await readFile(authPath, "utf8");
-  const marker = "export async function getAuthenticatedUser(): Promise<User | null> {";
-  if (!src.includes(marker)) throw new Error("auth marker missing");
-  await wf(authPath, src.replace(marker, marker + `
-  if (process.env.SYNTHETIC_AUTH === "1") { const uid = (await cookies()).get("syn_uid")?.value; return uid ? ({ id: uid, email: uid + "@synthetic.invalid", app_metadata: {}, user_metadata: {}, aud: "authenticated", created_at: new Date(0).toISOString() } as unknown as User) : null; }`));
-}
+// 합성 로그인(syn_uid)·개발용 주소(/api/dev/synthetic-*)는 저장소에 들어 있다 — 아래 SYNTHETIC_AUTH·메모리 DB·APP_ENV=local 이 모두 맞을 때만 켜진다(lib/synthetic-preview.ts)
 await symlink(join(root, "node_modules"), join(directory, "node_modules"), "dir");
 const reservation = createServer();
 // PREVIEW_PORT: 미리보기 창(.claude/launch.json 'preview-fake')이 붙을 포트를 고정한다. 없으면 빈 포트를 고른다
@@ -36,7 +26,7 @@ const log = await open(join(directory, "server.log"), "a", 0o600);
 const child = spawn(process.execPath, [join(root, "node_modules/next/dist/bin/next"), "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], {
   cwd: directory, detached: true, stdio: ["ignore", log.fd, log.fd],
   env: { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR, NODE_ENV: "development", NEXT_TELEMETRY_DISABLED: "1",
-    PERSISTENCE_MODE: "demo-memory", ANTHROPIC_API_KEY: "synthetic-not-a-real-key", SYNTHETIC_AUTH: "1", SYNTHETIC_AI_DELAY_MS: process.env.SYNTHETIC_AI_DELAY_MS ?? "", NEXT_PUBLIC_INTAKE_COACH_CHAT: process.env.NEXT_PUBLIC_INTAKE_COACH_CHAT ?? "", NEXT_PUBLIC_INTAKE_EDIT_CHAT: process.env.NEXT_PUBLIC_INTAKE_EDIT_CHAT ?? "", AUTH_PROJECT_SECRET: "synthetic-preview-only-secret", BUSINESS_JOURNEY_LAB: "true", HOMEPAGE_EDITOR_PREVIEW_EMAILS: "syn-1@synthetic.invalid,syn-2@synthetic.invalid,syn-3@synthetic.invalid,syn-4@synthetic.invalid,syn-5@synthetic.invalid,syn-6@synthetic.invalid,syn-7@synthetic.invalid,syn-8@synthetic.invalid,syn-9@synthetic.invalid,syn-10@synthetic.invalid", LLM_TEXT_PROVIDER: "anthropic", NODE_OPTIONS: "--import " + join(root, "scripts/synthetic-e2e/fake-anthropic.mjs"), PAYMENTS_ENABLED: "false", PROPOSAL_AI_ENABLED: "false", OPERATING_AI_ENABLED: "false", NEXT_PUBLIC_BUSINESS_INTAKE_V2: intake ? "1" : "0" },
+    PERSISTENCE_MODE: "demo-memory", APP_ENV: "local", ANTHROPIC_API_KEY: "synthetic-not-a-real-key", SYNTHETIC_AUTH: "1", SYNTHETIC_AI_DELAY_MS: process.env.SYNTHETIC_AI_DELAY_MS ?? "", NEXT_PUBLIC_INTAKE_COACH_CHAT: process.env.NEXT_PUBLIC_INTAKE_COACH_CHAT ?? "", NEXT_PUBLIC_INTAKE_EDIT_CHAT: process.env.NEXT_PUBLIC_INTAKE_EDIT_CHAT ?? "", AUTH_PROJECT_SECRET: "synthetic-preview-only-secret", BUSINESS_JOURNEY_LAB: "true", HOMEPAGE_EDITOR_PREVIEW_EMAILS: "syn-1@synthetic.invalid,syn-2@synthetic.invalid,syn-3@synthetic.invalid,syn-4@synthetic.invalid,syn-5@synthetic.invalid,syn-6@synthetic.invalid,syn-7@synthetic.invalid,syn-8@synthetic.invalid,syn-9@synthetic.invalid,syn-10@synthetic.invalid", LLM_TEXT_PROVIDER: "anthropic", NODE_OPTIONS: "--import " + join(root, "scripts/synthetic-e2e/fake-anthropic.mjs"), PAYMENTS_ENABLED: "false", PROPOSAL_AI_ENABLED: "false", OPERATING_AI_ENABLED: "false", NEXT_PUBLIC_BUSINESS_INTAKE_V2: intake ? "1" : "0" },
 });
 child.unref(); await log.close();
 const origin = `http://127.0.0.1:${port}`;

@@ -38,7 +38,6 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "scripts/synthetic-e2e/inject"
+    "node_modules"
   ]
 }
