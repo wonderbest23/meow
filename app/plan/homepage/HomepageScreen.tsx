@@ -6,7 +6,7 @@ import { apiMessage, fetchWithTimeout, isTimeoutError, koreanText, userErrorMess
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { LayoutTemplate, Maximize2, ArrowRight } from "lucide-react";
+import { LayoutTemplate, Maximize2, ArrowRight, ChevronRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
 import { HomepageKitPanel, homepageMissingInfo, withBusinessName } from "../../../components/homepage-kit-panel";
@@ -162,7 +162,7 @@ export function HomepageScreen() {
     const before = aiFillMark(siteRef.current);
     const done = (filled: LandingSiteRecord) => {
       siteRef.current = filled; setSite(filled); setDraft(filled.draft); setAction("saved");
-      setMessage(auto ? "" : "AI가 계획서로 홈페이지를 채웠어요. 마음에 안 드는 글은 에디터에서 바로 고칠 수 있어요.");
+      setMessage(auto ? "" : "홈페이지를 채웠어요.");
     };
     /* 답을 못 받았으면 서버가 저장을 마쳤는지 잠깐(최대 1분) 확인한다 */
     const recover = async () => {
@@ -372,7 +372,7 @@ export function HomepageScreen() {
       if (res.status === 401) {
         setBlocked({ title: "로그인이 필요해요", detail: "홈페이지는 내 계정에 저장돼요. 로그인하면 이어서 할 수 있어요.", missing: [], cta: "login" });
       } else if (res.status === 402) {
-        setBlocked({ title: "결제 후 이용할 수 있어요", detail: "홈페이지 편집·공개는 결제 후 열려요. 사업계획서를 결제했다면 홈페이지만, 아직이라면 사업계획서 + 홈페이지로 함께 결제할 수 있어요.", missing: [], cta: "pay" });
+        setBlocked({ title: "결제 후 이용할 수 있어요", detail: "사업계획서를 결제했다면 홈페이지만, 아직이라면 사업계획서 + 홈페이지로 함께 결제할 수 있어요.", missing: [], cta: "pay" });
       } else if (error.error === "plan_incomplete") {
         setBlocked({
           title: "홈페이지에 실을 내용이 조금 부족해요",
@@ -384,7 +384,7 @@ export function HomepageScreen() {
         // 서버에 이 플랜이 없다 — 로그인 전이라 아직 계정에 저장되지 않은 경우가 대부분이다
         setBlocked({
           title: "이 계획서가 아직 계정에 저장되지 않았어요",
-          detail: "로그인하면 지금까지 쓴 내용이 저장되고, 그 내용으로 홈페이지를 만들 수 있어요.",
+          detail: "로그인하면 이어서 만들 수 있어요",
           missing: [],
           cta: "login",
         });
@@ -491,8 +491,11 @@ export function HomepageScreen() {
     const missingInfo = siteRef.current?.status === "published" ? [] : homepageMissingInfo(draft, { nameCandidates: nameCandidatesRef.current });
     if (missingInfo.length && !await askConfirm({
       title: "비어 있는 정보가 있어요",
-      message: `비어 있는 항목: ${missingInfo.join(", ")}. ${missingInfo.includes("개인정보 문의처") ? "문의 양식을 켜 두었다면 개인정보 문의처는 꼭 적어야 공개할 수 있어요." : "지금 공개해도 되지만, 손님에게 돈을 받기 전에는 채워 주세요."} 채울 곳은 아래 '사업자 정보'예요.`,
-      cancelLabel: "채우러 가기",
+      /* 넓은 창 + 왼쪽 정렬 목록 — 360px 창 가운데에 쉼표로 늘어놓아 읽기 어려웠다(작업실 PC 점검 r37) */
+      message: missingInfo.includes("개인정보 문의처") ? "문의 양식을 켜 두었다면 개인정보 문의처는 꼭 적어야 공개할 수 있어요." : "지금 공개해도 되지만, 손님에게 돈을 받기 전에는 채워 주세요.",
+      list: missingInfo,
+      wide: true,
+      cancelLabel: "사업자 정보 채우기",
       confirmLabel: "그래도 공개",
     })) {
       const fold = document.getElementById("hk-business");
@@ -712,16 +715,17 @@ export function HomepageScreen() {
     }
     const ok = await askConfirm({
       title: planPaid ? "결제하면 바로 공개할 수 있어요" : "사업계획서와 함께 열어요",
-      message: planPaid
-        ? `사진·글·버튼을 직접 고치고 인터넷에 공개하려면 결제가 필요해요. ${price.toLocaleString("ko-KR")}원.`
-        : `홈페이지는 사업계획서와 함께 열어요. 둘 다 ${price.toLocaleString("ko-KR")}원.`,
-      confirmLabel: planPaid ? "결제하고 홈페이지 고치기" : "함께 결제하기",
+      /* 본문은 걷었다 — 제목과 단추(금액 포함)가 다 말한다(군더더기 점검 r37) */
+      message: "",
+      confirmLabel: planPaid ? `결제하고 공개하기 · ${price.toLocaleString("ko-KR")}원` : `함께 결제하기 · ${price.toLocaleString("ko-KR")}원`,
       cancelLabel: "나중에 하기",
       wide: true,
     });
     if (ok) go(blockedHref("pay"));
   };
   const payPromptRef = useRef(openPayPrompt); payPromptRef.current = openPayPrompt;
+  /* 머리줄 저장 — 고친 게 없으면 '저장됨'으로 잠그고, 누르면 '저장 중…' 뒤 '저장됨'(작업실 PC 점검 r37: 눌러도 아무 표시가 없었다) */
+  const saveLabel = action === "saving" ? "저장 중…" : unsaved ? "저장" : "저장됨";
   const studioActions = useMemo(() => {
     if (!studioHeader) return null;
     /* 새 배치 — 저장(보조) · 🌐 공개하기(파랑). 결제 전이면 공개하기만 두고 누르면 결제 안내 */
@@ -731,7 +735,7 @@ export function HomepageScreen() {
       </div>;
       const label = liveUpToDate ? "공개됨" : siteStatus === "published" ? "새 버전 공개" : siteStatus === "unpublished" ? "다시 공개" : "공개하기";
       return <div className={paneHeader.group}>
-        <button type="button" className={paneHeader.btn} aria-label="저장" disabled={busy} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span className={paneHeader.label}>저장</span></button>
+        <button type="button" className={paneHeader.btn} aria-label={saveLabel} disabled={busy || !unsaved} data-done={!unsaved && action !== "saving" || undefined} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : unsaved ? <Save size={15} /> : <Check size={15} />}<span className={paneHeader.label}>{saveLabel}</span></button>
         <button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Globe size={15} aria-hidden />}<span>{label}</span></button>
       </div>;
     }
@@ -739,11 +743,11 @@ export function HomepageScreen() {
     const label = liveUpToDate ? "공개됨" : siteStatus === "published" ? "새 버전 공개" : siteStatus === "unpublished" ? "다시 공개" : "공개하기";
     return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}>
       {previewSwitch}
-      <button type="button" className={paneHeader.btn} aria-label="저장" disabled={busy} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span className={paneHeader.label}>저장</span></button>
+      <button type="button" className={paneHeader.btn} aria-label={saveLabel} disabled={busy || !unsaved} data-done={!unsaved && action !== "saving" || undefined} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : unsaved ? <Save size={15} /> : <Check size={15} />}<span className={paneHeader.label}>{saveLabel}</span></button>
       {/* 처음 공개는 '홈페이지 공개하기' — 무엇을 공개하는지 머리줄에서도 읽히게(좁은 화면은 '공개하기'만) */}
       <button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />}<span>{label === "공개하기" && <span className={paneHeader.longLabel}>홈페이지 </span>}{label}</span></button>
     </div>;
-  }, [studioHeader, studioPro, editable, kitEditing, liveUpToDate, siteStatus, previewView, busy, action]); // eslint-disable-line react-hooks/exhaustive-deps -- previewSwitch 는 previewView 로만 바뀐다
+  }, [studioHeader, studioPro, editable, kitEditing, liveUpToDate, siteStatus, previewView, busy, action, unsaved, saveLabel]); // eslint-disable-line react-hooks/exhaustive-deps -- previewSwitch 는 previewView 로만 바뀐다
   useStudioHeaderActions(studioActions);
 
   /* 공개 주소 — 공개했으면 손님이 여는 주소, 아직이면 공개하면 생길 주소(지금 적어 둔 주소 끝부분) */
@@ -980,8 +984,7 @@ export function HomepageScreen() {
     <div className={studioPro ? styles.proCard : styles.frameScroll}>{strip}<div className={studioPro ? styles.proScroll : styles.frameInner} id={studioPro ? PRO_SCROLL_ID : undefined}>
       {/* 작업실 좁은 화면 — 머리줄 대신 칸 맨 위에 저장·공개(넓은 화면에서는 머리줄 단추가 같은 일을 한다) */}
       {studioHeader && headerActions && <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{headerActions}</div>}
-      {/* 휴대폰에서는 오른쪽 칸이 없어 대화 칸이 '홈페이지를 대화로 고치기'를 권하지 못한다 — 여기서 대화로 보낸다(결제 전·불러오는 중이면 숨김) */}
-      {embedded && HOMEPAGE_CHAT_EDIT_OPEN && nav?.composeInChat && draft && editable && phase !== "blocked" && phase !== "loading" && <div className={paneHeader.narrowOnly}><button type="button" className={styles.studioChatEdit} onClick={() => nav.composeInChat?.({ target: "homepage", label: "홈페이지" })}>대화로 고치기</button></div>}
+      {/* 휴대폰의 '대화로 고치기'는 미리보기 위 '홈페이지 고치기' 옆 작은 글 단추로 옮겼다(모바일 점검 r37: 고치는 길이 셋이었다) — chatEdit 참고 */}
       {/* 전체 화면 — 방문자가 보는 그대로 */}
       {fullscreen && draft && (
         <div ref={fullscreenRef} className={styles.fullscreen} role="dialog" aria-modal="true" aria-label="홈페이지 전체 화면">
@@ -1009,7 +1012,9 @@ export function HomepageScreen() {
             </ul>
           )}
           <button type="button" className={styles.cta} onClick={() => { if (blocked.cta === "retry") window.location.reload(); else go(blockedHref(blocked.cta)); }}>
-            {blocked.cta === "retry" ? "다시 시도" : blocked.cta === "pay" ? "결제하러 가기 →" : blocked.cta === "login" ? "로그인하기 →" : blocked.cta === "list" ? "내 사업으로 →" : screenPlanId ? "계획서 이어 쓰기 →" : "대화로 사업 시작하기 →"}
+            {blocked.cta === "retry" ? "다시 시도" : blocked.cta === "pay" ? "결제하러 가기" : blocked.cta === "login" ? "로그인하기" : blocked.cta === "list" ? "내 사업으로" : screenPlanId ? "계획서 이어 쓰기" : "대화로 사업 시작하기"}
+            {/* 다른 화면으로 가는 단추만 끝에 '>'(대표 규칙 2026-10-24) — 다시 시도는 이 화면에서 하는 일 */}
+            {blocked.cta === "retry" ? null : <ChevronRight size={18} aria-hidden="true" />}
           </button>
         </div>
       )}
@@ -1030,26 +1035,21 @@ export function HomepageScreen() {
         <div className={styles.previewWrap}>
           <div className={styles.payBar}>
             <div>
-              <strong className={styles.payTitle}>{sample ? "예시 홈페이지" : planPaid ? "홈페이지 고치기·공개" : "사업계획서 + 홈페이지"}</strong>
-              <p className={styles.payNote}>
-                {sample
-                  ? "예시 홈페이지예요. 내 사업으로 만들면 이 페이지의 글과 사진을 바꿔 쓸 수 있어요."
-                  : planPaid ? `사진·글·버튼을 직접 고치고 인터넷에 공개하려면 결제가 필요해요. ${price.toLocaleString("ko-KR")}원.`
-                    : `홈페이지는 사업계획서와 함께 열어요. 둘 다 ${price.toLocaleString("ko-KR")}원.`}
-              </p>
+              {/* 본문 없이 제목에 금액까지 — 단추가 하는 일을 말한다(군더더기 점검 r37) */}
+              <strong className={styles.payTitle}>{sample ? "예시 홈페이지" : planPaid ? `홈페이지 고치고 공개하기 · ${price.toLocaleString("ko-KR")}원` : `사업계획서 + 홈페이지 · ${price.toLocaleString("ko-KR")}원`}</strong>
             </div>
             <div className={styles.payActions}>
               {sample ? (
-                <a className={styles.cta} href="/plan/chat?new=1">내 사업으로 만들기{"\u00a0"}→</a>
+                <a className={styles.cta} href="/plan/chat?new=1">내 사업으로 만들기<ChevronRight size={18} aria-hidden="true" /></a>
               ) : (
                 <button type="button" className={styles.cta} onClick={() => go(blockedHref("pay"))}>
                   {/* 화살표만 다음 줄로 떨어지지 않게 마지막 낱말과 붙인다(줄바꿈 없는 빈칸, 감사 r36) */}
-                  {planPaid ? "결제하고 홈페이지 고치기\u00a0→" : "함께 결제하기\u00a0→"}
+                  결제하기<ChevronRight size={18} aria-hidden="true" />
                 </button>
               )}
               {/* 홈페이지는 나중에 해도 된다 — 결제 단추 하나뿐이라 개업 준비로 넘어갈 길이 없었다(여정 점검 2026-10-22) */}
               {!sample && screenPlanId && <Link className={styles.ctaSecondary} href={launchHref(screenPlanId)} onClick={() => setActivePlan(screenPlanId)}>
-                {journeyLabel("launch", !!screenPlan && readCoach(screenPlan.answers)?.stage === "operating")} 먼저 하기{"\u00a0"}→
+                {journeyLabel("launch", !!screenPlan && readCoach(screenPlan.answers)?.stage === "operating")} 먼저
               </Link>}
             </div>
           </div>
@@ -1085,6 +1085,8 @@ export function HomepageScreen() {
             pendingOutside: !!site && landingDraftFingerprint(draft) !== landingDraftFingerprint(site.draft),
             onEditAddress: () => { setBuilderOpen(false); setSlugFocus(n => n + 1); },
             onReloadLatest: () => void reloadLatest(),
+            /* 작업실 PC 에서 '컴퓨터'로 보고 있었으면 편집기도 컴퓨터 폭으로(아주 좁은 화면은 늘 휴대폰) */
+            initialView: previewView === "pc" && wideScreen ? "pc" : "mobile",
           }}
           onPublish={async () => {
             const result = await publish();
@@ -1112,9 +1114,8 @@ export function HomepageScreen() {
       {phase === "ready" && draft && editable && !draft.pageData?.brainwave && (
         <button type="button" className={styles.builderOpen} onClick={() => setBuilderOpen(true)}>
           <span className={styles.builderOpenIcon}><LayoutTemplate size={18} /></span>
-          <span className={styles.builderOpenText}>
+          <span className={styles.builderOpenText} title="글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿔요">
             <strong>자유 편집 열기</strong>
-            <small>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다. 다른 디자인으로도 바꿀 수 있어요</small>
           </span>
           <ArrowRight size={16} />
         </button>
@@ -1174,6 +1175,8 @@ export function HomepageScreen() {
           nameCandidates={nameCandidates}
           previewView={studioHeader ? previewView : undefined}
           studio={studioPro}
+          /* 휴대폰에서는 오른쪽 칸이 없어 대화 칸이 '홈페이지를 대화로 고치기'를 권하지 못한다 — 여기서 대화로 보낸다(결제 전·불러오는 중이면 숨김) */
+          onChatEdit={embedded && HOMEPAGE_CHAT_EDIT_OPEN && nav?.composeInChat && editable ? () => nav.composeInChat?.({ target: "homepage", label: "홈페이지" }) : undefined}
           pick={pick}
           aiFill={projectId && site && !sample ? {
             running: aiFilling,
@@ -1217,7 +1220,7 @@ export function HomepageScreen() {
       {phase === "ready" && site?.status === "published" && screenPlanId && !sample && screenNext && <div className={styles.nextRow}>
         <Link className={styles.nextCare} href={screenNext.href} onClick={() => setActivePlan(screenPlanId)}>
           <span>다음 단계</span>
-          <strong>{screenNext.title} →</strong>
+          <strong className={styles.nextTitle}>{screenNext.title}<ChevronRight size={18} aria-hidden="true" /></strong>
           <small>{screenNext.note}</small>
         </Link>
         {/* 그다음 — 홍보 상담(목록은 유지보수 화면 한 곳에) */}

@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, AlertTriangle, Clock3, RefreshCw } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ChevronRight, Clock3, RefreshCw } from "lucide-react";
 import styles from "../PlanCheckout.module.css";
 import { documentHref } from "../../../../lib/plan-builder/business-hub";
 import { homepageHref } from "../../../../lib/plan-builder/journey";
@@ -76,12 +76,12 @@ export default function PlanPayResult() {
         </p>
         {pending && orderId && <p className={styles.desc} style={{ overflowWrap: "anywhere" }}>주문번호 {orderId}</p>}
         {ok ? (
-          <Link href={doneHref} className={styles.primary}>{doneLabel}</Link>
+          <Link href={doneHref} className={`${styles.primary} ${styles.nav}`}>{doneLabel}<ChevronRight size={18} aria-hidden="true" /></Link>
         ) : pending ? (
-          loginRequired ? <Link href={`/account?next=${encodeURIComponent(`/plan/pay/result?${params.toString()}`)}`} className={styles.primary}>로그인하고 결과 확인</Link>
+          loginRequired ? <Link href={`/account?next=${encodeURIComponent(`/plan/pay/result?${params.toString()}`)}`} className={`${styles.primary} ${styles.nav}`}>로그인하고 결과 확인<ChevronRight size={18} aria-hidden="true" /></Link>
             : <button type="button" onClick={checkPayment} disabled={checking || !orderId} className={`${styles.primary} ${styles.statusAction}`}><RefreshCw size={18} aria-hidden="true" />{checking ? "확인 중" : "결제 결과 확인"}</button>
         ) : (
-          <Link href={retryHref} className={styles.primary}>{planId ? "다시 시도하기" : "내 사업으로 가기"}</Link>
+          <Link href={retryHref} className={`${styles.primary} ${styles.nav}`}>{planId ? "다시 시도하기" : "내 사업으로 가기"}<ChevronRight size={18} aria-hidden="true" /></Link>
         )}
         {/* 큰 단추와 같은 곳으로 가는 작은 링크는 두지 않는다 — 다음 할 일은 단추 하나 */}
         {!ok && (pending || planId) && <Link href={homepageProduct ? siteHref : planHref} className={styles.back}>← {homepageProduct ? "홈페이지로" : planId ? "사업계획서로" : "내 사업으로"} 돌아가기</Link>}

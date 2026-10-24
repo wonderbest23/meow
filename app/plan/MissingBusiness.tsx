@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import BusinessAppChrome from "./BusinessAppChrome";
 import styles from "./BusinessHub.module.css";
@@ -17,7 +18,8 @@ export function MissingBusinessBody({ title = MISSING_BUSINESS_TITLE, detail = M
   return <section className={styles.empty}>
     <h2>{title}</h2>
     <p>{detail}</p>
-    {action ?? <Link className={styles.primary} href="/plan">내 사업으로</Link>}
+    {/* 어디로 가는 단추인지 보이게 > 아이콘을 붙인다(대표 요청 2026-10-24) */}
+    {action ?? <Link className={styles.primary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></Link>}
     {action ? <Link className={styles.secondary} href="/plan">내 사업으로</Link> : null}
     {children}
   </section>;

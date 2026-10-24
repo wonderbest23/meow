@@ -29,9 +29,10 @@
 .page .primary:hover:not(:disabled) { background:#1b5bb7; }
 .page .primary:disabled { background:#e5e8eb; border-color:#e5e8eb; color:#8b95a1; }
 .page .secondary { background:#fff; border:1px solid #dce1e8; color:#333d4b; }
-.empty { padding:30px 0 48px; text-align:center; }
-.empty h2 { font-size:19px; line-height:1.6; margin:0 0 24px; }
-.empty p { color:#6b7684; font-size:16px; margin:0 0 22px; }
+/* 빈 화면 — 남은 칸의 세로 가운데(대표 규칙 2026-10-24). 글→단추 24px */
+.empty { display:grid; justify-items:center; align-content:center; min-height:max(240px, calc(100dvh - 380px)); padding:24px 0; text-align:center; }
+.empty h2 { font-size:19px; line-height:1.6; margin:0 0 24px; text-wrap:balance; }
+.empty p, .history .empty p { color:#6b7684; font-size:16px; margin:0 0 24px; text-wrap:pretty; }
 .success { display:flex; align-items:flex-start; gap:10px; padding:16px 0; margin:0 0 20px; color:#087f5b; font-size:15px; line-height:1.7; }
 .success svg { flex-shrink:0; margin-top:3px; }
 .error { margin-top:20px; padding:16px; border:1px solid #f4d0cd; background:#fff6f5; border-radius:8px; color:#b42318; line-height:1.7; font-size:14px; }

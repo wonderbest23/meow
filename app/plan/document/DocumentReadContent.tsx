@@ -16,7 +16,7 @@ export function planDisplayName(title: string, isSample: boolean): string {
  * pc — 작업실 PC 새 화면(1024px 이상). 칸 위 얇은 줄이 사업명·계획서 종류를 보여 주고, 사업 설명은 1장 머리로 옮겨 가므로
  *   여기서는 낭독기용 사업명 제목만 남긴다.
  */
-export function DocumentReadHeading({ title, planType, isSample, completed, identity, onDownload, compact = false, level = 1, studio = false, pc = false }: { title: string; planType: string; isSample: boolean; completed?: boolean; identity?: { headline: string; pitch: string }; onDownload?: () => void; compact?: boolean; level?: 1 | 2; studio?: boolean; pc?: boolean }) {
+export function DocumentReadHeading({ title, isSample, completed, identity, onDownload, compact = false, level = 1, studio = false, pc = false }: { title: string; planType: string; isSample: boolean; completed?: boolean; identity?: { headline: string; pitch: string }; onDownload?: () => void; compact?: boolean; level?: 1 | 2; studio?: boolean; pc?: boolean }) {
   // 한 줄 소개(AI 제안) — 문서를 열자마자 무슨 사업인지 알아보게 제목 바로 아래에 둔다
   /* 무엇이 사업 이름이고 무엇이 설명인지 헷갈리지 않게 각각 작은 이름표를 단다 */
   const name = planDisplayName(title, isSample);
@@ -27,14 +27,15 @@ export function DocumentReadHeading({ title, planType, isSample, completed, iden
     const narrowDownload = onDownload && <div className={`${styles.badgeRow} ${styles.narrowOnly}`}><button type="button" className={`${styles.completedBadge} ${styles.downloadBadge}`} onClick={onDownload}><Download size={14} aria-hidden="true" />내려받기</button></div>;
     if (compact) return narrowDownload ? <div className={`${styles.compactHeading} ${styles.narrowOnly}`}>{narrowDownload}</div> : null;
     /* 사업명은 화면에서 빼되(머리줄에 있다) 낭독기에는 제목으로 남긴다 — 칸 안 제목 순서가 끊기지 않게 */
+    /* 계획서 종류('일반 사업계획서') 줄은 읽는 데 필요 없어 뺀다(r37 글 점검) — 예시는 '예시' 표시만 남긴다 */
     return <header className={`${styles.heading} ${styles.studioHeading}`}>{narrowDownload}
-      <p>{isSample ? "예시 · " : ""}{planType}</p>
+      {isSample && <p>예시</p>}
       <h2 className={styles.srOnly}>{name}</h2>
       {identity && <div className={styles.identity}><strong>{identity.headline}</strong><span>{identity.pitch}</span></div>}
     </header>;
   }
   if (compact) return badges ? <div className={styles.compactHeading}>{badges}</div> : null;
-  return <header className={styles.heading}>{badges}<p>{isSample ? "예시 · " : ""}{planType}</p>
+  return <header className={styles.heading}>{badges}{isSample && <p>예시</p>}
     <span className={styles.fieldLabel}>사업명</span>{level === 2 ? <h2 className={styles.headingTitle}>{name}</h2> : <h1>{name}</h1>}
     {identity && <><span className={styles.fieldLabel}>사업 설명</span><div className={styles.identity}><strong>{identity.headline}</strong><span>{identity.pitch}</span></div></>}
   </header>;

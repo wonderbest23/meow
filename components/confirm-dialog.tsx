@@ -10,6 +10,7 @@ import styles from "./confirm-dialog.module.css";
  * 웹에서도 "oneulstart.com 내용:" 같은 브라우저 창이 떠 화면과 어울리지 않았다. 같은 모양의 한국어 창으로 바꾼다.
  */
 type ConfirmOptions = {
+  /** 빈 글이면 본문 줄 없이 제목·단추만(제목과 단추가 이미 다 말할 때) */
   message: string;
   title?: string;
   confirmLabel?: string;
@@ -19,6 +20,8 @@ type ConfirmOptions = {
   danger?: boolean;
   /** 단추 글이 긴 안내(예: '결제하고 홈페이지 고치기') — 넓은 화면에서 창을 넓히고 단추 글을 한 줄로 */
   wide?: boolean;
+  /** 항목 목록(예: 비어 있는 정보) — 가운데 정렬 문장에 쉼표로 늘어놓으면 읽기 어려워 왼쪽 정렬 목록으로 */
+  list?: string[];
   /** 글 입력칸(링크 주소 입력, 복사할 주소 보여 주기) — window.prompt 대신 */
   input?: { label: string; value: string; readOnly?: boolean; type?: "text" | "url" };
 };
@@ -33,13 +36,14 @@ function ConfirmSheet({ options, onDone }: { options: ConfirmOptions; onDone: (o
   }, []);
   const finish = (ok: boolean) => onDone(ok, ok ? field.current?.value : undefined);
   const cancelLabel = options.cancelLabel === undefined ? "취소" : options.cancelLabel;
-  return <dialog ref={ref} className={styles.dialog} data-wide={options.wide || undefined} aria-labelledby={options.title ? "confirm-dialog-title" : undefined} aria-describedby="confirm-dialog-message"
+  return <dialog ref={ref} role="dialog" aria-modal="true" className={styles.dialog} data-wide={options.wide || undefined} aria-labelledby={options.title ? "confirm-dialog-title" : undefined} aria-describedby={[options.message ? "confirm-dialog-message" : "", options.list?.length ? "confirm-dialog-list" : ""].filter(Boolean).join(" ") || undefined}
     onCancel={event => { event.preventDefault(); finish(false); }}
     onClick={event => { if (event.target === event.currentTarget) finish(false); }}>
     <form method="dialog" onSubmit={event => { event.preventDefault(); finish(true); }}>
       <div className={styles.body}>
         {options.title && <h2 id="confirm-dialog-title">{options.title}</h2>}
-        <p id="confirm-dialog-message">{options.message}</p>
+        {options.message && <p id="confirm-dialog-message">{options.message}</p>}
+        {options.list?.length ? <ul id="confirm-dialog-list" className={styles.list}>{options.list.map(item => <li key={item}>{item}</li>)}</ul> : null}
         {options.input && <input ref={field} className={styles.field} aria-label={options.input.label} type={options.input.type ?? "text"} defaultValue={options.input.value} readOnly={options.input.readOnly} autoComplete="off" autoCapitalize="off" spellCheck={false} onFocus={event => { if (options.input?.readOnly) event.currentTarget.select(); }} />}
       </div>
       <div className={styles.actions} data-single={cancelLabel ? undefined : ""}>

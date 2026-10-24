@@ -201,8 +201,6 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
   /* 서버가 지운 사업 번호 — 다른 기기·탭에서 지운 사업이 옛 서버 목록으로 되살아나지 않게 */
   const [remoteDeleted, setRemoteDeleted] = useState<string[]>([]);
   const [remoteFailed, setRemoteFailed] = useState(false);
-  /* 로그인하지 않았으면 '사업이 없어요' 대신 로그인 안내 — 본문은 '로그인하면 내 사업이 보여요'라고 하는데 왼쪽만 달랐다(2026-10-21 점검) */
-  const [signedOut, setSignedOut] = useState(false);
   const [remoteTick, setRemoteTick] = useState(0);
   const askedFor = useRef<string | null>(null);
   useEffect(() => {
@@ -210,7 +208,7 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
     let alive = true;
     fetch("/api/plan/state", { cache: "no-store" })
       .then(response => { if (!response.ok) throw new Error("PLAN_STATE_UNAVAILABLE"); return response.json(); })
-      .then((data: { plans?: Plan[]; authenticated?: boolean; deletedPlanIds?: unknown }) => { if (!alive) return; setRemote((data?.plans ?? []).filter(plan => !isSamplePlan(plan.id))); setRemoteDeleted(Array.isArray(data?.deletedPlanIds) ? data.deletedPlanIds.filter((id): id is string => typeof id === "string") : []); setSignedOut(data?.authenticated === false); setRemoteFailed(false); })
+      .then((data: { plans?: Plan[]; authenticated?: boolean; deletedPlanIds?: unknown }) => { if (!alive) return; setRemote((data?.plans ?? []).filter(plan => !isSamplePlan(plan.id))); setRemoteDeleted(Array.isArray(data?.deletedPlanIds) ? data.deletedPlanIds.filter((id): id is string => typeof id === "string") : []); setRemoteFailed(false); })
       .catch(() => { if (alive) setRemoteFailed(true); });
     return () => { alive = false; };
   }, [mounted, remoteTick]);
@@ -292,8 +290,8 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
       </button>
     </div>
     {listOpen && mounted && <div className={styles.list}>
-      {remoteFailed && plans.length === 0 ? <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>
-        : checked && plans.length === 0 && <p className={styles.empty}>{signedOut ? "로그인하면 내 사업이 보여요." : "아직 사업이 없어요. 새 대화로 시작해 보세요."}</p>}
+      {/* 비어 있을 때 안내는 걷었다 — 바로 위 '내 사업'·'새 대화'가 할 일을 말한다(군더더기 점검 r37). 불러오기 실패만 알린다 */}
+      {remoteFailed && plans.length === 0 && <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>}
       {plans.map(plan => {
         const isCurrent = plan.id === currentId;
         const open = openId === undefined ? isCurrent : openId === plan.id;

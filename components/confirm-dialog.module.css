@@ -10,6 +10,9 @@
 .field:focus { outline: none; border-color: #3182f6; box-shadow: 0 0 0 3px #3182f622; }
 .field[readonly] { background: #f9fafb; color: #4e5968; font-size: 14.5px; }
 .body h2 + p { color: #6b7684; font-size: 14.5px; }
+/* 항목 목록 — 가운데 정렬 문장 대신 왼쪽 정렬로 한 줄에 하나씩 */
+.list { margin: 4px 0 0; padding: 12px 14px 12px 32px; border-radius: 10px; background: #f9fafb; color: #333d4b; font-size: 14.5px; line-height: 1.6; text-align: left; word-break: keep-all; }
+.list li + li { margin-top: 2px; }
 
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 16px; }
 .actions[data-single] { grid-template-columns: 1fr; }

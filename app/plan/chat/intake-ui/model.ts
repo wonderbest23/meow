@@ -866,3 +866,11 @@ export function summaryAnswerText(question: Pick<IntakeQuestion, "id" | "kind" |
   const label = (item: string) => question.options?.find(option => option.value === item)?.label ?? item;
   return Array.isArray(value) ? value.map(label).join(LIST_SEPARATOR) : label(String(value));
 }
+
+/**
+ * 질문 글 끝의 '(최대 2개)'가 줄 끝에서 '(최대' / '2개)'로 갈라졌다(r37 글 점검) — 보여 줄 때만 앞 낱말과 붙는 공백(U+00A0)으로 묶는다.
+ * 질문 글 자체(AI 에 넘기는 글 · 저장 글)는 바꾸지 않는다.
+ */
+export function questionPromptText(prompt: string): string {
+  return prompt.replace(/ \((최대) (\d+개)\)/g, "\u00a0($1\u00a0$2)");
+}

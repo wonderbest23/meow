@@ -137,6 +137,8 @@ export function BusinessLocal0_2226({ overrides, hidden, sectionOrder, onPick, d
             {address ? <div className={styles.row} {...revealProps(1)}>
               <MapPin size={20} aria-hidden />
               <div>
+                {/* 영업시간 줄처럼 이름표를 붙인다(모바일 점검 r37: 주소 줄만 이름이 없었다) — 이 디자인에는 주소 이름표 글 자리가 없어 고정 글로 */}
+                <strong>주소</strong>
                 {Text({ id: "0:2282" })}
                 {map && !onPick ? <a className={styles.mapLink} href={map} target="_blank" rel="noreferrer"><Navigation size={14} aria-hidden /> 네이버 지도에서 보기</a> : null}
               </div>

@@ -28,6 +28,39 @@ function withSecurityHeaders(response: NextResponse) {
   return response;
 }
 
+/*
+ * 없는 공개 홈페이지(/launch/없는-주소) — 페이지가 notFound() 를 불러도 맨 위 로딩 화면(app/loading.tsx)이 먼저 흘러 나가
+ * 응답이 200 으로 굳었다(모바일 점검 r37). 검색·공유 미리보기가 빈 페이지를 살아 있는 주소로 믿는다.
+ * 여기서 공개된 주소인지 한 번만 가볍게 묻고, 없으면 같은 화면(launch/[slug]/not-found)을 404 로 돌려준다.
+ * DB 를 못 물으면(설정 없음·시간 초과·오류) 막지 않고 그대로 보낸다 — 있는 홈페이지를 404 로 만들지 않는다.
+ */
+/* app/launch/[slug]/not-found.tsx 와 같은 말·모양 — 손님이 보는 화면이라 오늘창업 로고·'내 사업' 단추는 없다 */
+const LAUNCH_MISSING_HTML = `<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>이 홈페이지는 지금 볼 수 없어요</title><style>
+body{margin:0;font-family:Pretendard,"Apple SD Gothic Neo",system-ui,sans-serif;background:#f6f8fb;color:#191f28}
+main{min-height:100vh;display:grid;place-content:center;padding:24px 16px;box-sizing:border-box}
+section{width:min(440px,100%);box-sizing:border-box;padding:40px 28px;border:1px solid #e3e9f1;border-radius:16px;background:#fff;text-align:center}
+h1{margin:0 0 8px;font-size:24px;line-height:1.4;word-break:keep-all;text-wrap:balance}
+p{margin:0;color:#4e5968;font-size:15px;line-height:1.7;word-break:keep-all;text-wrap:pretty}
+@media (max-width:640px){main{min-height:100svh;padding:24px 20px;background:#fff}section{padding:0;border:0}h1{font-size:22px}}
+</style></head><body><main><section><h1>이 홈페이지는 지금 볼 수 없어요</h1><p>주소가 바뀌었거나 사장님이 잠시 닫아 두었을 수 있어요. 주소를 다시 확인하거나 가게에 직접 물어봐 주세요.</p></section></main></body></html>`;
+const LAUNCH_PATH = /^\/launch\/([^/]+)\/?$/;
+async function launchSlugMissing(rawSlug: string): Promise<boolean> {
+  const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!url || !key || process.env.PERSISTENCE_MODE?.trim() === "demo-memory") return false;
+  let slug: string;
+  try { slug = decodeURIComponent(rawSlug); } catch { return true; }
+  try {
+    const query = `${url}/rest/v1/landing_sites?select=id&status=eq.published&published_slug=eq.${encodeURIComponent(slug)}&limit=1`;
+    const res = await fetch(query, { headers: { apikey: key, Authorization: `Bearer ${key}` }, cache: "no-store", signal: AbortSignal.timeout(2500) });
+    if (!res.ok) return false;
+    const rows = await res.json() as unknown;
+    return Array.isArray(rows) && rows.length === 0;
+  } catch {
+    return false;
+  }
+}
+
 // Edge middleware. Cloudflare(OpenNext)는 Edge 미들웨어만 지원하므로 Next 16의
 // Node 전용 proxy.ts 대신 이 파일을 사용한다. 세션 검증은 Web Crypto 기반이라 Edge에서 동작한다.
 export async function middleware(request: NextRequest) {
@@ -41,6 +74,13 @@ export async function middleware(request: NextRequest) {
     return withSecurityHeaders(gone);
   }
   if (closed === "page") return withSecurityHeaders(NextResponse.rewrite(new URL("/__closed", request.url), { status: 404 }));
+
+  const launch = LAUNCH_PATH.exec(pathname);
+  if (launch && await launchSlugMissing(launch[1])) {
+    /* 페이지로 다시 보내면(rewrite) 또 로딩 화면이 먼저 나가 200 이 된다 — 같은 문구의 작은 화면을 여기서 바로 404 로 */
+    const missing = new NextResponse(LAUNCH_MISSING_HTML, { status: 404, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+    return withSecurityHeaders(missing);
+  }
 
   /*
    * 아이폰·안드로이드 앱(mobile/)에서 로그인한 사람이 앱을 열면 홍보용 첫 화면 대신 '내 사업'으로 바로 보낸다

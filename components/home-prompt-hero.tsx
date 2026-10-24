@@ -14,7 +14,7 @@
  * 움직임 줄이기 설정이면 예시 문장을 그대로 두고, 띠도 저절로 넘기지 않으며, 그림은 맨 위에 둔 채 이름표만 보여 준다.
  * 입력칸에 초점이 있거나 진열 띠 위에 마우스가 있는 동안, 멈춤 단추를 누른 동안에는 그 자리에 멈춘다(글을 쓰거나 그림을 보는 중에 바뀌지 않게).
  */
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { Children, cloneElement, isValidElement, useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { composerEnterSends } from "../app/plan/chat/intake-ui/guidance";
 import { newChatHref } from "../lib/plan-builder/studio";
@@ -106,10 +106,15 @@ function motionVars(item: ShowcaseItem, kind: ShowcaseSlot): CSSProperties {
   const center = (top + bottom) / 2;
   const ty = clamp(0.56 * view - center, -(1 - view), 0);
   const centerInView = (center + ty) / view;
-  const chipY = clamp(centerInView - ((bottom - top) / 2) * ZOOM / view, 0.14, 0.8);
+  /*
+   * 휴대폰 화면은 당겨 보지 않는다 — 390 너비 화면을 1.16배로 키우면 양옆 여백과 머리줄 끝('대화로 고치기')이 잘렸다(모바일 점검 r37).
+   * 컴퓨터 화면(넓은 그림)만 강조할 곳을 당겨 본다.
+   */
+  const zoom = kind === "phone" ? 1 : ZOOM;
+  const chipY = clamp(centerInView - ((bottom - top) / 2) * zoom / view, 0.14, 0.8);
   return {
     "--ty": `${(ty * 100).toFixed(2)}%`,
-    "--zoom": ZOOM,
+    "--zoom": zoom,
     "--ox": `${x}%`,
     "--oy": `${(center * 100).toFixed(2)}%`,
     "--chip-x": `${clamp(x, 22, 78)}%`,
@@ -150,6 +155,17 @@ function inNativeApp() {
   return nativePlatform() !== null || (typeof navigator !== "undefined" && navigator.userAgent.includes("OneulstartApp"));
 }
 
+/*
+ * 가운뎃점(·)으로 이은 낱말('계획서·홈페이지·개업')은 한 덩어리로 — 휴대폰에서 '·개업'처럼 점부터 새 줄이 시작됐다(2026-10-24).
+ * 점 앞뒤에 줄바꿈 금지 문자(U+2060)를 넣는다. 관리자 문구(글·<br/> 조각)도 같은 규칙으로.
+ */
+function glueDots(node: ReactNode): ReactNode {
+  if (typeof node === "string") return node.replace(/·/g, "\u2060·\u2060");
+  if (Array.isArray(node)) return Children.map(node, glueDots);
+  if (isValidElement<{ children?: ReactNode }>(node) && node.props.children !== undefined) return cloneElement(node as ReactElement<{ children?: ReactNode }>, undefined, glueDots(node.props.children));
+  return node;
+}
+
 /** 보낼 주소 — 비어 있으면 새 대화만 연다. 작업실이 켜져 있으면 작업실의 새 대화(/plan/studio?new=1&idea=…)로 — newChatHref */
 export function landingIdeaHref(text: string) {
   return newChatHref(normalizeLandingIdea(text));
@@ -162,7 +178,7 @@ export function rememberLandingIdea(text: string) {
   stashLandingIdea(storage, text, Date.now());
 }
 
-/** signedIn — 로그인 안 했으면 false(입력칸 아래 '로그인해도 이어져요' 안내를 보인다), 로그인했거나 확인 전이면 숨긴다 */
+/** signedIn — 예전 '로그인해도 이어져요' 안내용(2026-10-24 군더더기라 걷음). 부르는 쪽 호환을 위해 받기만 한다 */
 /* 제목에서 처음 나오는 '사업'에만 옅은 파랑 그라데이션을 천천히 흘린다(대표 요청 2026-10-23, 토스처럼 모던하게) — 문구는 운영 화면에서 바뀔 수 있어 낱말을 찾아 감싼다 */
 const ACCENT_WORD = "사업";
 function accentLine(line: string, active: boolean): ReactNode {
@@ -171,7 +187,7 @@ function accentLine(line: string, active: boolean): ReactNode {
   return <>{line.slice(0, at)}<span className={styles.accent}>{ACCENT_WORD}</span>{line.slice(at + ACCENT_WORD.length)}</>;
 }
 
-export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }: { title: string; subtitle: ReactNode; hidden?: string[]; signedIn?: boolean | null }) {
+export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string; subtitle: ReactNode; hidden?: string[]; signedIn?: boolean | null }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -228,9 +244,11 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
     const check = () => {
       frame = 0;
       const widget = document.querySelector<HTMLElement>(".support-chat-widget:not(.open)");
-      const a = card.getBoundingClientRect();
       const b = widget?.getBoundingClientRect();
-      const covered = !!b && b.width > 0 && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      const hits = (a: DOMRect) => !!b && b.width > 0 && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      /* 휴대폰(480px 이하)에서는 아이폰 진열(#home-showcase)을 덮는 동안에도 비켜 둔다 — 화면 속 글을 가렸다(모바일 점검 r37) */
+      const showcase = window.matchMedia("(max-width: 480px)").matches ? document.getElementById("home-showcase") : null;
+      const covered = hits(card.getBoundingClientRect()) || (!!showcase && hits(showcase.getBoundingClientRect()));
       if (covered) root.setAttribute("data-compose-covered", ""); else root.removeAttribute("data-compose-covered");
     };
     const schedule = () => { if (!frame) frame = window.requestAnimationFrame(check); };
@@ -387,7 +405,7 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
     <h1 id="home-hero-title" className={hidden.includes("promptHome.title") ? styles.srOnly : styles.title} data-sc-field="promptHome.title">
       {titleLines.map((line, index) => <span key={index}>{accentLine(line, index === titleLines.findIndex(text => text.includes(ACCENT_WORD)))}{index < titleLines.length - 1 ? <br /> : null}</span>)}
     </h1>
-    {hidden.includes("promptHome.subtitle") ? null : <p className={styles.subtitle} data-sc-field="promptHome.subtitle">{subtitle}</p>}
+    {hidden.includes("promptHome.subtitle") ? null : <p className={styles.subtitle} data-sc-field="promptHome.subtitle">{glueDots(subtitle)}</p>}
 
     <form ref={form} className={styles.card} aria-label="사업 아이디어로 대화 시작" onSubmit={event => { event.preventDefault(); submit(); }}>
       <label htmlFor="home-idea" className={styles.srOnly}>어떤 사업을 생각하고 계세요?</label>
@@ -420,8 +438,6 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
         </button>
       </div>
     </form>
-    {/* 로그인 전인 사람에게만 보이는 안내 — 로그인했거나 아직 모르면 자리만 남겨 아래가 밀리지 않게 한다 */}
-    <p className={styles.hint} data-pending={signedIn !== false || undefined} aria-hidden={signedIn !== false || undefined}>로그인해도 적은 내용은 그대로 이어져요</p>
 
     <div className={styles.tabsRow} {...hoverProps}>
       {/*

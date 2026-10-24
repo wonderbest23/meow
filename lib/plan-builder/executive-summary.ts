@@ -116,11 +116,10 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   if (goal.basis !== "missing") actionLines.push(goal);
   const unresolved = [customer, offer, price].filter(item => item.basis === "missing").map(item => item.label);
   const attention = coach ? checkCoachFeasibility(coach.fields).filter(check => check.status === "attention").map(check => check.detail) : context.conflicts.map(conflict => conflict.detail);
+  /* 숫자 근거 고지는 한 문장으로(r37 글 점검 — 지우지 않는다). 비교 기간 길이가 다를 때만 그 경고를 덧붙인다 */
   const note = [
-    "직접 입력한 숫자는 아직 실제 실적으로 확인된 값이 아니에요. 계획 계산과 실제 실적은 나눠서 봐 주세요.",
-    flowLines ? "첫 달 가정은 문서 돈 장의 '조심스러운 경우'와 같은 계산이고, 세금은 빼기 전 금액이에요." : firstMonth ? "계획 손익은 세금·운전자금을 빼기 전 금액이에요." : "입력하지 않은 비용은 0원으로 계산하지 않았어요.",
+    "숫자는 계획 값이에요(실적 아님).",
     baseline && period && periodDays(baseline) !== periodDays(period) ? "비교 기간 길이가 달라 합계 차이만으로 나아졌다고 보기 어려워요." : "",
-    "줄여서 보여 준 항목은 상세 계획서에서 전체 내용을 확인해 주세요.",
   ].filter(Boolean).join(" ");
   const blocks = [
       { id: "business", title: "사업과 고객", lines: [businessLine, customer] },

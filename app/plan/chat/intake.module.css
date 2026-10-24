@@ -65,7 +65,7 @@
 .splitHandle:focus-visible { outline: 2px solid var(--intake-blue); outline-offset: -2px; }
 .inputPane { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .conversation, .summaryPane { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
-.conversation { flex: 1; overflow-anchor: none; scroll-padding-block: 16px; }
+.conversation { position: relative; flex: 1; overflow-anchor: none; scroll-padding-block: 16px; }
 .inputContent { max-width: 760px; padding: 28px 36px 24px; margin: 0 auto; }
 .workspace[data-loading] .conversation { display: flex; }
 .workspace[data-loading] .inputContent { display: flex; flex: 1; min-width: 0; padding: 0; }
@@ -216,11 +216,13 @@
 .complete p { color: var(--intake-muted); font-size: 14px; margin-bottom: 22px; }
 .complete button { margin-bottom: 12px; }
 /* 빈 화면(로그인 안내·사업 없음) — 대화 영역 가운데에 아이콘·제목·설명·버튼을 세로로 모은다 */
-.empty { display: grid; justify-items: center; gap: 12px; max-width: 440px; margin: 0 auto; padding: clamp(40px, 14vh, 140px) 0 40px; text-align: center; }
-.empty h1 { margin: 4px 0 0; font-size: 23px; line-height: 1.4; word-break: keep-all; text-wrap: balance; }
-.emptyIcon { display: grid; place-items: center; width: 60px; height: 60px; margin-bottom: 8px; border-radius: 16px; background: color-mix(in srgb, var(--intake-blue) 10%, transparent); color: var(--intake-blue); }
-.empty .primaryButton { width: 100%; max-width: 320px; min-height: 50px; margin-top: 12px; font-size: 15px !important; }
-.empty .textLink { justify-content: center; }
+/* 빈 화면은 대화 칸 세로 가운데에(대표 규칙 2026-10-24) — 제목→글 8px, 글→단추 24px */
+.inputContent:has(> .empty) { box-sizing: border-box; display: grid; align-content: center; min-height: 100%; }
+.empty { display: grid; justify-items: center; gap: 0; max-width: 440px; margin: 0 auto; padding: 24px 0; text-align: center; }
+.empty h1 { margin: 0 0 8px; font-size: 23px; line-height: 1.4; word-break: keep-all; text-wrap: balance; }
+.emptyIcon { display: grid; place-items: center; width: 60px; height: 60px; margin-bottom: 16px; border-radius: 16px; background: color-mix(in srgb, var(--intake-blue) 10%, transparent); color: var(--intake-blue); }
+.empty .primaryButton { width: 100%; max-width: 320px; min-height: 50px; margin-top: 24px; font-size: 15px !important; }
+.empty .textLink { justify-content: center; margin-top: 8px; }
 .muted { color: var(--intake-muted); font-size: 13px; margin-top: 20px !important; }
 .error { color: var(--intake-danger); font-size: 13px; }
 .error p + p { margin-top: 6px; }
@@ -242,6 +244,9 @@
 .userMessage { position: relative; width: fit-content; max-width: 88%; margin: 0 0 32px auto; padding: 10px 16px; border-radius: 20px; background: var(--intake-blue); color: #fff; font-size: 16px; line-height: 1.7; transform-origin: 100% 100%; }
 .messageEdit { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 40px; height: 40px; margin: -10px -14px -10px -4px; border: 0; border-radius: 50%; background: transparent; color: #ffffffd9; }
 .userMessage:has(.messageEdit) { display: flex; align-items: center; gap: 4px; }
+/* 연필 누르는 자리 44px(보이는 원은 40px) — r37 휴대폰 점검 */
+.messageEdit { position: relative; }
+.messageEdit::after { content: ""; position: absolute; inset: -2px; }
 .messageStatus { margin: -26px 0 28px auto !important; max-width: 88%; text-align: right; font-size: 11px; color: var(--intake-muted); transform-origin: 100% 0; animation: intake-receipt .4s ease; }
 .speakerStatus { color: transparent; background: linear-gradient(90deg, #8a96a8 0 35%, #2b3340 50%, #8a96a8 65% 100%) 0 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; font-weight: 500; animation: intake-status-shimmer 2s ease infinite; }
 .speakerStatus::before { content: "·"; margin-right: 7px; color: #b3bccb; }
@@ -909,7 +914,8 @@
 .page[data-embedded][data-studio-pro] .lockedTurn, .page[data-embedded][data-studio-pro] .editTurn { gap: 0; margin-top: 0; }
 .page[data-embedded][data-studio-pro] .typingBubble { background: #e9ecf0; }
 /* AI 답 아래 시각 · 복사 */
-.messageMeta { display: flex; align-items: center; gap: 2px; margin: -10px 0 12px; color: #8b95a1; font-size: 11.5px; }
+/* position:relative — 안의 낭독기용 글(srOnly, position:absolute)이 대화 칸 밖 기준으로 붙어 바깥 칸을 밀어 올리지 않게(r37 점검) */
+.messageMeta { position: relative; display: flex; align-items: center; gap: 2px; margin: -10px 0 12px; color: #8b95a1; font-size: 11.5px; }
 .messageMeta time { margin-right: 4px; font-variant-numeric: tabular-nums; }
 .metaButton { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; }
 .metaButton:hover { background: #e9ecf0; color: #4e5968; }
@@ -993,6 +999,9 @@ button.workLogRow:hover { background: #e9ecf0; }
 .suggestChip { flex: none; max-width: 100%; height: 30px; padding: 0 12px; border: 1px solid #e3e7ec; border-radius: 999px; background: #fff; color: #4e5968; font-size: 12.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .suggestChip:hover { border-color: #c9d3de; color: #191f28; }
 .suggestRow > [hidden] { display: none; }
+/* 둘째 줄 칩이 첫 칩과 같은 왼쪽 선에서 시작하게 — '추천' 글자 폭만큼 줄 전체를 들이고 글자만 내어 둔다(r37 점검) */
+.suggestRow:has(> .suggestLabel:not([hidden])) { padding-left: 48px; }
+.suggestRow > .suggestLabel:not([hidden]) { width: 42px; margin-left: -48px; margin-right: 0; }
 .page[data-embedded][data-studio-pro] .composerShell { padding: 10px 10px 8px 12px; border: 1px solid #d9dee5; border-radius: 16px; background: #fff; box-shadow: 0 2px 10px rgba(16, 24, 40, .05); }
 .page[data-embedded][data-studio-pro] .composerShell:focus-within { border-color: #b4c6dc; background: #fff; box-shadow: 0 2px 10px rgba(16, 24, 40, .05), 0 0 0 3px rgba(49, 130, 246, .08); }
 .page[data-embedded][data-studio-pro] .composerRow { display: block; }
@@ -1005,7 +1014,11 @@ button.workLogRow:hover { background: #e9ecf0; }
 .page[data-embedded][data-studio-pro] .composerTarget button::before { inset: 7px; border-radius: 4px; }
 .page[data-embedded][data-studio-pro] .composerTarget small { color: #8b95a1; }
 .page[data-embedded][data-studio-pro] .composerContext { padding: 2px 2px 0; }
-.composerGuide { margin: 2px 0 2px !important; padding: 0 2px; color: #4e5968; font-size: 12.5px; line-height: 1.5; }
+/* '고칠 곳 고르기' 장 목록 — 단추 바로 위로 연다(입력창이 칸 맨 아래라 아래로는 자리가 없다) */
+.pickWrap { position: relative; min-width: 0; }
+.pickMenu { position: absolute; left: -4px; bottom: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; min-width: 220px; max-width: min(320px, 80vw); max-height: 320px; overflow-y: auto; padding: 6px; border: 1px solid #e5e8eb; border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(16, 24, 40, .14); }
+.pickMenu button { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: #333d4b; font-size: 13.5px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pickMenu button:hover, .pickMenu button:focus-visible { background: #f2f4f6; outline: none; }
 .composerBar { display: flex; align-items: center; gap: 4px; min-height: 32px; }
 .composerAction { display: inline-flex; align-items: center; gap: 4px; min-width: 0; height: 30px; margin-left: -4px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #8b95a1; font-size: 12px; white-space: nowrap; }
 .composerAction:hover { background: #f2f4f6; color: #4e5968; }
@@ -1019,3 +1032,6 @@ button.workLogRow:hover { background: #e9ecf0; }
 .page[data-embedded][data-studio-pro] .lockedTurn .chipRow, .page[data-embedded][data-studio-pro] .editTurn .chipRow { margin: -4px 0 14px; }
 .page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong { border-color: #3182f6; background: #3182f6; color: #fff; }
 .page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong:hover { border-color: #1b64da; background: #1b64da; }
+/* 휴대폰 작업실: 자판이 열리면 진행 줄을 접는다 · 다 답한 뒤 줄은 요약 단추만 오른쪽에(r37 휴대폰 점검) */
+.page[data-embedded][data-keyboard]:not([data-studio-pro]) .paneBar { display: none; }
+.page[data-embedded]:not([data-studio-pro]) .paneBar[data-done] { justify-content: flex-end; }

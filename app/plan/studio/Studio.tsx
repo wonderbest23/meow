@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -72,7 +72,7 @@ const GENERATION_FAILED = ["errored", "terminated", "complete"];
 /* 대화 질문 진행(질문 6/14)을 다시 묻는 간격 — 대화 칸이 따로 자주 묻고 있어 머리줄은 느리게. AI 를 부르지 않는 읽기 요청 */
 const INTAKE_POLL_MS = 15_000;
 /* 새 대화 — 아직 사업이 없어 오른쪽 칸은 모두 막는다(PC 는 안내 대신 지금까지 답한 내용 — StudioIntakeSummary) */
-const FRESH_LOCK: Lock = { message: "먼저 대화로 사업 방향을 정해 주세요. 방향이 정해지면 사업계획서 · 홈페이지 · 개업 준비가 차례로 열려요.", back: "chat", label: "대화로 가기" };
+const FRESH_LOCK: Lock = { message: "대화를 마치면 열려요", back: "chat", label: "대화로 가기" };
 /* 다른 창에서 같은 사업을 고쳤을 수 있다 — 이 창으로 돌아오면 보이는 칸을 다시 읽는다. 창을 자주 오가도 이 간격에 한 번만 */
 const WAKE_REFRESH_MS = 5_000;
 /* 칸 ↔ 그 칸이 저장 안 한 수정을 알리는 이름(useStudioDirty) — 고치는 중인 칸은 돌아와도 다시 읽지 않는다 */
@@ -506,6 +506,21 @@ export default function Studio() {
     return () => { editPreviewListeners.current.delete(listener); };
   }, []);
   const editPreviewChapters = useCallback(() => editPreview.current, []);
+  /* 계획서 칸 → 대화 칸: 대화로 고칠 수 있는 장 목록(PC '고칠 곳 고르기'). 위와 같이 ref + 알림 — 같은 목록이면 알리지 않는다 */
+  const editChapters = useRef<StudioComposeRequest[] | null>(null);
+  const editChapterListeners = useRef(new Set<() => void>());
+  const setEditChapterList = useCallback((list: StudioComposeRequest[] | null) => {
+    const next = list?.length ? list : null;
+    const key = (value: StudioComposeRequest[] | null) => (value ?? []).map(item => `${item.label}\u0000${item.sectionId ?? ""}`).join("\u0001");
+    if (key(editChapters.current) === key(next)) return;
+    editChapters.current = next;
+    editChapterListeners.current.forEach(listener => listener());
+  }, []);
+  const subscribeEditChapterList = useCallback((listener: () => void) => {
+    editChapterListeners.current.add(listener);
+    return () => { editChapterListeners.current.delete(listener); };
+  }, []);
+  const editChapterList = useCallback(() => editChapters.current, []);
 
   /* ── 깔때기 — 작업실을 열었다 · 다른 탭을 봤다(측정만, 실패해도 조용히) ── */
   const opened = useRef(false);
@@ -590,8 +605,11 @@ export default function Studio() {
       setEditPreviewChapters: wide ? setEditPreviewChapters : undefined,
       subscribeEditPreviewChapters: wide ? subscribeEditPreviewChapters : undefined,
       editPreviewChapters: wide ? editPreviewChapters : undefined,
+      setEditChapterList: wide ? setEditChapterList : undefined,
+      subscribeEditChapterList: wide ? subscribeEditChapterList : undefined,
+      editChapterList: wide ? editChapterList : undefined,
     };
-  }, [planId, openTarget, confirmLeave, router, setHeaderActions, wide, setHeaderCenter, markActivity, showTab, setDesignRunning, registerEditHandler, editHandler, composeInChat, onComposeRequest, setEditPreviewChapters, subscribeEditPreviewChapters, editPreviewChapters]);
+  }, [planId, openTarget, confirmLeave, router, setHeaderActions, wide, setHeaderCenter, markActivity, showTab, setDesignRunning, registerEditHandler, editHandler, composeInChat, onComposeRequest, setEditPreviewChapters, subscribeEditPreviewChapters, editPreviewChapters, setEditChapterList, subscribeEditChapterList, editChapterList]);
 
   /*
    * 이 사업의 다른 화면으로 가는 링크는 이동 대신 탭 바꾸기 — 대화·계획서 안의 고정 링크를 하나하나 고치지 않아도 된다.
@@ -641,7 +659,7 @@ export default function Studio() {
    * 브라우저 탭 제목 — '사업명 · 보는 칸 | 오늘창업'(layout 의 '사업 작업실 | 오늘창업'은 사업을 부르기 전까지만). 창을 여럿 열어도 구분된다.
    * PC 는 오른쪽 칸, 휴대폰은 지금 탭. 새 대화 · 못 찾음 · 로그인이 풀림은 칸 이름 없이.
    */
-  const pageName = title || plan?.title || "";
+  const pageName = sampleTitle(planId, title || plan?.title || "");
   const pageTab = STUDIO_TAB_LABELS[wide ? rightTab : tab];
   useEffect(() => {
     if (!intakeV2) return;
@@ -653,7 +671,8 @@ export default function Studio() {
 
   const chatVisible = wide || tab === "chat" || chatOnly;
   const rightVisible = wide || (tab !== "chat" && !chatOnly);
-  const businessTitle = title || plan?.title || (fresh && newIntent ? "새 대화" : "사업 작업실");
+  /* 예시 사업 이름은 목록용 꼬리표 '샘플 · '로 저장돼 있다 — 화면에서는 다른 곳과 같게 '예시 · '로 부른다 */
+  const businessTitle = sampleTitle(planId, title || plan?.title || (fresh && newIntent ? "새 대화" : "사업 작업실"));
   const headingRef = (id: StudioTab) => (node: HTMLHeadingElement | null) => { headings.current[id] = node; };
   const isVisible = (id: StudioTab) => (id === "chat" ? chatVisible : rightVisible && rightTab === id);
 
@@ -694,7 +713,8 @@ export default function Studio() {
   const doneCount = chips.filter(chip => chip.state === "done").length;
   const chipState = (chip: StudioChip) => (chip.state === "done" ? " 완료" : chip.state === "current" ? " 지금 단계" : "");
   const progress = wide && !missing && chips.length ? <span key="progress" className={styles.progress} role="img" aria-label={`진행 ${doneCount}/${chips.length} — ${chips.map(chip => `${chip.label}${chipState(chip)}`).join(", ")}`} title={chips.map(chip => (chip.state === "done" ? `${chip.label} ✓` : chip.label)).join(" · ")}>
-    <span className={styles.progressBars} aria-hidden="true">{chips.map(chip => <b key={chip.step} data-state={chip.state} />)}</span>{doneCount}/{chips.length}
+    {/* 숫자(2/4)는 막대와 같은 말이라 화면에서 뺀다(r37 글 점검) — 낭독기는 aria-label 로 그대로 듣는다 */}
+    <span className={styles.progressBars} aria-hidden="true">{chips.map(chip => <b key={chip.step} data-state={chip.state} />)}</span>
   </span> : null;
   /* 작성 진행을 묻다 로그인이 풀렸으면(401) 머리줄에 다시 로그인하는 단추 — 로그인 팝업이 끝나면 지금 화면으로 돌아온다 */
   const relogin = generationAuthLost && !missing ? <button key="relogin" type="button" className={styles.relogin} onClick={() => openLogin()}>다시 로그인하기</button> : null;
@@ -719,8 +739,8 @@ export default function Studio() {
       {/* eslint-disable-next-line @next/next/no-img-element -- 사이트 머리말과 같은 정적 로고 */}
       <img className={styles.mark} src="/today-startup-mark-2026-128.webp" alt="오늘창업" width={24} height={24} />
       <div className={styles.biz}>
-        <h1 className={styles.bizTitle}><button type="button" className={styles.bizName} onClick={menu.open} aria-haspopup="dialog" aria-expanded={menu.isOpen} title={`${businessTitle} — 내 사업 메뉴 열기`}><span>{businessTitle}</span><ChevronDown size={14} aria-hidden="true" /></button></h1>
-        {!missing && <p className={styles.bizStatus}><i data-live={live || undefined} aria-hidden="true" />{statusText}</p>}
+        <h1 className={styles.bizTitle}><button type="button" className={styles.bizName} onClick={menu.open} aria-haspopup="dialog" aria-expanded={menu.isOpen} title={`${businessTitle} — 내 사업 메뉴 열기`}><span>{businessTitle}</span></button></h1>{/* ⌄ 는 뺐다 — 옆 ☰ 와 같은 메뉴를 열어 두 단추로 보였다(r37 점검). 이름을 눌러도 같은 메뉴가 열린다 */}
+        {!missing && statusText && <p className={styles.bizStatus}><i data-live={live || undefined} aria-hidden="true" />{statusText}</p>}
       </div>
       {headerSlot("chat")}
       {menu.button(styles.iconButton, 18)}
@@ -729,7 +749,7 @@ export default function Studio() {
       {missing ? null : chatOnly ? <>
         <ol className={styles.stepper} aria-label="진행 단계">
           {chips.map((chip, index) => <li key={chip.step} data-state={chip.state} aria-current={chip.state === "current" ? "step" : undefined}>
-            <i aria-hidden="true">{chip.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>{chip.label}<span className={styles.srOnly}>{chipState(chip) && ` (${chipState(chip).trim()})`}</span>
+            <i aria-hidden="true">{chip.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>{/* 바로 뒤에 나올 탭과 같은 이름(사업계획서) — r37 점검 */}{chip.tab === "plan" ? STUDIO_TAB_LABELS.plan : chip.label}<span className={styles.srOnly}>{chipState(chip) && ` (${chipState(chip).trim()})`}</span>
           </li>)}
         </ol>
       </> : <div className={styles.seg} data-appear={tabsAppear || undefined} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, RIGHT_TABS, rightTab, item => item as RightTab)}>
@@ -777,8 +797,7 @@ export default function Studio() {
             {isSamplePlan(planId)
               ? <div className={hub.scroll}><div className={hub.content}><section className={hub.empty}>
                 <h2>예시 사업이에요</h2>
-                <p>둘러보기용이라 이 대화는 이어서 쓸 수 없어요. 내 사업은 대화로 바로 시작할 수 있어요.</p>
-                <Link className={hub.primary} href={newChatHref()}>대화로 내 사업 시작하기</Link>
+                <Link className={hub.primary} href={newChatHref()}>대화로 내 사업 시작하기<ChevronRight size={18} aria-hidden="true" /></Link>
               </section></div></div>
               : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !locks[rightTab] ? rightTab : null} />}
           </Pane>
@@ -797,6 +816,10 @@ export default function Studio() {
       </BusinessAppChrome>
     </main>
   </StudioNavContext.Provider>;
+}
+
+function sampleTitle(planId: string, title: string): string {
+  return isSamplePlan(planId) ? title.replace(/^샘플(\s*·\s*)/, "예시$1") : title;
 }
 
 /* 운영 중인 사업은 4단계 이름이 '운영 개선'(journeySteps 와 같은 이름) */

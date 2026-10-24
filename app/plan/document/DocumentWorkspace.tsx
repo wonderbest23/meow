@@ -10,7 +10,7 @@ import frame from "../chat/page.module.css";
 import styles from "./DocumentWorkspace.module.css";
 import type { assembleSections } from "../../../lib/plan-builder/plan-store";
 import type { EditState } from "./use-document-edits";
-import { DocumentChapterHeading, DocumentReadHeading, DocumentSectionHeading, planDisplayName } from "./DocumentReadContent";
+import { DocumentChapterHeading, DocumentReadHeading, DocumentSectionHeading } from "./DocumentReadContent";
 import ChapterPicker from "./ChapterPicker";
 import editorStyles from "../InlineDocEditor.module.css";
 import DocumentSourceReview, { type DocumentReviewSource } from "./DocumentSourceReview";
@@ -75,6 +75,9 @@ type Props = {
   onFactsSaved?: () => void;
 };
 
+/** 작업실 대화 칸(showPlan)이 계획서 칸을 1장 맨 위로 열 때 붙이는 주소 꼬리(#doc-top) */
+const DOC_TOP_HASH = "doc-top";
+
 /** 쓰는 중 — 지금 쓰는 장 이름 뒤에 깜빡이는 커서, 아래로 글줄이 차오르는 듯한 자리 */
 function WritingStatus({ done, total, current }: { done: number; total: number; current: string | null }) {
   return <div className={styles.writing} role="status" aria-live="polite">
@@ -82,7 +85,7 @@ function WritingStatus({ done, total, current }: { done: number; total: number; 
     <progress value={done} max={total || 1} aria-label="작성한 항목" />
     {current && <p className={styles.writingNow}>지금 쓰는 중 · <b>{current}</b><i className={styles.caret} aria-hidden="true" /></p>}
     <div className={styles.writingLines} aria-hidden="true"><i /><i /><i /></div>
-    <small>새 항목이 끝날 때마다 바로 나타나요. 다른 장에 써지면 알려 드려요. 창을 닫아도 계속 만들어져요.</small>
+    <small>창을 닫아도 계속 써요.</small>
   </div>;
 }
 
@@ -101,17 +104,13 @@ function SecondaryNext({ planId, homepage }: { planId: string; homepage: Homepag
   return <p className={styles.secondaryNext}><Link href={secondary.href}>{secondary.title} →</Link></p>;
 }
 
-/* 다음 단계 이름(홈페이지 만들기 등) — 완료 알림이 단추 이름을 그대로 부른다. 단추는 PC 작업실은 머리줄, 휴대폰은 칸 아래에 있고 이름은 같다 */
-function nextStepTitle(planId: string, homepage: HomepageStatus): string | null {
-  const plan = loadState().plans.find(item => item.id === planId);
-  return plan ? journeyNext(plan, homepage).title : null;
-}
-
 function NextStepButton({ planId, homepage, className = styles.nextButton }: { planId: string; homepage: HomepageStatus; className?: string }) {
   const plan = loadState().plans.find(item => item.id === planId);
   if (!plan) return null;
   const next = journeyNext(plan, homepage);
-  return <Link className={className} href={next.href}>{className === styles.nextButton ? <span>다음 단계</span> : <small>다음 단계</small>}<b>{next.title}</b><ChevronRight size={className === styles.nextButton ? 20 : 16} aria-hidden="true" /></Link>;
+  /* 머리줄(PC) 단추는 이름만 — '다음 단계 · 홈페이지 만들기'의 앞말은 단추 자리가 이미 말한다(r37 글 점검). 낭독기는 aria-label 로 듣는다 */
+  if (className !== styles.nextButton) return <Link className={className} href={next.href} aria-label={`다음 단계: ${next.title}`}><b>{next.title}</b><ChevronRight size={16} aria-hidden="true" /></Link>;
+  return <Link className={className} href={next.href}><span>다음 단계</span><b>{next.title}</b><ChevronRight size={20} aria-hidden="true" /></Link>;
 }
 
 export default function DocumentWorkspace(props: Props) {
@@ -218,7 +217,9 @@ export default function DocumentWorkspace(props: Props) {
     if (!node) return;
     const open = (event: MouseEvent) => {
       if (!window.matchMedia("(max-width: 640px)").matches) return;
-      const table = (event.target as Element | null)?.closest?.(".tiptap[contenteditable=false] table");
+      /* 표 위 구석의 확대 그림(표 감싸개의 ::before)을 눌러도 그 표를 띄운다 */
+      const target = event.target as Element | null;
+      const table = target?.closest?.(".tiptap[contenteditable=false] table") ?? target?.closest?.(".tiptap[contenteditable=false] .tableWrapper")?.querySelector("table");
       if (table) { setZoomFit(true); setZoomScale(1); setZoomTable(table.outerHTML); }
     };
     node.addEventListener("click", open);
@@ -277,9 +278,15 @@ export default function DocumentWorkspace(props: Props) {
   /* ← 는 내 사업 목록으로 — 예전엔 사업 관리 문서 탭으로 가서, 거기 큰 단추('사업계획서 열기')가 다시 여기로 돌려보냈다 */
   const back = "/plan";
 
+  /*
+   * 완료 알림은 이 화면에서 쓰는 걸 지켜보다 끝났을 때만 — 다 만든 계획서를 다시 열 때마다(새 창 · 새 세션) 초록 띠가 다시 떴다(r37 점검).
+   */
+  const sawWriting = useRef(false);
+  if (props.writing) sawWriting.current = true;
   useEffect(() => {
     if (!ready || !props.completionKey || isSample) { setCelebrate(false); return; }
     const key = `oneulstart:document-complete:${props.completionKey}`;
+    if (!sawWriting.current) { announced.current = key; return; }
     if (announced.current !== key) {
       try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
       announced.current = key; setCelebrate(true);
@@ -306,7 +313,9 @@ export default function DocumentWorkspace(props: Props) {
   const handledHash = useRef<number | null>(null);
   useEffect(() => {
     const hash = window.location.hash.slice(1);
-    const index = grouped.findIndex(([, list]) => list.some(s => `sec-${s.key.replace("/", "-")}` === hash));
+    /* '#doc-top' — 대화 칸의 '계획서 보기' · 작성이 끝난 순간: 1장 맨 위로(r37 점검: 보던 장 중간에 머물렀다) */
+    const top = hash === DOC_TOP_HASH;
+    const index = top ? (grouped.length ? 0 : -1) : grouped.findIndex(([, list]) => list.some(s => `sec-${s.key.replace("/", "-")}` === hash));
     if (index < 0) return;
     if (pane) {
       if (!paneActive || handledHash.current === paneNav) return;
@@ -314,6 +323,7 @@ export default function DocumentWorkspace(props: Props) {
       setContinuous(false); setSummaryMode(false);
     }
     setChapter(index);
+    if (top) { scroller()?.scrollTo({ top: 0, behavior: "instant" }); return; }
     const timer = setTimeout(() => document.getElementById(hash)?.scrollIntoView({ block: "start" }), 150);
     return () => clearTimeout(timer);
   }, [grouped.length, paneActive, paneNav]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -338,6 +348,9 @@ export default function DocumentWorkspace(props: Props) {
 
   /* 고친 내용이 아직 계획서에 반영되지 않았는지 — 예전엔 '계획서에 반영하기'가 화면 위 카드에만 있어 아래 '수정 마치기'로 그냥 끝내기 쉬웠다 */
   const factsUnapplied = factMode && facts.snapshot?.documentStatus === "stale";
+  /* 이번에 직접 고친 사실이 있을 때만 '반영하지 않고 마칠까요?'를 묻는다 — 대화로 고친 뒤 열기만 하고 닫아도 물었다(r37 점검) */
+  const [factSavedHere, setFactSavedHere] = useState(false);
+  useEffect(() => { if (!factMode) setFactSavedHere(false); }, [factMode]);
   /*
    * 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다.
    * 고치기 단추 이름은 둘뿐 — '대화로 고치기' · '직접 고치기'(여정 점검 2026-10-23: 같은 일을 하는 단추 이름이 네 가지로 섞여 있었다).
@@ -365,9 +378,8 @@ export default function DocumentWorkspace(props: Props) {
     {directInChapter && <button type="button" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 직접 고치기`} onClick={directEdit}><PenLine size={14} aria-hidden="true" />직접 고치기</button>}
   </>;
   const actionButtons = factMode ? <>
-    {factsUnapplied ? null : <span className={styles.factHint}>노란 부분만 고칠 수 있어요</span>}
     <button className={styles.secondary} onClick={async () => {
-      if (factsUnapplied && !await askConfirm({ message: "고친 내용을 아직 계획서에 반영하지 않았어요. 반영하지 않고 마칠까요?", confirmLabel: "그냥 마치기", cancelLabel: "계속 고치기" })) return;
+      if (factsUnapplied && factSavedHere && !await askConfirm({ message: "고친 내용을 아직 계획서에 반영하지 않았어요. 반영하지 않고 마칠까요?", confirmLabel: "그냥 마치기", cancelLabel: "계속 고치기" })) return;
       setFactMode(false); setFactPick(null);
     }}>수정 마치기</button>
     {/* 아래 단추도 위 카드와 같은 확인창을 바로 연다 — 예전엔 위로 데려가기만 해서 같은 이름의 단추를 또 눌러야 했다 */}
@@ -392,11 +404,6 @@ export default function DocumentWorkspace(props: Props) {
   /* 내려받기는 문서 머리의 칩과 같은 기준 — 상세 항목이 하나라도 있을 때 */
   const canDownloadDoc = grouped.length > 0;
   const headerNext = showNext && !!planId && !factMode;
-  /*
-   * 작업실의 완료 알림 — 다음 단계는 하나만, 있는 단추 이름으로 부른다(여정 점검 2026-10-23: 휴대폰에 없는 '다음 단계' 단추를 가리켰고
-   * '개업 준비 먼저 하기' 링크까지 있어 다음 할 일이 둘로 보였다). 건너뛰는 길은 작업실 탭으로 언제든 갈 수 있다.
-   */
-  const celebrateNext = celebrate && studioHeader && showNext && planId ? nextStepTitle(planId, homepage) : null;
   const studioActions = useMemo(() => {
     if (!studioHeader || isSample || (!canDownloadDoc && !headerNext)) return null;
     return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`} onClickCapture={paneLinkCapture(nav, planId)}>
@@ -472,12 +479,21 @@ export default function DocumentWorkspace(props: Props) {
     publishChapters?.(pendingJobId && changingChapters ? { jobId: pendingJobId, chapters: changingChapters.split("\n") } : null);
   }, [publishChapters, pendingJobId, changingChapters]);
   useEffect(() => () => publishChapters?.(null), [publishChapters]);
+  /* 대화 칸 '고칠 곳 고르기'가 여는 장 목록(PC) — 장마다 '대화로 고치기'와 같은 요청. 고칠 수 없으면(작성 중 · 예시 등) 내린다 */
+  const publishEditList = nav?.setEditChapterList;
+  const editListKey = chatEdit && studioPc && !isSample ? grouped.map(([name, list]) => `${name}\u0000${list.map(section => section.key).join(",")}`).join("\u0001") : "";
+  useEffect(() => {
+    publishEditList?.(editListKey ? editListKey.split("\u0001").map((entry, index) => {
+      const [name, keys] = entry.split("\u0000");
+      return planChapterComposeRequest(index + 1, name, keys ? keys.split(",") : []);
+    }) : null);
+  }, [publishEditList, editListKey]);
+  useEffect(() => () => publishEditList?.(null), [publishEditList]);
 
   // 본문 머리(사업명·빈 문서 안내)가 h1을 가질 때는 머리줄 '사업계획서'를 h1로 두지 않는다 — 2장부터는 사업명 머리가 접혀 머리줄이 h1이 된다
   const bodyTitle = ready && !(grouped.length && !summaryMode && !continuous && chapter > 0);
   /* 작업실 안이면 main 대신 칸 본문(div) — 작업실 루트가 페이지의 유일한 main 이다 */
   const Root = pane ? "div" : "main";
-  const sectionCount = grouped.reduce((sum, [, list]) => sum + list.length, 0);
   const stripEdit = summaryMode ? null : <button type="button" className={styles.stripButton} disabled={!grouped.length || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { setSummaryMode(false); setFactMode(true); return; } setEditing(!editing); }}><PenLine size={14} aria-hidden="true" />{editing ? "수정 마치기" : "직접 고치기"}</button>;
   return <Root ref={rootRef as never} className={`${frame.page} ${styles.page}`} data-embedded={pane ? "" : undefined} data-studio-pc={studioPc ? "" : undefined} onClickCapture={paneLinkCapture(nav, planId)}>
     <BusinessAppChrome title="사업계획서" backHref={back} showRail={!isSample} documentToc={documentToc} titleHeading={!bodyTitle}>
@@ -489,11 +505,12 @@ export default function DocumentWorkspace(props: Props) {
           {/* PC 새 화면: 칸 위 얇은 줄 — 문서 이름 · 계획서 종류 왼쪽, 상세/요약 · 직접 고치기 오른쪽(고치는 중이면 그 단추들) */}
           {studioPc && <div className={styles.strip}>
             <FileText size={15} aria-hidden="true" className={styles.stripIcon} />
-            <span className={styles.stripTitle}>{planDisplayName(title, isSample)} 사업계획서</span>
-            {props.planType && <><span className={styles.stripSep} aria-hidden="true">·</span><span className={styles.stripMeta}>{isSample ? "예시 · " : ""}{props.planType}{sectionCount ? ` · ${sectionCount}개 항목` : ""}</span></>}
+            {/* 사업명은 머리줄에, 계획서 종류 · 항목 수는 읽는 데 필요 없어 이름만(r37 글 점검) — 예시는 '예시' 표시를 남긴다 */}
+            <span className={styles.stripTitle}>{isSample ? "예시 사업계획서" : "사업계획서"}</span>
             {!centerInHeader && picker}
             <span className={styles.stripSpace} />
-            {factMode || isSample ? <div className={styles.stripActions}>{actionButtons}</div> : <>
+            {/* 문서가 아직 없으면(작성 전) 보기 바꾸기 · 직접 고치기를 두지 않는다(r37 점검) */}
+            {!grouped.length && !props.writing && !factMode ? null : factMode || isSample ? <div className={styles.stripActions}>{actionButtons}</div> : <>
               {props.summary && <div className={styles.stripSeg} role="group" aria-label="문서 보기 방식">
                 <button type="button" aria-pressed={!summaryMode} onClick={() => { setSummaryMode(false); scroller()?.scrollTo({ top: 0 }); }}>상세 계획서</button>
                 <button type="button" aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroller()?.scrollTo({ top: 0 }); }}>한 장 요약</button>
@@ -515,8 +532,8 @@ export default function DocumentWorkspace(props: Props) {
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
-            {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>{studioHeader ? `내용을 확인하고 필요한 부분만 다듬어 보세요.${celebrateNext ? ` 준비되면 '${celebrateNext}' 단추로 이어가요.` : ""}` : "내용을 확인하고 필요한 부분만 다듬어 보세요. 준비되면 화면 아래 버튼으로 다음 단계를 이어가요."}</p>{planId && !studioHeader && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
-            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}>{pane ? <h2>아직 만든 문서가 없어요</h2> : <h1>아직 만든 문서가 없어요</h1>}<p>사업 이야기를 이어서 계획서를 만들어 보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
+            {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong>{planId && !studioHeader && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
+            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty} data-pane={pane ? "" : undefined}>{pane ? <h2>아직 만든 문서가 없어요</h2> : <h1>아직 만든 문서가 없어요</h1>}{/* 작업실 안은 대화 칸에 있는 '사업계획서 만들기'로 — 예전 '사업안으로 돌아가기'는 어디로 가는지 몰랐다(r37 점검) */}{pane ? <Link className={styles.emptyPrimary} href={coachHref ?? back}>사업계획서 만들기<ChevronRight size={18} aria-hidden="true" /></Link> : <><p>사업 이야기를 이어서 계획서를 만들어 보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></>}</div> : <article className={styles.article}>
               {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} pc={studioPc} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
@@ -550,7 +567,6 @@ export default function DocumentWorkspace(props: Props) {
           {/* PC 새 화면: 아래 가운데 떠 있는 장 넘기기 — '‹ 1장 / 5장 2장 고객과 시장 ›' */}
           {studioPc && ready && !summaryMode && !continuous && grouped.length > 1 && <nav className={styles.pager} aria-label="문서 장 이동">
             <button type="button" className={styles.pagerIcon} aria-label="이전 장" disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={16} aria-hidden="true" /></button>
-            <span className={styles.pagerCount}><b>{chapter + 1}장</b> / {grouped.length}장</span>
             {chapter < grouped.length - 1
               ? <button type="button" className={styles.pagerNext} onClick={() => selectChapter(chapter + 1)} aria-label={`다음 장: ${chapter + 2}장 ${grouped[chapter + 1][0]}`}><span>{chapter + 2}장 {grouped[chapter + 1][0]}</span><ChevronRight size={16} aria-hidden="true" /></button>
               : <button type="button" className={styles.pagerNext} onClick={readAll}><span>전체 이어 읽기</span></button>}
@@ -560,14 +576,11 @@ export default function DocumentWorkspace(props: Props) {
       </div>}
     </BusinessAppChrome>
     <dialog ref={dialog} className={styles.dialog} onCancel={() => setModal(null)} onClose={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setModal(null); } }} aria-labelledby="document-dialog-title">
-      <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : modal === "edit" ? "어떻게 고칠까요?" : "파일 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
+      <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : modal === "edit" ? "어떻게 고칠까요?" : summaryMode && props.summary ? "한 장 요약 내려받기" : "상세 계획서 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
       {modal === "edit" ? <div className={styles.editChoices}>
-        <p>계획서 내용 중 이 사업에 관한 것만 고칠 수 있어요.</p>
-        {EDIT_CHAT && coachHref && <Link href={`${coachHref}&edit=chat`} onClick={() => setModal(null)}><strong>대화로 고치기</strong><small>“가격을 올려줘”처럼 말하면 바뀔 내용을 정리해 보여 드려요</small></Link>}
-        <button onClick={() => { setModal(null); setSummaryMode(false); setFactMode(true); }}><strong>직접 고치기</strong><small>고칠 수 있는 숫자·사실만 표시돼요. 누르고 바꾸면 돼요</small></button>
+        {EDIT_CHAT && coachHref && <Link href={`${coachHref}&edit=chat`} onClick={() => setModal(null)}><strong>대화로 고치기</strong><small>“가격을 올려줘”처럼 말하기</small></Link>}
+        <button onClick={() => { setModal(null); setSummaryMode(false); setFactMode(true); }}><strong>직접 고치기</strong><small>숫자·사실을 눌러 바꾸기</small></button>
       </div> : modal === "toc" ? toc() : <div className={styles.downloads}>
-        {/* 지금 보고 있는 문서를 받는다 — 예전엔 한 장 요약을 보면서도 말없이 상세 계획서 전체가 받아졌다 */}
-        <p className={styles.downloadWhich}>{summaryMode && props.summary ? "지금 보고 있는 ‘한 장 요약’을 내려받아요." : "‘상세 계획서’ 전체를 내려받아요."}</p>
         {props.locked && <p className={styles.notice}>파일 내려받기는 결제 후 이용할 수 있어요. 형식을 선택하면 결제로 이어져요.</p>}
         {props.accessError ? <div className={styles.notice} role="alert">이용 권한을 확인하지 못했어요. <button className={styles.help} onClick={props.onRetryAccess}>다시 확인</button></div> : props.accessPending && <p role="status">이용 권한을 확인하고 있어요.</p>}
         {([{ format: "pdf", name: "PDF", description: "인쇄하거나 공유할 때", Icon: FileDown }, { format: "docx", name: "Word", description: "문서를 직접 고쳐 쓸 때", Icon: FileText }, { format: "pptx", name: props.deckLabel || "발표자료 PPT", description: "계획서를 발표자료로 만들 때", Icon: Presentation }] as const)
@@ -580,7 +593,7 @@ export default function DocumentWorkspace(props: Props) {
       </div>}
     </dialog>
   {toast && <p className={styles.toast} role="status" aria-live="polite">{toast}</p>}
-  {factMode && factPick && <FactPopover key={factPick.id} edit={facts} questionId={factPick.id} anchor={factPick.rect} onClose={() => setFactPick(null)} onSaved={() => { setFactPick(null); props.onFactsSaved?.(); }} />}
+  {factMode && factPick && <FactPopover key={factPick.id} edit={facts} questionId={factPick.id} anchor={factPick.rect} onClose={() => setFactPick(null)} onSaved={() => { setFactPick(null); setFactSavedHere(true); props.onFactsSaved?.(); }} />}
   {zoomTable && <dialog ref={zoomDialog} className={styles.tableZoom} aria-label="표 크게 보기" onClose={() => setZoomTable(null)}
     onPointerDown={event => { zoomPressOnBackdrop.current = event.target === zoomDialog.current; }}
     onClick={event => { if (zoomPressOnBackdrop.current && event.target === zoomDialog.current) zoomDialog.current?.close(); zoomPressOnBackdrop.current = false; }}>

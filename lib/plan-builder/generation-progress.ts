@@ -32,5 +32,7 @@ export function generationEta(state: Pick<GenerationProgress, "done" | "total" |
   const elapsed = now - Date.parse(state.startedAt);
   if (!Number.isFinite(elapsed) || elapsed <= 0) return null;
   const left = elapsed / state.done * (state.total - state.done);
-  return left < 60_000 ? "곧 끝나요" : `약 ${Math.ceil(left / 60_000)}분 남음`;
+  /* '곧 끝나요'는 80% 이상 썼을 때만 — 3/10 에서 보였다(r37 휴대폰 점검). 그 전에 1분 안쪽이면 '약 1분 남음' */
+  if (left < 60_000) return state.done / state.total >= 0.8 ? "곧 끝나요" : "약 1분 남음";
+  return `약 ${Math.ceil(left / 60_000)}분 남음`;
 }

@@ -129,7 +129,10 @@ export function HomepageKitPanel({
   previewView,
   studio = false,
   pick,
+  onChatEdit,
 }: {
+  /** 휴대폰 작업실 — '홈페이지 고치기' 옆의 작은 '대화로 고치기'(대화 칸으로 보낸다). 없으면 숨긴다 */
+  onChatEdit?: () => void;
   /** 작업실(PC) 배치 — 미리보기가 카드 끝까지 차고, 미리보기 위 이름·도구 줄 대신 아래 '홈페이지 설정' 칸에 도구·접는 칸을 모은다 */
   studio?: boolean;
   /** 대화로 고치기 제안이 떠 있는 동안 바뀔 글(글 자리 id · 지금 글) — 미리보기에서 그 글을 테두리로 짚는다 */
@@ -353,8 +356,9 @@ export function HomepageKitPanel({
         {!inChrome && <h3>내 사업 홈페이지</h3>}
         {publicPath ? (
           <p className="hk-url">
-            <span>{published ? "공개 중" : stopped ? "공개 멈춤" : "아직 비공개"}</span>
-            {unpublishedEdits ? <em className="hk-url-dirty">고친 내용은 아직 공개 전 · ‘새 버전 공개’를 누르면 손님 화면에 반영돼요</em> : null}
+            {/* 작업실(PC)은 카드 맨 위 주소 줄이 공개 상태를 한 번 보인다 — 여기서 또 적지 않는다(군더더기 점검 r37) */}
+            {!studio && <span>{published ? "공개 중" : stopped ? "공개 멈춤" : "아직 비공개"}</span>}
+            {unpublishedEdits && !studio ? <em className="hk-url-dirty">공개 안 된 수정 있음</em> : null}
             {/*
               긴 주소(/launch/영문-이름-번호)는 글자로 늘어놓지 않는다(대표 요청 2026-10-15: URL 이 과하게 보인다).
               공개 뒤에는 열기·주소 복사·공유 단추만, 공개 전에는 한 줄 안내만(그 주소는 아직 없어서 404).
@@ -362,9 +366,10 @@ export function HomepageKitPanel({
             {/* 공개 뒤에는 주소를 글로도 보여 준다 — 단추만 있으니 어떤 주소인지 몰라 손님에게 말로 알려 줄 수 없었다(여정 점검 2026-10-22). 길면 말줄임 */}
             {published
               ? <><em className="hk-url-pending" title={publicUrl}>{publicUrl.replace(/^https?:\/\//, "")}</em><a className="hk-url-btn" href={publicPath} target="_blank" rel="noreferrer"><ExternalLink size={13} /> 홈페이지 열기</a>
-                <button type="button" className="hk-url-btn" onClick={copyUrl}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "복사됨" : "주소 복사"}</button>
-                <button type="button" className="hk-url-btn" onClick={shareUrl}><Share2 size={13} /> 공유</button>
-                {onUnpublish ? <button type="button" className="hk-url-btn hk-url-stop" disabled={busy} onClick={onUnpublish}>{action === "unpublishing" ? <Spinner /> : <PauseCircle size={13} />} 공개 멈추기</button> : null}</>
+                {/* 휴대폰에서는 복사·공유·멈추기를 그림 단추로 줄여 한 줄에(모바일 점검 r37: '공개 멈추기'만 둘째 줄에 떨어졌다). 이름은 aria-label·title 로 */}
+                <button type="button" className="hk-url-btn" aria-label={copied ? "복사됨" : "주소 복사"} title={copied ? "복사됨" : "주소 복사"} onClick={copyUrl}>{copied ? <Check size={13} /> : <Copy size={13} />} <span className="hk-url-label">{copied ? "복사됨" : "주소 복사"}</span></button>
+                <button type="button" className="hk-url-btn" aria-label="공유" title="공유" onClick={shareUrl}><Share2 size={13} /> <span className="hk-url-label">공유</span></button>
+                {onUnpublish ? <button type="button" className="hk-url-btn hk-url-stop" aria-label="공개 멈추기" title="공개 멈추기" disabled={busy} onClick={onUnpublish}>{action === "unpublishing" ? <Spinner /> : <PauseCircle size={13} />} <span className="hk-url-label">공개 멈추기</span></button> : null}</>
               : <em className="hk-url-pending">{stopped ? "‘다시 공개’하면 같은 주소로 열려요" : "공개하면 주소가 생겨요"}</em>}
           </p>
         ) : <p className="hk-url">처음 공개하면 주소가 생겨요</p>}
@@ -422,7 +427,6 @@ export function HomepageKitPanel({
       icon={<PhoneCall size={18} />}
       title="손님 연락 방법"
       badge={<em className={`hk-badge ${contactReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{contactReady ? contactInfo.label : formOff ? "문의 양식 — 꺼져 있음" : `${contactInfo.label} — 입력 필요`}</em>}
-      hint="문의·예약 버튼을 누르면 어디로 연결할지 정해요"
     >
       <div className="hk-contact-methods" role="radiogroup" aria-label="연결 방법">
         {CONTACT_METHODS.map((method) => (
@@ -471,12 +475,6 @@ export function HomepageKitPanel({
       icon={<ShieldCheck size={18} />}
       title="사업자 정보"
       badge={missing.length ? <em className="hk-badge hk-badge-warn">채울 것 {missing.length}개</em> : <em className="hk-badge hk-badge-ok">완료</em>}
-      /* 문의 양식을 켠 채 개인정보 문의처가 비면 공개가 막힌다(landingPublicationIssues) — '지금도 공개할 수 있어요'라고 하지 않는다 */
-      hint={missing.length
-        ? (draft.pageMode === "transaction" || missing.includes("개인정보 문의처")
-          ? "공개 전에 채워 주세요"
-          : "결제를 받기 전에 채워 주세요")
-        : "홈페이지 맨 아래에 나오는 사업자 정보예요"}
     >
       <div className="hk-grid">
         <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(e) => update({ businessName: e.target.value })} /></label>
@@ -489,7 +487,7 @@ export function HomepageKitPanel({
         <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(e) => update({ openHours: e.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무" /></label>
         <label className="wide hk-switch">
           <input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(e) => update({ leadCaptureEnabled: e.target.checked })} />
-          <span>고객 문의 양식 받기 <small>홈페이지 아래에 이름·연락처 양식이 붙고, 들어온 문의는 메뉴의 ‘손님 문의’에 쌓여요.</small></span>
+          <span>고객 문의 양식 받기 <small>문의는 손님 문의에 모여요</small></span>
         </label>
         {/*
          * 받을 연락처 — 예전 편집 화면에 있던 토글이 사라져 휴대폰 칸을 켤 방법이 없었다. 그래서 '문의자 이름·연락처 문자',
@@ -530,7 +528,6 @@ export function HomepageKitPanel({
       icon={<Globe2 size={18} />}
       title="내 도메인 연결"
       badge={site?.customDomain ? <em className={`hk-badge ${domainReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{domainReady ? site.customDomain : `${site.customDomain} · 연결 확인 중`}</em> : null}
-      hint="www.mybrand.com 같은 내 주소 붙이기"
     >
       <LandingDomainConnector
         onReadyChange={setDomainReady}
@@ -549,7 +546,7 @@ export function HomepageKitPanel({
       icon={<Inbox size={18} />}
       title="문의 알림 · 손님 문의"
       badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건{openLeads ? ` · 답할 것 ${openLeads}건` : ""}</em>}
-      hint={draft.leadCaptureEnabled ? "새 문의를 문자로 받을 번호를 정해요" : "문의 양식이 꺼져 있어요"}
+      hint={draft.leadCaptureEnabled ? undefined : "문의 양식이 꺼져 있어요"}
     >
       <HomepageAlertSettings projectId={projectId} suggestedPhone={draft.businessPhone} />
       {/* 문의 목록은 왼쪽 메뉴 '내 문의'에서 메신저처럼 본다(소유자 요청 2026-10-07). 여기서는 알림 번호만 정한다 */}
@@ -560,7 +557,7 @@ export function HomepageKitPanel({
     </Fold>
 
     {/* 6. 전문가 상담 — 담당자가 직접 고쳐 주는 개별 상담. 신청하면 운영자에게 문자가 간다 */}
-    <Fold step={(inApp ? 5 : 6) - (studio ? 1 : 0)} id="hk-expert" icon={<PhoneCall size={18} />} title="전문가 상담" hint="담당자가 사진·문구·디자인을 직접 다듬어 드려요">
+    <Fold step={(inApp ? 5 : 6) - (studio ? 1 : 0)} id="hk-expert" icon={<PhoneCall size={18} />} title="전문가 상담">
       <HomepageExpertConsult planId={planId ?? null} />
     </Fold>
   </>;
@@ -577,27 +574,28 @@ export function HomepageKitPanel({
 
       {/*
         미리보기 — 예전엔 가짜 브라우저 창(신호등 점 + 주소창)에 담았는데 꾸밈이 많고 폰에서 옆으로 밀렸다(대표 요청 2026-10-15).
-        '미리보기' 이름과 에디터 버튼만 둔 줄 하나로.
+        에디터 버튼만 둔 줄 하나로('미리보기' 이름표는 군더더기라 걷음 2026-10-24).
         템플릿·에디터 버튼은 목업 바 오른쪽의 작은 버튼으로 — 예전의 큰 버튼
         두 개는 미리보기보다 목소리가 컸다(사용자 지적).
       */}
       {!studio && <p className="hk-step-head"><b className="hk-step-no" aria-hidden="true">1</b> 미리보기·고치기</p>}
       <div className="hk-preview hk-mock" id="hk-preview">
         {!studio && <div className="hk-mock-bar">
-          <span className="hk-mock-title">미리보기</span>
           <span className="hk-mock-actions">
             <button type="button" className="hk-mock-edit" disabled={busy} onClick={onOpenEditor}>
               <Pencil size={14} /> 홈페이지 고치기
             </button>
+            {/* 고치는 길은 큰 단추 하나 + 작은 글 단추 하나(모바일 점검 r37: 대화로 고치기·홈페이지 고치기·'미리보기를 누르면…' 셋이 겹쳤다) */}
+            {onChatEdit ? <button type="button" className="hk-mock-chat" disabled={busy} onClick={onChatEdit}>대화로 고치기</button> : null}
           </span>
         </div>}
         {!studio && tools}
-        {!studio && <div className="hk-preview-hint">
-          <span><Pencil size={14} aria-hidden /> 미리보기를 누르면 고칠 수 있어요</span>
-          {previewView ? null : <span className="hk-view-switch" role="radiogroup" aria-label="미리보기 모양">
+        {/* '미리보기를 누르면 고칠 수 있어요'는 걷었다 — 바로 위 '홈페이지 고치기'와 같은 말. 모양 단추가 필요할 때만 이 줄을 둔다 */}
+        {!studio && !previewView && <div className="hk-preview-hint">
+          <span className="hk-view-switch" role="radiogroup" aria-label="미리보기 모양">
             <button type="button" role="radio" aria-checked={view === "mobile"} className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")}>휴대폰</button>
             <button type="button" role="radio" aria-checked={view === "pc"} className={view === "pc" ? "on" : ""} onClick={() => setView("pc")}>컴퓨터</button>
-          </span>}
+          </span>
         </div>}
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
         <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} aria-busy={aiFill?.running || undefined} ref={previewBodyRef} className={`hk-preview-body ${view === "mobile" ? "hk-preview-phone" : ""}`} onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="홈페이지 고치기">
