@@ -217,7 +217,7 @@
 .complete button { margin-bottom: 12px; }
 /* 빈 화면(로그인 안내·사업 없음) — 대화 영역 가운데에 아이콘·제목·설명·버튼을 세로로 모은다 */
 .empty { display: grid; justify-items: center; gap: 12px; max-width: 440px; margin: 0 auto; padding: clamp(40px, 14vh, 140px) 0 40px; text-align: center; }
-.empty h1 { margin: 4px 0 0; font-size: 23px; line-height: 1.4; word-break: keep-all; }
+.empty h1 { margin: 4px 0 0; font-size: 23px; line-height: 1.4; word-break: keep-all; text-wrap: balance; }
 .emptyIcon { display: grid; place-items: center; width: 60px; height: 60px; margin-bottom: 8px; border-radius: 16px; background: color-mix(in srgb, var(--intake-blue) 10%, transparent); color: var(--intake-blue); }
 .empty .primaryButton { width: 100%; max-width: 320px; min-height: 50px; margin-top: 12px; font-size: 15px !important; }
 .empty .textLink { justify-content: center; }
@@ -889,9 +889,13 @@
 .page[data-embedded][data-studio-pro] .paneProgress > span { border-radius: 4px; background: #3182f6; }
 .paneCount { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .page[data-embedded][data-studio-pro] .paneBar[data-pro-head]:not(:has(b)) { justify-content: flex-end; padding-block: 2px 0; }
-/* 대화 — 위쪽 끝은 살짝 흐리게(바탕 위에 떠 있는 글이 칼같이 잘리지 않게) */
-.page[data-embedded][data-studio-pro] .conversation { scrollbar-gutter: auto; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 20px); mask-image: linear-gradient(to bottom, transparent 0, #000 20px); }
-.page[data-embedded][data-studio-pro] .inputContent { max-width: none; padding: 14px 18px 16px 20px; }
+/*
+ * 대화 — 위쪽 끝은 살짝 흐리게(바탕 위에 떠 있는 글이 칼같이 잘리지 않게).
+ * 머리줄과 대화 칸이 같은 회색 바탕이라, 흐림이 머리줄 바로 밑(0px)에서 시작하면 올라가는 글이 머리줄 아래로 파고들며 겹쳐 보였다(점검 2026-10-24).
+ * 맨 위 6px 은 비워 두고(글이 머리줄에 닿지 않게) 그 아래 16px 동안 흐리게 한다 — 첫 글은 그 아래(위 여백 22px)라 맨 위에 있어도 흐려지지 않고, 글로 스크롤해 갈 때도(scroll-padding) 흐림 아래에 멈춘다.
+ */
+.page[data-embedded][data-studio-pro] .conversation { scrollbar-gutter: auto; scroll-padding-top: 24px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 6px, #000 22px); mask-image: linear-gradient(to bottom, transparent 0, transparent 6px, #000 22px); }
+.page[data-embedded][data-studio-pro] .inputContent { max-width: none; padding: 22px 18px 16px 20px; }
 .page[data-embedded][data-studio-pro] .assistantMessage { margin: 0 0 14px; font-size: 14.5px; line-height: 1.65; }
 .page[data-embedded][data-studio-pro] .assistantMessage > p, .page[data-embedded][data-studio-pro] .assistantMessage > .conversationText, .page[data-embedded][data-studio-pro] .chatQuestion h2 { width: auto; max-width: 100%; padding: 0; border-radius: 0; background: none; color: #191f28; font-size: 14.5px; font-weight: 400; line-height: 1.65; animation: none; }
 .page[data-embedded][data-studio-pro] .conversationText .textButton { min-height: 32px; padding: 2px 0; }
@@ -961,6 +965,9 @@ button.workLogRow:hover { background: #e9ecf0; }
 .page[data-embedded][data-studio-pro] .changeCard > p > s { color: #b0b8c1; text-decoration-thickness: 1px; }
 .page[data-embedded][data-studio-pro] .changeCard > p > strong { padding: 0 4px; border-radius: 4px; background: #dcebff; color: #191f28; font-weight: 700; }
 .page[data-embedded][data-studio-pro] .changeCard > p.studioEditSummary { display: block; margin: -2px 14px 8px; padding: 0; background: none; color: #4e5968; font-size: 12.5px; }
+/* 바뀌는 장 칩(계획서 칸이 찾은 장) — 바뀌는 곳 아래 작은 회색 칩, 누르는 것이 아니라 알려 주기만 한다 */
+.page[data-embedded][data-studio-pro] .changeCard > .changeChapters { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 14px 6px; padding: 0; list-style: none; }
+.page[data-embedded][data-studio-pro] .changeChapters > li { padding: 2px 8px; border: 1px solid #e5e8eb; border-radius: 6px; background: #f2f4f6; color: #4e5968; font-size: 11.5px; font-weight: 500; line-height: 18px; white-space: nowrap; }
 .page[data-embedded][data-studio-pro] .changeCard > small { display: block; margin: 0 14px 8px; color: #8b95a1; font-size: 11.5px; }
 .page[data-embedded][data-studio-pro] .changeCard .chipRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 4px 14px 12px; }
 .page[data-embedded][data-studio-pro] .changeCard .chip, .page[data-embedded][data-studio-pro] .studioEditTurn .chip { min-height: 30px; padding: 0 12px; border: 1px solid #e3e7ec; border-radius: 7px; background: #fff; color: #191f28; font-size: 12.5px; font-weight: 600; }
@@ -980,12 +987,12 @@ button.workLogRow:hover { background: #e9ecf0; }
 .queueButton { display: inline-grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; }
 .queueButton:hover { background: #eef1f4; color: #4e5968; }
 .queueNote { margin: -2px 0 0 4px !important; color: #8b95a1; font-size: 11.5px; }
-/* 한 줄 — 넘치면 옆으로 밀어 본다(오른쪽 끝은 흐리게) */
-.suggestRow { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(to left, transparent 0, #000 24px); mask-image: linear-gradient(to left, transparent 0, #000 24px); padding-right: 20px; }
-.suggestRow::-webkit-scrollbar { display: none; }
+/* 두 줄까지 감싼다 — 셋째 줄로 넘치는 칩은 SuggestRow 가 통째로 숨긴다(칩 중간에서 글자가 잘리지 않게) */
+.suggestRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .suggestLabel { display: inline-flex; flex: none; align-items: center; gap: 4px; margin-right: 2px; color: #8b95a1; font-size: 12px; white-space: nowrap; }
 .suggestChip { flex: none; max-width: 100%; height: 30px; padding: 0 12px; border: 1px solid #e3e7ec; border-radius: 999px; background: #fff; color: #4e5968; font-size: 12.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .suggestChip:hover { border-color: #c9d3de; color: #191f28; }
+.suggestRow > [hidden] { display: none; }
 .page[data-embedded][data-studio-pro] .composerShell { padding: 10px 10px 8px 12px; border: 1px solid #d9dee5; border-radius: 16px; background: #fff; box-shadow: 0 2px 10px rgba(16, 24, 40, .05); }
 .page[data-embedded][data-studio-pro] .composerShell:focus-within { border-color: #b4c6dc; background: #fff; box-shadow: 0 2px 10px rgba(16, 24, 40, .05), 0 0 0 3px rgba(49, 130, 246, .08); }
 .page[data-embedded][data-studio-pro] .composerRow { display: block; }

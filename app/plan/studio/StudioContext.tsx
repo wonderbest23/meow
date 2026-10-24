@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useSyncExternalStore, type ReactNode } from "react";
 import type { StudioTab } from "../../../lib/plan-builder/studio";
 
 /*
@@ -58,7 +58,19 @@ export type StudioNav = {
    * 등록하는 순간 넘긴다. 돌려준 함수로 내린다.
    */
   onComposeRequest?: (listener: (request: StudioComposeRequest) => void) => () => void;
+  /**
+   * PC 만 — 계획서 칸이 대화 칸의 '이렇게 바꿀게요'(채팅 수정 제안)가 닿는 장 이름('1장 사업 개요' 등)을 올린다. 제안이 없으면 null.
+   * 계획서 칸이 이미 본문에서 바뀔 글을 찾고 있어(대화로 고치는 중 미리보기) 그 결과를 대화 칸 카드의 작은 칩으로도 보여 준다.
+   * 계획서 칸이 한 번도 열리지 않았으면 아무도 올리지 않아 칩이 없다. 휴대폰과 작업실 밖에서는 이 함수들이 없다.
+   */
+  setEditPreviewChapters?: (preview: StudioEditPreviewChapters | null) => void;
+  /** 대화 칸이 읽는다 — 올린 값이 바뀌면 listener 를 부른다. 돌려준 함수로 내린다(useStudioEditPreviewChapters 가 쓴다) */
+  subscribeEditPreviewChapters?: (listener: () => void) => () => void;
+  editPreviewChapters?: () => StudioEditPreviewChapters | null;
 };
+
+/** 채팅 수정 제안(작업 id)이 계획서에서 닿는 장 이름 — 대화 칸은 지금 카드의 작업 id 와 같을 때만 쓴다(앞 제안의 장이 남아 보이지 않게) */
+export type StudioEditPreviewChapters = { jobId: string; chapters: string[] };
 
 /** 대화로 고칠 수 있는 대상 — plan-section 은 계획서의 한 장, homepage 는 홈페이지 글 */
 export type StudioEditTarget = "homepage" | "plan-section";
@@ -137,4 +149,19 @@ export function useStudioHeaderCenter(node: ReactNode | null) {
     nav.setHeaderCenter(tab, node);
   }, [nav, tab, node]);
   useEffect(() => () => { if (nav?.setHeaderCenter && tab) nav.setHeaderCenter(tab, null); }, [nav, tab]);
+}
+
+/**
+ * 대화 칸의 '이렇게 바꿀게요' 카드가 쓰는 장 이름 — 계획서 칸이 올린 값이 이 작업(jobId)의 것일 때만 돌려준다.
+ * 작업실 밖 · 휴대폰 · 계획서 칸이 아직 계산하지 않았으면 빈 목록이다.
+ */
+const NO_CHAPTERS: string[] = [];
+const NO_SUBSCRIBE = () => () => {};
+export function useStudioEditPreviewChapters(jobId: string | null | undefined): string[] {
+  const nav = useStudioNav();
+  const subscribe = nav?.subscribeEditPreviewChapters ?? NO_SUBSCRIBE;
+  const read = nav?.editPreviewChapters;
+  const snapshot = useCallback(() => read?.() ?? null, [read]);
+  const preview = useSyncExternalStore(subscribe, snapshot, () => null);
+  return jobId && preview?.jobId === jobId ? preview.chapters : NO_CHAPTERS;
 }

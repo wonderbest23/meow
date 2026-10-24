@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ListChecks, Sparkles } from "lucide-react";
+import { ListChecks } from "lucide-react";
 import type { IntakeSnapshot } from "../../../lib/plan-builder/intake-types";
 import type { IntakeQuestion } from "../../../lib/plan-builder/intake-questions";
-import { formatWon } from "../../../lib/plan-builder/intake-options";
+import { wonLabel } from "../../../lib/plan-builder/intake-options";
 import { numericAnswer, plainText, summaryAnswerText } from "../chat/intake-ui/model";
 import styles from "./Studio.module.css";
 
@@ -17,6 +17,8 @@ import styles from "./Studio.module.css";
  * 새 작업실(대표 승인 시안 2026-10-24) — 카드 위 얇은 줄(지금까지 정한 내용 · 기본 질문 N개 답함), 사업 소개를 큰 제목으로,
  * '사업' 표 · '숫자'(가격 · 한 건 비용 · 둘 다 있으면 남는 돈 '계산') · 남은 질문(지금 묻는 중) · 마치면 무엇이 되는지 한 줄.
  * 숫자는 답한 것만 쓴다 — 남는 돈도 가격과 한 건 비용을 둘 다 답했을 때만 뺀 값이다(지어내지 않는다).
+ * 금액은 대화 말풍선과 같은 한국어 단위로(2,000만원 · 1억 5,000만원) — 여기만 '20,000,000원'으로 보였다(점검 2026-10-24).
+ * 사업 소개는 큰 제목이 맡는다 — 같은 글을 '사업' 표에 또 두지 않는다.
  */
 const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
 
@@ -24,6 +26,14 @@ export type SummaryRow = { id: string; label: string; value: string; proposal: b
 
 /* 요약 줄의 질문 — 질문 id 나 저장 칸(fieldKey)이 같은 것 */
 const questionFor = (snapshot: IntakeSnapshot, id: string): IntakeQuestion | undefined => snapshot.questions.find(entry => entry.id === id || entry.fieldKey === id);
+
+/** 원 단위 숫자 답이면 한국어 단위 금액(기간 기준이 있으면 ' / 월'처럼 붙인다), 아니면 undefined */
+function koreanAmount(question: IntakeQuestion | undefined, value: string): string | undefined {
+  if (!question || question.kind !== "number" || question.unit !== "원") return undefined;
+  const amount = numericAnswer(question, value);
+  if (amount === undefined) return undefined;
+  return question.period ? `${wonLabel(amount)} / ${question.period}` : wonLabel(amount);
+}
 
 /** 요약 줄 — 값이 없거나 이미 나온 글과 같으면 뺀다. 사업 소개(business)를 맨 앞에 */
 export function intakeSummaryRows(snapshot: IntakeSnapshot): SummaryRow[] {
@@ -35,7 +45,7 @@ export function intakeSummaryRows(snapshot: IntakeSnapshot): SummaryRow[] {
     const shown = plainText(item.value);
     if (!shown) continue;
     const question = questionFor(snapshot, item.id);
-    const display = item.id === "industry" && snapshot.ksic ? snapshot.ksic.name : (question ? summaryAnswerText(question, shown, snapshot.candidateIdeas) : "") || shown;
+    const display = item.id === "industry" && snapshot.ksic ? snapshot.ksic.name : koreanAmount(question, shown) ?? ((question ? summaryAnswerText(question, shown, snapshot.candidateIdeas) : "") || shown);
     const key = normalize(display);
     if (!key || seen.has(key)) continue;
     seen.add(key);
@@ -73,12 +83,12 @@ export function summaryStats(snapshot: IntakeSnapshot, rows: SummaryRow[]): Stat
     const row = rows.find(item => item.id === id);
     if (!row) continue;
     const value = amount(id);
-    stats.push({ id, label: row.label, value: value === undefined ? row.value : formatWon(value) });
+    stats.push({ id, label: row.label, value: value === undefined ? row.value : wonLabel(value) });
   }
   const price = amount("price"), unitCost = amount("unitCost");
   if (price !== undefined && unitCost !== undefined) {
     const basis = questionFor(snapshot, "price")?.period;
-    stats.push({ id: "margin", label: basis ? `${basis}에 남는 돈` : "한 건에 남는 돈", value: formatWon(price - unitCost), computed: true });
+    stats.push({ id: "margin", label: basis ? `${basis}에 남는 돈` : "한 건에 남는 돈", value: price - unitCost < 0 ? `-${wonLabel(unitCost - price)}` : wonLabel(price - unitCost), computed: true });
   }
   return stats;
 }
@@ -125,9 +135,8 @@ export default function StudioIntakeSummary({ snapshot }: { snapshot: IntakeSnap
       <ListChecks size={15} aria-hidden="true" />
       <h3 id="studio-live-summary-heading">지금까지 정한 내용</h3>
       {snapshot && snapshot.coreTotal > 0 && <span className={styles.sumStripMeta}><span aria-hidden="true">·</span>{snapshot.coreComplete ? "기본 질문을 다 답했어요" : `기본 질문 ${answeredCount}개 답함`}</span>}
-      <span className={styles.sumStripNote}>왼쪽에서 답하면 여기에 바로 정리돼요</span>
     </header>
-    <div className={styles.sumBody} ref={list}>
+    <div className={styles.sumBody} ref={list} data-empty={!rows.length || undefined}>
       {rows.length ? <>
         <div className={styles.sumHead} data-row={business ? "business" : undefined} data-fresh={business && fresh.includes("business") || undefined}>
           <p className={styles.sumTitle}>{business?.value ?? (title || "아직 사업 소개를 정하지 않았어요")}{business && freshTag("business")}</p>
@@ -147,14 +156,13 @@ export default function StudioIntakeSummary({ snapshot }: { snapshot: IntakeSnap
           </div>}
           {numberRows.length > 0 && <dl>{numberRows.map(summaryRow)}</dl>}
         </div>}
-      </> : <p className={styles.liveSummaryEmpty}>아직 답한 내용이 없어요. 왼쪽 대화에서 질문에 답하면 여기에 바로 정리돼요.</p>}
+      </> : <div className={styles.liveSummaryEmpty}><ListChecks size={26} aria-hidden="true" /><p>답하면 여기에 정리돼요</p></div>}
       {remaining.length > 0 && <div className={styles.sumGroup}>
         <h4>남은 질문 {remaining.length}개</h4>
         <ol className={styles.sumTodo}>
           {remaining.map(item => <li key={item.id} data-now={item.now || undefined} aria-current={item.now ? "step" : undefined}>{item.label}{item.now && <small>지금 묻는 중</small>}</li>)}
         </ol>
       </div>}
-      <p className={styles.sumFoot}><Sparkles size={14} aria-hidden="true" />질문을 다 마치면 30~40초 동안 사업 방향을 한 장으로 정리하고, 사업계획서를 만들 수 있어요.</p>
     </div>
   </section>;
 }

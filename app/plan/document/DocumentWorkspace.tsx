@@ -449,16 +449,29 @@ export default function DocumentWorkspace(props: Props) {
     return () => { document.removeEventListener("keydown", poke, true); document.removeEventListener("click", poke, true); window.clearInterval(timer); };
   }, [previewOn, paneRefresh]);
   const pendingJson = previewOn ? JSON.stringify(pendingFactChanges(facts.snapshot)) : "[]";
-  const previews = useMemo(() => {
+  /* 바뀔 글이 있는 항목 — 직접 고치는 중에도 계산해 둔다(대화 칸 카드의 장 칩). 본문 미리보기는 읽는 중일 때만 */
+  const changedSections = useMemo(() => {
     const map = new Map<string, string>();
     const changes = JSON.parse(pendingJson) as ReturnType<typeof pendingFactChanges>;
-    if (!changes.length || factMode || editing) return map;
+    if (!changes.length) return map;
     for (const [, list] of grouped) for (const section of list) {
       const html = previewFactChanges(withTableCellLabels(restoreRangeTildes(section.html)), changes);
       if (html) map.set(section.key, html);
     }
     return map;
-  }, [pendingJson, grouped, factMode, editing]);
+  }, [pendingJson, grouped]);
+  const previews = useMemo(() => factMode || editing ? new Map<string, string>() : changedSections, [changedSections, factMode, editing]);
+  /*
+   * 대화 칸의 '이렇게 바꿀게요' 카드 아래 장 칩('1장 사업 개요 · 6장 가격 전략') — 바뀔 글을 찾은 장 이름을 작업실에 올린다(PC).
+   * 그 제안(작업 id)의 것임을 같이 올려 카드가 앞 제안의 장을 잘못 보이지 않게 한다. 제안이 닫히거나 이 칸이 사라지면 내린다.
+   */
+  const pendingJobId = pendingJson !== "[]" ? facts.snapshot?.intake.job?.id ?? null : null;
+  const changingChapters = grouped.flatMap(([name, list], index) => list.some(section => changedSections.has(section.key)) ? [`${index + 1}장 ${name}`] : []).join("\n");
+  const publishChapters = nav?.setEditPreviewChapters;
+  useEffect(() => {
+    publishChapters?.(pendingJobId && changingChapters ? { jobId: pendingJobId, chapters: changingChapters.split("\n") } : null);
+  }, [publishChapters, pendingJobId, changingChapters]);
+  useEffect(() => () => publishChapters?.(null), [publishChapters]);
 
   // 본문 머리(사업명·빈 문서 안내)가 h1을 가질 때는 머리줄 '사업계획서'를 h1로 두지 않는다 — 2장부터는 사업명 머리가 접혀 머리줄이 h1이 된다
   const bodyTitle = ready && !(grouped.length && !summaryMode && !continuous && chapter > 0);
