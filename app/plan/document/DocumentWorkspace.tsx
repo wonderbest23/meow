@@ -160,6 +160,11 @@ export default function DocumentWorkspace(props: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
   /*
+   * 실제로 내려가는 상자 — 작업실 칸 안에서는 본문(.scroll)이 아니라 바깥 칸(studio-panel-*)이 내려간다.
+   * 본문이 따로 스크롤 상자이던 때는 그 위에서 휠·손가락이 먹지 않았다(오른쪽 칸 따라가기 점검 2026-10-24).
+   */
+  const scroller = () => scroll.current?.closest<HTMLElement>('[id^="studio-panel-"]') ?? scroll.current;
+  /*
    * 폰에서 표 크게 보기 — 좁은 화면에서 표는 옆으로 밀어야 보여서 끝까지 읽기 어려웠다.
    * 읽기 중인 표를 누르면 그 표만 전체 화면으로 띄운다(고치는 중에는 칸을 눌러야 하니 띄우지 않는다).
    */
@@ -205,13 +210,45 @@ export default function DocumentWorkspace(props: Props) {
   const showNext = !isSample && !!planId && (!!props.completionKey || !!props.allWritten) && !props.writing;
   /* 작성 중 새 항목이 지금 보고 있지 않은 장에 써지면 알려 주고 누르면 그 장으로 간다 — 예전엔 장 번호만 바뀌어 새로고침해야 하는 줄 알았다 */
   const [arrival, setArrival] = useState<{ index: number; title: string; id: string } | null>(null);
+  /*
+   * 따라 읽기 — 작성 중 새 항목이 써지면 그 항목으로 부드럽게 옮겨 보여 준다(대표 요청 2026-10-24: 오른쪽에 내용이 붙어도 그대로 있었다).
+   * 다만 사람이 직접 문서를 내리거나 누른 지 8초 안이면 읽는 자리를 빼앗지 않고 예전처럼 '새 항목이 써졌어요' 알림만 띄운다.
+   */
+  const lastReadAt = useRef(0);
+  /* 마지막 장은 '작성 중'이 꺼지는 순간에 함께 도착하기도 한다 — 방금까지 쓰고 있었으면 그 장도 따라간다 */
+  const wasWriting = useRef(false);
+  if (props.writing) wasWriting.current = true;
   useEffect(() => {
-    if (!props.freshKeys?.size || continuous) return;
-    for (const key of props.freshKeys) {
+    // 읽는 중 감지는 실제로 내려가는 상자(작업실 칸)에 건다 — 목차·여백·스크롤바·키보드로 내려도 읽는 중이다
+    const node = scroller();
+    if (!node) return;
+    const mark = () => { lastReadAt.current = Date.now(); };
+    const events = ["wheel", "touchmove", "pointerdown", "keydown"] as const;
+    for (const name of events) node.addEventListener(name, mark, { passive: true });
+    // 바깥 칸이 내려가도 숫자 고치기 말풍선을 닫는다(본문 onScroll 은 작업실에서는 오지 않는다)
+    const closePick = () => setFactPick(null);
+    node.addEventListener("scroll", closePick, { passive: true });
+    return () => { for (const name of events) node.removeEventListener(name, mark); node.removeEventListener("scroll", closePick); };
+  }, [ready]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!props.freshKeys?.size || continuous || summaryMode || editing || factMode) return;
+    const follow = (!!props.writing || wasWriting.current) && Date.now() - lastReadAt.current > 8000;
+    if (!props.writing) wasWriting.current = false;
+    const keys = [...props.freshKeys];
+    for (const key of keys.reverse()) {
       const index = grouped.findIndex(([, list]) => list.some(section => section.key === key));
-      if (index < 0 || index === chapter) continue;
+      if (index < 0) continue;
       const section = grouped[index][1].find(item => item.key === key)!;
-      setArrival({ index, title: section.sectionTitle, id: `sec-${key.replace("/", "-")}` });
+      const id = `sec-${key.replace("/", "-")}`;
+      if (follow) {
+        setArrival(null);
+        if (index !== chapter) setChapter(index);
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }), 120);
+        return;
+      }
+      if (index === chapter) continue;
+      setArrival({ index, title: section.sectionTitle, id });
       return;
     }
   }, [props.freshKeys]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -262,7 +299,7 @@ export default function DocumentWorkspace(props: Props) {
     return () => clearTimeout(timer);
   }, [grouped.length, paneActive, paneNav]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function readAll() { setContinuous(true); setSummaryMode(false); setModal(null); scroll.current?.scrollTo({ top: 0 }); }
+  function readAll() { setContinuous(true); setSummaryMode(false); setModal(null); scroller()?.scrollTo({ top: 0 }); }
   /* PC에서는 목차가 왼쪽 메뉴의 이 사업 아래에 붙는다(내 사업 → 사업 → 사업계획서 → 장) */
   /* 작업실 안에는 왼쪽 메뉴가 없다 — 목차를 머리줄로 넘기지 않고 문서 옆에 그린다 */
   const documentToc = planId && !isSample && !pane && grouped.length > 0 ? {
@@ -272,7 +309,7 @@ export default function DocumentWorkspace(props: Props) {
   function selectChapter(index: number) {
     /* 완료 알림은 다른 장으로 넘어가면 닫는다 — 장마다 위에 붙어 읽을 자리를 가렸다 */
     setChapter(index); setContinuous(false); setSummaryMode(false); setModal(null); setCelebrate(false);
-    scroll.current?.scrollTo({ top: 0, behavior: "instant" });
+    scroller()?.scrollTo({ top: 0, behavior: "instant" });
   }
 
   const toc = () => <nav className={styles.toc} aria-label="문서 목차">
@@ -363,8 +400,8 @@ export default function DocumentWorkspace(props: Props) {
           <div className={styles.readingBar}>
             <button className={styles.tocToggle} onClick={() => setModal("toc")} disabled={!grouped.length}><List size={19} aria-hidden="true" /><span className={styles.tocLabel}>목차</span></button>
             {props.summary && <div className={styles.viewSelector} role="group" aria-label="문서 보기 방식">
-              <button aria-pressed={!summaryMode} onClick={() => { setSummaryMode(false); scroll.current?.scrollTo({ top: 0 }); }}>상세 계획서</button>
-              <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroll.current?.scrollTo({ top: 0 }); }}>한 장 요약</button>
+              <button aria-pressed={!summaryMode} onClick={() => { setSummaryMode(false); scroller()?.scrollTo({ top: 0 }); }}>상세 계획서</button>
+              <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroller()?.scrollTo({ top: 0 }); }}>한 장 요약</button>
             </div>}
             <span className={styles.pageCount}>{summaryMode ? props.summary ? "" : "한 장 요약" : continuous ? "전체 이어 읽기" : grouped.length ? `${chapter + 1} / ${grouped.length}장` : "사업계획서"}</span>
             {/* 휴대폰(좁은 화면)의 도구 줄 — 장 머리가 위로 밀려 올라가도 지금 보는 장을 대화로 고칠 수 있게. 넓은 화면은 장 머리 단추만 */}

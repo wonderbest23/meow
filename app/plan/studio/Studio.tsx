@@ -350,6 +350,22 @@ export default function Studio() {
     for (const id of RIGHT_TABS) result[id] = lockFor(id, plan, steps, chatComplete, pending);
     return result;
   }, [plan, steps, chatComplete, pending]);
+  /*
+   * 대화만 할 때 — 사업 방향을 정하기 전에는 오른쪽 칸이 모두 막혀 있는데 위에 네 칸 탭이 다 보여 헷갈렸다(대표 요청 2026-10-24).
+   * 이때는 탭 줄을 숨기고 대화만 보인다(PC 는 오른쪽에 지금까지 정한 내용만). 방향이 정해져 칸이 하나라도 열리면 탭이 나타난다.
+   */
+  const chatOnly = !isSamplePlan(planId) && !chatComplete && RIGHT_TABS.every(id => !!locks[id]);
+  /* 탭 줄이 처음 나타나는 순간(대화만 하던 중 → 칸이 열림)에만 내려오는 효과를 준다 — 다시 열거나 키보드가 접힐 때마다 반복되지 않게 */
+  const [tabsAppear, setTabsAppear] = useState(false);
+  const wasChatOnly = useRef(chatOnly);
+  useEffect(() => {
+    const appeared = wasChatOnly.current && !chatOnly;
+    wasChatOnly.current = chatOnly;
+    if (!appeared) return;
+    setTabsAppear(true);
+    const timer = window.setTimeout(() => setTabsAppear(false), 600);
+    return () => window.clearTimeout(timer);
+  }, [chatOnly]);
 
   /* 막힌 탭을 보고 있으면 서버 것을 다시 확인한다(대화로 방향을 정한 직후 등) */
   const visibleRight: RightTab | null = wide || tab !== "chat" ? rightTab : null;
@@ -595,8 +611,8 @@ export default function Studio() {
 
   if (!intakeV2) return <StudioLoading />;
 
-  const chatVisible = wide || tab === "chat";
-  const rightVisible = wide || tab !== "chat";
+  const chatVisible = wide || tab === "chat" || chatOnly;
+  const rightVisible = wide || (tab !== "chat" && !chatOnly);
   const businessTitle = title || plan?.title || (fresh && newIntent ? "새 대화" : "사업 작업실");
   const headingRef = (id: StudioTab) => (node: HTMLHeadingElement | null) => { headings.current[id] = node; };
   const isVisible = (id: StudioTab) => (id === "chat" ? chatVisible : rightVisible && rightTab === id);
@@ -653,7 +669,7 @@ export default function Studio() {
         {missing ? <div className={hub.scroll}><div className={hub.content}>{signedOut
           ? <MissingBusinessBody title="로그인이 풀렸어요" detail="다시 로그인하면 이 사업을 이어서 볼 수 있어요." action={<button type="button" className={hub.primary} onClick={() => openLogin()}>다시 로그인하기</button>} />
           : <MissingBusinessBody />}</div></div> : <div className={styles.studio} data-wide={wide || undefined}>
-          {!wide && <div className={styles.narrowTabs} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, NARROW_TABS, narrowSelected, item => narrowTarget(item as NarrowTab))}>
+          {!wide && !chatOnly && <div className={styles.narrowTabs} data-appear={tabsAppear || undefined} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, NARROW_TABS, narrowSelected, item => narrowTarget(item as NarrowTab))}>
             {NARROW_TABS.map(item => {
               const selected = narrowSelected === item;
               const done = chipFor(NARROW_STEP[item])?.state === "done";
@@ -664,7 +680,7 @@ export default function Studio() {
             })}
           </div>}
 
-          <Pane id="chat" planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} refresh={refreshSeq.chat ?? 0} className={styles.chatCol} role={wide ? undefined : "tabpanel"} labelledBy={labelledBy("chat")} headingRef={headingRef("chat")}>
+          <Pane id="chat" planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} refresh={refreshSeq.chat ?? 0} className={styles.chatCol} role={wide || chatOnly ? undefined : "tabpanel"} labelledBy={labelledBy("chat")} headingRef={headingRef("chat")}>
             {/* PC 에서 오른쪽에 보이는 열린 칸 — 대화 칸이 '홈페이지를 대화로 고치기' 같은 제안을 고른다(막힌 칸이면 null) */}
             {/* 예시 사업은 서버에 대화가 없어 대화 칸이 '사업을 찾지 못했어요 · 내 사업으로'를 보였다(감사 2026-10-23) — 읽기 전용 안내와 새 대화 길로 */}
             {isSamplePlan(planId)
@@ -677,7 +693,7 @@ export default function Studio() {
           </Pane>
 
           <div className={styles.rightCol} data-visible={rightVisible || undefined} inert={!rightVisible}>
-            {wide && <div className={styles.wideTabs} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, RIGHT_TABS, rightTab, item => item as RightTab)}>
+            {wide && !chatOnly && <div className={styles.wideTabs} data-appear={tabsAppear || undefined} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, RIGHT_TABS, rightTab, item => item as RightTab)}>
               {RIGHT_TABS.map(item => {
                 const selected = rightTab === item;
                 const news = unread.includes(item) && !selected;
@@ -688,7 +704,7 @@ export default function Studio() {
               {(["launch", "operations"] as const).map(item => <button key={item} type="button" aria-pressed={rightTab === item} onClick={() => selectTab(item, { focus: "heading" })}>{item === "launch" ? (plan ? launchLabel(plan) : STUDIO_TAB_LABELS.launch) : STUDIO_TAB_LABELS.operations}</button>)}
             </div>}
             <div className={styles.panes}>
-              {RIGHT_TABS.map(id => <Pane key={id} id={id} planId={planId} visible={rightVisible && rightTab === id} nav={navSeq[id] ?? 0} refresh={refreshSeq[id] ?? 0} className={styles.pane} role="tabpanel" labelledBy={labelledBy(id)} headingRef={headingRef(id)}>
+              {RIGHT_TABS.map(id => <Pane key={id} id={id} planId={planId} visible={rightVisible && rightTab === id} nav={navSeq[id] ?? 0} refresh={refreshSeq[id] ?? 0} className={styles.pane} role={chatOnly ? undefined : "tabpanel"} labelledBy={chatOnly ? undefined : labelledBy(id)} headingRef={headingRef(id)}>
                 {rightBody(id)}
               </Pane>)}
             </div>

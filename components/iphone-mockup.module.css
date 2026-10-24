@@ -74,7 +74,17 @@
   fill: currentColor;
 }
 
-/* 화면 그림 — 상태 표시줄 아래 790pt */
+/* 화면 그림 — 상태 표시줄 아래 790pt. 움직이는 화면(children)은 같은 자리의 .viewport 칸 안에 놓는다 */
+.viewport {
+  position: absolute;
+  z-index: 1;
+  top: calc(54 / 844 * 100%);
+  left: 0;
+  width: 100%;
+  height: calc(790 / 844 * 100%);
+  overflow: hidden;
+  background: #fff;
+}
 .shot {
   position: absolute;
   z-index: 1;

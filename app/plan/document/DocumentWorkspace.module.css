@@ -474,6 +474,10 @@
  * clip 은 넘친 것을 자르기만 하고 스크롤 상자가 되지 않는다(지원하지 않는 브라우저는 visible — 칸이 자르므로 괜찮다).
  */
 .page[data-embedded] { overflow:visible; overflow:clip; }
+/* 작업실 칸 안에서는 바깥 칸이 내려간다 — 본문이 따로 스크롤 상자(overflow:auto + overscroll contain)라 그 위에서 휠·손가락이 먹지 않았다 */
+.page[data-embedded] .scroll { overflow:visible; overscroll-behavior:auto; }
+/* 작성 중 '새 항목이 써졌어요' — 내려 읽는 중에도 보이게 도구 줄 아래에 붙인다 */
+.page[data-embedded] .arrival { position:sticky; top:72px; z-index:4; box-shadow:0 6px 18px #191f2814; }
 /*
  * 휴대폰 작업실 — 머리줄 + 탭 줄 + 도구 줄이 두 줄로 접혀 위에 붙은 자리가 245px 쯤이었다. 도구 줄을 한 줄로:
  * 목차는 아이콘만(이름은 낭독기에 남긴다), 대화로 고치기가 있으면 장 번호는 장 머리에 있어 숨긴다.

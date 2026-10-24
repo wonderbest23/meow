@@ -134,7 +134,9 @@
 .liveSummary h3 { margin:0; font-size:20px; font-weight:700; color:var(--app-text); }
 .liveSummary header p { margin:0; font-size:14px; color:var(--app-muted); }
 .liveSummary dl { margin:0; display:flex; flex-direction:column; gap:10px; }
-.liveSummary dl > div { padding:14px 18px; border:1px solid var(--app-line); border-radius:12px; background:var(--app-surface); }
+.liveSummary dl > div { padding:14px 18px; border:1px solid var(--app-line); border-radius:12px; background:var(--app-surface); scroll-margin:16px 0 24px; transition:background-color .6s ease, border-color .6s ease, box-shadow .6s ease; }
+/* 방금 대화에서 반영된 줄 — 잠깐 파랗게 밝혔다가 원래대로 */
+.liveSummary dl > div[data-fresh] { background:#eef5ff; border-color:#a9c9fb; box-shadow:0 0 0 3px rgba(49,130,246,.12); transition:none; }
 .liveSummary dt { display:flex; align-items:center; gap:8px; margin:0 0 6px; font-size:13px; font-weight:600; color:var(--app-muted); }
 .liveSummary dt small { padding:1px 6px; border-radius:6px; background:var(--app-raised); font-size:11px; font-weight:600; }
 .liveSummary dd { margin:0; font-size:15px; line-height:1.65; color:var(--app-text); white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
@@ -142,3 +144,8 @@
 .liveSummaryNote { margin:0; font-size:14px; line-height:1.7; color:var(--app-muted); word-break:keep-all; }
 /* 칸 본문의 작은 것은 가운데에 두지만(.paneBody > :not([data-embedded])) 요약은 위에서부터 읽는다 */
 .paneBody > .liveSummary { margin-block:0; }
+
+/* 대화를 마쳐 탭 줄이 처음 나타날 때 — 위에서 살짝 내려오며 나타난다(대화만 할 때는 탭 줄을 숨긴다) */
+.narrowTabs[data-appear], .wideTabs[data-appear] { animation: studioTabsIn .32s ease-out both; }
+@keyframes studioTabsIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .narrowTabs[data-appear], .wideTabs[data-appear] { animation: none; } }

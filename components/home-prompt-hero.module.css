@@ -163,7 +163,7 @@
 /*
  * 탭 줄 — 알약 모양 묶음 탭(2026-10-23 사장님: base44 식 [괄호]·네모 점 대신 우리 모양).
  * 옅은 회색 통(#eef1f4, 얇은 테두리) 안에 탭을 나란히 두고, 고른 탭만 흰 알약 + 옅은 그림자 + 진한 글자(#191f28).
- * 안 고른 탭 글자 #4e5968 은 통 바탕 위에서 약 6.4:1. 고른 탭 아래 파란 막대가 4초(ADVANCE_MS)에 걸쳐 찬다.
+ * 안 고른 탭 글자 #4e5968 은 통 바탕 위에서 약 6.4:1. 고른 탭 아래 파란 막대가 7초(ADVANCE_MS)에 걸쳐 찬다 — 멈추면 그 자리에 선다(animation-play-state, 화면 안 움직임과 같이).
  */
 .tabsRow { margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }
 .tabs {
@@ -272,12 +272,74 @@
 }
 .browserBar { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px; border-bottom: 1px solid #e5e8eb; background: #f2f4f6; }
 .browserBar i { width: 10px; height: 10px; border-radius: 50%; background: #d1d6db; }
-.browser img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; background: #f2f4f6; }
+/* 브라우저 틀의 보이는 칸 — 16:10(1280×800 화면 한 장). 긴 그림이 이 안에서 움직인다 */
+.browserView { position: relative; overflow: hidden; aspect-ratio: 16 / 10; background: #f2f4f6; container-type: inline-size; }
 /* 아이폰 틀 — 너비만 정하면 틀이 비율대로 높이를 잡는다(iphone-mockup.module.css 의 .device 너비 100%보다 앞서게 두 단계 선택자) */
 .stage .phone { position: absolute; right: 8px; bottom: 0; width: 228px; }
 
+/*
+ * 화면 안 움직임(탭 한 번 = 7초, ADVANCE_MS) — 0~0.8초 맨 위에 머묾 → 0.8~3.8초 천천히 내려감(ease-in-out) →
+ * 3.8~5.2초 강조할 곳을 중심으로 1.16배 당겨 봄 → 4.4~4.9초 이름표가 떠오름 → 다음 탭까지 머묾.
+ * 움직이는 것은 transform·opacity 뿐(GPU) — 둘레 자리는 보이는 칸의 비율로 고정돼 밀리지 않는다.
+ * 값(--ty 내릴 거리, --ox/--oy 당겨 볼 중심, --chip-x/--chip-y 이름표 자리)은 그림마다 home-prompt-hero.tsx 의 motionVars 가 정한다.
+ */
+.track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform-origin: var(--ox, 50%) var(--oy, 0%);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.track img { display: block; width: 100%; height: auto; background: #fff; }
+/* 강조할 곳의 이름표 — 그림 밖(크기가 바뀌지 않는 칸)에 있어 늘 같은 크기로 읽힌다. 흰 글자 / #1b64da 약 5.3:1 */
+.chip {
+  position: absolute;
+  z-index: 3;
+  left: var(--chip-x, 50%);
+  top: var(--chip-y, 20%);
+  max-width: 92%;
+  padding: 0.42em 0.95em;
+  border-radius: 999px;
+  background: #1b64da;
+  color: #fff;
+  font-size: clamp(11px, 4.4cqw, 15px);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, .24);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, calc(-100% + 4px));
+  will-change: opacity, transform;
+}
+.browserView .chip { font-size: clamp(12px, 1.9cqw, 16px); }
+.stage[data-motion="run"] .track,
+.stage[data-motion="pause"] .track { animation: showcase-move var(--showcase-ms, 7000ms) both; }
+.stage[data-motion="run"] .chip,
+.stage[data-motion="pause"] .chip { animation: showcase-chip var(--showcase-ms, 7000ms) ease-out both; }
+/* 멈춤(단추 · 마우스 올림 · 입력칸 초점) — 그 자리에 선다 */
+.stage[data-motion="pause"] .track,
+.stage[data-motion="pause"] .chip { animation-play-state: paused; }
+/* 움직임 줄이기 — 맨 위 그대로, 이름표만 화면 아래쪽에 */
+.stage[data-motion="static"] .chip { opacity: 1; top: auto; bottom: 5%; left: 50%; transform: translateX(-50%); }
+@keyframes showcase-move {
+  0%, 11.43% { transform: translate3d(0, 0, 0) scale(1); animation-timing-function: cubic-bezier(.45, 0, .55, 1); }
+  54.29% { transform: translate3d(0, var(--ty, 0%), 0) scale(1); animation-timing-function: cubic-bezier(.33, 0, .25, 1); }
+  74.29%, 100% { transform: translate3d(0, var(--ty, 0%), 0) scale(var(--zoom, 1.16)); }
+}
+@keyframes showcase-chip {
+  0%, 62.86% { opacity: 0; transform: translate(-50%, calc(-100% + 4px)); }
+  70%, 100% { opacity: 1; transform: translate(-50%, calc(-100% - 6px)); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card, .browser, .phone, .send, .tab, .play { transition: none; }
+  /* 화면이 붙기 전(스크립트가 움직임 줄이기를 알기 전)에도 움직이지 않게 */
+  .stage .track { animation: none !important; transform: none; }
+  .stage .chip { animation: none !important; opacity: 1; top: auto; bottom: 5%; left: 50%; transform: translateX(-50%); }
   .caret { animation: none; }
   /* 움직임 줄이기 — 띠도 저절로 넘기지 않으니 차오르는 막대도 그리지 않는다 */
   .progress { display: none; }

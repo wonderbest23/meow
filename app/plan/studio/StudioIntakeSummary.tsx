@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { IntakeSnapshot } from "../../../lib/plan-builder/intake-types";
 import { plainText, summaryAnswerText } from "../chat/intake-ui/model";
 import styles from "./Studio.module.css";
@@ -33,15 +34,43 @@ export function intakeSummaryRows(snapshot: IntakeSnapshot): SummaryRow[] {
   return rows;
 }
 
+/** 지난번과 비교해 새로 생기거나 바뀐 줄 — 처음 그릴 때(이전 값이 없을 때)는 없다고 본다 */
+export function changedSummaryRows(previous: Map<string, string> | null, rows: SummaryRow[]): string[] {
+  if (!previous) return [];
+  return rows.filter(row => previous.get(row.id) !== row.value).map(row => row.id);
+}
+
 export default function StudioIntakeSummary({ snapshot, note }: { snapshot: IntakeSnapshot | null; note: string }) {
   const rows = snapshot ? intakeSummaryRows(snapshot) : [];
+  /*
+   * 왼쪽 대화에서 답하면 오른쪽에 새 줄이 생기는데, 아래쪽에 붙으면 보이지 않아 반영된 줄 몰랐다(대표 요청 2026-10-24).
+   * 새로 생기거나 바뀐 줄을 칸 안에서 보이는 곳까지 부드럽게 내리고 잠깐 밝힌다. 이미 보이면 움직이지 않는다(nearest).
+   */
+  const list = useRef<HTMLDListElement>(null);
+  const previous = useRef<Map<string, string> | null>(null);
+  const [fresh, setFresh] = useState<string[]>([]);
+  const signature = rows.map(row => `${row.id}\u0000${row.value}`).join("\u0001");
+  useEffect(() => {
+    if (!snapshot) return;
+    const changed = changedSummaryRows(previous.current, rows);
+    previous.current = new Map(rows.map(row => [row.id, row.value]));
+    if (!changed.length) return;
+    setFresh(changed);
+    const last = changed[changed.length - 1];
+    const target = list.current?.querySelector<HTMLElement>(`[data-row="${CSS.escape(last)}"]`);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    target?.scrollIntoView({ block: "nearest", behavior: reduce ? "auto" : "smooth" });
+    const timer = window.setTimeout(() => setFresh([]), 1800);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 줄 내용(signature)이 바뀔 때만 비교한다
+  }, [signature, snapshot === null]);
   return <section className={styles.liveSummary} aria-labelledby="studio-live-summary-heading">
     <header>
       <h3 id="studio-live-summary-heading">지금까지 정한 내용</h3>
       {snapshot && snapshot.coreTotal > 0 && <p>{snapshot.coreComplete ? "기본 질문을 다 답했어요" : `기본 질문 ${Math.min(snapshot.coreAnswered, snapshot.coreTotal)} / ${snapshot.coreTotal}`}</p>}
     </header>
-    {rows.length ? <dl>
-      {rows.map(row => <div key={row.id}><dt>{row.label}{row.proposal && <small>AI 초안</small>}</dt><dd>{row.value}</dd></div>)}
+    {rows.length ? <dl ref={list}>
+      {rows.map(row => <div key={row.id} data-row={row.id} data-fresh={fresh.includes(row.id) || undefined}><dt>{row.label}{row.proposal && <small>AI 초안</small>}</dt><dd>{row.value}</dd></div>)}
     </dl> : <p className={styles.liveSummaryEmpty}>아직 답한 내용이 없어요. 왼쪽 대화에서 질문에 답하면 여기에 바로 정리돼요.</p>}
     <p className={styles.liveSummaryNote}>{note}</p>
   </section>;

@@ -8,11 +8,13 @@
  * 비어 있으면 지금처럼 새 대화만 연다.
  *
  * 움직임 값은 base44 첫 화면에서 잰 것: 글자 치기 45ms·지우기 25ms·다 친 뒤 2초 쉼·다음 예시 전 0.4초·시작 0.5초 뒤,
- * 진열 띠는 4초마다 다음 탭, 화면(브라우저 틀·휴대폰 틀)마다 90ms 차이로 '끊어 바꾸기'(사라짐 60ms → 나타남 160ms).
- * 움직임 줄이기 설정이면 예시 문장을 그대로 두고 띠도 저절로 넘기지 않는다.
- * 입력칸에 초점이 있거나 진열 띠 위에 마우스가 있는 동안에도 저절로 넘기지 않는다(글을 쓰거나 그림을 보는 중에 바뀌지 않게).
+ * 진열 띠는 7초마다 다음 탭, 화면(브라우저 틀·휴대폰 틀)마다 90ms 차이로 '끊어 바꾸기'(사라짐 60ms → 나타남 160ms).
+ * 탭마다 화면 안 그림이 움직인다(2026-10-24 사장님: 그림이 가만히 있어 무엇을 보여 주는지 안 보인다) —
+ * 맨 위를 0.8초 보여 주고 → 3초 동안 천천히 아래로 내려 강조할 곳까지 → 그곳으로 살짝 당겨 보며(1.16배) 작은 이름표를 띄우고 → 잠깐 머문 뒤 다음 탭.
+ * 움직임 줄이기 설정이면 예시 문장을 그대로 두고, 띠도 저절로 넘기지 않으며, 그림은 맨 위에 둔 채 이름표만 보여 준다.
+ * 입력칸에 초점이 있거나 진열 띠 위에 마우스가 있는 동안, 멈춤 단추를 누른 동안에는 그 자리에 멈춘다(글을 쓰거나 그림을 보는 중에 바뀌지 않게).
  */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { composerEnterSends } from "../app/plan/chat/intake-ui/guidance";
 import { newChatHref } from "../lib/plan-builder/studio";
@@ -31,51 +33,100 @@ const PROMPTS = [
   "아파트 상가에 초등 공부방을 열고 싶어요.",
 ];
 
-type ShowcaseItem = { src: string; alt: string; width: number; height: number };
+/** 강조할 곳 — 그림 높이에 대한 위·아래 끝(%)과 가로 가운데(%, 기본 50) */
+type ShowcaseFocus = { top: number; bottom: number; x?: number };
+type ShowcaseItem = { src: string; alt: string; width: number; height: number; focus: ShowcaseFocus };
 /* 화면 두 칸 — 컴퓨터 화면(브라우저 틀)과 휴대폰 화면(아이폰 틀). 휴대폰 너비에서는 아이폰 틀 한 장만 크게 */
 type ShowcaseSlot = "screen" | "phone";
 const SLOTS: ShowcaseSlot[] = ["screen", "phone"];
 const S = "/home-media/showcase";
-/* 컴퓨터 화면 — 1280×800 화면을 찍어 1600×1000 으로 */
-const screen = (name: string, alt: string): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 1600, height: 1000 });
-/* 휴대폰 화면 — 390×844 화면을 그대로 찍어 위 390×790만(상태 표시줄 자리 54pt를 뺀 나머지) 780×1580 으로. 컴퓨터 화면을 줄여 넣지 않는다 */
-const phone = (name: string, alt: string): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 780, height: 1580 });
+/*
+ * 그림은 한 화면보다 길게(아래로 내려 볼 수 있게) 찍었다 — 앱 머리줄이 맨 위에 있다.
+ * 컴퓨터 화면: 1280×2000 화면을 찍어 1600×2500 으로. 틀 안에는 위 16:10(1280×800)만 보이고 아래로 내려 간다.
+ * 휴대폰 화면: 390×(1720~2400) 화면을 찍어 너비 780 으로. 틀 안에는 상태 표시줄 아래 390×790 만 보인다. 컴퓨터 화면을 줄여 넣지 않는다.
+ */
+const screen = (name: string, alt: string, focus: ShowcaseFocus): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 1600, height: 2500, focus });
+const phone = (name: string, cssHeight: number, alt: string, focus: ShowcaseFocus): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 780, height: cssHeight * 2, focus });
+/** 보이는 칸의 높이 ÷ 너비 — 컴퓨터 화면 16:10, 휴대폰 화면 390×790 */
+const VIEW_RATIO: Record<ShowcaseSlot, number> = { screen: 10 / 16, phone: 790 / 390 };
 
 /*
- * 진열 띠 — 실제 AI로 만든 예시 사업('성수 쿠키공방', 성수동 1인 수제 쿠키 가게)의 실제 화면만 쓴다(2026-10-23, 로컬 시험 서버·실제 AI).
+ * 진열 띠 — 실제 AI로 만든 예시 사업('성수 쿠키공방', 성수동 1인 수제 쿠키 가게)의 실제 화면만 쓴다(2026-10-24 다시 찍음, 로컬 시험 서버·실제 AI).
  * 대화로 답한 선물 상자 18,000원·상자 비용 6,500원·월 고정비 220만 원·예산 2,500만 원으로 만든 계획서·한 장 요약·공개 홈페이지·개업 준비 그대로다.
- * 탭마다 컴퓨터 화면과 '같은 탭'의 휴대폰 화면(390×844로 따로 찍은 것)을 함께 보여 준다.
- * 설명 문장·출처 안내 줄은 두지 않는다(2026-10-23 사장님: 군더더기) — 무엇을 보여 주는지는 그림의 대체 글에 적는다.
+ * 탭마다 컴퓨터 화면과 '같은 탭'의 휴대폰 화면(390 너비로 따로 찍은 것)을 함께 보여 준다.
+ * note 는 강조할 곳에 띄우는 작은 이름표(14자 안) — 그림 대체 글에도 같은 내용이 들어 있어 낭독기에는 읽히지 않게 둔다.
+ * 설명 문장·출처 안내 줄은 두지 않는다(2026-10-23 사장님: 군더더기).
  * 발표 자료(PPT)는 결제 제공 범위가 아니라서 탭에 두지 않는다(lib/plan-builder/deck-availability.ts).
  */
 const EXAMPLE = "실제 AI로 만든 예시 가게 ‘성수 쿠키공방’";
-const SHOWCASE: Array<{ label: string } & Record<ShowcaseSlot, ShowcaseItem>> = [
+const SHOWCASE: Array<{ label: string; note: string } & Record<ShowcaseSlot, ShowcaseItem>> = [
   {
     label: "계획서",
-    screen: screen("cookie-plan", `${EXAMPLE}의 사업계획서 작업실 — 왼쪽 대화에는 '선물 상자 가격을 19,000원으로 올려 줘' 요청과 바꿀 내용 확인 카드, 오른쪽에는 재무 계획의 '초기 지출에 따라 버티는 기간' 표(초기 지출 500만 원이면 약 4개월)`),
-    phone: phone("cookie-plan-m", `${EXAMPLE}의 사업계획서를 휴대폰으로 본 화면 — '세 가지 경우로 본 한 달': 상자 18,000원에 한 건 비용 6,500원, 본전 판매량 월 192건(하루 약 7건), 조심스러운 경우 월 96건이면 3,096,000원 부족`),
+    note: "하루 7건이면 본전",
+    screen: screen("cookie-plan-tall", `${EXAMPLE}의 사업계획서 작업실 — 왼쪽 대화에는 '선물 상자 가격을 19,000원으로 올려 줘' 요청과 바꿀 내용 확인 카드, 오른쪽 4장 재무 계획에는 고정비 월 2,200,000원·상자 한 개 비용 6,500원·대표 생활비 표와 '세 가지 경우로 본 한 달': 한 건에 11,500원이 남고 본전 판매량은 월 192건(하루 약 7건)`, { top: 92.3, bottom: 97.5, x: 74 }),
+    phone: phone("cookie-plan-tall-m", 2400, `${EXAMPLE}의 사업계획서 재무 계획을 휴대폰으로 본 화면 — 초기 지출을 500만 원 수준으로 줄이는 방법, '세 가지 경우로 본 한 달': 한 건에 11,500원이 남고 본전 판매량은 월 192건(하루 약 7건), 조심스러운 경우 월 96건이면 3,096,000원 부족, 12개월 통장 누적`, { top: 31.4, bottom: 37.8 }),
   },
   {
     label: "한 장 요약",
-    screen: screen("cookie-summary", `${EXAMPLE}의 한 장 요약 — '퇴근길에 미리 주문한 쿠키 선물상자를 바로 찾아가요', 사업과 고객, 제공안과 판매, 수익 구조와 계획 계산`),
-    phone: phone("cookie-summary-m", `${EXAMPLE}의 한 장 요약을 휴대폰으로 본 화면 — 수제 쿠키 6종 6개입 선물 상자 18,000원, 손익분기 월 192건 / 매출 3,456,000원`),
+    note: "첫 달·본전 계산",
+    screen: screen("cookie-summary-tall", `${EXAMPLE}의 한 장 요약 — '아침에 구운 쿠키 선물 상자, 퇴근길에 바로 찾아가요', 사업과 고객, 제공안과 판매, 수익 구조와 계획 계산(손익분기 월 192건 / 매출 3,456,000원), 다음 행동과 확인 기준`, { top: 35.4, bottom: 45.3, x: 74 }),
+    phone: phone("cookie-summary-tall-m", 1720, `${EXAMPLE}의 한 장 요약을 휴대폰으로 본 화면 — 수제 쿠키 6종 6개입 선물 상자 18,000원, 첫 달 가정(조심스러운 경우 96건 판매 / 한 달 -3,096,000원), 손익분기 월 192건 / 매출 3,456,000원`, { top: 47.2, bottom: 61.6 }),
   },
   {
     label: "홈페이지",
-    screen: screen("cookie-homepage", `계획서로 만들어 공개한 ${EXAMPLE} 홈페이지 첫 화면 — 빵 사진 위에 가게 이름, '퇴근길에 미리 주문한 쿠키 선물상자를 바로 찾아가요', 예약 문의하기 단추`),
-    phone: phone("cookie-homepage-m", `손님이 휴대폰으로 보는 ${EXAMPLE} 공개 홈페이지 — 예약 문의하기 단추와 쿠키 6종 · 6개입 · 픽업 오후 12시~8시 안내`),
+    note: "손님이 보는 메뉴",
+    screen: screen("cookie-homepage-tall", `계획서로 만들어 공개한 ${EXAMPLE} 홈페이지 — 빵 사진 위에 가게 이름과 '아침에 구운 쿠키 선물 상자, 퇴근길에 바로 찾아가요', 예약 문의하기 단추, 메뉴(수제 쿠키 6개입 선물 상자 18,000원)`, { top: 59.9, bottom: 82.8, x: 37 }),
+    phone: phone("cookie-homepage-tall-m", 2400, `손님이 휴대폰으로 보는 ${EXAMPLE} 공개 홈페이지 — 예약 문의하기 단추, 쿠키 6종 · 6개입 · 픽업 오후 12시~8시, 메뉴(수제 쿠키 6개입 선물 상자 18,000원), 이용 순서`, { top: 37.5, bottom: 57 }),
   },
   {
     label: "개업 준비",
-    screen: screen("cookie-launch", `${EXAMPLE}의 개업 준비 전체 과정 10단계 — 팔고 싶은 상품 정하기, 작게 시작할 범위, 식품 제조·가공 시작 준비와 신고 순서, 일할 공간, 사업자등록, 세금 관리, 홈페이지 공개, 주문·결제 점검, 첫 홍보`),
-    phone: phone("cookie-launch-m", `${EXAMPLE}의 개업 준비 목록을 휴대폰으로 본 화면 — 식품 제조·가공 신고 순서, 사업자등록, 세금 관리, 주문·결제 점검, 첫 홍보`),
+    note: "할 일 10단계",
+    screen: screen("cookie-launch-tall", `${EXAMPLE}의 개업 준비 전체 과정 10단계 — 팔고 싶은 상품 정하기, 작게 시작할 범위, 식품 제조·가공 시작 준비와 신고 순서, 일할 공간, 사업자등록, 세금 관리, 홈페이지 공개, 주문·결제 점검, 첫 홍보, 운영 결과로 개선`, { top: 45, bottom: 70, x: 66 }),
+    phone: phone("cookie-launch-tall-m", 1720, `${EXAMPLE}의 개업 준비를 휴대폰으로 본 화면 — 2/10 '작게 시작할 범위를 정해요'와 전체 과정 10단계: 식품 제조·가공 신고 순서, 사업자등록, 세금 관리, 홈페이지 공개, 주문·결제 점검, 첫 홍보`, { top: 53.4, bottom: 81.4 }),
   },
 ];
 
 type Slot = { set: number; phase: "hold" | "gone" | "enter" };
 
-/** 진열 띠가 다음 탭으로 넘어가는 간격 — 진행 막대도 이 시간 동안 찬다 */
-const ADVANCE_MS = 4000;
+/** 진열 띠가 다음 탭으로 넘어가는 간격 — 화면 안 움직임과 진행 막대가 이 한 번에 맞춰 돈다(박자는 home-prompt-hero.module.css 의 @keyframes showcase-move) */
+const ADVANCE_MS = 7000;
+/** 강조할 곳으로 당겨 보는 배율 */
+const ZOOM = 1.16;
+const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
+
+/*
+ * 화면 안 움직임 값 — 모두 그림 크기에 대한 비율이라 틀 크기가 달라도 같다.
+ * --ty: 아래로 내리는 거리(그림 높이의 %), 강조할 곳의 가운데가 보이는 칸의 56% 높이에 오게(끝을 넘지 않게).
+ * --ox/--oy: 당겨 보는 중심 = 강조할 곳의 가운데. 내린 뒤 그 점을 중심으로 키우므로 강조할 곳이 제자리에서 커진다.
+ * --chip-x/--chip-y: 이름표 자리(보이는 칸의 %) — 키운 뒤 강조할 곳의 위 끝 바로 위.
+ */
+function motionVars(item: ShowcaseItem, kind: ShowcaseSlot): CSSProperties {
+  const view = Math.min(1, VIEW_RATIO[kind] / (item.height / item.width));
+  const top = item.focus.top / 100, bottom = item.focus.bottom / 100, x = item.focus.x ?? 50;
+  const center = (top + bottom) / 2;
+  const ty = clamp(0.56 * view - center, -(1 - view), 0);
+  const centerInView = (center + ty) / view;
+  const chipY = clamp(centerInView - ((bottom - top) / 2) * ZOOM / view, 0.14, 0.8);
+  return {
+    "--ty": `${(ty * 100).toFixed(2)}%`,
+    "--zoom": ZOOM,
+    "--ox": `${x}%`,
+    "--oy": `${(center * 100).toFixed(2)}%`,
+    "--chip-x": `${clamp(x, 22, 78)}%`,
+    "--chip-y": `${(chipY * 100).toFixed(2)}%`,
+    "--showcase-ms": `${ADVANCE_MS}ms`,
+  } as CSSProperties;
+}
+
+/** 틀 안의 보이는 칸 — 긴 그림이 그 안에서 내려가고 커진다. 움직이는 것은 transform·opacity 뿐이라 둘레가 밀리지 않는다 */
+function ShowcaseView({ item, kind, note, loading }: { item: ShowcaseItem; kind: ShowcaseSlot; note: string; loading: "eager" | "lazy" }) {
+  return <>
+    <div className={styles.track} style={motionVars(item, kind)}>
+      <img src={item.src} alt={item.alt} width={item.width} height={item.height} loading={loading} decoding="async" />
+    </div>
+    <span className={styles.chip} style={motionVars(item, kind)} aria-hidden="true">{note}</span>
+  </>;
+}
 
 type SpeechRecognitionLike = {
   lang: string; interimResults: boolean; continuous: boolean;
@@ -129,10 +180,12 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
   const [typed, setTyped] = useState("");
   const [tab, setTab] = useState(0);
   const [playing, setPlaying] = useState(true);
-  /* 진열 띠·탭 줄 위에 마우스가 있는 동안 — 저절로 넘기지 않는다(멈춤 단추의 상태와는 따로) */
+  /* 진열 띠·탭 줄 위에 마우스가 있는 동안 — 그 자리에 멈춘다(멈춤 단추의 상태와는 따로) */
   const [hovering, setHovering] = useState(false);
-  /* 저절로 넘기는 한 번(4초)마다 하나씩 올라간다 — 고른 탭 아래 진행 막대를 그 박자에 맞춰 처음부터 다시 채운다 */
-  const [cycle, setCycle] = useState(0);
+  /* 탭을 직접 고른 뒤 — 저절로 넘기지 않고 그 탭의 움직임만 한 번 보여 준 뒤 끝 장면에 머문다 */
+  const [manual, setManual] = useState(false);
+  /* 움직임을 처음부터 다시 돌릴 때마다 하나씩 — 화면 안 움직임과 진행 막대를 같은 순간에 새로 시작한다 */
+  const [run, setRun] = useState(0);
   const [slots, setSlots] = useState<Slot[]>(() => SLOTS.map(() => ({ set: 0, phase: "hold" })));
   const [micReady, setMicReady] = useState(false);
   const [listening, setListening] = useState(false);
@@ -143,7 +196,6 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
   const timers = useRef(new Set<number>());
   /** 마지막으로 친 예시 번호 — 입력칸을 비우고 나가면 처음이 아니라 다음 예시부터 친다 */
   const promptIndex = useRef(0);
-  const cutting = useRef(false);
   const tabRef = useRef(0);
   tabRef.current = tab;
 
@@ -260,7 +312,6 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
     if (next === tabRef.current) return;
     setTab(next);
     if (reduced) { setSlots(SLOTS.map(() => ({ set: next, phase: "hold" }))); return; }
-    cutting.current = true;
     const setSlot = (index: number, patch: Partial<Slot>) => setSlots(current => current.map((slot, k) => k === index ? { ...slot, ...patch } : slot));
     SLOTS.forEach((_, index) => {
       const at = index * 90;
@@ -268,19 +319,22 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
       later(at + 60, () => setSlot(index, { set: next, phase: "enter" }));
       later(at + 60 + 160, () => setSlot(index, { phase: "hold" }));
     });
-    later((SLOTS.length - 1) * 90 + 220, () => { cutting.current = false; });
   }, [later, reduced]);
 
-  const autoAdvance = playing && !reduced && !focused && !hovering;
-  useEffect(() => {
-    if (!autoAdvance) return;
-    const id = window.setInterval(() => {
-      setCycle(value => value + 1);
-      if (cutting.current || document.hidden) return;
-      cutTo((tabRef.current + 1) % SHOWCASE.length);
-    }, ADVANCE_MS);
-    return () => window.clearInterval(id);
-  }, [autoAdvance, cutTo]);
+  /*
+   * 한 탭의 움직임(화면 안 내리기·당겨 보기·이름표)과 진행 막대는 같은 길이(ADVANCE_MS)의 CSS 움직임이고, 멈출 때는 함께 그 자리에 선다(animation-play-state).
+   * 저절로 넘길 때는 진행 막대가 다 찬 순간(animationend) 다음 탭으로 — 시계를 따로 두지 않아 멈췄다 이어도 어긋나지 않는다.
+   * 숨은 창에서는 브라우저가 움직임을 멈추므로 그동안 넘어가지도 않는다.
+   */
+  const moving = mounted && !reduced && !focused && !hovering && (playing || manual);
+  const motion = !mounted ? "idle" : reduced ? "static" : moving ? "run" : "pause";
+  const advance = () => { if (playing && !reduced) cutTo((tabRef.current + 1) % SHOWCASE.length); };
+  const togglePlay = () => {
+    if (playing) { setPlaying(false); setManual(false); return; }
+    /* 직접 고른 탭을 보던 중이면 그 탭을 처음부터 다시 — 움직임과 진행 막대를 같이 시작한다 */
+    if (manual) { setManual(false); setRun(value => value + 1); }
+    setPlaying(true);
+  };
   const hoverProps = { onPointerEnter: (event: PointerEvent) => { if (event.pointerType === "mouse") setHovering(true); }, onPointerLeave: () => setHovering(false) };
 
   const submit = () => {
@@ -317,7 +371,7 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
     try { engine.start(); setListening(true); } catch { setListening(false); setMicNote("음성 입력을 쓰지 못했어요. 글로 적어 주세요."); }
   };
 
-  const pickTab = (index: number) => { setPlaying(false); cutTo(index); };
+  const pickTab = (index: number) => { setPlaying(false); setManual(true); if (index === tabRef.current) setRun(value => value + 1); cutTo(index); };
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
     if (!delta) return;
@@ -372,7 +426,7 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
     <div className={styles.tabsRow} {...hoverProps}>
       {/*
         * 알약 모양 탭(2026-10-23 사장님: base44 의 [괄호]·네모 점 말고 우리 모양으로) — 옅은 회색 통 안에서 고른 탭만 흰 알약으로 떠오른다.
-        * 저절로 넘기는 동안에는 고른 알약 아래 얇은 막대가 4초에 걸쳐 차서 다음 탭까지 남은 시간을 보여 준다(멈추거나 마우스를 올리면 사라진다).
+        * 저절로 넘기는 동안에는 고른 알약 아래 얇은 막대가 7초에 걸쳐 차서 다음 탭까지 남은 시간을 보여 준다(멈추면 화면 안 움직임과 함께 그 자리에 선다).
         */}
       <div role="tablist" aria-label="만들어지는 결과물" className={styles.tabs}>
         {SHOWCASE.map((set, index) => <button
@@ -389,11 +443,11 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
         >
           {/* 굵은 글자 폭을 늘 잡아 두어 고른 탭이 바뀌어도 탭 줄이 옆으로 밀리지 않는다 */}
           <span className={styles.tabText} data-text={set.label}>{set.label}</span>
-          {index === tab && mounted && autoAdvance && <span key={cycle} className={styles.progress} style={{ animationDuration: `${ADVANCE_MS}ms` }} aria-hidden="true" />}
+          {index === tab && mounted && !reduced && !manual && <span key={`${tab}-${run}`} className={styles.progress} style={{ animationDuration: `${ADVANCE_MS}ms`, animationPlayState: moving ? "running" : "paused" }} onAnimationEnd={advance} aria-hidden="true" />}
         </button>)}
       </div>
       {/* 이름은 그대로 두고 눌림 상태(aria-pressed)만 바뀐다 — 이름까지 바뀌면 낭독기가 다른 단추로 읽었다 */}
-      <button type="button" className={styles.play} aria-pressed={!playing} aria-label="예시 넘김 멈추기" title={playing ? "예시 넘김 멈추기" : "예시 넘김 다시 시작"} onClick={() => setPlaying(value => !value)}>
+      <button type="button" className={styles.play} aria-pressed={!playing} aria-label="예시 넘김 멈추기" title={playing ? "예시 넘김 멈추기" : "예시 넘김 다시 시작"} onClick={togglePlay}>
         {playing
           ? <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" /><rect x="14" y="5" width="4" height="14" /></svg>
           : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5l12 7-12 7z" /></svg>}
@@ -402,18 +456,20 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
 
     {/*
       * 컴퓨터: 큰 브라우저 틀(컴퓨터 화면) + 오른쪽 아래에 걸친 아이폰 틀(같은 탭의 휴대폰 화면). 휴대폰 너비: 아이폰 틀 한 장만 가운데 크게.
-      * 자리는 그림 비율(aspect-ratio)로 미리 잡아 두어 넘길 때 아래가 밀리지 않는다.
+      * 자리는 보이는 칸의 비율(aspect-ratio)로 미리 잡아 두어 넘길 때도 움직이는 동안에도 아래가 밀리지 않는다.
       * 브라우저 틀 그림은 휴대폰 너비에서 숨겨지므로 늦게 받기(lazy) — 숨긴 그림은 받지 않는다.
+      * data-motion: idle(화면이 붙기 전 — 맨 위) · run · pause(그 자리에 멈춤) · static(움직임 줄이기 — 맨 위 + 이름표).
       */}
     <div id="home-showcase" role="tabpanel" aria-labelledby={`home-showcase-tab-${tab}`} className={styles.showcase} {...hoverProps}>
-      <div className={styles.stage}>
+      <div className={styles.stage} data-motion={motion}>
         {SLOTS.map((kind, index) => {
           const slot = slots[index];
-          const item = SHOWCASE[slot.set][kind];
-          if (kind === "phone") return <IphoneMockup key={kind} className={styles.phone} data-phase={slot.phase} src={item.src} alt={item.alt} width={item.width} height={item.height} loading="eager" />;
+          const set = SHOWCASE[slot.set];
+          const view = <ShowcaseView key={`${slot.set}-${run}`} item={set[kind]} kind={kind} note={set.note} loading={kind === "phone" ? "eager" : "lazy"} />;
+          if (kind === "phone") return <IphoneMockup key={kind} className={styles.phone} data-phase={slot.phase}>{view}</IphoneMockup>;
           return <figure key={kind} className={styles.browser} data-phase={slot.phase}>
             <span className={styles.browserBar} aria-hidden="true"><i /><i /><i /></span>
-            <img src={item.src} alt={item.alt} width={item.width} height={item.height} loading="lazy" decoding="async" />
+            <div className={styles.browserView}>{view}</div>
           </figure>;
         })}
       </div>

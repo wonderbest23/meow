@@ -359,3 +359,20 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
 }
 
 console.log("studio navigation ok");
+
+// 오른쪽 칸 따라가기(대표 요청 2026-10-24) — 대화로 반영된 요약 줄과 작성 중 새로 써진 장으로 화면을 옮긴다
+{
+  const summary = readFileSync(new URL("../app/plan/studio/StudioIntakeSummary.tsx", import.meta.url), "utf8");
+  assert.match(summary, /scrollIntoView\(\{ block: "nearest"/, "새로 반영된 요약 줄이 보이는 곳까지 내린다");
+  assert.match(summary, /data-fresh=\{fresh\.includes\(row\.id\)/, "새로 반영된 줄을 잠깐 밝힌다");
+  const doc = readFileSync(new URL("../app/plan/document/DocumentWorkspace.tsx", import.meta.url), "utf8");
+  assert.match(doc, /Date\.now\(\) - lastReadAt\.current > 8000/, "직접 읽는 중이면 자리를 빼앗지 않는다");
+}
+
+// 대화만 할 때는 탭 줄을 숨긴다(대표 요청 2026-10-24) — 칸이 모두 막혀 있는 동안 네 칸 탭이 헷갈렸다
+{
+  const studio = readFileSync(new URL("../app/plan/studio/Studio.tsx", import.meta.url), "utf8");
+  assert.match(studio, /const chatOnly = !isSamplePlan\(planId\) && !chatComplete && RIGHT_TABS\.every\(id => !!locks\[id\]\)/);
+  assert.match(studio, /\{!wide && !chatOnly && <div className=\{styles\.narrowTabs\}/);
+  assert.match(studio, /\{wide && !chatOnly && <div className=\{styles\.wideTabs\}/);
+}
