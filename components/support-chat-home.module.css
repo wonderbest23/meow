@@ -39,7 +39,7 @@
 
 .pane .muted { margin: 0; color: #6b7684; font-size: 13px; }
 .pane .emptyPlans { display: grid; gap: 8px; }
-.pane .emptyPlans a { color: #246bd1; font-size: 14px; font-weight: 600; text-decoration: none; }
+.pane .emptyPlans a { display: inline-flex; align-items: center; min-height: 44px; width: fit-content; color: #246bd1; font-size: 14px; font-weight: 600; text-decoration: none; }
 .pane .plans { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .pane .plans a { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "text arrow" "bar arrow"; align-items: center; gap: 6px 10px; padding: 10px 4px; border-radius: 10px; color: inherit; text-decoration: none; }
 .pane .plans a:hover { background: #f9fafb; }
@@ -52,10 +52,10 @@
 
 .pane .account { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
 .pane .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.pane .ghost, .pane .dark { display: flex; align-items: center; justify-content: center; height: 42px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.pane .ghost, .pane .dark { display: flex; align-items: center; justify-content: center; gap: 2px; height: 44px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
 .pane .ghost { border: 1px solid #d1d6db; background: #fff; color: #191f28; }
 .pane .dark { border: 1px solid #1f2125; background: #1f2125; color: #fff; }
-.pane .toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+.pane .toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; cursor: pointer; }
 .pane .toggle span { display: grid; gap: 2px; font-size: 14px; font-weight: 600; }
 .pane .toggle small { color: #6b7684; font-size: 12px; font-weight: 400; }
 .pane .toggle input { flex: none; width: 44px; height: 26px; margin: 0; appearance: none; border-radius: 26px; background: #d1d6db; position: relative; cursor: pointer; transition: background .2s; }
@@ -77,3 +77,6 @@
 .tabs .tabIcon em { position: absolute; top: -5px; left: 14px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #f04452; color: #fff; font-size: 10px; font-style: normal; font-weight: 700; line-height: 17px; text-align: center; }
 
 /* 창 자체(둥근 모서리)는 전역 클래스라 globals.css 맨 끝에 둔다 — CSS 모듈에 전역만 쓴 선택자는 webpack 빌드가 거부한다 */
+
+/* 이동 단추 끝의 › (대표 규칙 2026-10-24) */
+.pane .ghost > svg { flex: none; width: 18px; height: 18px; }

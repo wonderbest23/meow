@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, RefreshCw, X } from "lucide-react";
 import { generationEta, type GenerationProgress } from "../../lib/plan-builder/generation-progress";
@@ -225,7 +225,8 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
     {finished.length > 0 && <p className={styles.cardDone}><Check size={14} aria-hidden="true" />{finished.map(section => section.title).join(" · ")}</p>}
     {/* 쓰는 장이 바뀔 때만 읽힌다(몇 초마다 오는 확인에는 글이 그대로라 다시 읽지 않는다) */}
     {current && <p className={styles.cardCurrent} role="status" aria-live="polite"><i aria-hidden="true" />{current.title} 쓰는 중</p>}
-    {waiting.length > 0 && <p className={styles.cardWaiting}>{stalled ? "남은 항목" : "대기"}: {waiting.map(section => section.title).join(" · ")}</p>}
+    {/* 장 이름이 줄 끝에서 둘로 쪼개지지 않게 이름마다 한 덩어리로(r37 휴대폰 점검) */}
+    {waiting.length > 0 && <p className={styles.cardWaiting}>{stalled ? "남은 항목" : "대기"}: {waiting.map((section, index) => <Fragment key={section.title + index}>{index > 0 && " · "}<span>{section.title}</span></Fragment>)}</p>}
     {(stalled || note !== null) && <p className={styles.cardNote}>{stalled ? done ? "다 쓴 장은 저장돼 있어요." : "한 장도 쓰지 못했어요. 계속 안 되면 고객센터로 알려 주세요." : note ?? "창을 닫아도 계속 써요."}</p>}
     {(stalled || onOpen && done > 0) && <div className={styles.cardActions}>
       {stalled && <button type="button" className={styles.cardPrimary} disabled={retryDisabled} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />남은 항목 이어서 쓰기</button>}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { Menu, Search, UserRound, X } from "lucide-react";
+import { ChevronRight, Menu, Search, UserRound, X } from "lucide-react";
 import { CtaArrow } from "./cta-arrow";
 import { useDialogFocus } from "./use-dialog-focus";
 import { loadAuthSession } from "../lib/client/auth-session";
@@ -124,8 +124,8 @@ function HomeMenu({ signedIn }: { signedIn: boolean | null }) {
         </nav>
         {signedIn !== null && <div className={menuStyles.group} role="group" aria-label="계정">
           {signedIn
-            ? <><a href="/plan" className={menuStyles.primary}>내 사업</a><a href="/account" className={menuStyles.link}>내 계정</a></>
-            : <><a href="/account?next=%2Fplan" className={menuStyles.primary}>로그인</a><a href="/account?mode=register&next=%2Fplan" className={menuStyles.link}>회원가입</a></>}
+            ? <><a href="/plan" className={menuStyles.primary}>내 사업<ChevronRight size={18} aria-hidden="true" /></a><a href="/account" className={menuStyles.link}>내 계정</a></>
+            : <><a href="/account?next=%2Fplan" className={menuStyles.primary}>로그인<ChevronRight size={18} aria-hidden="true" /></a><a href="/account?mode=register&next=%2Fplan" className={menuStyles.link}>회원가입</a></>}
         </div>}
         <nav aria-label="약관과 사업자 정보" className={`${menuStyles.group} ${menuStyles.legal}`}>
           {LEGAL_LINKS.map(([href, label]) => <a key={href} href={href}>{label}</a>)}

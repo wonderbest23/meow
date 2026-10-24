@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import styles from "./not-found.module.css";
 
 /*
@@ -18,7 +19,7 @@ export default function AppError({ reset }: { error: Error & { digest?: string }
         <p>저장한 내용은 그대로 있어요.</p>
         <div className={styles.actions}>
           <button type="button" className={styles.primary} onClick={() => reset()}>다시 시도</button>
-          <Link href="/plan" className={styles.secondary}>내 사업 보기</Link>
+          <Link href="/plan" className={styles.secondary}>내 사업 보기<ChevronRight size={18} aria-hidden="true" /></Link>
         </div>
       </section>
     </main>

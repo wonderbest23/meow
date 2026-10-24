@@ -126,8 +126,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 34px;
-  padding: 0 13px;
+  height: 44px; /* 누르는 자리 44px(점검 r38 — 34px 였다) */
+  padding: 0 16px;
   border: 1px solid var(--line, var(--app-line));
   border-radius: 999px;
   background: var(--app-surface);

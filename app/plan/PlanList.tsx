@@ -50,7 +50,8 @@ export default function PlanList() {
   }, []);
   // 로그인 여부 — 확인하지 못했으면(null) 예전처럼 둔다
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  useEffect(() => { let alive = true; loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}); return () => { alive = false; }; }, []);
+  const [authChecked, setAuthChecked] = useState(false);
+  useEffect(() => { let alive = true; loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}).finally(() => { if (alive) setAuthChecked(true); }); return () => { alive = false; }; }, []);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
   const plans = allPlans;
   const samples = state?.plans.filter(p => isSamplePlan(p.id) && LISTED_SAMPLE_IDS.has(p.id)) ?? [];
@@ -77,9 +78,12 @@ export default function PlanList() {
   }
   function sample(id: string) { setActivePlan(id); router.push(`/plan/document?planId=${encodeURIComponent(id)}`); }
   return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="plans" backHref="/">
-    {!state ? <PlanLoading fill variant="compact" note="내 사업을 불러오고 있어요" onRetry={() => retry.current()} /> : <div className={styles.scroll}><div className={styles.content}>
+    {!state ? <PlanLoading fill variant="compact" note="내 사업을 불러오고 있어요" onRetry={() => retry.current()} /> : <div className={styles.scroll}><div className={styles.content} data-empty-list={plans.length === 0 && !error ? "" : undefined}>
         <p role="status" className={mine.status} data-empty={notice ? undefined : ""}>{notice}</p>
-        {plans.length === 0 && error ? <div role="alert" className={styles.error}><p>사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><button type="button" className={styles.primary} onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</button></div> : plans.length === 0 ? <BusinessEmptyState kind={signedIn === false ? "loggedOut" : "plans"} /> : <>
+        {plans.length === 0 && error ? <div role="alert" className={styles.error}><p>사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><button type="button" className={styles.primary} onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</button></div> : plans.length === 0 ? (
+          /* 로그인 여부를 아직 모르면 자리만 잡아 둔다 — '사업이 없어요'를 먼저 보였다가 '로그인하면…'으로 바뀌며 화면이 한 번 흔들렸다(점검 r38) */
+          !authChecked ? <section className={styles.empty} aria-hidden="true" /> : <BusinessEmptyState kind={signedIn === false ? "loggedOut" : "plans"} />
+        ) : <>
           {/*
             목록만 보여 준다(대표 요청 2026-10-14: '내 사업인데 새 대화 단추가 왜 있나', 꾸밈이 AI 같고 복잡하다).
             예전에 있던 것 — 머리말과 겹치던 '내 사업' 제목·한 줄 소개, 새 대화 단추(메뉴에 있음), 상태 필터 4개, 가짜 문서 그림.

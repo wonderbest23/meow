@@ -487,7 +487,7 @@
  */
 @media (max-width:480px) {
   .page[data-embedded] .readingBar { flex-wrap:nowrap; gap:8px; min-height:52px; padding-block:6px; }
-  .page[data-embedded] .tocToggle { padding:8px 10px; min-height:40px; }
+  .page[data-embedded] .tocToggle { justify-content:center; padding:8px 10px; min-width:44px; min-height:44px; } /* 누르는 자리 44px(점검 r38) */
   .page[data-embedded] .tocLabel { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
   .page[data-embedded] .readingBar:has(.chapterChatEdit) .pageCount { display:none; }
   .page[data-embedded] .chapterChatEdit { padding:7px 10px; }
@@ -585,3 +585,9 @@
 .page .pagerNext:hover { background:#e9ecf0; }
 .pagerNext > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:240px; }
 .pagerNext > svg { flex:none; }
+
+/* 계획서 본문 — 짧은 문단·목록의 마지막 줄에 낱말 하나만 떨어지지 않게(점검 r38) */
+.body :global(.tiptap) :is(p, li) { text-wrap: pretty; }
+/* 목록 한 줄은 짧아 pretty 가 손대지 않는다 — 두 줄이면 줄 길이를 고르게 */
+.body :global(.tiptap) li { text-wrap: balance; }
+.body :global(.tiptap) li > p { text-wrap: inherit; }

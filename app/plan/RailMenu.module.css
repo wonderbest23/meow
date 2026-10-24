@@ -64,7 +64,7 @@
 
 /* 폰의 아이콘 띠(56px, PlanShell) — 로고는 심볼만, 로그인은 한 단추로 */
 @media (max-width: 640px) {
-  .menu .brand { justify-content: center; height: auto; margin: 0 0 14px; padding: 0; border: 0; }
+  .menu .brand { justify-content: center; height: auto; min-height: 44px; margin: 0 0 14px; padding: 0; border: 0; }
   .menu .brand .logoFull { display: none; }
   .menu .logoMark { display: block !important; width: 36px; height: 36px; }
   .menu .auth { grid-template-columns: 1fr; }

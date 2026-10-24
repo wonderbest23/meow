@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { hydrateFromServer, lastHydrationFailed, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
@@ -252,7 +253,7 @@ export default function PlanMePage() {
       <section className={styles.card}>
         <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>내 사업</h2>
-          <Link href="/plan" className={styles.cardAction}>내 사업 보기</Link>
+          <Link href="/plan" className={styles.cardAction}>내 사업 보기<ChevronRight size={18} aria-hidden="true" /></Link>
         </div>
         {myPlans.length ? (
           <dl className={styles.rows}>

@@ -16,7 +16,7 @@ export default function NotFound() {
         <p>주소가 바뀌었거나 없는 화면이에요.</p>
         <div className={styles.actions}>
           <Link href="/" className={styles.primary}>처음 화면으로<ChevronRight size={18} aria-hidden="true" /></Link>
-          <Link href="/plan" className={styles.secondary}>내 사업 보기</Link>
+          <Link href="/plan" className={styles.secondary}>내 사업 보기<ChevronRight size={18} aria-hidden="true" /></Link>
         </div>
       </section>
     </main>

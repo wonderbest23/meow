@@ -72,7 +72,8 @@ export default function PlanPayResult() {
         <div className={`${styles.icon} ${ok ? styles.iconPop : ""}`} aria-hidden="true">{ok ? <CheckCircle2 size={30} strokeWidth={1.8} /> : pending ? <Clock3 size={30} strokeWidth={1.8} /> : <AlertTriangle size={30} strokeWidth={1.8} />}</div>
         <h1 className={styles.title}>{ok ? "결제가 끝났어요" : pending ? "결제 결과를 확인하고 있어요" : "결제를 마치지 못했어요"}</h1>
         <p className={styles.desc} aria-live="polite">
-          {ok ? doneDesc : pending ? (reason ?? "승인 결과 확인이 늦어지고 있어요. 다시 결제하지 말고 이 주문의 결과를 확인해 주세요.") : (reason ?? "결제가 취소됐거나 승인되지 않았어요.")}
+          {/* 빈 사유(reason=)는 없는 것으로 — 빈 문단이 제목 아래를 24px 로 벌렸다(점검 r38) */}
+          {ok ? doneDesc : pending ? (reason || "승인 결과 확인이 늦어지고 있어요. 다시 결제하지 말고 이 주문의 결과를 확인해 주세요.") : (reason || "결제가 취소됐거나 승인되지 않았어요.")}
         </p>
         {pending && orderId && <p className={styles.desc} style={{ overflowWrap: "anywhere" }}>주문번호 {orderId}</p>}
         {ok ? (

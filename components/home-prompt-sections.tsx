@@ -9,6 +9,7 @@
  * 등장 움직임은 자바스크립트가 붙은 뒤에만 숨김 상태를 얹는다 — 스크립트가 없거나 움직임 줄이기면 처음부터 다 보인다.
  */
 import { useEffect, useRef, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_INCLUDED } from "../lib/payments/domain";
 import { PPT_GENERATION_VERIFIED } from "../lib/plan-builder/deck-availability";
 import { newChatEntryHref, newChatHref, studioHref, type EntryMode } from "../lib/plan-builder/studio";
@@ -177,7 +178,7 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
           {/* 결제 화면과 같은 표시(LAUNCH_PRICE_LABEL) — 종전가·할인율은 적지 않는다(lib/payments/domain.ts) */}
           <span className={styles.launchTag}>{LAUNCH_PRICE_LABEL}</span>
           <strong className={styles.price}>{won(PACKAGE_AMOUNT)}</strong>
-          <p>사업계획서 작성, {formats} 내려받기, 항목별 다시 생성 {REGEN_INCLUDED}회</p>
+          <p>사업계획서 작성, {formats} 내려받기, 항목별 <span className={styles.nowrap}>다시 생성 {REGEN_INCLUDED}회</span></p>
         </article>
         <article className={styles.panel}>
           <h3 className={styles.priceName}>{BUNDLE_PRODUCT_NAME}</h3>
@@ -202,7 +203,7 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
 
     <section className={`${styles.section} ${styles.closing}`} aria-labelledby="home-closing-title" data-reveal>
       <h2 id="home-closing-title" className={styles.closingTitle}>내 사업의 첫날,<br />오늘 시작해요</h2>
-      <a className={styles.closingAction} href={NEW_CHAT} onClick={event => { if (!document.getElementById("home-idea")) return; event.preventDefault(); focusHeroPrompt(); }}>대화로 시작하기</a>
+      <a className={styles.closingAction} href={NEW_CHAT} onClick={event => { if (!document.getElementById("home-idea")) return; event.preventDefault(); focusHeroPrompt(); }}>대화로 시작하기<ChevronRight size={18} aria-hidden="true" /></a>
     </section>
   </div>;
 }

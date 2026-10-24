@@ -340,7 +340,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <h1 className={styles.title}>{bundleBlocked && bothOwned ? "사업계획서와 홈페이지가 모두 열려 있어요" : bundleBlocked ? "묶음 대신 남은 상품만 결제해 주세요" : isHomepage ? "홈페이지는 이미 열려 있어요" : "이 사업계획서는 이미 열려 있어요"}</h1>
           <p className={styles.desc}>{bundleBlocked && bothOwned ? "따로 결제할 것이 없어요." : bundleBlocked ? `${info?.paid ? "사업계획서" : "홈페이지"}는 이미 열려 있어요. ${info?.paid ? "홈페이지" : "사업계획서"}만 따로 결제하면 돼요.` : isHomepage ? "결제가 확인돼서 사진·글·버튼을 고치고 공개할 수 있어요." : "결제가 확인돼서 전체 항목을 쓸 수 있어요."}</p>
           {bundleBlocked && !bothOwned && planId && <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, ...(info?.paid ? { product: "homepage" } : {}) }).toString()}`} className={`${styles.primary} ${styles.nav}`}>{info?.paid ? "홈페이지만 결제하기" : "사업계획서만 결제하기"}<ChevronRight size={18} aria-hidden="true" /></Link>}
-          <Link href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={bundleBlocked ? styles.back : `${styles.primary} ${styles.nav}`}>{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}{bundleBlocked ? null : <ChevronRight size={18} aria-hidden="true" />}</Link>
+          <Link href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={bundleBlocked ? styles.back : `${styles.primary} ${styles.nav}`}>{bundleBlocked ? "← " : null}{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}{bundleBlocked ? null : <ChevronRight size={18} aria-hidden="true" />}</Link>
         </div>
       </div>
     );

@@ -45,16 +45,17 @@ li[data-state="current"] .mark i { width: 10px; height: 10px; border: 2px solid 
 .card progress::-webkit-progress-value { background: #246bd1; border-radius: 6px; transition: width .4s ease; }
 .card progress::-moz-progress-bar { background: #246bd1; }
 /* 대화 칸 마무리 묶음(.complete p — 아래 여백 22px)에 들어가도 줄 사이가 벌어지지 않게 한 단계 강하게(r37 휴대폰 점검: 줄 사이 ~130px) */
-.card.card p { margin: 0; font-size: 13.5px; line-height: 1.6; word-break: keep-all; }
+.card.card p { margin: 0; font-size: 13.5px; line-height: 1.6; word-break: keep-all; text-wrap: pretty; }
 .cardDone { display: flex; align-items: flex-start; gap: 6px; color: #4e5968; }
 .cardDone svg { margin-top: 3px; color: #246bd1; }
 .cardCurrent { display: flex; align-items: center; gap: 8px; color: #191f28; font-weight: 700; }
 .cardCurrent i { flex: none; width: 12px; height: 12px; border: 2px solid #246bd1; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
 .cardWaiting { color: #8b95a1; }
+.cardWaiting > span { white-space: nowrap; }
 .cardNote { color: #6b7684; font-size: 12.5px !important; }
 .card[data-state="stalled"] > header strong { color: #ad343d; }
 .cardActions { display: flex; flex-wrap: wrap; gap: 6px; }
-.cardPrimary, .cardSecondary { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.cardPrimary, .cardSecondary { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .cardPrimary { border: 0; background: #111418; color: #fff; }
 .cardPrimary:disabled { opacity: .45; cursor: default; }
 .cardSecondary { border: 1px solid #d5dae0; background: #fff; color: #2b3036; }

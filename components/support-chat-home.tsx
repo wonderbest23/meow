@@ -122,7 +122,7 @@ export function SupportSettings({ open, badge, onBadge, onClearConsult, onClose 
         : session.authenticated ? <>
           <p className={styles.account}>{session.email ?? "로그인됨"}</p>
           <div className={styles.row}>
-            <Link className={styles.ghost} href="/plan/me" onClick={onClose}>내 계정 · 결제 내역</Link>
+            <Link className={styles.ghost} href="/plan/me" onClick={onClose}>내 계정 · 결제 내역<ChevronRight size={18} aria-hidden="true" /></Link>
             <button type="button" className={styles.ghost} disabled={loggingOut} onClick={() => void logout()}>{loggingOut ? "로그아웃 중…" : "로그아웃"}</button>
           </div>
           {logoutFailed && <p className={styles.muted} role="alert">로그아웃하지 못했어요. 연결을 확인하고 다시 눌러 주세요.</p>}

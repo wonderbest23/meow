@@ -73,7 +73,9 @@
 }
 .link:hover { background: #f2f4f6; }
 /* 계정 줄의 첫 단추(로그인 · 내 사업)는 앱의 주 색 단추 */
-.primary { justify-content: center; background: var(--brand-primary, #3182f6); color: #fff; font-weight: 700; }
+.primary { justify-content: center; gap: 6px; background: var(--brand-primary, #3182f6); color: #fff; font-weight: 700; }
+/* 이동 단추 끝의 › (대표 규칙 2026-10-24) — 첫 화면의 옛 전역 규칙이 단추 속 아이콘을 숨기지 않게 */
+.primary svg { display: block !important; flex: none; }
 .primary:hover { background: var(--brand-primary-hover, #1b64da); }
 .legal a {
   min-height: 44px;

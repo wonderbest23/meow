@@ -74,3 +74,12 @@
  * 제목 위에 진행 줄 자리만큼 남긴다.
  */
 .launch h2[tabindex] { scroll-margin-top:120px; }
+
+/* 예시 안내 속 '대화로 내 사업 시작하기 ›' — 꺾쇠를 글줄에 맞춘다(점검 r38) */
+.notice .textLink { white-space: nowrap; }
+.notice .textLink > svg { display: inline-block; vertical-align: -4px; margin-left: 2px; }
+/* 좁은 휴대폰(≤380px) — '준비 과정 둘러보기'가 두 줄로 꺾이지 않게 단추를 위아래로 쌓는다(점검 r38) */
+@media (max-width: 380px) {
+  .stepActions { flex-direction: column; gap: 8px; }
+  .stepActions > * { flex: none; white-space: nowrap; }
+}
