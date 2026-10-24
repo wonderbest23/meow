@@ -217,10 +217,10 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 14, total: 14, complete: false } }), "대화 중 · 질문 14/14", "질문 수를 넘지 않는다");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 14, total: 14, complete: true } }), "대화 중 · 마무리");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo") }), "대화 중", "질문 진행을 모르면 숫자 없이");
-  assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), generation: { done: 6, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 6/10장");
-  assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), generation: { done: 6, total: 10, active: true, stalled: true } }), "사업계획서 · 6/10장에서 멈춤");
+  assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), generation: { done: 6, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 6/10 항목");
+  assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), generation: { done: 6, total: 10, active: true, stalled: true } }), "사업계획서 · 6/10 항목에서 멈춤");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo") }), "사업 방향 정리됨 · 계획서 만들 차례");
-  assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), documents: { done: 3, total: 10 } }), "사업계획서 · 3/10장");
+  assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), documents: { done: 3, total: 10 } }), "사업계획서 · 3/10 항목");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo") }), "홈페이지 · 공개 전");
   assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "todo", "active") }), "홈페이지 공개 중 · 다음은 개업 준비", "공개 뒤에는 진행 단계 칩의 지금 단계(개업 준비)와 같게");
   assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "done", "active") }), "홈페이지 · 공개 중", "개업 준비까지 마쳤으면 공개 상태만");
@@ -232,13 +232,13 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo"), design: false }), "대화 중 · 마무리");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo"), design: true }), "사업 방향 정리됨 · 계획서 만들 차례");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true }), "수정 내용 반영 필요");
-  assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true, generation: { done: 0, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 0/10장", "다시 쓰는 중");
+  assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true, generation: { done: 0, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 0/10 항목", "다시 쓰는 중");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "launch" }), "개업 준비 · 시작 전", "개업 준비 칸에서 홈페이지 상태를 말하지 않는다");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "operations" }), "유지보수 · 실적과 개선 기록", "유지보수 칸에서 개업 준비 진행을 말하지 않는다");
-  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "plan" }), "사업계획서 · 문서 완성", "보고 있는 칸 이름을 앞에(승인 시안)");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "plan" }), "", "끝난 계획서 칸은 머리줄 상태를 숨긴다(r37 — 칸 안이 이미 말한다)");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), stale: true, tab: "plan" }), "사업계획서 · 수정 내용 반영 필요");
-  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "homepage" }), "홈페이지 · 공개 전", "홈페이지 글은 이미 칸 이름으로 시작한다");
-  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "launch" }), "개업 준비 · 2/9");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "homepage" }), "", "홈페이지 공개 여부는 주소창 이름표 한 곳에서만(r37)");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "launch" }), "", "진행 수는 칸 안 '2 / 9' 한 곳에서만(r37)");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), tab: "homepage" }), "홈페이지 · 만들기 전");
 
   /* 작업실의 대화 완료 — 첫 답(coach.ready)만으로는 끝나지 않는다: 사업안 · 계획서 장 · 쓰는 중 · 핵심 질문 모두 답함 중 하나 */
@@ -411,6 +411,8 @@ console.log("studio navigation ok");
   assert.match(summary, /if \(price !== undefined && unitCost !== undefined\) \{/);
   // 군더더기 안내는 두지 않는다(대표 요청 2026-10-24) — 빈 상태는 가운데 한 줄만
   assert.doesNotMatch(summary, /30~40초|왼쪽에서 답하면 여기에 바로 정리돼요/);
-  assert.match(summary, /답하면 여기에 정리돼요/);
+  assert.match(summary, /아직 정한 내용이 없어요/);
+  // 질문 수는 머리줄 · 진행 막대만 — 요약에서 'N개 답함 · N개 남았어요'를 되풀이하지 않는다(r37)
+  assert.doesNotMatch(summary, /`기본 질문 \$\{answeredCount\}개 답함`|`질문 \$\{remaining\.length\}개가 남았어요\.`|남은 질문 \{remaining\.length\}개/);
   assert.match(summary, /\{item\.now && <small>지금 묻는 중<\/small>\}/);
 }

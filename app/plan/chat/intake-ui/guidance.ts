@@ -103,9 +103,8 @@ export function resumeSummary(snapshot: IntakeSnapshot): string {
   if (snapshot.hasDocuments) return "";
   if (["queued", "running"].includes(snapshot.intake.job?.status ?? "")) return "답변은 저장돼 있어요. 진행 중인 작업의 상태를 이어서 확인하고 있어요.";
   if (!snapshot.nextQuestion) return "저장한 답변을 불러왔어요. 마무리 단계부터 이어가면 돼요.";
-  const latest = [...snapshot.coach.messages].reverse().find(message => message.role === "user" && snapshot.questions.some(question => snapshot.intake.answers[question.id]?.messageId === message.id));
-  const answered = latest && snapshot.questions.find(question => snapshot.intake.answers[question.id]?.messageId === latest.id);
-  return answered ? `${answered.label}까지 남겼어요. 이제 ${snapshot.nextQuestion.label}부터 이어갈게요.` : `이어서 ${snapshot.nextQuestion.label}부터 정해볼까요?`;
+  /* 다음 질문이 바로 아래 카드로 보인다 — '…까지 남겼어요. 이제 …부터 이어갈게요' 말풍선은 같은 말이라 두지 않는다(r37 글 점검) */
+  return "";
 }
 
 export function composerEnterSends(event: { key: string; shiftKey: boolean; isComposing?: boolean; keyCode?: number }, coarsePointer: boolean): boolean {

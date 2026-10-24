@@ -22,7 +22,7 @@ assert.ok(BUSINESS_DESIGNED_PAGES.has("0-290"));
 assert.equal(businessNeedsFlow({ id: "0-290", slots: { text: [], image: [] } } as never, { contentMode: "business", texts: { "0:414": "짧은 제목" }, images: {} }), true, "designed page never falls back to the fixed-coordinate kit");
 const legacy = render(createBusinessTemplate(content, "0-290"));
 assert.match(legacy, /<h1[^>]*>카페피드<\/h1>/);
-assert.ok(legacy.includes(">카페피드에 문의해 보세요<"), "contact band invites the visitor by name");
+assert.ok(legacy.includes(">문의해 보세요<") && !legacy.includes("카페피드에 문의해 보세요"), "contact band invites the visitor without repeating the name");
 assert.equal(count(legacy, 'src="/qa-light-photo.png"'), 1, "public page shows one photo once");
 // 편집 화면도 공개 화면과 같게 — 같은 사진은 처음 자리에만, 나머지 자리는 '사진 넣기' 칸(예전엔 편집 화면만 첫 화면 사진을 되풀이했다)
 const editorWithPhoto = render(createBusinessTemplate(content, "0-290"), () => {});
@@ -41,13 +41,13 @@ const shop = render(createBusinessTemplate({ ...content, headline: "퇴근하면
 assert.match(shop, /<h1[^>]*>카페피드<\/h1><p[^>]*>퇴근하면 문 앞에 반찬이 와 있는 저녁<\/p><button[^>]*data-bw-btn="0:1110"/, "name, tagline, then a button on the first screen");
 assert.ok(shop.indexOf(">카페피드<") < shop.indexOf("<h1"), "header comes first even though it overlays the hero in the kit");
 assert.ok(render(createBusinessTemplate(content, "0-1102")).includes(content.description), "without a tagline the business description sits under the name");
-for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "카페피드에 문의해 보세요"]) assert.ok(shop.includes(label), label);
+for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "문의해 보세요"]) assert.ok(shop.includes(label), label);
 assert.equal(count(shop, 'src="/qa-light-photo.png"'), 1);
 assert.ok(!/Brainwave|Living Room|Start Shopping|Explore All|\$\d/.test(shop), "no raw kit copy");
 // 사장님이 편집기에서 순서를 바꾸면 그 순서를 따른다
 const reordered = createBusinessTemplate(content, "0-1102");
 const reorderedHtml = renderToStaticMarkup(createElement(BrainwaveBusinessMobile, { pageId: "0-1102", overrides: { ...reordered, order: ["0:1104", "0:1360", "0:1321", "0:1329"] }, hidden: new Set(reordered.hidden), sectionOrder: ["0:1104", "0:1360", "0:1321", "0:1329"], desktop: true }));
-assert.ok(reorderedHtml.indexOf("카페피드에 문의해 보세요") < reorderedHtml.indexOf("<h1"));
+assert.ok(reorderedHtml.indexOf("문의해 보세요") < reorderedHtml.indexOf("<h1"));
 // 다른 템플릿(흐름 화면)도 같은 사진은 공개 화면에 한 번만
 for (const pageId of Object.keys(BUSINESS_TEMPLATE_PROFILES).filter(id => !BUSINESS_DESIGNED_PAGES.has(id))) {
   const html = render(createBusinessTemplate(content, pageId));
@@ -106,7 +106,7 @@ const local = createBusinessTemplate({ ...content, businessName: "퇴근필라",
 const localHtml = render(local);
 assert.ok(localHtml.indexOf(">퇴근필라<") < localHtml.indexOf("<h1"), "brand bar first");
 assert.match(localHtml, /<h1[^>]*>퇴근필라<\/h1><p[^>]*>퇴근 후, 붐비지 않는 4인 기구 필라테스<\/p><button[^>]*data-bw-btn="0:2372"/);
-for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "오시는 길·영업시간", "주소는 문의 주시면 안내해 드려요", "영업시간은 문의 주시면 안내해 드려요", "퇴근필라에 문의해 보세요"]) assert.ok(localHtml.includes(label), label);
+for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "오시는 길·영업시간", "주소는 문의 주시면 안내해 드려요", "영업시간은 문의 주시면 안내해 드려요", ">문의해 보세요<"]) assert.ok(localHtml.includes(label), label);
 assert.ok(!localHtml.includes("네이버 지도"), "no map link until there is an address");
 assert.ok(!localHtml.includes('href="#visit"'), "no hours/address chips until they are known");
 assert.ok(!/Coworking|Brainwave|자리 예약|새벽커피|이메일 주소|Subscribe/.test(localHtml), "no raw kit or sample copy");
@@ -132,7 +132,7 @@ const clinic = createBusinessTemplate({ ...content, businessName: "밝은하루�
 const clinicHtml = render(clinic);
 assert.ok(clinicHtml.indexOf(">밝은하루치과<") < clinicHtml.indexOf("<h1") && clinicHtml.includes('data-bw-btn="0:2554"'), "brand bar with a booking button first");
 assert.match(clinicHtml, /<h1[^>]*>밝은하루치과<\/h1><p[^>]*>퇴근 후에도 들를 수 있는 동네 치과<\/p><button[^>]*data-bw-btn="0:2544"/);
-for (const label of ["진료 시간·오시는 길", "진료 시간은 문의 주시면 안내해 드려요", "주소는 문의 주시면 안내해 드려요", "밝은하루치과에 문의해 보세요"]) assert.ok(clinicHtml.includes(label), label);
+for (const label of ["진료 시간·오시는 길", "진료 시간은 문의 주시면 안내해 드려요", "주소는 문의 주시면 안내해 드려요", ">문의해 보세요<"]) assert.ok(clinicHtml.includes(label), label);
 assert.ok(!/Albino|Brainwave|\$\d|Get started|Pricing|Corey|Basic|Premium/.test(clinicHtml), "no raw kit copy");
 assert.ok(!clinicHtml.includes("의료진"), "doctors stay hidden until the owner turns them on");
 assert.equal(clinic.images["0:2459/0"], "", "doctor photos are never copied from the hero");
@@ -159,7 +159,7 @@ gallery.hidden = gallery.hidden.filter(id => !["0:875/0", "0:876/0"].includes(id
 const galleryHtml = render(gallery);
 assert.ok(galleryHtml.indexOf(">온결 인테리어<") < galleryHtml.indexOf("<h1") && galleryHtml.includes('data-bw-btn="0:1101"'));
 assert.match(galleryHtml, /<h1[^>]*>온결 인테리어<\/h1><p[^>]*>오래 살아도 편한 집을 만듭니다<\/p><button[^>]*data-bw-btn="0:1090"/);
-for (const label of ["작업 사례", "이런 일을 해요", "찾아오시는 길", "운영 시간", "오시는 길", "온결 인테리어에 문의해 보세요"]) assert.ok(galleryHtml.includes(label), label);
+for (const label of ["작업 사례", "이런 일을 해요", "찾아오시는 길", "운영 시간", "오시는 길", ">문의해 보세요<"]) assert.ok(galleryHtml.includes(label), label);
 assert.ok(!/Brainwave|Download|Starter|Unlimited|Isaac|Team Members|\$|Company|Careers|Privacy Policy|©/.test(galleryHtml), "no raw kit copy");
 assert.equal(count(galleryHtml, 'data-bw-btn="0:1090"'), 2, "closing repeats the first-screen button");
 assert.equal(count(galleryHtml, 'aria-label="크게 보기"'), 2, "each work photo opens large on the public page");

@@ -53,7 +53,7 @@ export default function DeletedBusinessGuard() {
   if (!shown) return null;
   return <dialog ref={dialog} className={styles.dialog} aria-labelledby="deleted-business-title" onCancel={event => { event.preventDefault(); router.replace("/plan"); }}>
     <h2 id="deleted-business-title">삭제된 사업이에요</h2>
-    <p>이 사업은 지워져서 더 볼 수도 고칠 수도 없어요. 잠시 뒤 내 사업 목록으로 옮겨 갈게요.</p>
+    <p>잠시 뒤 내 사업 목록으로 옮겨 갈게요.</p>
     <Link href="/plan" replace autoFocus>내 사업으로</Link>
   </dialog>;
 }

@@ -280,8 +280,9 @@ export function studioStatusText(input: StudioStatusInput): string {
   const { generation, intake, documents, homepage, launch, tab } = input;
   if (input.fresh) return "대화 중";
   if (!input.steps) return input.loading ? "불러오는 중" : "대화 중";
-  if (generation?.active && !generation.stalled) return `사업계획서 만드는 중 · ${generation.done}/${generation.total}장`;
-  if (generation?.active && generation.stalled) return `사업계획서 · ${generation.done}/${generation.total}장에서 멈춤`;
+  /* 작성 단위는 장 안의 항목이다 — 대화 칸 '계획서 10개 항목을 썼어요' · 진행 카드와 같은 말(r37 점검: 머리줄만 '2/10장'이었다) */
+  if (generation?.active && !generation.stalled) return `사업계획서 만드는 중 · ${generation.done}/${generation.total} 항목`;
+  if (generation?.active && generation.stalled) return `사업계획서 · ${generation.done}/${generation.total} 항목에서 멈춤`;
   const state = (id: JourneyStepId) => input.steps!.find(step => step.id === id)?.state ?? "todo";
   if (state("chat") !== "done") {
     /* 질문을 다 답해 정리를 시작했다 — 대화 단계는 정리가 끝날 때까지(studioChatComplete) 이어진다 */
@@ -291,7 +292,7 @@ export function studioStatusText(input: StudioStatusInput): string {
     return intake.complete ? "대화 중 · 마무리" : `대화 중 · 질문 ${Math.min(intake.answered + 1, intake.total)}/${intake.total}`;
   }
   if (state("document") !== "done") {
-    if (documents && documents.done > 0) return `사업계획서 · ${documents.done}/${documents.total}장`;
+    if (documents && documents.done > 0) return `사업계획서 · ${documents.done}/${documents.total} 항목`;
     /* 질문은 다 답했지만 사업안이 아직 없다 — 정리하는 중이거나(30~40초) 정리를 기다린다 */
     if (input.design === false) return input.designRunning ? "사업 방향 정리 중" : "대화 중 · 마무리";
     return "사업 방향 정리됨 · 계획서 만들 차례";
@@ -302,12 +303,16 @@ export function studioStatusText(input: StudioStatusInput): string {
   const launchText = launchDone ? `${launchName} · 완료` : launchRunning ? `${launchName} · ${launch!.done}/${launch!.total}` : `${launchName} · 시작 전`;
   const documentText = input.stale ? "수정 내용 반영 필요" : "문서 완성";
   const homepageText = homepage === "draft" ? "홈페이지 · 공개 전" : homepage === "published" ? "홈페이지 · 공개 중" : "홈페이지 · 만들기 전";
-  /* 보고 있는 칸의 진행 — 유지보수 칸에서 '개업 준비 · 시작 전'이 보였다(감사 r36). 유지보수는 그 칸이 하는 일을 말한다 */
+  /*
+   * 보고 있는 칸의 진행 — 유지보수 칸에서 '개업 준비 · 시작 전'이 보였다(감사 r36). 유지보수는 그 칸이 하는 일을 말한다.
+   * 칸 안이 이미 말하는 상태는 머리줄에 되풀이하지 않는다(r37 글 점검) — 끝난 계획서('문서 완성'), 홈페이지 공개 여부(주소창 이름표),
+   * 진행 중이거나 끝난 개업 준비(칸 안 '2 / 11')는 빈 글(머리줄 상태 줄을 숨긴다). 할 일이 남았을 때만 말한다.
+   */
   if (tab === "operations") return `${JOURNEY_LABELS.care} · 실적과 개선 기록`;
-  if (tab === "launch") return launchText;
-  if (tab === "homepage") return homepageText;
-  /* 칸 이름을 앞에 — '사업계획서 · 문서 완성'(승인 시안). 홈페이지 · 개업 준비 글은 이미 칸 이름으로 시작한다 */
-  if (tab === "plan") return `${JOURNEY_LABELS.document} · ${documentText}`;
+  if (tab === "launch") return launchDone || launchRunning ? "" : launchText;
+  if (tab === "homepage") return homepage === "draft" || homepage === "published" ? "" : homepageText;
+  /* 칸 이름을 앞에 — '사업계획서 · 수정 내용 반영 필요'. 홈페이지 · 개업 준비 글은 이미 칸 이름으로 시작한다 */
+  if (tab === "plan") return input.stale ? `${JOURNEY_LABELS.document} · ${documentText}` : "";
   /* 전체 진행(휴대폰 대화 탭 등) — 고칠 것이 남았으면 먼저, 그다음 지금 하는 단계 */
   if (input.stale) return documentText;
   if (homepage === "draft") return homepageText;

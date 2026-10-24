@@ -554,9 +554,10 @@ async function main() {
     assert.ok(appliedHistory.includes("data-change-note") && appliedHistory.includes("바꾼 내용 · 주 고객을 1인 가구로"));
     assert.equal((appliedHistory.match(/data-coach-message="user"/g) ?? []).length, 2, "적용한 답은 손님 말풍선으로 쌓지 않는다");
     assert.ok(appliedHistory.includes("계획서에 반영하기") && !appliedHistory.includes("계획서 다시 작성하기"));
+    assert.ok(!appliedHistory.includes("아래 &quot;계획서에 반영하기") && !appliedHistory.includes("아래 \"계획서에 반영하기"), "반영 단추는 아래에 있지 않다 — '아래'를 떼고 보인다(r37)");
     // 다 만든 뒤 고치는 길의 이름은 '대화로 고치기' · '직접 고치기' 둘뿐
     const lockedStudio = renderToStaticMarkup(<DocumentLockedTurn planId="p1" chatEdit onChatEdit={noop} />);
-    assert.ok(lockedStudio.includes("대화로 고치기</button>") && lockedStudio.includes("직접 고치기</a>") && lockedStudio.includes("아래 입력창"));
+    assert.ok(lockedStudio.includes("대화로 고치기</button>") && lockedStudio.includes("직접 고치기</a>") && lockedStudio.includes("사업계획서를 만들었어요.") && !lockedStudio.includes("아래 입력창"), "한 문장만(r37 글 점검)");
     const lockedOld = renderToStaticMarkup(<DocumentLockedTurn planId="p1" chatEdit />);
     assert.ok(lockedOld.includes("edit=chat") && lockedOld.includes("대화로 고치기</a>"));
     for (const markup of [lockedStudio, lockedOld]) assert.ok(!/채팅으로 수정하기|문장에서 바로 고치기/.test(markup));
@@ -781,7 +782,8 @@ async function main() {
   assert.match(source, /\{studioTurn \?\? <NextStepAction /, "작성 중·방금 끝남이면 진행 카드·마무리 말이 다음 단계 단추 자리를 대신한다");
   assert.match(source, /\{studioTurn \?\? <DocumentLockedTurn /);
   assert.match(source, /onHomepage=\{\(\) => navigate\(homepageHref\(plan\.planId\)\)\}/);
-  assert.match(source, /if \(studioNav\?\.showTab\) studioNav\.showTab\("plan"\);/);
+  // 계획서 보기는 계획서 칸을 1장 맨 위로 연다(#doc-top · r37 점검)
+  assert.match(source, /if \(studioNav\) studioNav\.push\(`\/plan\/document\?planId=\$\{encodeURIComponent\(planId\)\}#doc-top`\);/);
   // 숨은 대화 칸: 알림 칸 대신 대화 탭에 점, 숨은 칸으로 초점을 옮기지 않는다
   assert.match(source, /if \(!visible\) \{ if \(arrived\) studioNav\?\.markActivity\?\.\("chat"\); setAnnouncement\(""\); return; \}/);
   assert.match(source, /paneVisible\.current = studioPane \? studioPane\.active : true;/);
@@ -794,14 +796,15 @@ async function main() {
   assert.match(source, /if \(!runShown\) return;\n\s*follow\.current = true;/);
   // 요약 단추: 작업실 안에서는 칸 단추 줄(actions)로 넘기지 않고 진행 막대와 한 줄(paneBar)에 둔다
   assert.match(source, /actions=\{embedded \? undefined : summaryToggle\}/);
-  assert.match(source, /<div className=\{styles\.paneBar\}><div className=\{styles\.paneProgress\} aria-hidden="true">/);
+  // 기본 질문을 다 답하면 진행 막대는 빼고 요약 단추만(휴대폰 머리 높이 · r37)
+  assert.match(source, /<div className=\{styles\.paneBar\} data-done=\{plan\.coreComplete \|\| undefined\}>\{!plan\.coreComplete && <div className=\{styles\.paneProgress\} aria-hidden="true">/);
   assert.match(css, /\.page\[data-embedded\] \.paneBar \{ display: flex;/);
   // 새 사업(주소에 planId 없음)을 작업실에서 시작해도 로그인 뒤 작업실로 돌아온다 · planId 는 지금 경로에 붙인다(tab 유지)
   assert.match(source, /embedded \? plan \? studioHref\(plan\.planId, "chat"\) : `\$\{STUDIO_PATH\}\?new=1`/);
   assert.match(source, /url\.searchParams\.set\("planId", id\); url\.searchParams\.delete\("new"\);\s*const target = `\$\{url\.pathname\}\$\{url\.search\}\$\{url\.hash\}`;/);
   const generationSource = readFileSync(new URL("../app/plan/GenerationProgress.tsx", import.meta.url), "utf8");
   assert.match(generationSource, /export function GenerationCard\(/);
-  assert.match(generationSource, /남은 장 이어서 쓰기/);
+  assert.match(generationSource, /남은 항목 이어서 쓰기/);
   assert.match(generationSource, /useEffect\(\(\) => \{ setEta\(generationEta\(state, Date\.now\(\)\)\); \}, \[state\]\);/, "렌더 중에 시계를 읽지 않는다");
   {
     const startedAt = "2026-10-23T00:00:00.000Z", t0 = Date.parse(startedAt);
@@ -972,7 +975,7 @@ async function main() {
     assert.match(dockQueue, /\[3장 시장과 고객\] 가격을 2만원으로/);
     assert.match(dockQueue, /기다리는 요청 고치기/);
     assert.match(dockQueue, /기다리는 요청 취소/);
-    assert.match(dockQueue, /대기 중 · 다 쓰면 반영할게요/);
+    assert.doesNotMatch(dockQueue, /대기 중/, "'다음 요청' 이름표가 이미 말한다 — 대기 줄을 되풀이하지 않는다(r37)");
     assert.ok(!dockQueue.includes("data-studio-item"), "입력창 위 줄은 대화 끝 따라가기 대상이 아니다");
 
     // 작업 기록 — 이미 있는 데이터에서만, 걸린 시간은 시작·끝 시각이 다 있을 때만
@@ -996,8 +999,8 @@ async function main() {
     assert.equal(workLog.editFoundItem(3)?.text, "바꿀 곳 3군데를 찾았어요");
     const base0 = fixture();
     assert.equal(workLog.designLogItem(base0), null, "사업 방향이 없으면 기록도 없다");
-    assert.equal(workLog.documentCheckItem({ ...base0, hasDocuments: true, documentStatus: "current" })?.id, "current");
-    assert.equal(workLog.documentCheckItem({ ...base0, hasDocuments: true, documentStatus: "stale" }), null);
+    // '계획서에 지금 답이 다 반영됐어요' 줄은 두지 않는다(r37 글 점검) — 반영이 필요할 때는 머리줄 상태와 계획서 칸이 알린다
+    assert.equal((workLog as Record<string, unknown>).documentCheckItem, undefined);
     const money = (cost: number | string): IntakeSnapshot => ({ ...base0, coach: { ...base0.coach, messages: [{ id: "m-price", role: "user", text: "판매 가격: 9000", at }, { id: "m-cost", role: "user", text: "비용: 3000", at }] }, intake: { ...base0.intake, answers: { ...base0.intake.answers, price: { status: "answered", value: 9000, messageId: "m-price", at }, "structure.unitCost": { status: "answered", value: cost, messageId: "m-cost", at } } } });
     const margin = workLog.marginLogItem(money("3,000원"));
     assert.equal(margin?.anchor, "m-cost", "둘 중 나중에 답한 메시지 뒤에 붙인다");
@@ -1035,9 +1038,10 @@ async function main() {
     const intake = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
     // 쓰는 동안 보낸 요청: 남은 질문이 없을 때만 대기열(질문 답은 예전 입력창 그대로) · 진행 카드가 그걸 알린다
     assert.match(intake, /const queueMode = embedded && !!plan && generating && !question && !draft\.editingId;/);
-    assert.match(intake, /onOpen=\{\(\) => showPlan\(plan\.planId\)\} note=\{STUDIO_RUN_NOTE\}/);
-    assert.match(intake, /기다리는 동안 요청을 보내도 돼요/);
-    assert.match(generationSource, /note \?\? "다른 탭을 보거나 창을 닫아도 계속 만들어져요\./, "작업실 밖 안내는 그대로");
+    // PC 는 진행 카드에 안내를 두지 않는다(오른쪽 계획서 칸이 한 번만 말한다 · r37) — 휴대폰만 받아 둔다는 말을 짧게
+    assert.match(intake, /onOpen=\{\(\) => showPlan\(plan\.planId\)\} note=\{pro \? null : STUDIO_RUN_NOTE\}/);
+    assert.match(intake, /기다리는 동안 보낸 요청은 다 쓰면 반영해요/);
+    assert.match(generationSource, /note \?\? "창을 닫아도 계속 써요\."/, "작업실 밖 안내는 한 줄");
     // 다 쓴 뒤 하나씩: 채팅 수정의 확인을 기다리는 동안 · 멈춘 작성 · 실패 중에는 보내지 않는다
     assert.match(intake, /if \(!studioPlanId \|\| !plan \|\| !queuedRequests\.length \|\| generating \|\| runStalled \|\| !plan\.hasDocuments\) return;/);
     assert.match(intake, /editWorking \|\| editProposalOpen \|\| status === "failed"\) return;/);
@@ -1059,7 +1063,8 @@ async function main() {
     assert.ok(css.includes(".composerTarget"), "입력창 위 대상 칩");
     // 채팅 수정을 적용하면 계획서 칸을 다시 읽게 한다 · 장 고치기는 사업 내용만 바뀐다고 알린다
     assert.match(intake, /if \(pending\.command\.action === "edit-apply" && embedded\) studioNav\?\.markActivity\?\.\("plan"\);/);
-    assert.match(intake, /가격·고객 같은 사업 내용을 바꿔요/);
+    assert.match(intake, /const targetChip = !editTarget \? "" : studioTargetChipText\(editTarget\.label\);/, "고칠 곳 칩은 '1장 사업 개요 고치기' 한 줄만(r37)");
+    assert.doesNotMatch(intake, /가격·고객 같은 사업 내용을 바꿔요/);
     // 작업실에서는 입력창이 늘 보인다 — 다 만든 사업을 다시 열어도, 사업 방향 정리가 끝난 뒤에도. 보낸 말은 뜻을 보고 나눈다
     assert.match(intake, /const studioChatMode = embedded && !!plan && !showReview && !replyTurn && !draft\.editingId && \(locked \|\| showCompletion && \(nextStep === "prepare" \|\| nextStep === "open"\)\);/);
     assert.match(intake, /if \(isConsultationText\(text\)\) \{ void send\(\{ action: "help", message: text \}\); return; \}/);

@@ -244,7 +244,8 @@ function shared(seed: LandingPageSeed) {
      */
     cta: {
       eyebrow: "문의하기",
-      title: `${seed.businessName}에 문의해 보세요`,
+      /* 사업 이름은 빼고(2026-10-24 군더더기 점검: 페이지 위에 이름이 이미 있다) — 아래 설명이 무엇을 묻는 칸인지 밝힌다 */
+      title: "문의해 보세요",
       description: seed.offerTitle
         ? `${seed.offerTitle} 관련 문의를 남겨주시면 연락처로 답변드립니다.`
         : "궁금한 점을 남겨주시면 연락처로 답변드립니다.",

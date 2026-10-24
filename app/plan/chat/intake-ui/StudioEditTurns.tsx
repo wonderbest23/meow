@@ -81,7 +81,7 @@ export function QueuedStudioRequests({ items, generating, onCancel, onEdit, dock
       {onEdit && <button type="button" className={styles.queueButton} aria-label={`기다리는 요청 고치기: ${item.text.slice(0, 40)}`} title="고치기" onClick={() => onEdit(item)}><PencilLine size={14} aria-hidden="true" /></button>}
       <button type="button" className={styles.queueButton} aria-label={`기다리는 요청 취소: ${item.text.slice(0, 40)}`} title="취소" onClick={() => onCancel(item.id)}><X size={14} aria-hidden="true" /></button>
     </div>)}
-    <p className={styles.queueNote}>{queuedRequestStatus(generating)}</p>
+    {/* '다음 요청' 이름표가 이미 기다린다는 뜻이라 '대기 중 · 다 쓰면 반영할게요' 줄은 두지 않는다(r37 점검) */}
   </div>;
   return <div className={styles.studioQueue} aria-label="기다리는 요청" data-studio-queue>
     {items.map(item => <div key={item.id} className={styles.studioQueued} data-studio-item>

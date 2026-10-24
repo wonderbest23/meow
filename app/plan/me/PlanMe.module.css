@@ -209,10 +209,11 @@
 }
 
 
-/* 폰 — 셸 뒤로가기 pill이 겹칠 첫 줄 확보 */
+/* 폰 — 셸 뒤로가기 pill이 겹칠 첫 줄 확보. 아래는 떠 있는 상담 단추(46px + 아래 여백)만큼 비워 '회원 탈퇴' 칸 끝을 덮지 않게(모바일 점검 r37) */
 @media (max-width: 640px) {
   .page {
     padding-top: 56px;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
   }
 }
 

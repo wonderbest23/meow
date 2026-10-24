@@ -6,12 +6,13 @@
  * 읽혔다 — 기다리는 화면의 주인공은 이 안내 하나뿐이다.
  */
 .center {
-  min-height: min(60vh, 460px);
+  /* 빈·막힘 화면은 칸의 세로 가운데에(대표 규칙 2026-10-24) — 제목→글 8px, 글→단추 24px(.cta 위 16px + 8px) */
+  min-height: max(min(60vh, 460px), calc(100dvh - 200px));
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   padding: 48px 20px;
   text-align: center;
 }
@@ -62,7 +63,7 @@
  * 글이 길어지면 눌리지 않고 늘어나야 한다.
  */
 .cta {
-  margin-top: 8px;
+  margin-top: 16px;
   min-height: 44px;
   padding: 0 20px;
   border: 0;
@@ -347,6 +348,7 @@
 .nextCare { display:grid; gap:2px; margin:24px 0 8px; padding:16px 18px; border-radius:12px; background:#246bd1; color:#fff; text-decoration:none; }
 .nextCare span { font-size:12px; opacity:.85; }
 .nextCare strong { font-size:16px; font-weight:700; }
+.nextTitle { display:inline-flex; align-items:center; gap:2px; }
 .nextCare small { font-size:13px; opacity:.9; }
 .nextCare:hover { background:#1b5bb8; }
 
@@ -374,8 +376,8 @@
 /* 2단계 작업실 좁은 화면 — 머리줄 대신 칸 맨 위 오른쪽에 저장·공개 */
 .studioNarrowBar { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
 .studioNarrowBar > :first-child { margin-right:auto; }
-/* 휴대폰 작업실 — 홈페이지를 대화로 고치기(대화 탭으로 가서 입력창을 홈페이지 고치기로 연다) */
-.studioChatEdit { min-height:44px; width:100%; margin:0 0 12px; border:1px solid var(--app-line, #e5e8eb); border-radius:12px; background:#fff; color:#191f28; font:inherit; font-size:15px; font-weight:700; cursor:pointer; }
+/* 휴대폰 손가락 단추 44px(모바일 점검 r37 — 머리줄 단추 모양은 그대로, 높이만) */
+.studioNarrowBar button { min-height:44px; }
 
 /*
  * 작업실 PC(1024px 이상) 새 배치(data-studio-pro) — 오른쪽 칸이 흰 카드 하나(테두리·둥근 모서리는 작업실이 그린다).

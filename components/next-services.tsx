@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Building2, Camera, Check, CheckCircle2, ChevronRight, Clock3, Megaphone, Newspaper, PenLine, ShieldCheck, ShoppingBag, X, type LucideIcon } from "lucide-react";
+import { BadgeCheck, Building2, Camera, Check, CheckCircle2, ChevronRight, Clock3, Megaphone, Newspaper, PenLine, ShieldCheck, ShoppingBag, X, type LucideIcon } from "lucide-react";
 import { formatKoreanPhone, normalizeMobilePhone } from "../lib/contact-links";
 import { findService, findServiceRecord, SERVICE_CATALOG, SERVICE_GROUPS, servicePriceLabel, type ServiceGroupId, type ServiceIcon, type ServiceItem } from "../lib/services/catalog";
 import { EMPTY_SIGNALS, orderServices, serviceBadges, serviceSignalsFromPlan } from "../lib/services/recommend";
@@ -169,10 +169,8 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
   const openDetail = (item: ServiceItem) => { setDetailId(item.id); start(item); };
 
   return <section className={styles.root} id={NEXT_SERVICES_ANCHOR} aria-labelledby="next-services-title">
-    {/* '다음 단계'는 여정 단계(개업 준비 등)와 헷갈렸다 — 맡길 수 있는 일 목록이다(여정 점검 2026-10-22) */}
-    <span className={styles.eyebrow}>맡길 수 있는 일</span>
-    <h2 id="next-services-title">필요한 일, 골라서 맡기세요</h2>
-    <p className={styles.lead}>눌러서 무엇을 해 주는지 보고 바로 신청하세요. 담당자가 전화로 안내해요.</p>
+    {/* '다음 단계'는 여정 단계(개업 준비 등)와 헷갈렸다 — 맡길 수 있는 일 목록이다(여정 점검 2026-10-22). 제목 하나만(군더더기 점검 r37) */}
+    <h2 id="next-services-title">맡길 수 있는 일</h2>
     {done ? <p className={styles.done} role="status"><CheckCircle2 size={18} aria-hidden /> {done}</p> : null}
     {state?.error ? <div className={styles.loadError} role="alert"><p className={styles.error}>{state.error}</p><button type="button" onClick={() => { setState(null); setReload((value) => value + 1); }}>다시 시도</button></div> : null}
 
@@ -278,7 +276,7 @@ export function NextServicesCard({ planId, className }: { planId: string; classN
   }, [planId]);
   return <Link className={`${styles.card2} ${className ?? ""}`} href={`${careHref(planId)}#${NEXT_SERVICES_ANCHOR}`}>
     <span>맡길 수 있는 일</span>
-    <strong>홍보 맡기기 <ArrowRight size={16} aria-hidden /></strong>
+    <strong>홍보 맡기기 <ChevronRight size={18} aria-hidden /></strong>
     <small>{highlights.length ? `이 사업에 먼저 필요해 보여요: ${highlights.join(", ")}` : "블로그·SNS·언론보도 같은 홍보를 상담 신청할 수 있어요"}</small>
   </Link>;
 }

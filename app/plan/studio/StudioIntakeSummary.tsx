@@ -14,13 +14,17 @@ import styles from "./Studio.module.css";
  * 같은 설명이 '처음 적은 설명 · 사업 소개 · 이전 답변'으로 세 번 보였다 — 같은 글은 한 번만(먼저 나온 이름으로).
  * 고치기는 대화 칸이 맡는다(여기는 읽기만, AI 를 부르지 않는다).
  *
- * 새 작업실(대표 승인 시안 2026-10-24) — 카드 위 얇은 줄(지금까지 정한 내용 · 기본 질문 N개 답함), 사업 소개를 큰 제목으로,
+ * 새 작업실(대표 승인 시안 2026-10-24) — 카드 위 얇은 줄(지금까지 정한 내용), 사업 소개를 큰 제목으로,
+ * 질문 수는 머리줄과 진행 막대에만 둔다 — 여기서 'N개 답함 · N개 남았어요'를 또 말하지 않는다(r37 글 점검).
  * '사업' 표 · '숫자'(가격 · 한 건 비용 · 둘 다 있으면 남는 돈 '계산') · 남은 질문(지금 묻는 중) · 마치면 무엇이 되는지 한 줄.
  * 숫자는 답한 것만 쓴다 — 남는 돈도 가격과 한 건 비용을 둘 다 답했을 때만 뺀 값이다(지어내지 않는다).
  * 금액은 대화 말풍선과 같은 한국어 단위로(2,000만원 · 1억 5,000만원) — 여기만 '20,000,000원'으로 보였다(점검 2026-10-24).
  * 사업 소개는 큰 제목이 맡는다 — 같은 글을 '사업' 표에 또 두지 않는다.
  */
 const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
+
+/* 좁은 표 칸에서 두 줄로 꺾이던 긴 이름 — 뜻이 같은 짧은 이름으로(r37 점검) */
+const SHORT_LABELS: Record<string, string> = { "일주일에 쓸 수 있는 시간": "일주일 시간" };
 
 export type SummaryRow = { id: string; label: string; value: string; proposal: boolean };
 
@@ -39,7 +43,9 @@ function koreanAmount(question: IntakeQuestion | undefined, value: string): stri
 export function intakeSummaryRows(snapshot: IntakeSnapshot): SummaryRow[] {
   const seen = new Set<string>();
   const rows: SummaryRow[] = [];
-  const items = [...snapshot.summary].sort((a, b) => Number(b.id === "business") - Number(a.id === "business"));
+  /* 사업 소개를 맨 앞, 업종을 바로 다음에(r37 점검) — 나머지는 원래 순서 */
+  const rank = (id: string) => (id === "business" ? 0 : id === "industry" ? 1 : 2);
+  const items = [...snapshot.summary].sort((a, b) => rank(a.id) - rank(b.id));
   for (const item of items) {
     if (item.basis === "unknown") continue;
     const shown = plainText(item.value);
@@ -49,7 +55,7 @@ export function intakeSummaryRows(snapshot: IntakeSnapshot): SummaryRow[] {
     const key = normalize(display);
     if (!key || seen.has(key)) continue;
     seen.add(key);
-    rows.push({ id: item.id, label: item.label, value: display, proposal: item.basis === "proposal" });
+    rows.push({ id: item.id, label: SHORT_LABELS[item.label] ?? item.label, value: display, proposal: item.basis === "proposal" });
   }
   return rows;
 }
@@ -78,17 +84,21 @@ export function summaryStats(snapshot: IntakeSnapshot, rows: SummaryRow[]): Stat
     const raw = plainText(snapshot.summary.find(item => item.id === id && item.basis !== "unknown")?.value);
     return question && raw ? numericAnswer(question, raw) : undefined;
   };
+  /*
+   * 세 칸 이름은 같은 단위 낱말로 — '판매 1건 가격 · 판매 1건 비용 · 판매 1건 남는 돈'(r37 점검).
+   * 대화 칸 작업 기록('남는 돈을 계산했어요 · 판매 1건에 6,000원')과 같은 단위(비용 질문의 기준, 없으면 가격 질문의 기준)를 쓴다.
+   */
+  const unit = questionFor(snapshot, "unitCost")?.period ?? questionFor(snapshot, "price")?.period ?? "한 건";
   const stats: Stat[] = [];
-  for (const id of ["price", "unitCost"]) {
+  for (const [id, name] of [["price", "가격"], ["unitCost", "비용"]] as const) {
     const row = rows.find(item => item.id === id);
     if (!row) continue;
     const value = amount(id);
-    stats.push({ id, label: row.label, value: value === undefined ? row.value : wonLabel(value) });
+    stats.push({ id, label: `${unit} ${name}`, value: value === undefined ? row.value : wonLabel(value) });
   }
   const price = amount("price"), unitCost = amount("unitCost");
   if (price !== undefined && unitCost !== undefined) {
-    const basis = questionFor(snapshot, "price")?.period;
-    stats.push({ id: "margin", label: basis ? `${basis}에 남는 돈` : "한 건에 남는 돈", value: price - unitCost < 0 ? `-${wonLabel(unitCost - price)}` : wonLabel(price - unitCost), computed: true });
+    stats.push({ id: "margin", label: `${unit} 남는 돈`, value: price - unitCost < 0 ? `-${wonLabel(unitCost - price)}` : wonLabel(price - unitCost), computed: true });
   }
   return stats;
 }
@@ -123,7 +133,6 @@ export default function StudioIntakeSummary({ snapshot }: { snapshot: IntakeSnap
   const textRows = rows.filter(row => row !== business && !numeric(row));
   const numberRows = rows.filter(row => numeric(row) && !stats.some(stat => stat.id === row.id));
   const remaining = snapshot ? remainingCoreQuestions(snapshot) : [];
-  const answeredCount = snapshot ? Math.min(snapshot.coreAnswered, snapshot.coreTotal) : 0;
   const title = snapshot?.title && normalize(snapshot.title) !== normalize(business?.value ?? "") ? snapshot.title : "";
   const freshTag = (id: string) => (fresh.includes(id) ? <span className={styles.sumTag}>방금 정함</span> : null);
   const summaryRow = (row: SummaryRow) => <div key={row.id} data-row={row.id} data-fresh={fresh.includes(row.id) || undefined}>
@@ -134,13 +143,12 @@ export default function StudioIntakeSummary({ snapshot }: { snapshot: IntakeSnap
     <header className={styles.sumStrip}>
       <ListChecks size={15} aria-hidden="true" />
       <h3 id="studio-live-summary-heading">지금까지 정한 내용</h3>
-      {snapshot && snapshot.coreTotal > 0 && <span className={styles.sumStripMeta}><span aria-hidden="true">·</span>{snapshot.coreComplete ? "기본 질문을 다 답했어요" : `기본 질문 ${answeredCount}개 답함`}</span>}
     </header>
     <div className={styles.sumBody} ref={list} data-empty={!rows.length || undefined}>
       {rows.length ? <>
         <div className={styles.sumHead} data-row={business ? "business" : undefined} data-fresh={business && fresh.includes("business") || undefined}>
           <p className={styles.sumTitle}>{business?.value ?? (title || "아직 사업 소개를 정하지 않았어요")}{business && freshTag("business")}</p>
-          <p className={styles.sumLead}>{[business ? title : "", remaining.length ? `질문 ${remaining.length}개가 남았어요.` : "기본 질문을 다 답했어요."].filter(Boolean).join(" · ")}</p>
+          {business && title && <p className={styles.sumLead}>{title}</p>}
         </div>
         {textRows.length > 0 && <div className={styles.sumGroup}>
           <h4>사업</h4>
@@ -156,9 +164,9 @@ export default function StudioIntakeSummary({ snapshot }: { snapshot: IntakeSnap
           </div>}
           {numberRows.length > 0 && <dl>{numberRows.map(summaryRow)}</dl>}
         </div>}
-      </> : <div className={styles.liveSummaryEmpty}><ListChecks size={26} aria-hidden="true" /><p>답하면 여기에 정리돼요</p></div>}
+      </> : <div className={styles.liveSummaryEmpty}><ListChecks size={26} aria-hidden="true" /><p>아직 정한 내용이 없어요</p></div>}
       {remaining.length > 0 && <div className={styles.sumGroup}>
-        <h4>남은 질문 {remaining.length}개</h4>
+        <h4>남은 질문</h4>
         <ol className={styles.sumTodo}>
           {remaining.map(item => <li key={item.id} data-now={item.now || undefined} aria-current={item.now ? "step" : undefined}>{item.label}{item.now && <small>지금 묻는 중</small>}</li>)}
         </ol>

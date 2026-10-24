@@ -6,6 +6,7 @@ import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../lib/plan-builder
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import styles from "../BusinessHub.module.css";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { homepageHref, journeyLabel } from "../../../lib/plan-builder/journey";
 import { JOURNEY_LABELS } from "../../../lib/plan-builder/journey-steps";
 import type { HomepageStatus } from "../../../lib/plan-builder/journey";
@@ -52,7 +53,7 @@ export function WorkspaceDocumentStatus({ complete, count, total, stale, onOpen,
     <div className={styles.documentState}><p>{complete ? "사업계획서가 완성됐어요." : "사업계획서를 준비하고 있어요."}</p><span className={styles.count}>{count} / {total} 항목</span></div>
     {!complete && <progress className={styles.progress} aria-label="준비된 문서 항목" value={count} max={total} />}
     {stale && <div className={styles.notice}><h3>수정 내용 반영 필요</h3><p>현재 사업안과 다른 내용이 문서에 남아 있어요. 기존 문서는 유지되며, 대화에서 반영을 요청할 수 있어요.</p></div>}
-    <button className={styles.primary} data-workspace-open-document onClick={onOpen}>사업계획서 열기</button>
+    <button className={styles.primary} data-workspace-open-document onClick={onOpen}>사업계획서 열기<ChevronRight size={18} aria-hidden="true" /></button>
     {/* 예전엔 PDF·워드가 단추처럼 생긴 꼬리표로 있었는데 눌러도 아무 일이 없었다(대표 요청 2026-10-15) — 안내 한 줄로 */}
     <p className={styles.downloadNote}>{PPT_GENERATION_VERIFIED ? "PDF·워드·발표자료" : "PDF·워드"} 내려받기는 사업계획서 화면에서 할 수 있어요.</p>
   </>;
@@ -65,14 +66,15 @@ export function WorkspaceDocumentStatus({ complete, count, total, stale, onOpen,
 export function WorkspaceHomepageCare({ planId, status, publicPath, sample = false }: { planId: string; status: HomepageStatus; publicPath: string | null; sample?: boolean }) {
   if (sample) return <div className={styles.careBlock} data-workspace-homepage-care>
     <h2>홈페이지 관리</h2>
-    <p>예시 사업의 홈페이지 초안이에요. 내 사업은 사업계획서 내용으로 초안을 바로 만들고, 공개한 뒤에는 여기서 고칠 수 있어요.</p>
-    <div className={styles.careActions}><Link className={styles.primary} href={homepageHref(planId)}>예시 홈페이지 보기</Link></div>
+    <p>예시 사업의 홈페이지 초안이에요.</p>
+    <div className={styles.careActions}><Link className={styles.primary} href={homepageHref(planId)}>예시 홈페이지 보기<ChevronRight size={18} aria-hidden="true" /></Link></div>
   </div>;
   return <div className={styles.careBlock} data-workspace-homepage-care>
     <h2>홈페이지 관리</h2>
-    <p>{status === "published" ? "홈페이지가 공개되어 있어요. 글·사진·가격이 바뀌면 바로 고쳐 주세요. 새 문의는 메뉴의 ‘손님 문의’에 쌓이고, 번호를 등록하면 문자로도 알려 드려요." : status === "draft" ? "만들어 둔 홈페이지가 아직 공개 전이에요. 다듬어서 공개하면 문의를 받을 수 있어요." : status === "none" ? "아직 홈페이지가 없어요. 사업계획서 내용으로 초안을 바로 만들 수 있어요." : "홈페이지 상태를 확인하고 있어요."}</p>
+    {/* 상태만 한 줄 — 할 일은 아래 단추 이름이 말한다(r37 글 점검) */}
+    <p>{status === "published" ? "공개 중이에요" : status === "draft" ? "공개 전이에요" : status === "none" ? "아직 홈페이지가 없어요" : "홈페이지 상태를 확인하고 있어요"}</p>
     <div className={styles.careActions}>
-      <Link className={styles.primary} href={homepageHref(planId)}>{status === "published" ? "홈페이지 고치기" : status === "draft" ? "홈페이지 다듬고 공개하기" : status === "none" ? "홈페이지 만들기" : "홈페이지 열기"}</Link>
+      <Link className={styles.primary} href={homepageHref(planId)}>{status === "published" ? "홈페이지 고치기" : status === "draft" ? "홈페이지 다듬고 공개하기" : status === "none" ? "홈페이지 만들기" : "홈페이지 열기"}<ChevronRight size={18} aria-hidden="true" /></Link>
       {publicPath && <a className={styles.secondary} href={publicPath} target="_blank" rel="noopener">공개된 홈페이지 보기</a>}
     </div>
   </div>;

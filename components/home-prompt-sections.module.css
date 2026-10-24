@@ -144,6 +144,7 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
   list-style: none;
   cursor: pointer;
   word-break: keep-all;
+  text-wrap: balance;
 }
 .faqList summary::-webkit-details-marker { display: none; }
 .faqList summary:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
@@ -193,8 +194,12 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
   .linkList a { min-height: 58px; font-size: 17px; }
   .panel { padding: 22px; }
   .panel h3 { font-size: 20px; }
-  .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; }
-  .result h3 { font-size: 17px; }
+  /* 결과물은 휴대폰에서 한 칸씩 — 두 칸이면 화면 사진 글씨가 너무 작아 읽을 수 없었다(모바일 점검 r37) */
+  .grid4 { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  /* 구간 제목은 휴대폰에서 모두 가운데로 — 왼쪽·가운데가 섞여 있었다(모바일 점검 r37) */
+  .heading, .sectionHead { text-align: center; }
+  .sectionHead { align-items: center; }
+  .result h3 { font-size: 17px; text-align: center; }
   .result p { font-size: 14px; }
   .faqList summary { font-size: 17px; }
   .closing { margin-top: 104px; }

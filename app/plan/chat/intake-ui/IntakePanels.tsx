@@ -19,7 +19,7 @@ import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type Structur
 import { ksicNameHint, ksicSectorLabel } from "../../../../lib/plan-builder/ksic-hints";
 import { parseWonAmount } from "../../../../lib/plan-builder/answer-number";
 import styles from "../intake.module.css";
-import { chatTextPreview, unitCostRanges } from "./model";
+import { chatTextPreview, questionPromptText, unitCostRanges } from "./model";
 import type { QuestionSuggestions } from "./AnswerSuggestions";
 import { editExamples } from "../../../../lib/plan-builder/edit-examples";
 import { MessageMeta, WorkLog } from "./WorkLog";
@@ -33,10 +33,10 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false 
   ];
   // Coach chat opens like a messenger: a short greeting, the first question as a bubble, three pills to tap.
   if (coach) return <section className={styles.chatHistory} aria-labelledby="intake-entry-heading" data-coach-entry>
-    {initialMessage ? <><article className={styles.userMessage} data-coach-message="user"><p>{initialMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p></>
-      : <div className={styles.assistantMessage}><p>안녕하세요. 몇 가지 질문에 답해 주시면 사업 방향을 정리해 드려요.</p></div>}
+    {/* 첫 인사 말풍선은 두지 않는다 — 바로 첫 질문(r37 글 점검). 고르는 것이 단계라 질문도 단계를 묻는다(대화 기록 첫 줄과 같은 말) */}
+    {initialMessage && <><article className={styles.userMessage} data-coach-message="user"><p>{initialMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p></>}
     <div className={`${styles.question} ${styles.chatQuestion}`}>
-      <h2 id="intake-entry-heading">{initialMessage ? "지금 어느 단계에 계신가요?" : "어떤 사업을 생각하고 계세요?"}</h2>
+      <h2 id="intake-entry-heading">지금 어느 단계세요?</h2>
       <div className={styles.chipRow} role="group" aria-label="대화 시작 선택지">{choices.map(({ mode, label }) => <button type="button" key={mode} className={styles.chip} disabled={disabled} onClick={() => onStart(mode)}>{label}</button>)}</div>
     </div>
   </section>;
@@ -126,7 +126,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
     return () => { clearTimeout(timer); controller.abort(); };
   }, [ksicQuery, inChat, question.id, ksicRetry]);
   const ksicSearched = ksicSearch.query !== "" && ksicSearch.query === ksicQuery.trim();
-  const ksicShown = ksicSearchable(ksicQuery.trim()) ? ksicSearch.items : ksicCandidates;
+  /* 찾은 업종이 없으면(업종이 아닌 말을 적었을 때 등) 추천 후보를 그대로 둔다 — 예전엔 추천 칩이 사라져 고를 것이 없었다(r37 휴대폰 점검) */
+  const ksicShown = ksicSearchable(ksicQuery.trim()) && ksicSearch.items.length ? ksicSearch.items : ksicCandidates;
   const candidate = question.id === "candidate";
   const options = candidate ? snapshot.candidateIdeas.map(idea => ({ value: idea.id, label: idea.title })) : question.options ?? [];
   const stage = (value: IntakeValue) => send({ ...draft, text: String(value ?? ""), unknown: false });
@@ -182,7 +183,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       <span>{refining ? "선택 보완" : editing ? "답변 수정" : inChat ? "" : snapshot.coreComplete ? "선택 보완" : "기본 질문"}</span>
       {editing && <button type="button" className={styles.textButton} onClick={onCancel}>{snapshot.coreComplete ? "마무리로 돌아가기" : "현재 질문으로"}</button>}
     </div>}
-    <h2 id="intake-question-heading" tabIndex={-1}>{showMention ? `${question.label}, 앞서 말한 내용으로 이어갈까요?` : showSuggested ? "이 업종으로 정리할까요?" : question.prompt}</h2>
+    <h2 id="intake-question-heading" tabIndex={-1}>{showMention ? `${question.label}, 앞서 말한 내용으로 이어갈까요?` : showSuggested ? "이 업종으로 정리할까요?" : questionPromptText(question.prompt)}</h2>
     {question.hint && !showSuggested && !showMention && <p className={styles.questionHint}>{coach && numeric && question.unit === "원" && ladder.length > 0 ? "대략 고르면 가운데 값으로 계산해요. 정확히 알면 입력창에 적어 주세요." : question.hint}</p>}
     {draft.hint && <p className={styles.draftHint}>이전 답변: {draft.hint}</p>}
     {soloSeeded && soloOption && draft.selected.includes(soloOption.value) && <p className={styles.draftHint}>앞서 혼자 한다고 하셔서 &apos;{soloOption.label}&apos;를 골라 뒀어요. 다르면 바꿔 주세요.</p>}
@@ -472,7 +473,7 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss, p
   const examples = editExamples(price?.status === "answered" ? price.value : null);
   return <section className={styles.editTurn} aria-label="계획서 수정" data-edit-chat>
     {/* 장의 문장을 다시 쓰는 게 아니라 사업 내용(답변)을 바꾼다 — 약속과 하는 일이 같게(여정 점검 2026-10-23) */}
-    {!job && <div className={styles.assistantMessage}><p>바꾸고 싶은 사업 내용(가격·고객·상품·목표 등)을 말씀해 주세요. 바꾼 뒤 &apos;계획서에 반영하기&apos;를 누르면 계획서를 다시 써요.</p></div>}
+    {!job && <div className={styles.assistantMessage}><p>바꾸고 싶은 사업 내용(가격·고객·상품·목표 등)을 말씀해 주세요.</p></div>}
     {running && <JobProgress snapshot={snapshot} announce variant="chat" />}
     {pending && pro && <WorkLog items={[editFoundItem(job!.proposal!.length)]} />}
     {pending && <div className={styles.changeCard} data-edit-proposal>
@@ -500,7 +501,8 @@ export function DocumentLockedTurn({ planId, chatEdit, onChatEdit, pro = false }
   /** 작업실 PC: 안내 아래 복사 줄만 두고 단추 줄은 뺀다 — 계획서 보기는 칸 탭, 대화로 고치기는 늘 열린 입력창, 직접 고치기는 계획서 칸에 있다 */
   pro?: boolean }) {
   const id = encodeURIComponent(planId);
-  const text = onChatEdit ? "사업계획서를 만들었어요. 바꿀 사업 내용이나 궁금한 점은 아래 입력창에 적어 주세요." : "사업계획서를 만들었어요. 이 대화는 기록으로 남겨 두고, 고칠 내용은 계획서에서 바꿀 수 있어요.";
+  /* 한 문장만 — 입력창 · 고치기 단추가 바로 아래에 있어 무엇을 할지 따로 말하지 않는다(r37 글 점검) */
+  const text = "사업계획서를 만들었어요.";
   if (pro) return <section className={styles.lockedTurn} aria-label="사업계획서 완성" data-document-locked>
     <div className={styles.assistantMessage}><p>{text}</p></div>
     <MessageMeta text={text} />
@@ -597,7 +599,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
     return <Fragment key={`log:${message.id}`}>{log!.node}{body}</Fragment>;
   };
   return <div className={styles.chatHistory} aria-label="지금까지의 대화">
-    <div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div>
+    <div className={styles.assistantMessage}><ChatSpeaker /><p>지금 어느 단계세요?</p></div>
     <article className={styles.userMessage} data-coach-message="user"><p>{mode}</p></article>
     {snapshot.coach.messages.map(message => placeLog(message, (() => {
       if (snapshot.intake.job?.kind === "design" && message.id === `${snapshot.intake.job.id}:reply` && snapshot.coach.design?.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
@@ -619,9 +621,9 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
         <p className={styles.changeNote} data-change-note>바꾼 내용 · {labelled ? `${labelled.label}: ${bubbleAnswerText(labelled, text)}` : text}</p>
       </div>;
       return <div key={message.id} className={styles.chatTurn}>
-        {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{question.prompt}</p></div>}
+        {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{questionPromptText(question.prompt)}</p></div>}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role}>
-          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text.replace("\"계획서 다시 작성하기\"", "\"계획서에 반영하기\"")} /></> : <p>{bubbleAnswerText(labelled, text)}</p>}
+          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={questionPromptText(text.replace(/(?:아래 )?"계획서 (?:다시 작성하기|에 반영하기)"/, "\"계획서에 반영하기\""))} /></> : <p>{bubbleAnswerText(labelled, text)}</p>}
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
         {pro && message.role === "assistant" && <MessageMeta text={text} at={message.at} />}
@@ -823,8 +825,13 @@ export function RewriteConfirm({ snapshot, disabled, label = "계획서에 반�
   </>;
 }
 
-export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false, preparing = false, payNote }: {
+export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false, preparing = false, payNote, reflect = "button" }: {
   snapshot: IntakeSnapshot; prepared: boolean; disabled: boolean; aiBusy: boolean; onDesign: () => void; onPrepare: () => void; secondary?: ReactNode; announce?: boolean;
+  /**
+   * 계획서가 이미 있을 때 '계획서에 반영하기'의 모양 — 작업실 PC 는 계획서 칸(띠 · 노란 카드)에 같은 단추가 있어 대화 칸은 작은 글 링크(link),
+   * 오른쪽에 계획서 칸이 보이지 않으면 두지 않는다(none). 휴대폰 · 예전 화면은 큰 단추(button) 그대로(r37 점검: 세 번 보였다)
+   */
+  reflect?: "button" | "link" | "none";
   /** '사업계획서 만들기' 아래 한 줄 — 결제 전이면 가격(웹), 이미 결제했으면 바로 작성. 없으면 기본 안내 */
   payNote?: string;
   /** '사업계획서 만들기'를 눌러 서버 확인·결제 화면 이동을 기다리는 중 — 단추가 그냥 흐려지기만 해 멈춘 줄 알았다(대표 지적 2026-10-16) */
@@ -854,7 +861,10 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     {step === "prepare" && <small className={styles.nextStepHint} role={preparing ? "status" : undefined}>{preparing ? "잠시만요. 결제 화면을 여는 중이에요." : payNote ?? "결제하면 바로 작성을 시작해요. 몇 분 걸려요."}</small>}
   </div>;
   // 계획서가 이미 있으면 단계 표시·설명·이전 계획서 링크 없이 버튼 하나만(확인창에서 안내).
-  if (step === "prepare" && snapshot.hasDocuments) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <RewriteConfirm snapshot={snapshot} disabled={locked} onConfirm={onPrepare} />}</div>;
+  if (step === "prepare" && snapshot.hasDocuments) {
+    if (reflect === "none" && !jobActive) return null;
+    return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <RewriteConfirm snapshot={snapshot} disabled={locked} onConfirm={onPrepare} className={reflect === "link" ? styles.textButton : undefined} />}</div>;
+  }
   return <div className={styles.nextStep} data-active data-step={step}>
     <ol className={styles.stepper} aria-label="진행 단계">
       <li data-state={step === "design" ? "current" : "done"}>{step === "design" ? <span>1</span> : <Check size={13} aria-hidden="true" />}사업 방향 요약</li>
@@ -1077,6 +1087,6 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
     </div>}
     {design && <details className={styles.design}><summary>AI 사업안{staleDesign ? " · 이전 입력 기준" : " · 제안"}</summary><h3>시작할 범위</h3><p>{design.startingPlan.scope}</p><p>{design.startingPlan.connectionToVision}</p><h3>제안 이유</h3><p>{design.startingPlan.whyThis}</p><h3>확인할 가정</h3><ul>{design.assumptions.map((assumption, index) => <li key={index}>{assumption.statement}<p>{assumption.howToCheck}</p></li>)}</ul></details>}
     {showActions && !nextStep && <small className={styles.nextStepHint}>{snapshot.coreComplete ? "사업 소개를 정하면 사업 방향을 정리할 수 있어요." : "기본 질문을 마치면 사업 방향을 정리할 수 있어요."}</small>}
-    {(snapshot.hasDocuments || prepared) && <nav className={styles.artifactLinks} aria-label="저장한 결과물">{showActions || nextStep !== "open" ? <Link href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={17} aria-hidden="true" />계획서 열기<ArrowRight size={16} aria-hidden="true" /></Link> : null}<Link href={`/plan/workspace?planId=${encodeURIComponent(snapshot.planId)}`}>내 사업<ArrowRight size={16} aria-hidden="true" /></Link></nav>}
+    {(snapshot.hasDocuments || prepared) && <nav className={styles.artifactLinks} aria-label="저장한 결과물">{showActions || nextStep !== "open" ? <Link href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={17} aria-hidden="true" />계획서 열기<ChevronRight size={16} aria-hidden="true" /></Link> : null}<Link href={`/plan/workspace?planId=${encodeURIComponent(snapshot.planId)}`}>내 사업<ArrowRight size={16} aria-hidden="true" /></Link></nav>}
   </>;
 }

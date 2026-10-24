@@ -317,7 +317,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className={styles.logo} src={DEFAULT_LOGO.src} alt="오늘창업" width={DEFAULT_LOGO.width} height={DEFAULT_LOGO.height} />
           </Link>
-          <h1 id={titleId} className={mode === "login" ? styles.srOnly : styles.title}>{mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 재설정" : mode === "reset" ? "새 비밀번호" : "로그인"}</h1>
+          <h1 id={titleId} className={styles.title}>{mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 재설정" : mode === "reset" ? "새 비밀번호" : "로그인"}</h1>
           {mode === "recover" && <p className={styles.sub}>가입한 이메일로 재설정 링크를 보내드려요.</p>}
           {mode === "reset" && <p className={styles.sub}>8자 이상으로 정해 주세요.</p>}
         </header>
@@ -366,7 +366,8 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           {/* 문서 링크 — 웹은 새 창, 앱 안은 화면 위에 띄운다(앱에서 새 창은 앱 밖으로 나갔다) */}
           <p className={styles.note}>SNS로 계속하면 <DocLink href="/terms" title="이용약관">이용약관</DocLink>·<DocLink href="/privacy" title="개인정보처리방침">개인정보처리방침</DocLink>에 동의하고 <DocLink href="/ai-notice" title="인공지능·국외 처리 안내">인공지능·국외 처리 안내</DocLink>를 확인한 것으로 봐요.</p>
         </section>}
-        <footer className={styles.footer}><DocLink href="/terms" title="이용약관">이용약관</DocLink><DocLink href="/privacy" title="개인정보처리방침">개인정보처리방침</DocLink></footer>
+        {/* SNS 칸의 동의 문장에 같은 두 문서 링크가 이미 있다 — 그 칸이 없는 화면(비밀번호 재설정 등)에만 둔다(모바일 점검 r37: 두 번 보였다) */}
+        {!entry && <footer className={styles.footer}><DocLink href="/terms" title="이용약관">이용약관</DocLink><DocLink href="/privacy" title="개인정보처리방침">개인정보처리방침</DocLink></footer>}
       </form>
     </div>
   );

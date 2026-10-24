@@ -90,7 +90,10 @@ export function BrainwaveEditor({
   pendingOutside = false,
   onEditAddress,
   onReloadLatest,
+  initialView = "mobile",
 }: {
+  /** 처음 보는 폭 — 작업실 PC 에서 미리보기를 '컴퓨터'로 보고 있었으면 편집기도 컴퓨터 폭으로 연다(작업실 PC 점검 r37) */
+  initialView?: "pc" | "mobile";
   /** 다른 화면에서 먼저 저장돼 저장이 막혔을 때 — 이 편집기의 수정을 버리고 서버의 최신 내용으로 다시 연다 */
   onReloadLatest?: () => void;
   /** 공개 페이지 맨 아래에 자동으로 붙는 문의 양식 — 에디터에도 같은 자리에 보여 준다 */
@@ -188,10 +191,10 @@ export function BrainwaveEditor({
   const [picking, setPicking] = useState(false);
   /*
    * 보는 폭 — 제품 정책과 같게 둘뿐이다: PC / 모바일 (태블릿 모드 없음, ≤640 은 모바일).
-   * 늘 모바일로 시작한다 — 손님 대부분이 휴대폰으로 보고, PC 폭은 화면에 다 안 들어와
-   * 어디를 눌러 고치는지 헷갈렸다(사용자 지적). 홈페이지 화면의 미리보기도 휴대폰이 먼저다.
+   * 기본은 모바일 — 손님 대부분이 휴대폰으로 보고, PC 폭은 화면에 다 안 들어와
+   * 어디를 눌러 고치는지 헷갈렸다(사용자 지적). 단, 홈페이지 화면에서 '컴퓨터'를 골라 두었으면 그 폭으로 연다(initialView).
    */
-  const [view, setView] = useState<"pc" | "mobile">("mobile");
+  const [view, setView] = useState<"pc" | "mobile">(initialView);
   const VIEW_W = { pc: 1600, mobile: 390 } as const;
   /* 미리보기 — 손님이 보는 그대로(테두리·클릭 없음) */
   const [previewMode, setPreviewMode] = useState(false);

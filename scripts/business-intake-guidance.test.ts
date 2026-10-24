@@ -105,8 +105,8 @@ try {
   });
   check("resume recap uses saved question labels, no speculative progress", () => {
     const { snapshot } = fixture();
-    assert.match(resumeSummary(snapshot), /사업 소개까지 남겼어요/);
-    assert.ok(resumeSummary(snapshot).includes(snapshot.nextQuestion!.label));
+    // 다음 질문이 카드로 바로 보이면 '…까지 남겼어요' 말풍선은 두지 않는다(r37 글 점검)
+    assert.equal(resumeSummary(snapshot), "");
     snapshot.nextQuestion = null;
     assert.match(resumeSummary(snapshot), /마무리 단계/);
     assert.equal(resumeSummary({ ...snapshot, hasDocuments: true }), "", "a plan that already has documents gets no resume notice");

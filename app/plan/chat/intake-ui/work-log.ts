@@ -49,10 +49,10 @@ export function planLogItem(state: Pick<GenerationProgress, "total" | "done" | "
   return { id: "plan", text: `계획서 ${state.done}개 항목을 썼어요`, ...(sub ? { sub } : {}), detail: state.sections.filter(section => section.done).map(section => section.title) };
 }
 
-/** 계획서가 지금 답을 모두 담고 있는지(장마다 같은 기준으로 썼다) — 서버가 알려 준 documentStatus 그대로 */
-export function documentCheckItem(plan: IntakeSnapshot): WorkLogItem | null {
-  return plan.hasDocuments && plan.documentStatus === "current" ? { id: "current", text: "계획서에 지금 답이 다 반영됐어요" } : null;
-}
+/*
+ * '계획서에 지금 답이 다 반영됐어요' 줄은 두지 않는다(r37 글 점검) — 할 일이 없다는 말이라 군더더기였다.
+ * 반영이 필요할 때는 머리줄 상태('사업계획서 · 수정 내용 반영 필요')와 계획서 칸의 '계획서에 반영하기'가 알린다.
+ */
 
 const wonValue = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : typeof value === "string" ? parseWonAmount(value) ?? null : null;
 
@@ -68,7 +68,9 @@ export function marginLogItem(plan: IntakeSnapshot): (WorkLogItem & { anchor: st
   const order = (id: string) => plan.coach.messages.findIndex(message => message.id === id);
   const anchor = order(price.messageId) > order(cost.messageId) ? price.messageId : cost.messageId;
   if (order(anchor) < 0) return null;
-  const unit = getIntakeQuestion(plan.intake.mode, plan.intake.sector, "structure.unitCost", plan.structure?.values)?.period ?? "하나";
+  /* 단위는 대화에 보인 질문('프로젝트 1건에 드는 … 비용')과 같은 낱말로 — 오른쪽 요약 숫자 칸('프로젝트 1건 남는 돈')과도 같다(r37 점검) */
+  const asked = plan.questions.find(question => question.id === "structure.unitCost" || question.fieldKey === "unitCost");
+  const unit = asked?.period ?? getIntakeQuestion(plan.intake.mode, plan.intake.sector, "structure.unitCost", plan.structure?.values)?.period ?? "하나";
   const margin = priceWon - costWon;
   return { id: "margin", anchor, text: "남는 돈을 계산했어요", sub: margin >= 0 ? `${unit}에 ${formatWon(margin)}` : `${unit}에 ${formatWon(-margin)} 손해`, detail: [`판매 가격 ${formatWon(priceWon)}`, `드는 비용 ${formatWon(costWon)}`] };
 }

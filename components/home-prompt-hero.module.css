@@ -156,9 +156,6 @@
 .tab:focus-visible,
 .play:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
 
-.hint { margin: -6px 0 0; color: #6b7684; font-size: 13px; line-height: 1.5; }
-/* 로그인했거나 확인 전 — 자리만 잡아 둔다 */
-.hint[data-pending] { visibility: hidden; }
 
 /*
  * 탭 줄 — 알약 모양 묶음 탭(2026-10-23 사장님: base44 식 [괄호]·네모 점 대신 우리 모양).

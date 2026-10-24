@@ -31,7 +31,8 @@
 }
 
 .title {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
+  text-wrap: balance;
   font-size: 22px;
   font-weight: 800;
   letter-spacing: 0;
@@ -39,7 +40,8 @@
 }
 
 .desc {
-  margin: 0 0 22px;
+  margin: 0 0 24px;
+  text-wrap: pretty;
   font-size: 14px;
   line-height: 1.75;
   color: var(--text-body, var(--app-body));
@@ -107,6 +109,15 @@
 .retry:hover {
   background: #f2f6fd;
 }
+
+/* 다른 화면으로 가는 큰 단추 — 끝에 '>' 그림(대표 규칙 2026-10-24: 가는 단추는 단추로 읽히게) */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.nav svg { flex: none; }
 
 .statusAction {
   display: flex;
@@ -185,7 +196,7 @@
 /* 출시 기념가 표시 — 할인율·종전가 없이 지금 가격이 실제 판매가임을 알린다 */
 .launchTag { align-self: center; justify-self: center; margin: 0 auto 10px; width: fit-content; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--app-primary, #4a3aff) 12%, transparent); color: var(--app-primary, #4a3aff); font-size: 12px; font-weight: 700; }
 /* 계획서 결제 화면에서 묶음으로 넘어가는 링크 */
-.upsell { margin-top: 8px; font-size: 14px; font-weight: 700; color: var(--app-primary, #4a3aff); text-decoration: none; }
+.upsell { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap; margin-top: 8px; font-size: 14px; font-weight: 700; color: var(--app-primary, #4a3aff); text-decoration: none; }
 .upsell small { margin-left: 4px; font-weight: 500; color: var(--app-muted, #6b7280); }
 
 /* 결제 안내 받을 휴대폰(선택) */

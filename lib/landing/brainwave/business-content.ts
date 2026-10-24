@@ -183,7 +183,8 @@ export function businessTemplateDefaults(content: BusinessContent): Set<string> 
     name, content.headline ?? "", content.offer, content.description, content.customer, content.price, content.cta,
     "이용 안내", "제공 내용", "이용 대상", "가격 안내", "01", "02", "03",
     "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING, "진료 시간·오시는 길", CLINIC_HOURS_PENDING, "찾아오시는 길", "운영 시간", "오시는 길", "작업 사례", "이런 일을 해요",
-    `${name} 문의`, `${name}에 문의해 보세요`,
+    /* 마무리 띠는 사업 이름 없이 '문의해 보세요'(2026-10-24, 이름은 바로 위 제목에 이미 있다). 예전 '○○에 문의해 보세요'도 자동 문구로 본다 */
+    `${name} 문의`, `${name}에 문의해 보세요`, "문의해 보세요",
     [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
   ];
   return new Set(values.map((value) => value.trim()).filter(Boolean));
@@ -210,7 +211,7 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
      * 이름부터 알 수 없었다 — 사이트는 이름을 먼저 보여주고 설명을 붙인다.
      * 한 줄 소개는 템플릿마다 큰 제목 바로 아래 자리(profile.description)에 넣는다.
      */
-    ...content, headline: content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`, contactInvite: `${content.businessName}에 문의해 보세요`,
+    ...content, headline: content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`, contactInvite: "문의해 보세요",
     contactDescription: [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
     offerLabel: "제공 내용", customerLabel: "이용 대상", priceLabel: "가격 안내", one: "01", two: "02", three: "03",
     visitTitle: "오시는 길·영업시간", address: LOCAL_ADDRESS_PENDING, hoursLabel: "영업시간", hours: LOCAL_HOURS_PENDING,

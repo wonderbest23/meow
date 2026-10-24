@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Bot, ChevronRight, CircleUserRound, Home, MessageCircle, MessagesSquare, Send, Settings } from "lucide-react";
+import { ChevronRight, CircleUserRound, Home, MessageCircle, Send, Settings } from "lucide-react";
 import { clearLocalState, hydrateFromServer, lastHydrationFailed, isSamplePlan, type Plan } from "../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../lib/plan-builder/business-hub";
 import { openLogin } from "./login-dialog";
@@ -73,12 +73,11 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
         <img src="/support-agent-avatar-2026.png" alt="" width="40" height="40" />
         <div><b>고객센터</b><p>안녕하세요, 오늘창업입니다.</p></div>
       </div>
-      <ul className={styles.ways}>
-        {session && !session.authenticated && <li className={styles.notice}><CircleUserRound aria-hidden="true" /><span>내 사업 진행을 확인하려면 <button type="button" onClick={() => { onClose(); openLogin(); }}>로그인</button>해 주세요</span></li>}
-        <li><Bot aria-hidden="true" /><span><b>AI 창업 상담</b> 언제든 바로 답변해요</span></li>
-        <li><MessagesSquare aria-hidden="true" /><span><b>고객센터 문의</b> 결제·환불·이용 방법은 남겨 주시면 담당자가 순서대로 답변해요</span></li>
-      </ul>
-      <button type="button" className={styles.primary} onClick={onInquiry}>문의하기<Send aria-hidden="true" /></button>
+      {/* 'AI 창업 상담 · 고객센터 문의' 두 줄 소개는 걷었다 — 아래 두 단추 이름과 같은 말이었다(모바일 점검 r37). 단추 이름이 할 일을 말한다 */}
+      {session && !session.authenticated && <ul className={styles.ways}>
+        <li className={styles.notice}><CircleUserRound aria-hidden="true" /><span>내 사업 진행을 확인하려면 <button type="button" onClick={() => { onClose(); openLogin(); }}>로그인</button>해 주세요</span></li>
+      </ul>}
+      <button type="button" className={styles.primary} onClick={onInquiry}>담당자에게 문의하기<Send aria-hidden="true" /></button>
       <button type="button" className={styles.secondary} onClick={onConsult}>AI 창업 상담 시작하기</button>
     </section>
 
@@ -91,7 +90,7 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
           const total = state.keys.length;
           const done = state.documents.length;
           return <li key={plan.id}><Link href={businessEntryHref(plan)} onClick={onClose}>
-            <span className={styles.planText}><b>{plan.title}</b><small>{state.status}{total > 0 && done > 0 ? ` · 문서 ${done}/${total}` : ""}</small></span>
+            <span className={styles.planText}><b>{plan.title}</b><small>{state.status}{total > 0 && done > 0 && done < total ? ` · 문서 ${done}/${total}` : ""}</small></span>
             {total > 0 && <span className={styles.bar} aria-hidden="true"><i style={{ width: `${Math.round(done / total * 100)}%` }} /></span>}
             <ChevronRight aria-hidden="true" />
           </Link></li>;

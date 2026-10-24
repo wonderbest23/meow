@@ -6,7 +6,7 @@ import { ChevronDown, FileText } from "lucide-react";
 import styles from "./DocumentWorkspace.module.css";
 
 /**
- * 작업실 PC 머리줄 가운데 알약 — '📄 1장 사업 개요 1 / 5 ⌄'. 누르면 장 목록(+ 전체 이어 읽기)이 열린다.
+ * 작업실 PC 머리줄 가운데 알약 — '📄 1장 사업 개요 ⌄'. 누르면 장 목록(+ 전체 이어 읽기)이 열린다.
  * 예전 PC 작업실은 문서 왼쪽에 목차 칸(190px)이 있어 본문이 좁았다(작업실 새 화면 2026-10-24).
  * 키보드: 단추에서 Enter·Space·↓ 로 열고, 목록 안은 ↑↓·Home·End 로 옮기고 Enter 로 고른다. Esc·Tab·바깥 누르기로 닫고 초점은 단추로 돌아온다.
  * 목록은 문서 맨 위(body)에 띄운다 — 머리줄 안에 두면 아래 오른쪽 카드가 목록 윗부분을 덮었다.
@@ -64,7 +64,8 @@ export default function ChapterPicker({ chapters, current, onSelect }: { chapter
     <button ref={button} type="button" className={styles.pickerButton} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined}
       aria-label={`지금 보는 곳: ${label}${count ? ` (${count})` : ""} — 장 고르기`} disabled={!total}
       onClick={() => setOpen(value => !value)} onKeyDown={event => { if (event.key === "ArrowDown" && !open) { event.preventDefault(); setOpen(true); } }}>
-      <FileText size={14} aria-hidden="true" /><b>{label}</b>{count && <span className={styles.pickerCount}>{count}</span>}<ChevronDown size={14} aria-hidden="true" />
+      {/* 장 번호(1 / 5)는 화면에서 뺀다 — 장 이름 '1장 …'이 이미 말한다(r37 글 점검). 낭독기는 aria-label 로 그대로 듣는다 */}
+      <FileText size={14} aria-hidden="true" /><b>{label}</b><ChevronDown size={14} aria-hidden="true" />
     </button>
     {open && createPortal(<div ref={menu} id={menuId} className={styles.pickerMenu} role="menu" aria-label="사업계획서 장 고르기" onKeyDown={onMenuKey}
       style={place ? { top: place.top, left: place.left } : { top: -9999, left: 0 }}>

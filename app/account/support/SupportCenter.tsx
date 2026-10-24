@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ChevronDown, LogIn, RefreshCw, Send } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, LogIn, RefreshCw, Send } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import AppFrame from "../../plan/AppFrame";
@@ -167,7 +167,7 @@ export default function SupportCenter() {
   return <AppFrame title="고객센터" backHref="/plan/me"><div className={`${styles.page} ${styles.inFrame} plan-ui`}>
     <h1 className={styles.srTitle}>고객센터</h1>
     <div className={styles.content}>
-      {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <section className={styles.empty}><h2>로그인 후 문의를 남겨 주세요</h2><Link className={styles.primary} href={loginHref}><LogIn size={19} />로그인하기</Link></section> : <>
+      {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <section className={styles.empty}><h2>로그인 후 문의를 남겨 주세요</h2><Link className={styles.primary} href={loginHref}><LogIn size={19} />로그인하기<ChevronRight size={18} aria-hidden="true" /></Link></section> : <>
         {scope && <>
           <nav className={styles.tabs} aria-label="고객센터 메뉴">
             <button type="button" aria-pressed={view === "write"} onClick={() => setView("write")}>문의하기</button>

@@ -9,7 +9,18 @@ import { EDITABLE_FACT_IDS, factNeedles, findFactRanges, parseWon, type Editable
 import { isShortCell } from "../../../lib/plan-builder/table-cells";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import { QuestionForm, RewriteConfirm } from "../chat/intake-ui/IntakePanels";
-import { choiceDraftSubmission, emptyAnswer, incompleteChoiceText, readIntakePayload, summaryAnswerText, type AnswerDraft } from "../chat/intake-ui/model";
+import { choiceDraftSubmission, emptyAnswer, incompleteChoiceText, numericAnswer, readIntakePayload, summaryAnswerText, type AnswerDraft } from "../chat/intake-ui/model";
+import { wonLabel } from "../../../lib/plan-builder/intake-options";
+
+/**
+ * 칩 · 고치기 창에 보이는 값 — 원 단위 숫자는 대화 · 요약과 같은 한국어 단위('220만원')로(r37 점검: 여기만 '2,200,000원').
+ * 문서에서 노란 칸을 찾는 글(needles)은 문서에 적힌 그대로의 display 를 쓴다.
+ */
+function factShown(fact: { question: IntakeQuestion; value: IntakeValue; display: string }): string {
+  if (fact.question.kind !== "number" || fact.question.unit !== "원") return fact.display;
+  const amount = numericAnswer(fact.question, fact.value);
+  return amount === undefined ? fact.display : fact.question.period ? `${wonLabel(amount)} / ${fact.question.period}` : wonLabel(amount);
+}
 import intake from "../chat/intake.module.css";
 import styles from "./DocumentWorkspace.module.css";
 
@@ -198,8 +209,7 @@ export function FactCard({ edit, onPick, onReflect }: { edit: ReturnType<typeof 
   return <section className={styles.factCard} aria-label="고칠 수 있는 내용" data-fact-card>
     <strong>고칠 수 있는 곳만 표시했어요</strong>
     {!edit.snapshot && !edit.error && <p role="status">사업 정보를 불러오고 있어요…</p>}
-    {edit.facts.length > 0 && <div className={styles.factChips}>{edit.facts.map(fact => <button key={fact.questionId} type="button" data-fact-chip={fact.questionId} disabled={edit.busy} onClick={event => onPick(fact.questionId, event.currentTarget.getBoundingClientRect())}><small>{fact.label}</small>{fact.display}</button>)}</div>}
-    <p>노란 부분을 누르면 고칠 수 있어요. 여러 곳을 고친 뒤 한 번에 계획서에 반영해요.</p>
+    {edit.facts.length > 0 && <div className={styles.factChips}>{edit.facts.map(fact => <button key={fact.questionId} type="button" data-fact-chip={fact.questionId} disabled={edit.busy} onClick={event => onPick(fact.questionId, event.currentTarget.getBoundingClientRect())}><small>{fact.label}</small>{factShown(fact)}</button>)}</div>}
     {stale && edit.snapshot && <div className={styles.factReflect} data-fact-reflect><RewriteConfirm snapshot={edit.snapshot} disabled={edit.busy} label="계획서에 반영하기" className={styles.primary} onConfirm={onReflect} /></div>}
     {edit.error && <p className={styles.factError} role="alert">{edit.error.message} {edit.error.href && <Link href={edit.error.href}>{edit.error.label}</Link>}</p>}
   </section>;
@@ -238,7 +248,7 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
     if (result) onSaved();
   };
   return <div ref={box} className={styles.factPopover} style={{ top: position.top, left: position.left }} role="dialog" aria-label={`${fact.label} 바꾸기`} data-fact-popover>
-    <header><div><b>{fact.label} 바꾸기</b><small>지금: {fact.display}</small></div><button type="button" aria-label="닫기" onClick={onClose}><X size={16} /></button></header>
+    <header><div><b>{fact.label} 바꾸기</b><small>지금: {factShown(fact)}</small></div><button type="button" aria-label="닫기" onClick={onClose}><X size={16} /></button></header>
     {amount ? <form className={styles.factAmount} onSubmit={event => { event.preventDefault(); void saveAmount(); }}>
       {/* 휴대폰은 숫자 자판이 뜬다 — 예시도 숫자로 둔다('6만'은 숫자 자판으로 칠 수 없다). 키보드로 '6만'을 적어도 읽는다 */}
       <label htmlFor="fact-amount">새 금액</label>

@@ -67,6 +67,13 @@ export type StudioNav = {
   /** 대화 칸이 읽는다 — 올린 값이 바뀌면 listener 를 부른다. 돌려준 함수로 내린다(useStudioEditPreviewChapters 가 쓴다) */
   subscribeEditPreviewChapters?: (listener: () => void) => () => void;
   editPreviewChapters?: () => StudioEditPreviewChapters | null;
+  /**
+   * PC 만 — 계획서 칸이 대화로 고칠 수 있는 장 목록(장마다 '대화로 고치기'와 같은 요청)을 올린다. 대화 칸 입력창 왼쪽 아래
+   * '고칠 곳 고르기'가 이 목록을 열어 장을 고르면 입력창을 그 장 고치기로 연다. 계획서 칸이 없거나 고칠 수 없으면 null.
+   */
+  setEditChapterList?: (list: StudioComposeRequest[] | null) => void;
+  subscribeEditChapterList?: (listener: () => void) => () => void;
+  editChapterList?: () => StudioComposeRequest[] | null;
 };
 
 /** 채팅 수정 제안(작업 id)이 계획서에서 닿는 장 이름 — 대화 칸은 지금 카드의 작업 id 와 같을 때만 쓴다(앞 제안의 장이 남아 보이지 않게) */
@@ -157,6 +164,16 @@ export function useStudioHeaderCenter(node: ReactNode | null) {
  */
 const NO_CHAPTERS: string[] = [];
 const NO_SUBSCRIBE = () => () => {};
+/** 대화 칸이 읽는다 — 계획서 칸이 올린 '대화로 고칠 수 있는 장' 목록(PC). 없으면 빈 배열 */
+export function useStudioEditChapterList(): StudioComposeRequest[] {
+  const nav = useStudioNav();
+  const subscribe = nav?.subscribeEditChapterList ?? NO_SUBSCRIBE;
+  const read = nav?.editChapterList;
+  const snapshot = useCallback(() => read?.() ?? null, [read]);
+  return useSyncExternalStore(subscribe, snapshot, () => null) ?? NO_COMPOSE;
+}
+const NO_COMPOSE: StudioComposeRequest[] = [];
+
 export function useStudioEditPreviewChapters(jobId: string | null | undefined): string[] {
   const nav = useStudioNav();
   const subscribe = nav?.subscribeEditPreviewChapters ?? NO_SUBSCRIBE;

@@ -45,13 +45,14 @@ function draftFor(period?: OperatingPeriod): Draft {
   const weekAgo = day.toLocaleDateString("en-CA");
   return { ...(period ? oldInput(period) : { start: weekAgo, end: today, feedback: "", keep: "", change: "", nextAction: "", successCriterion: "" }), metrics: Object.fromEntries(METRICS.map(m => [m.key, metricText(m.unit, period?.metrics[m.key])])) as Draft["metrics"] };
 }
+const COMPARE_RULE = "미입력은 0으로 계산하지 않아요. 이전 값이 0이면 증감률은 표시하지 않아요.";
 function Comparison({ period, baseline }: { period: OperatingPeriod; baseline: OperatingPeriod | null }) {
   return <div className={styles.comparison}>
     <p className={styles.meta}>비교 기간 {baseline ? `${periodLabel(baseline)} · ${periodDays(baseline)}일` : "없음"}</p>
     {!baseline && <p className={styles.note}>첫 기록이에요. 다음 기간을 저장하면 비교할 수 있어요.</p>}
     {baseline && periodDays(period) !== periodDays(baseline) && <p className={styles.warning}>기간 길이가 달라요. 합계의 증감만으로 성과 개선을 판단할 수 없어요.</p>}
-    <div className={styles.tableScroll}><table><caption>기간별 실적 비교</caption><thead><tr><th scope="col">항목</th><th scope="col">이번 기간</th><th scope="col">이전 기간</th><th scope="col">증감</th></tr></thead><tbody>{comparePeriods(period, baseline).map(row => <tr key={row.key}><th scope="row">{row.label}</th><td>{metricValue(row.current, row.unit)}</td><td>{metricValue(row.previous, row.unit)}</td><td>{row.delta === null ? "비교 불가" : <>{row.delta > 0 ? "+" : ""}{metricValue(row.delta, row.unit)}{row.percent !== null && <small>{row.percent > 0 ? "+" : ""}{row.percent.toFixed(1)}%</small>}</>}</td></tr>)}</tbody></table></div>
-    <p className={styles.note}>미입력은 0으로 계산하지 않아요. 이전 값이 0이면 증감률은 표시하지 않아요.</p>
+    {/* 계산 규칙은 표 제목의 도움말(title)로 — 표 아래 긴 글을 걷었다(r37 글 점검). 낭독기는 캡션 안 숨은 글로 듣는다 */}
+    <div className={styles.tableScroll}><table><caption title={COMPARE_RULE}>기간별 실적 비교<span className={styles.srOnly}> — {COMPARE_RULE}</span></caption><thead><tr><th scope="col">항목</th><th scope="col">이번 기간</th><th scope="col">이전 기간</th><th scope="col">증감</th></tr></thead><tbody>{comparePeriods(period, baseline).map(row => <tr key={row.key}><th scope="row">{row.label}</th><td>{metricValue(row.current, row.unit)}</td><td>{metricValue(row.previous, row.unit)}</td><td>{row.delta === null ? "비교 불가" : <>{row.delta > 0 ? "+" : ""}{metricValue(row.delta, row.unit)}{row.percent !== null && <small>{row.percent > 0 ? "+" : ""}{row.percent.toFixed(1)}%</small>}</>}</td></tr>)}</tbody></table></div>
   </div>;
 }
 function PeriodNotes({ period, archivedAnalysis = false }: { period: OperatingPeriod; archivedAnalysis?: boolean }) {
@@ -243,13 +244,15 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
   const canAddPeriod = !!state && !editor && mode === "periods" && !sample;
   const addDisabled = busy || analysisDirty;
   const editRef = useRef(edit); editRef.current = edit;
-  const headerNode = useMemo(() => studioHeader && canAddPeriod
+  /* 기록이 하나도 없으면 빈 칸 가운데 '기간 기록 추가' 하나만 — 머리줄 · 제목 옆에 같은 단추를 또 두지 않는다(r37 점검) */
+  const addOnTop = canAddPeriod && !!state?.periods.length;
+  const headerNode = useMemo(() => studioHeader && addOnTop
     ? <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}><button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} disabled={addDisabled} onClick={() => editRef.current()}><Plus size={16} aria-hidden="true" />기간 기록 추가</button></div>
-    : null, [studioHeader, canAddPeriod, addDisabled]);
+    : null, [studioHeader, addOnTop, addDisabled]);
   useStudioHeaderActions(headerNode);
 
   return <div className={styles.root}>
-    <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{state ? <p>운영 기록 {state.periods.length}개 <span aria-hidden="true">·</span> 개선 리포트 {state.reports.length}개</p> : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{canAddPeriod && <button className={studioHeader ?`${styles.primary} ${paneHeader.narrowOnly}` : styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
+    <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{/* 둘 다 0개면 숫자 줄을 숨긴다(빈 칸이 이미 말한다) · 항목마다 줄바꿈하지 않게(r37 점검) */}{state ? (state.periods.length || state.reports.length ? <p className={styles.counts}><span>운영 기록 {state.periods.length}개</span> <span aria-hidden="true">·</span> <span>개선 리포트 {state.reports.length}개</span></p> : null) : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{addOnTop && <button className={studioHeader ?`${styles.primary} ${paneHeader.narrowOnly}` : styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
     <div className={styles.tabs} role="group" aria-label="운영 기록 보기"><button aria-pressed={mode === "periods"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("periods")}>기간별 실적</button><button aria-pressed={mode === "reports"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("reports")}>리포트 보관함</button></div>
     {sample && <p className={styles.note} role="note">예시 사업의 기록이라 보기만 할 수 있어요. 내 사업을 만들면 직접 기록하고 리포트로 보관할 수 있어요. <a className={styles.inlineButton} href={newChatHref()}>대화로 내 사업 시작하기</a></p>}
     {error && !invalid && <div role="alert" className={styles.error}><p>{error}</p>{errorKind !== "input" && <><button type="button" disabled={busy} onClick={() => void reload()}>기록 다시 불러오기</button>{editor && <p>{errorKind === "conflict" ? "다른 곳에서 먼저 고친 기록이 있어요. 입력 중인 내용은 그대로 있으니 복사해 두고, 취소한 뒤 다시 열어 고쳐 주세요." : "입력 중인 내용은 그대로 있어요."}</p>}</>}</div>}
@@ -281,7 +284,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
       {!sample && (!period.nextAction || !period.successCriterion) && <p className={styles.note}>다음 개선 행동과 확인 기준을 적으면 리포트로 보관할 수 있어요.</p>}
       {/* AI 개선안은 운영에서 AI 분석을 켰을 때만(꺼져 있으면 '준비 중'만 보였다) */}
       {analysisTarget && <OperatingAnalysisPanel key={period.id} planId={planId} period={period} baseline={baseline} records={state} target={analysisTarget} onState={acceptState} onArchive={run} onDirtyChange={setAnalysisDirty} />}
-    </> : <div className={styles.empty}><FileText size={30} /><h3>아직 기간 기록이 없어요</h3><p>첫 실적과 고객 반응을 남겨 보세요</p>
+    </> : <div className={styles.empty}><FileText size={30} aria-hidden="true" /><h3>아직 기간 기록이 없어요</h3>
       {/* 넓은 화면은 '기간 기록 추가'가 머리줄 오른쪽 끝에만 있어 빈 칸 가운데서 찾기 어려웠다 — 여기에도 둔다 */}
       {canAddPeriod && !chatRecord && <button type="button" className={styles.primary} disabled={addDisabled} onClick={() => edit()}><Plus size={18} aria-hidden="true" />기간 기록 추가</button>}
       {canAddPeriod && chatRecord && <><button type="button" className={styles.primary} disabled={busy || analysisDirty} onClick={() => editFromChat(chatRecord)}><FileText size={18} />대화에서 말한 실적으로 첫 기록 만들기</button><small className={styles.note}>{`${chatRecord.start} ~ ${chatRecord.end}`}{chatRecord.revenue !== null ? ` · 실제 매출 ${chatRecord.revenue.toLocaleString("ko-KR")}원` : ""} · 저장 전에 고칠 수 있어요</small></>}

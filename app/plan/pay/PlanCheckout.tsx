@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
 import { finishNativePurchase, nativePlatform, nativePurchase } from "../../../lib/native-app";
-import { AlertCircle, CheckCircle2, LogIn, Unlock } from "lucide-react";
+import { AlertCircle, CheckCircle2, ChevronRight, LogIn, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 import { ConsentList } from "../../../components/consent-list";
 import { documentHref } from "../../../lib/plan-builder/business-hub";
@@ -265,8 +265,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><LogIn size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>로그인이 필요해요</h1>
-          <p className={styles.desc}>결제 내역을 계정에 남기기 위해 먼저 로그인해 주세요. 로그인하면 이 화면으로 돌아와요.</p>
-          <Link href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} className={styles.primary}>로그인 · 회원가입</Link>
+          <p className={styles.desc}>로그인하면 이 화면으로 돌아와요.</p>
+          <Link href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} className={`${styles.primary} ${styles.nav}`}>로그인 · 회원가입<ChevronRight size={18} aria-hidden="true" /></Link>
           <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
         </div>
       </div>
@@ -285,7 +285,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>{MISSING_BUSINESS_TITLE}</h1>
           <p className={styles.desc}>{MISSING_BUSINESS_DETAIL} 결제는 진행되지 않았어요.</p>
-          <Link href="/plan" className={styles.primary}>내 사업으로</Link>
+          <Link href="/plan" className={`${styles.primary} ${styles.nav}`}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></Link>
         </div>
       </div>
     );
@@ -312,7 +312,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>홈페이지는 사업계획서와 함께 열어요</h1>
           <p className={styles.desc}>홈페이지 단독 {HOMEPAGE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원은 이 사업의 사업계획서를 결제한 분 전용이에요. 사업계획서 + 홈페이지를 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 함께 결제해 주세요.</p>
-          <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`} className={styles.primary}>사업계획서 + 홈페이지 결제하기</Link>
+          <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`} className={`${styles.primary} ${styles.nav}`}>사업계획서 + 홈페이지 결제하기<ChevronRight size={18} aria-hidden="true" /></Link>
           <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
         </div>
       </div>
@@ -326,7 +326,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>살 주소를 먼저 골라 주세요</h1>
           <p className={styles.desc}>홈페이지 화면 아래 ‘내 도메인 연결’에서 원하는 주소(.com·.kr·.co.kr)가 비어 있는지 확인한 뒤 결제할 수 있어요.</p>
-          <Link href={laterHref} className={styles.primary}>홈페이지로 돌아가기</Link>
+          <Link href={laterHref} className={`${styles.primary} ${styles.nav}`}>홈페이지로 돌아가기<ChevronRight size={18} aria-hidden="true" /></Link>
         </div>
       </div>
     );
@@ -339,8 +339,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><CheckCircle2 size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>{bundleBlocked && bothOwned ? "사업계획서와 홈페이지가 모두 열려 있어요" : bundleBlocked ? "묶음 대신 남은 상품만 결제해 주세요" : isHomepage ? "홈페이지는 이미 열려 있어요" : "이 사업계획서는 이미 열려 있어요"}</h1>
           <p className={styles.desc}>{bundleBlocked && bothOwned ? "따로 결제할 것이 없어요." : bundleBlocked ? `${info?.paid ? "사업계획서" : "홈페이지"}는 이미 열려 있어요. ${info?.paid ? "홈페이지" : "사업계획서"}만 따로 결제하면 돼요.` : isHomepage ? "결제가 확인돼서 사진·글·버튼을 고치고 공개할 수 있어요." : "결제가 확인돼서 전체 항목을 쓸 수 있어요."}</p>
-          {bundleBlocked && !bothOwned && planId && <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, ...(info?.paid ? { product: "homepage" } : {}) }).toString()}`} className={styles.primary}>{info?.paid ? "홈페이지만 결제하기" : "사업계획서만 결제하기"}</Link>}
-          <Link href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={bundleBlocked ? styles.back : styles.primary}>{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}</Link>
+          {bundleBlocked && !bothOwned && planId && <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, ...(info?.paid ? { product: "homepage" } : {}) }).toString()}`} className={`${styles.primary} ${styles.nav}`}>{info?.paid ? "홈페이지만 결제하기" : "사업계획서만 결제하기"}<ChevronRight size={18} aria-hidden="true" /></Link>}
+          <Link href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={bundleBlocked ? styles.back : `${styles.primary} ${styles.nav}`}>{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}{bundleBlocked ? null : <ChevronRight size={18} aria-hidden="true" />}</Link>
         </div>
       </div>
     );
@@ -364,14 +364,13 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           {extra ? extra.desc : isHomepage ? (
             <>
               계획서 내용으로 만든 홈페이지를 직접 고치고 인터넷에 공개할 수 있어요.
-              신청 폼으로 들어온 문의는 메뉴의 ‘손님 문의’에서 한곳에 모아 볼 수 있어요.
             </>
           ) : (
             <>
               {/* 문서 종류를 고르는 화면은 없어졌다 — 종류 이름(planType)이나 '다른 유형' 안내 대신 이 사업의 계획서로 말한다 */}
               이 사업의 사업계획서 전체 항목이 열리고, 완성 후 {PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word"}로 내려받을 수 있어요.
               {!PPT_GENERATION_VERIFIED && " PPT 자동 생성은 준비 중이라 이번 결제에는 들어가지 않아요."}
-              {" "}항목별 ‘다시 생성’ {REGEN_INCLUDED}회가 포함돼요. 대화로 정리한 내용은 그대로 이어져요.
+              {" "}항목별 ‘다시 생성’ {REGEN_INCLUDED}회가 포함돼요.
             </>
           )}
         </p>
@@ -391,7 +390,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.price}>
             {info.price.toLocaleString("ko-KR")}원
             <span>사업계획서 1부 · 1회 결제 · 부가세 포함</span>
-            {!info.paid && homepageInfo?.editable !== true && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small> →</Link>}
+            {!info.paid && homepageInfo?.editable !== true && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small><ChevronRight size={18} aria-hidden="true" /></Link>}
           </div>
         ) : infoFailed ? (
           <div className={styles.price} role="alert">
@@ -427,7 +426,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
             {!native && <label className={styles.phone}>
               <span>결제 안내 받을 휴대폰 <small>(선택)</small></span>
               <input type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} />
-              <small>{phoneInvalid ? "010으로 시작하는 11자리로 적어 주세요." : `적으면 결제 완료를 문자로 한 번 알려 드려요.${receiptByEmail ? " 영수증은 가입한 이메일로도 가요." : ""}`}</small>
+              <small>{phoneInvalid ? "010으로 시작하는 11자리로 적어 주세요." : `결제 완료 문자 1회${receiptByEmail ? " · 영수증은 가입한 이메일로도 가요" : ""}`}</small>
             </label>}
             {/* 약관 동의 — 공용 동의 목록(동그란 체크·(필수)·›, 대표 요청 2026-10-16). 환불 제한처럼 꼭 읽어야 할 설명은 그 줄 아래에 그대로 */}
             <div ref={consentRef} className={styles.consentAnchor}>
@@ -464,8 +463,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         {blocked ? (
           <>
             {/* 결제를 아직 열지 않았을 때(출시 전·결제 설정 전) — '잠시 후 다시'는 기다리면 될 것처럼 읽혔다(감사 2026-10-23) */}
-            <p className={styles.notice} role="status">{notSoldInApp ? "이 상품은 앱에서 결제할 수 없어요." : <>아직 결제를 열기 전이에요. 결제가 열리면 이 화면에서 바로 결제할 수 있어요. 궁금한 점은 <Link href="/account/support">고객센터</Link>로 남겨 주세요.</>}</p>
-            <Link href={laterHref} className={`${styles.primary} ${styles.blockedBack}`}>돌아가기</Link>
+            <p className={styles.notice} role="status">{notSoldInApp ? "이 상품은 앱에서 결제할 수 없어요." : <>아직 결제를 열기 전이에요 · <Link href="/account/support">고객센터</Link></>}</p>
+            <Link href={laterHref} className={`${styles.primary} ${styles.nav} ${styles.blockedBack}`}>돌아가기<ChevronRight size={18} aria-hidden="true" /></Link>
           </>
         ) : (
           <div className={styles.payBar} data-pay-bar>
@@ -486,16 +485,13 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         )}
 
         {blocked ? null : <>
-          <p className={styles.note}>
-            {/* 결제 뒤 실제로 가는 곳(결제 결과 화면의 단추)과 같은 말 */}
-            {product === "regen" ? "결제가 끝나면 사업계획서로 돌아가 이어서 고칠 수 있어요."
-              : product === "bundle" ? "결제가 끝나면 바로 사업계획서 작성을 시작해요. 홈페이지 편집·공개도 함께 열려요."
-              : product === "domain" ? "결제가 끝나면 홈페이지 화면에서 가지고 있는 도메인의 www 주소를 넣고 ‘연결 시작’을 눌러요(홈페이지를 먼저 공개해야 해요). 도메인을 산 곳에서 안내대로 한 줄(CNAME)만 설정하면 보통 몇 분 안에 연결돼요."
-              : product === "domain-purchase" ? "결제가 끝나면 적어 주신 명의자 이름으로 도메인을 등록해요(.com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일). 진행 상황은 홈페이지 화면에서 볼 수 있어요."
-              : product === "tokens" ? "결제가 끝나면 홈페이지 화면으로 돌아가 바로 AI 수정을 쓸 수 있어요."
-              : product === "homepage" ? "결제가 끝나면 홈페이지 화면으로 돌아가 바로 고치고 공개할 수 있어요."
-              : "지금까지 답한 내용은 그대로 남아 있어요. 결제가 끝나면 바로 사업계획서 작성을 시작해요."}
-          </p>
+          {/*
+            * 결제 뒤 할 일 — 도메인만 남긴다(직접 해야 할 일이 있다). 계획서·홈페이지·묶음 등은 위 '제공 시점'과 같은 말이라 걷었다(군더더기 점검 r37)
+            */}
+          {product === "domain" || product === "domain-purchase" ? <p className={styles.note}>
+            {product === "domain" ? "결제가 끝나면 홈페이지 화면에서 가지고 있는 도메인의 www 주소를 넣고 ‘연결 시작’을 눌러요(홈페이지를 먼저 공개해야 해요). 도메인을 산 곳에서 안내대로 한 줄(CNAME)만 설정하면 보통 몇 분 안에 연결돼요."
+              : "결제가 끝나면 적어 주신 명의자 이름으로 도메인을 등록해요(.com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일). 진행 상황은 홈페이지 화면에서 볼 수 있어요."}
+          </p> : null}
           <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
         </>}
       </div>

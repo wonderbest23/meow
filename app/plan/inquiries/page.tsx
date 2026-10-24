@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Inbox, RefreshCw } from "lucide-react";
+import { ChevronRight, Inbox, RefreshCw } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import frame from "../chat/page.module.css";
@@ -58,7 +58,7 @@ export default function InquiriesPage() {
 
   return <main className={frame.page}>{/* 휴대폰에서 문의를 열어 둔 동안 머리말 뒤로 단추는 목록으로 — 상세 안의 두 번째 뒤로 단추는 뺐다(뒤로가 두 개였다) */}
     <BusinessAppChrome title="손님 문의" active="inquiries" onBack={selected && phone ? () => setSelectedId(null) : undefined}>
-    {items === null && !error ? <PlanLoading fill variant="compact" note="문의를 불러오고 있어요" onRetry={() => refresh(true)} /> : <div className={styles.wrap} data-detail={selected ? "" : undefined}>
+    {items === null && !error ? <PlanLoading fill variant="compact" note="문의를 불러오고 있어요" onRetry={() => refresh(true)} /> : <div className={styles.wrap} data-detail={selected ? "" : undefined} data-empty={items?.length === 0 || undefined}>
       <aside className={styles.list} aria-label="문의 목록">
         {/* 문의가 하나도 없으면 0개짜리 거름 단추는 빼고, 새로 확인하는 단추만 빈 화면 안에 둔다 */}
         {items?.length === 0 ? null : <div className={styles.listHead}>
@@ -73,10 +73,10 @@ export default function InquiriesPage() {
         {items === null ? null : shown.length === 0 ? <div className={styles.empty}>
           <Inbox size={28} aria-hidden />
           <strong>{filter === "open" && items?.length ? "답할 문의가 없어요" : "아직 들어온 문의가 없어요"}</strong>
-          <p>홈페이지를 공개하면 손님 문의가 여기로 모여요. 들어오면 알림 받을 번호로 문자도 보내 드려요.</p>
+          <p>홈페이지를 공개하면 여기로 모여요</p>
           {items.length === 0 && recentPlanId ? <div className={styles.emptyActions}>
-            <Link className={styles.emptyLink} href={homepageHref(recentPlanId)}>홈페이지 보기</Link>
-            <Link className={styles.emptyLink} href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정</Link>
+            <Link className={styles.emptyLink} href={homepageHref(recentPlanId)}>홈페이지 보기<ChevronRight size={18} aria-hidden="true" /></Link>
+            <Link className={styles.emptyLink} href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정<ChevronRight size={18} aria-hidden="true" /></Link>
           </div> : null}
           {items.length === 0 ? <button type="button" className={styles.emptyRefresh} onClick={() => refresh(true)}><RefreshCw size={14} aria-hidden /> 새로 확인</button> : null}
         </div> : <ul className={styles.rows}>
@@ -94,9 +94,9 @@ export default function InquiriesPage() {
           </li>)}
         </ul>}
       </aside>
-      <section className={styles.detail} aria-label="문의 내용">
-        {/* 문의가 하나도 없으면 '왼쪽에서 골라 주세요'는 맞지 않는 말이다 */}
-        {selected ? <InquiryDetail key={selected.lead.id} item={selected} notifications={notifications} /> : <div className={styles.placeholder}><Inbox size={30} aria-hidden /><p>{items && items.length === 0 ? "들어온 문의가 여기에 보여요" : "왼쪽에서 문의를 골라 주세요"}</p></div>}
+      {/* 문의가 하나도 없으면 오른쪽은 비워 둔다 — 왼쪽 빈 화면 안내와 같은 말이었다(군더더기 점검 r37) */}
+      <section className={styles.detail} aria-label={items && items.length === 0 ? undefined : "문의 내용"} aria-hidden={items && items.length === 0 ? true : undefined}>
+        {selected ? <InquiryDetail key={selected.lead.id} item={selected} notifications={notifications} /> : items && items.length === 0 ? null : <div className={styles.placeholder}><Inbox size={30} aria-hidden /><p>왼쪽에서 문의를 골라 주세요</p></div>}
       </section>
     </div>}
   </BusinessAppChrome></main>;

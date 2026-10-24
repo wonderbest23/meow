@@ -23,7 +23,7 @@
 /* 항목 줄 — 오른쪽 › */
 .item { position: relative; }
 .item .row { padding-right: 40px; }
-.view { position: absolute; top: 4px; right: -8px; display: grid; place-items: center; width: 44px; height: 44px; color: #b0b8c1; }
+.view { position: absolute; top: -1px; right: -8px; display: grid; place-items: center; width: 44px; height: 44px; color: #b0b8c1; }
 .view svg { display: block !important; width: 20px; height: 20px; }
 .view:hover { color: #6b7684; }
 

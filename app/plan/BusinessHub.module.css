@@ -126,3 +126,10 @@
 .embeddedRoot[data-embedded] .content { padding-top: 24px; }
 /* PC 작업실 카드는 950px 안팎까지 넓어져 표·문단이 끝에서 끝까지 늘었다 — 읽는 폭을 760px 로 두고 가운데에(계획서 · 요약 칸과 같은 폭) */
 @media (min-width: 1024px) { .embeddedRoot[data-embedded] .content { box-sizing: content-box; max-width: 760px; padding: 24px 28px 96px; } }
+/* 빈 화면(사업을 찾지 못했어요 등) — 제목·설명·단추 사이가 44px 가까이 벌어져 보였다(대표 요청 2026-10-24). 제목 아래 8px, 단추 위 24px */
+.empty h1, .empty h2 { margin:0 0 8px; text-wrap:balance; }
+.empty p { margin:0; }
+/* 이동하는 파란 단추 끝의 › (대표 규칙 2026-10-24) — 글과 꺾쇠 사이 */
+.primary > :global(.lucide-chevron-right) { flex: none; margin-left: 6px; }
+/* 빈 화면은 화면 세로 가운데에 — 위쪽 여백만 주던 때는 휴대폰에서 위로 몰려 보였다(대표 요청 2026-10-24) */
+.empty { min-height:calc(100dvh - 200px); align-content:center; padding-block:24px; }

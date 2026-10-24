@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
@@ -215,9 +216,9 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
     void confirmLeave(EXPERT_LEAVE).then(ok => { if (ok) { leavingExpert.current = true; anchor.click(); } });
   }}><BusinessAppChrome title="내 사업" titleHeading={false}>
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : embedded && resumeChat ? <div className={styles.scroll}><div className={styles.content}>
-      <section className={styles.empty}><h2>사업 이야기를 먼저 마쳐 주세요</h2><p>대화에서 사업안을 정하면 여기서 이어서 준비할 수 있어요.</p><Link className={styles.primary} href={resumeChat}>대화로 가기</Link></section>
+      <section className={styles.empty}><h2>사업 이야기를 먼저 마쳐 주세요</h2><p>대화에서 사업안을 정하면 여기서 이어서 준비할 수 있어요.</p><Link className={styles.primary} href={resumeChat}>대화로 가기<ChevronRight size={18} aria-hidden="true" /></Link></section>
     </div></div> : <div className={styles.scroll}><div className={styles.content}>
-      {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : requested ? "사업을 찾지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : requested ? "지웠거나 다른 계정에서 만든 사업일 수 있어요. 내 사업 목록에서 다시 골라 주세요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{loadError && !signedOut ? <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 시도</button> : signedOut ? <Link className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기</Link> : <Link className={styles.primary} href="/plan">내 사업으로</Link>}<Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
+      {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : requested ? "사업을 찾지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : requested ? "지웠거나 다른 계정에서 만든 사업일 수 있어요. 내 사업 목록에서 다시 골라 주세요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{loadError && !signedOut ? <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 시도</button> : signedOut ? <Link className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기<ChevronRight size={18} aria-hidden="true" /></Link> : <Link className={styles.primary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></Link>}<Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인할게요.</p>}
         {/* 유지보수 화면에는 유지보수만 — 사업 요약·내 자료 탭과 '대화 이어가기'는 헷갈린다(소유자 지적 2026-10-07). 대화는 왼쪽 목록의 '대화'로 */}
         {!embedded && <WorkspaceIdentity title={plan.title} status={hub.status} action={view === "operations" ? undefined : hub.coach ? <Link className={styles.titleAction} href={chat}>대화 이어가기</Link> : <button type="button" className={styles.titleAction} onClick={openLegacy}>사업계획서 열기</button>} />}
@@ -233,13 +234,13 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
           {view==="operations" && <NextServices key={`services-${plan.id}`} plan={plan} homepagePublished={homepage.status === "published"} hasHomepage={homepage.status === "draft" || homepage.status === "published"} />}
           {view==="summary" && expert && hub.coach && <ExpertEditor key={plan.id} plan={plan} onSaved={setPlan} onDirtyChange={setExpertDirty} />}
           {view==="summary" && (!expert || !hub.coach) && <WorkspaceSummary headingRef={heading} description={design?.startingPlan.scope || hub.coach?.business.description || "만들어 둔 사업계획서를 이어서 볼 수 있어요."} stale={hub.stale} fields={hub.coach?.fields}>
-            {hub.coach ? <><Link className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}</Link>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <button className={styles.primary} onClick={openLegacy}>사업계획서 이어보기</button>}
+            {hub.coach ? <><Link className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}<ChevronRight size={18} aria-hidden="true" /></Link>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <button className={styles.primary} onClick={openLegacy}>사업계획서 이어보기</button>}
           </WorkspaceSummary>}
           {view==="documents" && <>
             <h2 ref={heading} tabIndex={-1}>{JOURNEY_LABELS.document}</h2>
             {hub.documents.length ? <>
               <WorkspaceDocumentStatus businessId={plan.id} complete={hub.complete} count={hub.documents.length} total={hub.keys.length} stale={hub.stale} onOpen={openDocument} />
-            </> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지 나눈 대화를 그대로 써요.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기</Link> : <button className={styles.primary} onClick={openLegacy}>사업계획서 이어보기</button>}</>}
+            </> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지 나눈 대화를 그대로 써요.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기<ChevronRight size={18} aria-hidden="true" /></Link> : <button className={styles.primary} onClick={openLegacy}>사업계획서 이어보기</button>}</>}
             {hub.coach && !!hub.documents.length && <Link className={styles.secondary} href={chat}>{hub.stale ? "수정 내용 반영하러 가기" : "자료를 더 다듬기"}</Link>}
             {/* 다음 단계는 계획서 화면과 같은 답 하나 — 홈페이지 만들기 → 다듬고 공개하기 → 유지보수 */}
             {hub.complete && !hub.stale && (() => {
@@ -251,7 +252,8 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
             })()}
           </>}
           {/* '기간별 실적과 개선 리포트 보기'는 위 '유지보수' 탭과 같은 곳이라 뺐다 — 예전엔 두 링크가 띄어쓰기 없이 한 줄로 붙어 보였다(대표 요청 2026-10-15) */}
-          {view==="launch" && <>{action && <p className={styles.tabLink}><button className={styles.textButton} onClick={()=>tab("action")}>대화에서 정한 할 일 보기</button></p>}<LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} /></>}
+          {/* '대화에서 정한 할 일 보기'는 준비 과정 아래로 — 제목 위에 붙어 휴대폰에서 첫 줄을 차지했다(r37 휴대폰 점검) */}
+          {view==="launch" && <><LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} />{action && <p className={styles.tabLink}><button className={styles.textButton} onClick={()=>tab("action")}>대화에서 정한 할 일 보기</button></p>}</>}
           {view==="action" && <>
             <h2 ref={heading} tabIndex={-1}>{done==="done" ? "하나를 마쳤어요" : done==="skipped" ? "이 일은 나중에 해요" : "지금은 이것 하나만"}</h2>
             <p className={styles.muted}>실행은 선택 사항이에요. 하지 않아도 사업안과 자료는 그대로 남아요.</p>

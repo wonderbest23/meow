@@ -39,7 +39,8 @@ export const pricePrompt = (period: string, mode?: IntakeMode) => mode === "oper
 const business = fieldQuestion("business", "어떤 사업인가요? 한 문장(60자 안)으로 알려 주세요.", { hint: "아래 보기를 누르면 입력창에 채워져요. 그대로 보내거나 상호·지역을 덧붙여 주세요." });
 const customer = fieldQuestion("customer", "주로 누가 이용하나요? (최대 2개)");
 const problem = fieldQuestion("problem", "그 고객의 어떤 불편을 해결하나요? (최대 2개)");
-const offer = fieldQuestion("offer", "대표 상품이나 서비스는 무엇인가요?", { hint: "유형을 고른 뒤 상품명을 덧붙일 수 있어요." });
+/* 도움말 '유형을 고른 뒤 상품명을 덧붙일 수 있어요'는 뺐다 — 보기를 누르면 바로 보내져 말과 동작이 달랐다(r37 점검) */
+const offer = fieldQuestion("offer", "대표 상품이나 서비스는 무엇인가요?");
 const channel = fieldQuestion("channel", "처음 고객을 만날 곳은 어디인가요? (최대 3개)");
 const price = fieldQuestion("price", pricePrompt(PRICE_DEFAULT_PERIOD), { kind: "number", unit: "원", period: PRICE_DEFAULT_PERIOD, hint: "범위를 고른 뒤 적게·많게 잡은 금액이나 정확한 금액 중 아는 것을 골라 주세요." });
 type RevenueModel = BusinessStructure["revenue"];
@@ -88,7 +89,7 @@ const CORE_QUESTIONS: Record<IntakeMode, IntakeQuestion[]> = {
     industry,
     fieldQuestion("business", "현재 어떤 사업을 운영하나요? 한 문장으로 알려 주세요.", { hint: "아래 문장을 누른 뒤 ○○ 자리만 채워 주세요." }),
     fieldQuestion("customer", "지금 주로 누가 이용하나요? (최대 2개)"),
-    fieldQuestion("offer", "지금 판매하거나 제공하는 대표 상품·서비스는 무엇인가요?", { hint: "유형을 고른 뒤 상품명을 덧붙일 수 있어요." }),
+    fieldQuestion("offer", "지금 판매하거나 제공하는 대표 상품·서비스는 무엇인가요?"),
     // 운영 중 사업도 가격이 있어야 실적 매출을 판매량으로 풀고(매출 ÷ 가격) 손익분기를 계산할 수 있다.
     { ...price, prompt: pricePrompt(PRICE_DEFAULT_PERIOD, "operating"), hint: "여러 상품이면 가장 많이 팔리는 상품이나 평균 결제액을 골라요." },
     structureUnitCost("per_unit"),

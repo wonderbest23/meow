@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, RefreshCw, X } from "lucide-react";
+import { Check, ChevronRight, RefreshCw, X } from "lucide-react";
 import { generationEta, type GenerationProgress } from "../../lib/plan-builder/generation-progress";
 import styles from "./GenerationProgress.module.css";
 
@@ -176,7 +176,8 @@ export function GenerationDialog({ planId, open, state, onClose }: { planId: str
       <h2 id="generation-title">{finished ? "사업계획서를 다 만들었어요" : failed ? "일부 항목을 만들지 못했어요" : "사업계획서를 만들고 있어요"}</h2>
       <button type="button" className={styles.close} onClick={onClose} aria-label="닫기"><X size={20} /></button>
     </header>
-    <p className={styles.lead}>{finished ? "모든 항목을 작성했어요. 바로 열어 확인해 보세요." : failed ? "만든 항목은 저장돼 있어요. 대화 화면에서 '사업계획서 문서 작성하기'를 다시 누르면 남은 항목만 이어서 만들어요." : "항목마다 쓰고 검토하느라 5분 안팎 걸려요. 창을 닫거나 다른 화면으로 가도 계속 만들어져요."}</p>
+    {/* 짧게 — 제목이 이미 상태를 말한다(r37 글 점검). 멈췄으면 다시 만들 때 남은 항목만 쓴다는 것만 */}
+    {!finished && <p className={styles.lead}>{failed ? "만든 항목은 저장돼 있어요. 다시 만들면 남은 항목만 써요." : "5분 안팎 걸려요. 창을 닫아도 계속 써요."}</p>}
     <div className={styles.meter}><span>{done} / {total || "–"}</span><progress value={done} max={total || 1} aria-label="작성한 항목" /></div>
     <ol className={styles.list}>
       {(state?.sections ?? []).map(section => <li key={section.key} data-state={section.done ? "done" : section.key === firstPending && !failed ? "current" : "todo"}>
@@ -186,7 +187,7 @@ export function GenerationDialog({ planId, open, state, onClose }: { planId: str
     </ol>
     <footer>
       <button type="button" className={styles.secondary} onClick={onClose}>{finished ? "닫기" : "닫고 기다리기"}</button>
-      <Link className={styles.primary} href={`/plan/document?planId=${encodeURIComponent(planId)}`} aria-disabled={!done} onClick={event => { if (!done) event.preventDefault(); }}>{finished ? "사업계획서 열기" : "작성된 부분 보기"}</Link>
+      <Link className={styles.primary} href={`/plan/document?planId=${encodeURIComponent(planId)}`} aria-disabled={!done} onClick={event => { if (!done) event.preventDefault(); }}>{finished ? "사업계획서 열기" : "작성된 부분 보기"}<ChevronRight size={18} aria-hidden="true" /></Link>
     </footer>
   </dialog>;
 }
@@ -202,8 +203,8 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
   retryDisabled?: boolean;
   /** 다 쓴 장이 있으면 '쓴 부분 보기' — 작업실에서는 계획서 탭을 보여 준다 */
   onOpen?: () => void;
-  /** 쓰는 중 안내를 바꾼다 — 작업실 대화 칸은 기다리는 동안 보낸 요청을 받아 두므로 그 말을 덧붙인다 */
-  note?: string;
+  /** 쓰는 중 안내를 바꾼다 — null 이면 쓰는 중 안내를 두지 않는다(작업실 PC: 오른쪽 계획서 칸이 '창을 닫아도 계속 써요'를 한 번만 말한다) */
+  note?: string | null;
 }) {
   const total = state.total, done = state.done;
   const stalled = generationStalled(state);
@@ -216,17 +217,18 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
   useEffect(() => { setEta(generationEta(state, Date.now())); }, [state]);
   return <section className={styles.card} aria-label="사업계획서 작성 진행" data-generation-card data-state={stalled ? "stalled" : "running"}>
     <header>
-      <strong>{stalled ? done ? "일부 장을 만들지 못했어요" : "계획서를 만들지 못했어요" : "사업계획서 만드는 중"}</strong>
-      <span>{stalled ? `${done}/${total}장 완성` : eta ?? "보통 5분 안팎"}</span>
+      {/* 단위는 항목 — 머리줄 '만드는 중 · 2/10 항목' · 대화 '10개 항목을 썼어요'와 같은 말(r37 점검) */}
+      <strong>{stalled ? done ? "일부 항목을 만들지 못했어요" : "계획서를 만들지 못했어요" : "사업계획서 만드는 중"}</strong>
+      <span>{stalled ? `${done}/${total} 항목 완성` : eta ?? "보통 5분 안팎"}</span>
     </header>
-    <progress value={done} max={total || 1} aria-label={`작성한 장 ${done}/${total}`} />
+    <progress value={done} max={total || 1} aria-label={`작성한 항목 ${done}/${total}`} />
     {finished.length > 0 && <p className={styles.cardDone}><Check size={14} aria-hidden="true" />{finished.map(section => section.title).join(" · ")}</p>}
     {/* 쓰는 장이 바뀔 때만 읽힌다(몇 초마다 오는 확인에는 글이 그대로라 다시 읽지 않는다) */}
     {current && <p className={styles.cardCurrent} role="status" aria-live="polite"><i aria-hidden="true" />{current.title} 쓰는 중</p>}
-    {waiting.length > 0 && <p className={styles.cardWaiting}>{stalled ? "남은 장" : "대기"}: {waiting.map(section => section.title).join(" · ")}</p>}
-    <p className={styles.cardNote}>{stalled ? done ? "다 쓴 장은 저장돼 있어요. 남은 장만 이어서 쓸 수 있어요." : "한 장도 쓰지 못하고 멈췄어요. 다시 시작해 보시고, 계속 안 되면 고객센터로 알려 주세요." : note ?? "다른 탭을 보거나 창을 닫아도 계속 만들어져요. 다 되면 여기에서 알려 드릴게요."}</p>
+    {waiting.length > 0 && <p className={styles.cardWaiting}>{stalled ? "남은 항목" : "대기"}: {waiting.map(section => section.title).join(" · ")}</p>}
+    {(stalled || note !== null) && <p className={styles.cardNote}>{stalled ? done ? "다 쓴 장은 저장돼 있어요." : "한 장도 쓰지 못했어요. 계속 안 되면 고객센터로 알려 주세요." : note ?? "창을 닫아도 계속 써요."}</p>}
     {(stalled || onOpen && done > 0) && <div className={styles.cardActions}>
-      {stalled && <button type="button" className={styles.cardPrimary} disabled={retryDisabled} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />남은 장 이어서 쓰기</button>}
+      {stalled && <button type="button" className={styles.cardPrimary} disabled={retryDisabled} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />남은 항목 이어서 쓰기</button>}
       {onOpen && done > 0 && <button type="button" className={styles.cardSecondary} onClick={onOpen}>쓴 부분 보기</button>}
     </div>}
   </section>;

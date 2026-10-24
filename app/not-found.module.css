@@ -2,17 +2,17 @@
 .brand { display: block; }
 .brand img { display: block; width: auto; height: 30px; }
 .card { width: min(440px, 100%); padding: 40px 28px; border: 1px solid #e3e9f1; border-radius: 16px; background: #fff; text-align: center; }
-.card h1 { margin: 0 0 12px; color: #191f28; font-size: 24px; line-height: 1.4; word-break: keep-all; }
-.card > p:not(.code) { margin: 0; color: #4e5968; font-size: 15px; line-height: 1.7; word-break: keep-all; }
-.actions { display: grid; gap: 10px; margin-top: 28px; }
-.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; }
+.card h1 { margin: 0 0 8px; color: #191f28; font-size: 24px; line-height: 1.4; word-break: keep-all; text-wrap: balance; }
+.card > p:not(.code) { margin: 0; color: #4e5968; font-size: 15px; line-height: 1.7; word-break: keep-all; text-wrap: pretty; }
+.actions { display: grid; gap: 10px; margin-top: 24px; }
+.primary, .secondary { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 48px; border-radius: 10px; font-size: 15px; font-weight: 600; text-decoration: none; }
 .primary { background: #3182f6; color: #fff; }
 .secondary { border: 1px solid #d5dce6; color: #333d4b; background: #fff; }
 .primary:focus-visible, .secondary:focus-visible { outline: 2px solid #3182f6; outline-offset: 3px; }
 
-/* 휴대폰 — 회색 바탕에 떠 있는 카드 대신 흰 바탕에 바로 놓고, 눈높이로 살짝 위에 둔다 */
+/* 휴대폰 — 회색 바탕에 떠 있는 카드 대신 흰 바탕에 바로 놓고, 화면 세로 가운데에 둔다(대표 규칙 2026-10-24: 빈 화면은 가운데) */
 @media (max-width: 640px) {
-  .page { min-height: 100svh; padding: 24px 20px 120px; background: #fff; }
+  .page { min-height: 100svh; padding: 24px 20px; background: #fff; }
   .card { padding: 0; border: 0; border-radius: 0; }
   .card h1 { font-size: 22px; }
   .brand img { height: 26px; }
