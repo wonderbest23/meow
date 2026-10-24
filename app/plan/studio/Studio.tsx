@@ -395,6 +395,8 @@ export default function Studio() {
       loading: !plan && !ready,
       steps,
       intake,
+      /* PC 는 대화 칸이 늘 보이고, 질문 중이면 그 맨 위 진행 줄이 번호를 보인다 */
+      questionCount: wide,
       generation: generation ? { done: generation.done, total: generation.total, active: generation.active, stalled: generationStalled } : null,
       documents: hubState ? { done: hubState.documents.length, total: hubState.keys.length } : null,
       homepage,
@@ -811,7 +813,6 @@ export default function Studio() {
               : noChat
                 ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
                   <h2>대화 기록이 없는 사업이에요</h2>
-                  <p>{wide ? "계획서와 홈페이지는 오른쪽에서 볼 수 있어요." : "계획서와 홈페이지는 위 탭에서 볼 수 있어요."}</p>
                 </section></div></div>
                 : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !locks[rightTab] ? rightTab : null} />}
           </Pane>

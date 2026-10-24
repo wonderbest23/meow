@@ -253,7 +253,8 @@ export default function PlanMePage() {
       <section className={styles.card}>
         <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>내 사업</h2>
-          <Link href="/plan" className={styles.cardAction}>내 사업 보기<ChevronRight size={18} aria-hidden="true" /></Link>
+          {/* 사업이 없으면 볼 목록도 없다 — 빈 목록으로 가는 단추를 두지 않는다(PC 점검 2026-10-24) */}
+          {(myPlans.length > 0 || plansStale) && <Link href="/plan" className={styles.cardAction}>내 사업 보기<ChevronRight size={18} aria-hidden="true" /></Link>}
         </div>
         {myPlans.length ? (
           <dl className={styles.rows}>
@@ -265,7 +266,7 @@ export default function PlanMePage() {
             ))}
           </dl>
         ) : (
-          plansStale ? <p className={styles.empty} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <p className={styles.empty}>아직 시작한 사업이 없어요. <Link href="/plan/chat?new=1">새 대화로 시작하기</Link></p>
+          plansStale ? <p className={styles.empty} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <div className={styles.emptyPlans}><p className={styles.empty}>아직 시작한 사업이 없어요.</p><Link href="/plan/chat?new=1" className={`${styles.cardAction} ${styles.emptyAction}`}>새 대화로 시작하기<ChevronRight size={18} aria-hidden="true" /></Link></div>
         )}
       </section>
 

@@ -77,7 +77,9 @@ export function QueuedStudioRequests({ items, generating, onCancel, onEdit, dock
   if (dock) return <div className={styles.queueDock} aria-label="기다리는 요청" data-studio-queue>
     {items.map(item => <div key={item.id} className={styles.queueRow} data-queued>
       <span className={styles.queueBadge}>다음 요청</span>
-      <span className={styles.queueText} title={item.text}>{item.section && sectionHint(item.section.label) ? `[${sectionHint(item.section.label)}] ` : ""}{item.text}</span>
+      {/* 장 이름은 '[1장 사업 개요]' 날것 대신 작은 꼬리표로(PC 점검 2026-10-24) */}
+      {item.section && sectionHint(item.section.label) && <span className={styles.queueTag}>{sectionHint(item.section.label)}</span>}
+      <span className={styles.queueText} title={item.text}>{item.text}</span>
       {onEdit && <button type="button" className={styles.queueButton} aria-label={`기다리는 요청 고치기: ${item.text.slice(0, 40)}`} title="고치기" onClick={() => onEdit(item)}><PencilLine size={14} aria-hidden="true" /></button>}
       <button type="button" className={styles.queueButton} aria-label={`기다리는 요청 취소: ${item.text.slice(0, 40)}`} title="취소" onClick={() => onCancel(item.id)}><X size={14} aria-hidden="true" /></button>
     </div>)}
@@ -85,7 +87,8 @@ export function QueuedStudioRequests({ items, generating, onCancel, onEdit, dock
   </div>;
   return <div className={styles.studioQueue} aria-label="기다리는 요청" data-studio-queue>
     {items.map(item => <div key={item.id} className={styles.studioQueued} data-studio-item>
-      <article className={styles.userMessage} data-coach-message="user" data-queued><p>{item.section && sectionHint(item.section.label) ? `[${sectionHint(item.section.label)}] ` : ""}{item.text}</p></article>
+      {item.section && sectionHint(item.section.label) && <p className={styles.bubbleTag}>{sectionHint(item.section.label)}</p>}
+      <article className={styles.userMessage} data-coach-message="user" data-queued><p>{item.text}</p></article>
       <p className={styles.studioQueuedStatus}>{queuedRequestStatus(generating)}<button type="button" className={styles.studioQueuedCancel} aria-label={`기다리는 요청 취소: ${item.text.slice(0, 40)}`} onClick={() => onCancel(item.id)}><X size={13} aria-hidden="true" />취소</button></p>
     </div>)}
   </div>;

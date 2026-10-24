@@ -5,7 +5,7 @@
 
 .body { display: grid; gap: 8px; padding: 26px 24px 20px; text-align: center; }
 .body h2 { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.4; }
-.body p { margin: 0; color: #4e5968; font-size: 15px; line-height: 1.55; white-space: pre-line; word-break: keep-all; }
+.body p { margin: 0; color: #4e5968; font-size: 15px; line-height: 1.55; white-space: pre-line; word-break: keep-all; text-wrap: pretty; }
 .field { width: 100%; min-height: 48px; margin-top: 8px; padding: 0 14px; border: 1px solid #d1d6db; border-radius: 10px; background: #fff; color: #191f28; font: inherit; font-size: 16px; text-align: left; }
 .field:focus { outline: none; border-color: #3182f6; box-shadow: 0 0 0 3px #3182f622; }
 .field[readonly] { background: #f9fafb; color: #4e5968; font-size: 14.5px; }
@@ -30,6 +30,12 @@
   .dialog[data-wide] { width: min(440px, calc(100% - 48px)); }
   .dialog[data-wide] .actions { grid-template-columns: auto minmax(0, 1fr); }
   .dialog[data-wide] .actions button { padding: 0 18px; white-space: nowrap; }
+}
+
+/* 좁은 화면에서 단추 글이 길면 세로로 — 할 일(확인)을 위에 */
+@media (max-width: 519px) {
+  .actions[data-stack] { grid-template-columns: 1fr; }
+  .actions[data-stack] .confirm { order: -1; }
 }
 
 @keyframes confirm-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }

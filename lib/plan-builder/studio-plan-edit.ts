@@ -37,3 +37,13 @@ export function planSectionEditMessage(label: string, text: string, maxLength = 
   if (prefixed.length > maxLength) return body;
   return classifyEditRequest(prefixed) === classifyEditRequest(body) ? prefixed : body;
 }
+
+/**
+ * 저장된 고치기 말을 화면에 나눠 보인다 — "[3장 시장과 고객] 가격을 올려 줘" → { tag: "3장 시장과 고객", body: "가격을 올려 줘" }.
+ * 저장 형식(planSectionEditMessage 가 붙인 머리표)은 그대로 두고, 말풍선에는 본문만 · 장 이름은 작은 꼬리표로(PC 점검 2026-10-24).
+ * 머리표가 없거나 본문이 비면 tag 없이 글 그대로.
+ */
+export function splitSectionEditMessage(text: string): { tag: string | null; body: string } {
+  const match = /^\[(\d+장 [^\]\n]{1,60})\] ([\s\S]+)$/.exec(text);
+  return match && match[2].trim() ? { tag: match[1], body: match[2] } : { tag: null, body: text };
+}

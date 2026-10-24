@@ -212,7 +212,11 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
         ? clamp(sentence(identityPitch, "."), 600)
         : intro
           ? clamp(intro, 600)
-          : mainOffer ? clamp(mainOffer, 600) : base.offerDescription,
+          /*
+           * 소개가 하나도 없으면 예전엔 상품 이름을 또 적었다 — 이 글은 홈페이지 첫 화면 설명(상호 아래)에 그대로 쓰여
+           * 바로 아래 '제공 내용'의 상품 이름과 두 번 보였다(PC 점검 2026-10-24). 한 줄 소개 자리에는 소제목 문장을 쓴다.
+           */
+          : subheadline || base.offerDescription,
     priceLabel: priceValue ? clamp(priceValue, 100) : base.priceLabel,
     /*
      * 계획서의 실적은 홈페이지에 싣지 않는다.

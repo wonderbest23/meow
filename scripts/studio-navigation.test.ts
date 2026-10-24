@@ -126,7 +126,7 @@ assert.deepEqual(JOURNEY_ORDER.map(studioTabForStep), ["chat", "plan", "homepage
   assert.match(studio, /const nextUrl = studioSwitchUrl\(window\.location\.href, next, options\.link\);/);
   // 찾지 못한 사업은 작업실에서 한 번만 알린다 — 칸마다 따로 그리지 않는다
   assert.equal((studio.match(/<MissingBusinessBody \/>/g) ?? []).length, 1);
-  assert.match(studio, /\{missing \? <div className=\{hub\.scroll\}>/);
+  assert.match(studio, /\{missing \? <div className=\{styles\.missingNote\}>/);
   // 칸 안의 아무 요소나 늘리지 않는다 — 칸 본문 자리와 각 화면의 작업실 루트만
   assert.ok(!/\.pane > :not\(\.paneHeading\)/.test(studioCss), "칸 안의 아무 요소나 늘리면 단추가 칸 높이만큼 커진다");
   assert.match(studioCss, /\.paneBody > \[data-embedded\] \{ flex:1 1 auto; min-height:0; \}/);
@@ -215,6 +215,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ ...base, fresh: true, loading: true, steps: null }), "대화 중");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 6, total: 14, complete: false } }), "대화 중 · 질문 7/14", "지금 묻는 질문 번호(답한 수 + 1) — 대화 칸의 '질문 7 / 14'와 같다");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 14, total: 14, complete: false } }), "대화 중 · 질문 14/14", "질문 수를 넘지 않는다");
+  assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 6, total: 14, complete: false }, questionCount: true }), "대화 중", "PC 는 대화 칸 진행 줄이 번호를 보여 머리줄은 되풀이하지 않는다(PC 점검 2026-10-24)");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 14, total: 14, complete: true } }), "대화 중 · 마무리");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo") }), "대화 중", "질문 진행을 모르면 숫자 없이");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), generation: { done: 6, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 6/10 항목");

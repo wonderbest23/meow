@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { classifyEditRequest } from "../lib/plan-builder/intake-edit-filter";
-import { PLAN_EDIT_MAX_LENGTH, planChapterComposeRequest, planChapterEditLabel, planSectionEditMessage } from "../lib/plan-builder/studio-plan-edit";
+import { PLAN_EDIT_MAX_LENGTH, planChapterComposeRequest, planChapterEditLabel, planSectionEditMessage, splitSectionEditMessage } from "../lib/plan-builder/studio-plan-edit";
 
 /* 장 이름표 — "{n}장 {제목} 고치기", 제목 안 겹친 빈칸은 하나로 */
 {
@@ -78,6 +78,15 @@ import { PLAN_EDIT_MAX_LENGTH, planChapterComposeRequest, planChapterEditLabel, 
   assert.match(body, /edits\.syncServer\(/, "고치는 중인 장(초안·저장 중)은 덮지 않는다");
   const edits = readFileSync(new URL("../app/plan/document/use-document-edits.ts", import.meta.url), "utf8");
   assert.match(edits, /function syncServer\(/);
+}
+
+/* 저장된 '[N장 …]' 머리표는 화면에서 꼬리표와 본문으로 나뉜다(저장 형식은 그대로) */
+{
+  assert.deepEqual(splitSectionEditMessage("[1장 사업 개요] 가격을 올려 줘"), { tag: "1장 사업 개요", body: "가격을 올려 줘" });
+  assert.deepEqual(splitSectionEditMessage("가격을 올려 줘"), { tag: null, body: "가격을 올려 줘" });
+  assert.deepEqual(splitSectionEditMessage("[메모] 가격"), { tag: null, body: "[메모] 가격" });
+  const sent = planSectionEditMessage("2장 고객과 시장 고치기", "주 고객을 1인 가구로 바꿔줘");
+  assert.deepEqual(splitSectionEditMessage(sent), { tag: "2장 고객과 시장", body: "주 고객을 1인 가구로 바꿔줘" });
 }
 
 console.log("studio plan edit: ok");

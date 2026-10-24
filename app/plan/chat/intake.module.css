@@ -929,6 +929,9 @@
 .workLog { display: flex; flex-direction: column; gap: 2px; margin: 0 0 12px; }
 .workLogRow { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; min-height: 28px; margin: 0; padding: 0 6px 0 2px; border: 0; border-radius: 7px; background: transparent; color: #4e5968; font-size: 13px; line-height: 1.4; text-align: left; }
 button.workLogRow:hover { background: #e9ecf0; }
+/* 눌러서 펼치는 줄은 PC 누르는 자리 32px(휴대폰 44px) — 28px 이었다(PC 점검 2026-10-24) */
+button.workLogRow { min-height: 32px; }
+@media (max-width: 1023px) { button.workLogRow { min-height: 44px; } }
 .workLogIcon { color: #3182f6; }
 .workLogSub { color: #8b95a1; }
 .workLogChevron { color: #b0b8c1; }
@@ -946,7 +949,7 @@ button.workLogRow:hover { background: #e9ecf0; }
 .page[data-embedded][data-studio-pro] .chatQuestion .questionMeta > .textButton { min-height: 28px; margin-left: auto; padding: 0; color: #4e5968; font-size: 12px !important; font-weight: 500 !important; }
 .page[data-embedded][data-studio-pro] .chatQuestion .questionMeta > span:empty { display: none; }
 .questionCardFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; color: #8b95a1; font-size: 12px; line-height: 1.5; }
-.questionCardBack { display: inline-flex; flex: none; align-items: center; gap: 4px; min-height: 28px; padding: 0 2px; border: 0; background: none; color: #4e5968; font-size: 12px; font-weight: 500; }
+.questionCardBack { display: inline-flex; flex: none; align-items: center; gap: 4px; min-height: 32px; padding: 0 4px; margin-block: -2px; border: 0; background: none; color: #4e5968; font-size: 12px; font-weight: 500; }
 .questionCardBack:hover:not(:disabled) { color: #191f28; text-decoration: underline; text-underline-offset: 3px; }
 /* 보기 칩 — 작고 각진 흰 칩. 고르면 파랑 */
 .page[data-embedded][data-studio-pro] .chatQuestion .options, .page[data-embedded][data-studio-pro] .chatQuestion .ksicChips, .page[data-embedded][data-studio-pro] .chatQuestion .chipRow { gap: 6px; }
@@ -1042,3 +1045,12 @@ button.workLogRow:hover { background: #e9ecf0; }
 /* 휴대폰 작업실: 자판이 열리면 진행 줄을 접는다 · 다 답한 뒤 줄은 요약 단추만 오른쪽에(r37 휴대폰 점검) */
 .page[data-embedded][data-keyboard]:not([data-studio-pro]) .paneBar { display: none; }
 .page[data-embedded]:not([data-studio-pro]) .paneBar[data-done] { justify-content: flex-end; }
+
+/* '이 장 고치기'로 보낸 말의 장 이름 — 말풍선 위 오른쪽 작은 꼬리표(저장 글의 '[1장 사업 개요]' 머리표를 떼어 보인다 · PC 점검 2026-10-24) */
+.bubbleTag { width: fit-content; max-width: 84%; margin: 0 0 4px auto; padding: 1px 8px; border-radius: 6px; background: #f2f4f6; color: #4e5968; font-size: 11.5px; font-weight: 600; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.queueTag { flex: none; max-width: 40%; padding: 1px 6px; border-radius: 5px; background: #f2f4f6; color: #4e5968; font-size: 11px; font-weight: 600; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 다른 화면으로 가는 칩(계획서 보기 · 직접 고치기) — 글 끝에 › 를 같은 줄에 */
+.lockedTurn .chipRow a.chip { flex-direction: row; align-items: center; gap: 2px; padding-right: 10px; }
+.lockedTurn .chipRow a.chip > svg { flex: none; }
+/* 내 말풍선은 짧은 답이 많다 — 두 줄이면 줄 길이를 고르게('…(카페 / · 음식점)'처럼 끝 몇 글자만 떨어졌다 · 휴대폰 점검 2026-10-24) */
+.userMessage > p { text-wrap: balance; }

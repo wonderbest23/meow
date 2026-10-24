@@ -1557,7 +1557,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
       .sort((a, b) => b.order - a.order)[0]?.id ?? null : null;
   // 지난 답을 고칠 때는 카드 머리를 예전 '답변 수정 · 현재 질문으로' 줄이 맡는다
   const questionCard = pro && !!plan && !!question;
-  const questionCardLabel = questionCard && !draft.editingId ? plan.coreComplete ? "더 알려 주면 좋은 질문" : `질문 ${questionNumber} / ${plan.coreTotal}` : undefined;
+  /* 질문 번호는 칸 맨 위 진행 줄('사업 방향 정하기 ▬ 10 / 14')이 한 번만 말한다 — 카드·머리줄까지 세 번 보였다(PC 점검 2026-10-24) */
+  const questionCardLabel = questionCard && !draft.editingId && plan.coreComplete ? "더 알려 주면 좋은 질문" : undefined;
   const questionCardFoot = questionCard ? <div className={styles.questionCardFoot}>
     <span>{question?.id === "industry" ? "업종 이름을 아래에 적으면 찾아 드려요" : "보기에 없으면 아래에 바로 적어 주세요"}</span>
     {previousAnswerId && <button type="button" className={styles.questionCardBack} disabled={answerBlocked} onClick={() => editQuestion(previousAnswerId)}><Undo2 size={13} aria-hidden="true" />앞 질문 고치기</button>}

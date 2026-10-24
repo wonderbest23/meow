@@ -587,7 +587,8 @@
 .pagerNext > svg { flex:none; }
 
 /* 계획서 본문 — 짧은 문단·목록의 마지막 줄에 낱말 하나만 떨어지지 않게(점검 r38) */
-.body :global(.tiptap) :is(p, li) { text-wrap: pretty; }
+/* :is() 로 묶으면 빌드가 :-webkit-any() 대체 규칙을 함께 내보내 그쪽이 더 세져 아래 목록 balance 를 덮었다(PC 점검 2026-10-24) — 풀어 쓴다 */
+.body :global(.tiptap) p, .body :global(.tiptap) li { text-wrap: pretty; }
 /* 목록 한 줄은 짧아 pretty 가 손대지 않는다 — 두 줄이면 줄 길이를 고르게 */
 .body :global(.tiptap) li { text-wrap: balance; }
 .body :global(.tiptap) li > p { text-wrap: inherit; }

@@ -83,3 +83,10 @@
   .stepActions { flex-direction: column; gap: 8px; }
   .stepActions > * { flex: none; white-space: nowrap; }
 }
+
+/* 확인 목록 한 줄이 '포함)'처럼 끝 몇 글자만 다음 줄로 넘지 않게(휴대폰 점검 2026-10-24) */
+.checklist label span { text-wrap:pretty; }
+/* 개업 준비를 마친 화면 — 제목→글 8px(제목 아래 기본 여백이 커서 떨어져 보였다) */
+.finish h2 { margin-bottom:0; }
+.finish h2 + p { margin-top:8px; }
+@media (min-width:1024px) { .studioNarrowOnly { display:none !important; } }

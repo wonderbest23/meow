@@ -252,6 +252,8 @@ export type StudioStatusInput = {
   steps: ReadonlyArray<{ id: JourneyStepId; state: JourneyState }> | null;
   /** 대화 질문 진행(핵심 질문 몇 개 중 몇 개) — 모르면 null */
   intake?: { answered: number; total: number; complete: boolean } | null;
+  /** 대화 칸 맨 위 진행 줄이 질문 번호를 보이고 있다(작업실 PC) — 머리줄은 번호를 되풀이하지 않는다 */
+  questionCount?: boolean;
   /** 이번 계획서 작성 — active 는 아직 쓸 장이 남음, stalled 는 남은 채로 작업이 멈춤 */
   generation?: { done: number; total: number; active: boolean; stalled: boolean } | null;
   /** 이 기기 저장본의 계획서 장 수(작성 중이 아닐 때) */
@@ -289,7 +291,9 @@ export function studioStatusText(input: StudioStatusInput): string {
     if (input.designRunning && !input.design) return "사업 방향 정리 중";
     if (!intake || intake.total <= 0) return "대화 중";
     /* 지금 묻는 질문 번호(답한 수 + 1) — 대화 칸의 '질문 11 / 14'와 같은 기준(10개 답했으면 11번째를 묻는 중) */
-    return intake.complete ? "대화 중 · 마무리" : `대화 중 · 질문 ${Math.min(intake.answered + 1, intake.total)}/${intake.total}`;
+    if (intake.complete) return "대화 중 · 마무리";
+    /* PC 는 바로 아래 대화 칸 진행 줄이 '10 / 14'를 보인다 — 머리줄까지 같은 번호가 두 번 보였다(PC 점검 2026-10-24) */
+    return input.questionCount ? "대화 중" : `대화 중 · 질문 ${Math.min(intake.answered + 1, intake.total)}/${intake.total}`;
   }
   if (state("document") !== "done") {
     if (documents && documents.done > 0) return `사업계획서 · ${documents.done}/${documents.total} 항목`;

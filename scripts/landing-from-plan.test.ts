@@ -172,6 +172,12 @@ const cafeImages = Object.values(withIdentity.pageData?.brainwave?.images ?? {})
 assert.ok(new Set(cafeImages.filter(Boolean)).size >= 3, "cards, band and closing get their own photos, not the hero copied everywhere");
 // 알아볼 수 없는 사업은 사진을 깔지 않는다(템플릿 기본 사진 금지)
 const unknownBusiness = { planTitle: "온결", business: { name: "온결", industry: "무역업" }, answers: { "market/products": { main_offer: "원자재 수입" }, "market/segments": { first_target: "중소 제조사" } } };
+{
+  // 소개 글이 하나도 없어도 첫 화면 설명(offerDescription)이 바로 아래 제공 내용의 상품 이름을 되풀이하지 않는다(PC 점검 2026-10-24)
+  const bare = landingDraftFromPlan(unknownBusiness);
+  assert.notEqual(bare.offerDescription, bare.offerTitle);
+  assert.equal(bare.offerDescription, bare.subheadline);
+}
 // 광고 대행처럼 사무실에서 하는 일은 사무·전문직 사진
 assert.match(landingDraftFromPlan({ ...unknownBusiness, business: { ...unknownBusiness.business, industry: "광고 대행업" } }).heroImageUrl, /1600880292203/);
 assert.equal(landingDraftFromPlan(unknownBusiness).heroImageUrl, "");

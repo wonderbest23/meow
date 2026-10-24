@@ -3,7 +3,7 @@
 import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Archive, ChevronRight, Download, FileText, Pencil, Plus, Save, X } from "lucide-react";
-import { METRICS, comparePeriods, metricValue, oldInput, periodDays, periodInputSchema, periodIssue, periodLabel, previousPeriod, referenceFor, reportIsCurrent, reportMarkdown, type OperatingCommand, type OperatingPeriod, type OperatingReport, type OperatingState, type PeriodInput } from "../../../lib/plan-builder/operating-records";
+import { METRICS, comparePeriods, metricValue, oldInput, periodDays, periodInputSchema, periodIssue, periodLabel, periodShortLabel, previousPeriod, referenceFor, reportIsCurrent, reportMarkdown, type OperatingCommand, type OperatingPeriod, type OperatingReport, type OperatingState, type PeriodInput } from "../../../lib/plan-builder/operating-records";
 import { isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import { sampleOperatingState } from "../../../lib/plan-builder/sample-operations";
 import { newChatHref } from "../../../lib/plan-builder/studio";
@@ -254,7 +254,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
   return <div className={styles.root}>
     <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{/* 둘 다 0개면 숫자 줄을 숨긴다(빈 칸이 이미 말한다) · 항목마다 줄바꿈하지 않게(r37 점검) */}{state ? (state.periods.length || state.reports.length ? <p className={styles.counts}><span>운영 기록 {state.periods.length}개</span> <span aria-hidden="true">·</span> <span>개선 리포트 {state.reports.length}개</span></p> : null) : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{addOnTop && <button className={studioHeader ?`${styles.primary} ${paneHeader.narrowOnly}` : styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
     <div className={styles.tabs} role="group" aria-label="운영 기록 보기"><button aria-pressed={mode === "periods"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("periods")}>기간별 실적</button><button aria-pressed={mode === "reports"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("reports")}>리포트 보관함</button></div>
-    {sample && <p className={styles.note} role="note">예시 사업의 기록이라 보기만 할 수 있어요. 내 사업을 만들면 직접 기록하고 리포트로 보관할 수 있어요. <a className={styles.inlineButton} href={newChatHref()}>대화로 내 사업 시작하기<ChevronRight size={18} aria-hidden="true" /></a></p>}
+    {sample && <p className={styles.note} role="note">예시 사업의 기록이라 보기만 할 수 있어요. 내 사업을 만들면 직접 기록하고 리포트로 보관할 수 있어요. <a className={`${styles.inlineButton} ${studioHeader ? styles.studioNarrowOnly : ""}`} href={newChatHref()}>대화로 내 사업 시작하기<ChevronRight size={18} aria-hidden="true" /></a></p>}
     {error && !invalid && <div role="alert" className={styles.error}><p>{error}</p>{errorKind !== "input" && <><button type="button" disabled={busy} onClick={() => void reload()}>기록 다시 불러오기</button>{editor && <p>{errorKind === "conflict" ? "다른 곳에서 먼저 고친 기록이 있어요. 입력 중인 내용은 그대로 있으니 복사해 두고, 취소한 뒤 다시 열어 고쳐 주세요." : "입력 중인 내용은 그대로 있어요."}</p>}</>}</div>}
     {notice && <p role="status" className={styles.success}>{notice}</p>}
     {!state && !error && <PlanLoading note="운영 기록을 불러오고 있어요" />}
@@ -277,7 +277,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
       <div className={styles.actions}><button type="submit" className={styles.primary} disabled={busy}><Save size={18} />{busy ? "저장 중" : "기록 저장"}</button><button type="button" disabled={busy} onClick={closeEditor}>취소</button></div>
     </form>}
     {state && !editor && mode === "periods" && (period ? <>
-      <div className={styles.selectRow}><label>기록 기간<select value={selected} disabled={busy || analysisDirty} onChange={e => { setSelected(e.target.value); setNotice(""); }}>{state.periods.map(p => <option key={p.id} value={p.id}>{periodLabel(p)}</option>)}</select></label>{!sample && <button disabled={busy || analysisDirty} onClick={() => edit(period)}><Pencil size={17} />수정</button>}</div>
+      <div className={styles.selectRow}><label>기록 기간<select value={selected} disabled={busy || analysisDirty} onChange={e => { setSelected(e.target.value); setNotice(""); }}>{state.periods.map(p => <option key={p.id} value={p.id} title={periodLabel(p)}>{periodShortLabel(p)}</option>)}</select></label>{!sample && <button disabled={busy || analysisDirty} onClick={() => edit(period)}><Pencil size={17} />수정</button>}</div>
       <p className={styles.meta}>{periodDays(period)}일 기록 · 마지막 저장 {stamp(period.updatedAt)}</p>
       <Comparison period={period} baseline={baseline} /><PeriodNotes period={period} />
       {!sample && <div className={styles.actions}><button className={styles.primary} disabled={busy || analysisDirty || !period.nextAction || !period.successCriterion || state.reports.some(r => r.source === "user-records" && JSON.stringify(referenceFor(r.period, r.baseline)) === JSON.stringify(referenceFor(period, baseline)))} onClick={requestArchive}><Archive size={18} />리포트 보관</button></div>}

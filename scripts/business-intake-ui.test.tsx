@@ -557,9 +557,9 @@ async function main() {
     assert.ok(!appliedHistory.includes("아래 &quot;계획서에 반영하기") && !appliedHistory.includes("아래 \"계획서에 반영하기"), "반영 단추는 아래에 있지 않다 — '아래'를 떼고 보인다(r37)");
     // 다 만든 뒤 고치는 길의 이름은 '대화로 고치기' · '직접 고치기' 둘뿐
     const lockedStudio = renderToStaticMarkup(<DocumentLockedTurn planId="p1" chatEdit onChatEdit={noop} />);
-    assert.ok(lockedStudio.includes("대화로 고치기</button>") && lockedStudio.includes("직접 고치기</a>") && lockedStudio.includes("사업계획서를 만들었어요.") && !lockedStudio.includes("아래 입력창"), "한 문장만(r37 글 점검)");
+    assert.ok(lockedStudio.includes("대화로 고치기</button>") && /직접 고치기<svg[^]*?<\/svg><\/a>/.test(lockedStudio) && lockedStudio.includes("사업계획서를 만들었어요.") && !lockedStudio.includes("아래 입력창"), "한 문장만(r37 글 점검)");
     const lockedOld = renderToStaticMarkup(<DocumentLockedTurn planId="p1" chatEdit />);
-    assert.ok(lockedOld.includes("edit=chat") && lockedOld.includes("대화로 고치기</a>"));
+    assert.ok(lockedOld.includes("edit=chat") && /대화로 고치기<svg[^]*?<\/svg><\/a>/.test(lockedOld));
     for (const markup of [lockedStudio, lockedOld]) assert.ok(!/채팅으로 수정하기|문장에서 바로 고치기/.test(markup));
   }
   const undecided = previewIntakeAnswer(original, command({ questionId: "industry", value: null, unknown: true }))!;
@@ -957,7 +957,7 @@ async function main() {
     assert.match(card({ ...base, status: "note", target: "plan-section", label: "3장 시장과 고객 고치기" }), /메모로 남겨 뒀어요/);
     assert.equal(renderToStaticMarkup(<StudioEditTurns turns={[]} onApply={noop} onDismiss={noop} onUndo={noop} onRetry={noop} />), "");
     const queued = renderToStaticMarkup(<QueuedStudioRequests items={[item("q1", "가격을 2만원으로", { label: "3장 시장과 고객 고치기" })]} generating onCancel={noop} />);
-    assert.match(queued, /\[3장 시장과 고객\] 가격을 2만원으로/);
+    assert.match(queued, /class="bubbleTag">3장 시장과 고객<\/p><article[^>]*><p>가격을 2만원으로<\/p>/, "장 이름은 말풍선 위 꼬리표, 말풍선에는 본문만");
     assert.match(queued, /대기 중 · 다 쓰면 반영할게요/);
     assert.match(queued, />취소<\/button>/);
 
@@ -972,7 +972,7 @@ async function main() {
     // 다음 요청 줄 — 입력창 바로 위 한 줄(연필은 입력창으로 되돌리기, ✕ 는 취소)
     const dockQueue = renderToStaticMarkup(<QueuedStudioRequests dock items={[item("q1", "가격을 2만원으로", { label: "3장 시장과 고객 고치기" })]} generating onCancel={noop} onEdit={noop} />);
     assert.match(dockQueue, /다음 요청/);
-    assert.match(dockQueue, /\[3장 시장과 고객\] 가격을 2만원으로/);
+    assert.match(dockQueue, /class="queueTag">3장 시장과 고객<\/span><span class="queueText"[^>]*>가격을 2만원으로<\/span>/);
     assert.match(dockQueue, /기다리는 요청 고치기/);
     assert.match(dockQueue, /기다리는 요청 취소/);
     assert.doesNotMatch(dockQueue, /대기 중/, "'다음 요청' 이름표가 이미 말한다 — 대기 줄을 되풀이하지 않는다(r37)");
