@@ -874,3 +874,141 @@
 @keyframes ksicRecIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes ksicRecPulse { 0% { box-shadow: 0 0 0 0 rgba(49, 130, 246, .38), 0 2px 10px rgba(49, 130, 246, .16); } 100% { box-shadow: 0 0 0 12px rgba(49, 130, 246, 0), 0 2px 10px rgba(49, 130, 246, .16); } }
 @media (prefers-reduced-motion: reduce) { .page[data-coach] .ksicChip[data-recommended] { animation: none; } }
+
+/*
+ * ── 작업실 PC 대화 칸(새 모양 · 시안 2026-10-24) ─────────────────────────────
+ * 넓은 작업실(1024px 이상)에서만 BusinessIntake 가 data-studio-pro 를 단다. 휴대폰 작업실 · 예전 대화 화면(/plan/chat)은 위 규칙 그대로다.
+ * AI 글은 말풍선 없이 바탕 위에, 내 말은 연한 파랑 말풍선, 지금 질문은 흰 카드, 입력창은 흰 카드(대상 칩 · 입력 · 아래 줄).
+ * 운영 빌드에서 CSS 순서가 바뀌어도 이기도록 모두 .page[data-embedded][data-studio-pro] 로 시작한다.
+ */
+.page[data-embedded][data-studio-pro] { background: transparent; color: #191f28; font-size: 14.5px; }
+/* 맨 위 한 줄(질문 중에만) — '사업 방향 정하기 ▬▬ 10 / 14' */
+.page[data-embedded][data-studio-pro] .paneBar { gap: 10px; min-height: 0; padding: 6px 22px 10px 20px; border-bottom: 0; background: transparent; color: #4e5968; font-size: 12.5px; }
+.page[data-embedded][data-studio-pro] .paneBar > b { color: #191f28; font-weight: 650; white-space: nowrap; }
+.page[data-embedded][data-studio-pro] .paneProgress { height: 4px; border-radius: 4px; background: #e1e5ea; }
+.page[data-embedded][data-studio-pro] .paneProgress > span { border-radius: 4px; background: #3182f6; }
+.paneCount { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.page[data-embedded][data-studio-pro] .paneBar[data-pro-head]:not(:has(b)) { justify-content: flex-end; padding-block: 2px 0; }
+/* 대화 — 위쪽 끝은 살짝 흐리게(바탕 위에 떠 있는 글이 칼같이 잘리지 않게) */
+.page[data-embedded][data-studio-pro] .conversation { scrollbar-gutter: auto; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 20px); mask-image: linear-gradient(to bottom, transparent 0, #000 20px); }
+.page[data-embedded][data-studio-pro] .inputContent { max-width: none; padding: 14px 18px 16px 20px; }
+.page[data-embedded][data-studio-pro] .assistantMessage { margin: 0 0 14px; font-size: 14.5px; line-height: 1.65; }
+.page[data-embedded][data-studio-pro] .assistantMessage > p, .page[data-embedded][data-studio-pro] .assistantMessage > .conversationText, .page[data-embedded][data-studio-pro] .chatQuestion h2 { width: auto; max-width: 100%; padding: 0; border-radius: 0; background: none; color: #191f28; font-size: 14.5px; font-weight: 400; line-height: 1.65; animation: none; }
+.page[data-embedded][data-studio-pro] .conversationText .textButton { min-height: 32px; padding: 2px 0; }
+.page[data-embedded][data-studio-pro] .userMessage { max-width: 84%; margin: 0 0 14px auto; padding: 9px 14px; border-radius: 18px 18px 6px 18px; background: #e6effc; color: #191f28; font-size: 14.5px; line-height: 1.55; }
+.page[data-embedded][data-studio-pro] .messageEdit { width: 32px; height: 32px; margin: -8px -10px -8px -2px; color: #7d8a9c; }
+.page[data-embedded][data-studio-pro] .messageEdit:hover { color: #1b64da; }
+.page[data-embedded][data-studio-pro] .messageStatus { margin: -8px 0 14px auto !important; color: #8b95a1; font-size: 11.5px; }
+.page[data-embedded][data-studio-pro] .studioEditTurn > .messageStatus { margin-top: -8px !important; }
+.page[data-embedded][data-studio-pro] .studioQueued > .userMessage { background: #f4f9ff; color: #1b64da; }
+.page[data-embedded][data-studio-pro] .changeNote { background: #eceff3; color: #4e5968; }
+.page[data-embedded][data-studio-pro] .lockedTurn, .page[data-embedded][data-studio-pro] .editTurn { gap: 0; margin-top: 0; }
+.page[data-embedded][data-studio-pro] .typingBubble { background: #e9ecf0; }
+/* AI 답 아래 시각 · 복사 */
+.messageMeta { display: flex; align-items: center; gap: 2px; margin: -10px 0 12px; color: #8b95a1; font-size: 11.5px; }
+.messageMeta time { margin-right: 4px; font-variant-numeric: tabular-nums; }
+.metaButton { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; }
+.metaButton:hover { background: #e9ecf0; color: #4e5968; }
+/* 작업 기록 — 파란 체크 + 한 줄, 목록이 있으면 눌러서 2열로 펼친다 */
+.workLog { display: flex; flex-direction: column; gap: 2px; margin: 0 0 12px; }
+.workLogRow { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; min-height: 28px; margin: 0; padding: 0 6px 0 2px; border: 0; border-radius: 7px; background: transparent; color: #4e5968; font-size: 13px; line-height: 1.4; text-align: left; }
+button.workLogRow:hover { background: #e9ecf0; }
+.workLogIcon { color: #3182f6; }
+.workLogSub { color: #8b95a1; }
+.workLogChevron { color: #b0b8c1; }
+.workLogBody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3px 12px; margin: 0 0 4px 9px; padding: 4px 0 4px 16px; border-left: 1.5px solid #dde2e8; color: #8b95a1; font-size: 12.5px; line-height: 1.5; }
+.workLogBody > span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.workLogBody > span svg { color: #9fb7da; }
+.workLogMore { justify-self: start; grid-column: 1 / -1; min-height: 24px; padding: 0; border: 0; background: none; color: #1b64da; font-size: 12.5px; font-weight: 600; }
+/* 지금 질문 — 흰 카드 */
+.page[data-embedded][data-studio-pro] .chatQuestion[data-question-card] { margin-bottom: 4px; padding: 14px 14px 12px; border: 1px solid #e3e7ec; border-radius: 14px; background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); animation: intake-message .24s ease-out; }
+.questionCardLabel { margin: 0 0 4px !important; color: #1b64da; font-size: 11.5px; font-weight: 650; line-height: 1.4; }
+.page[data-embedded][data-studio-pro] .chatQuestion[data-question-card] h2 { margin: 0; font-size: 15px; font-weight: 650; line-height: 1.45; }
+.page[data-embedded][data-studio-pro] .chatQuestion[data-question-card] .questionHint { margin: 4px 0 0 !important; color: #8b95a1; font-size: 12.5px; line-height: 1.5; }
+.page[data-embedded][data-studio-pro] .chatQuestion form { margin-top: 12px; }
+.page[data-embedded][data-studio-pro] .chatQuestion .questionMeta { order: 0; justify-content: space-between; margin: -4px 0 2px; min-height: 0; color: #1b64da; font-size: 11.5px; font-weight: 650; }
+.page[data-embedded][data-studio-pro] .chatQuestion .questionMeta > .textButton { min-height: 28px; margin-left: auto; padding: 0; color: #4e5968; font-size: 12px !important; font-weight: 500 !important; }
+.page[data-embedded][data-studio-pro] .chatQuestion .questionMeta > span:empty { display: none; }
+.questionCardFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; color: #8b95a1; font-size: 12px; line-height: 1.5; }
+.questionCardBack { display: inline-flex; flex: none; align-items: center; gap: 4px; min-height: 28px; padding: 0 2px; border: 0; background: none; color: #4e5968; font-size: 12px; font-weight: 500; }
+.questionCardBack:hover:not(:disabled) { color: #191f28; text-decoration: underline; text-underline-offset: 3px; }
+/* 보기 칩 — 작고 각진 흰 칩. 고르면 파랑 */
+.page[data-embedded][data-studio-pro] .chatQuestion .options, .page[data-embedded][data-studio-pro] .chatQuestion .ksicChips, .page[data-embedded][data-studio-pro] .chatQuestion .chipRow { gap: 6px; }
+.page[data-embedded][data-studio-pro] .chatQuestion .option, .page[data-embedded][data-studio-pro] .chatQuestion .chip, .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip, .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice, .page[data-embedded][data-studio-pro] .chatQuestion .presetChip { min-height: 34px; padding: 6px 12px; border: 1px solid #e3e7ec; border-radius: 9px; background: #fff; color: #191f28; font-size: 13px; font-weight: 550; line-height: 1.35; box-shadow: none; }
+.page[data-embedded][data-studio-pro] .chatQuestion .option strong, .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip strong, .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice strong { color: inherit; font-size: 13px; font-weight: 550; line-height: 1.35; }
+.page[data-embedded][data-studio-pro] .chatQuestion .option:hover, .page[data-embedded][data-studio-pro] .chatQuestion .chip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice:hover:not(:disabled) { border-color: #c9d3de; background: #f7f9fb; }
+.page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice { margin-top: 6px; color: #4e5968; font-weight: 500; }
+.page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice strong { font-weight: 500; }
+.page[data-embedded][data-studio-pro] .chatQuestion .option[data-selected="true"], .page[data-embedded][data-studio-pro] .chatQuestion .option[data-selected="true"]:hover, .page[data-embedded][data-studio-pro] .chatQuestion .chip[aria-pressed="true"], .page[data-embedded][data-studio-pro] .chatQuestion .chip[data-selected="true"], .page[data-embedded][data-studio-pro] .chatQuestion .chip[aria-pressed="true"]:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .chip[data-selected="true"]:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[aria-pressed="true"], .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[aria-pressed="true"]:hover, .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice[aria-pressed="true"] { border-color: #3182f6; background: #e8f3ff; color: #1b64da; }
+/* AI 추천(업종 첫 후보 · 맞춤 추천 칩) — 연한 파랑 테두리, 나타날 때의 물결은 그대로 */
+.page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended], .page[data-embedded][data-studio-pro] .chatQuestion .suggestionChip { border-color: #b7d3fb; background: #f4f9ff; color: #191f28; }
+.page[data-embedded][data-studio-pro] .chatQuestion .ksicChips > .ksicChip[data-recommended] { flex-basis: auto; min-height: 34px; padding: 6px 12px; }
+.page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended] strong { color: #191f28; font-size: 13px; font-weight: 600; }
+.page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended]:hover { border-color: #3182f6; background: #e8f3ff; }
+.page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended] .ksicHint { color: #4e5968; }
+.page[data-embedded][data-studio-pro] .ksicBadge { margin-right: 6px; padding: 1px 5px; border-radius: 4px; background: #3182f6; font-size: 10.5px; line-height: 16px; }
+.page[data-embedded][data-studio-pro] .chatQuestion .suggestionChip svg { color: #3182f6; }
+.page[data-embedded][data-studio-pro] .chatQuestion .stepLegend, .page[data-embedded][data-studio-pro] .chatQuestion .ksicLead { color: #8b95a1; font-size: 12px; }
+.page[data-embedded][data-studio-pro] .chatQuestion .multiSendHint { margin: 8px 0 0; color: #8b95a1; font-size: 12px; }
+/* "이렇게 바꿀게요" — 흰 카드, 줄마다 이름 · 지금(취소선) → 바꿀 글(강조) */
+.page[data-embedded][data-studio-pro] .changeCard { width: 100%; gap: 0; padding: 0; border: 1px solid #e3e7ec; border-radius: 14px; background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); overflow: hidden; }
+.page[data-embedded][data-studio-pro] .changeCard > b { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; color: #191f28; font-size: 13.5px; font-weight: 700; }
+.changeIcon { color: #3182f6; }
+.changeCount { margin-left: auto; color: #8b95a1; font-size: 12px; font-weight: 500; }
+.changeArrow { color: #b0b8c1; }
+.page[data-embedded][data-studio-pro] .changeCard > p { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin: 0 14px 8px; padding: 9px 11px; border-radius: 10px; background: #f7f8fa; font-size: 13.5px; line-height: 1.5; }
+.page[data-embedded][data-studio-pro] .changeCard > p > span { flex-basis: 100%; color: #8b95a1; font-size: 11.5px; }
+.page[data-embedded][data-studio-pro] .changeCard > p > s { color: #b0b8c1; text-decoration-thickness: 1px; }
+.page[data-embedded][data-studio-pro] .changeCard > p > strong { padding: 0 4px; border-radius: 4px; background: #dcebff; color: #191f28; font-weight: 700; }
+.page[data-embedded][data-studio-pro] .changeCard > p.studioEditSummary { display: block; margin: -2px 14px 8px; padding: 0; background: none; color: #4e5968; font-size: 12.5px; }
+.page[data-embedded][data-studio-pro] .changeCard > small { display: block; margin: 0 14px 8px; color: #8b95a1; font-size: 11.5px; }
+.page[data-embedded][data-studio-pro] .changeCard .chipRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 4px 14px 12px; }
+.page[data-embedded][data-studio-pro] .changeCard .chip, .page[data-embedded][data-studio-pro] .studioEditTurn .chip { min-height: 30px; padding: 0 12px; border: 1px solid #e3e7ec; border-radius: 7px; background: #fff; color: #191f28; font-size: 12.5px; font-weight: 600; }
+.page[data-embedded][data-studio-pro] .changeCard .chip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip:hover:not(:disabled) { background: #f7f9fb; border-color: #c9d3de; }
+.page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong, .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong { border-color: #3182f6; background: #3182f6; color: #fff; box-shadow: 0 1px 2px rgba(27, 100, 218, .3); }
+.page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong:hover:not(:disabled) { border-color: #1b64da; background: #1b64da; }
+.changeUndoNote { margin-left: auto; color: #8b95a1; font-size: 11.5px; }
+.page[data-embedded][data-studio-pro] .studioEditTurn .changeCard { margin-top: 0; }
+.page[data-embedded][data-studio-pro] .lockedTurn .chipRow .chip, .page[data-embedded][data-studio-pro] .editTurn .chipRow .chip { min-height: 32px; padding: 0 12px; border-radius: 9px; font-size: 13px; }
+/* 입력창 쪽 — 기다리는 요청 줄 · 추천 칩 줄 · 흰 입력 카드 */
+.page[data-embedded][data-studio-pro] .composer { display: flex; flex-direction: column; gap: 8px; padding: 6px 16px 12px; background: transparent; }
+.queueDock { display: grid; gap: 6px; }
+.queueRow { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 6px 6px 12px; border: 1px solid #e3e7ec; border-radius: 12px; background: #fff; font-size: 13px; }
+.queueBadge { flex: none; padding: 2px 6px; border-radius: 5px; background: #e8f3ff; color: #1b64da; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.queueText { flex: 1; min-width: 0; overflow: hidden; color: #191f28; white-space: nowrap; text-overflow: ellipsis; }
+.page .queueText { overflow-wrap: normal; }
+.queueButton { display: inline-grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; }
+.queueButton:hover { background: #eef1f4; color: #4e5968; }
+.queueNote { margin: -2px 0 0 4px !important; color: #8b95a1; font-size: 11.5px; }
+/* 한 줄 — 넘치면 옆으로 밀어 본다(오른쪽 끝은 흐리게) */
+.suggestRow { display: flex; align-items: center; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(to left, transparent 0, #000 24px); mask-image: linear-gradient(to left, transparent 0, #000 24px); padding-right: 20px; }
+.suggestRow::-webkit-scrollbar { display: none; }
+.suggestLabel { display: inline-flex; flex: none; align-items: center; gap: 4px; margin-right: 2px; color: #8b95a1; font-size: 12px; white-space: nowrap; }
+.suggestChip { flex: none; max-width: 100%; height: 30px; padding: 0 12px; border: 1px solid #e3e7ec; border-radius: 999px; background: #fff; color: #4e5968; font-size: 12.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.suggestChip:hover { border-color: #c9d3de; color: #191f28; }
+.page[data-embedded][data-studio-pro] .composerShell { padding: 10px 10px 8px 12px; border: 1px solid #d9dee5; border-radius: 16px; background: #fff; box-shadow: 0 2px 10px rgba(16, 24, 40, .05); }
+.page[data-embedded][data-studio-pro] .composerShell:focus-within { border-color: #b4c6dc; background: #fff; box-shadow: 0 2px 10px rgba(16, 24, 40, .05), 0 0 0 3px rgba(49, 130, 246, .08); }
+.page[data-embedded][data-studio-pro] .composerRow { display: block; }
+.page[data-embedded][data-studio-pro] .composerRow textarea { width: 100%; min-height: 40px; padding: 8px 2px 10px; color: #191f28; font-size: 14.5px; line-height: 1.5; }
+.page[data-embedded][data-studio-pro] .composerRow textarea::placeholder { color: #b0b8c1; }
+.page[data-embedded][data-studio-pro] .composerTarget { padding: 0 0 2px; }
+.page[data-embedded][data-studio-pro] .composerTarget > span { gap: 5px; min-height: 24px; padding: 0 2px 0 8px; border-radius: 6px; background: #e8f3ff; color: #1b64da; font-size: 12px; font-weight: 650; }
+.page[data-embedded][data-studio-pro] .composerTarget[data-question-target] > span { padding-right: 8px; }
+.page[data-embedded][data-studio-pro] .composerTarget button { width: 32px; height: 32px; margin: -6px -8px -6px -6px; color: #6b9be6; }
+.page[data-embedded][data-studio-pro] .composerTarget button::before { inset: 7px; border-radius: 4px; }
+.page[data-embedded][data-studio-pro] .composerTarget small { color: #8b95a1; }
+.page[data-embedded][data-studio-pro] .composerContext { padding: 2px 2px 0; }
+.composerGuide { margin: 2px 0 2px !important; padding: 0 2px; color: #4e5968; font-size: 12.5px; line-height: 1.5; }
+.composerBar { display: flex; align-items: center; gap: 4px; min-height: 32px; }
+.composerAction { display: inline-flex; align-items: center; gap: 4px; min-width: 0; height: 30px; margin-left: -4px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #8b95a1; font-size: 12px; white-space: nowrap; }
+.composerAction:hover { background: #f2f4f6; color: #4e5968; }
+.composerAction[aria-pressed="true"] { background: #e8f3ff; color: #1b64da; }
+.page[data-embedded][data-studio-pro] .sendButton { flex: 0 0 32px; width: 32px; height: 32px; margin-left: auto; background: #3182f6; }
+.page[data-embedded][data-studio-pro] .sendButton:disabled { background: #d1d6dc; color: #fff; }
+.page[data-embedded][data-studio-pro] .sendButton svg { width: 18px; height: 18px; }
+.page[data-embedded][data-studio-pro] .resumeNotice { width: auto; max-width: 100%; margin: 0 0 14px; padding: 0; border-radius: 0; background: none; align-items: flex-start; }
+.page[data-embedded][data-studio-pro] .resumeNotice p { font-size: 14.5px; line-height: 1.65; color: #191f28; }
+.page[data-embedded][data-studio-pro] .resumeNotice button { width: 28px; height: 28px; color: #8b95a1; }
+.page[data-embedded][data-studio-pro] .lockedTurn .chipRow, .page[data-embedded][data-studio-pro] .editTurn .chipRow { margin: -4px 0 14px; }
+.page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong { border-color: #3182f6; background: #3182f6; color: #fff; }
+.page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong:hover { border-color: #1b64da; background: #1b64da; }

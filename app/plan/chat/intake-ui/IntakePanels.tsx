@@ -3,7 +3,7 @@ import { ResourceFitDetails, resourceFitLine } from "./ResourcePanel";
 import { INTAKE_JOB_TIMING } from "../../../../lib/plan-builder/intake-timing";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
 
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { LoadingStatus, Spinner } from "../../PlanLoading";
@@ -22,6 +22,8 @@ import styles from "../intake.module.css";
 import { chatTextPreview, unitCostRanges } from "./model";
 import type { QuestionSuggestions } from "./AnswerSuggestions";
 import { editExamples } from "../../../../lib/plan-builder/edit-examples";
+import { MessageMeta, WorkLog } from "./WorkLog";
+import { editFoundItem, marginLogItem } from "./work-log";
 
 export function EntryChoices({ disabled, onStart, initialMessage, coach = false }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null; coach?: boolean }) {
   const choices = [
@@ -48,7 +50,7 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false 
 /** 업종 검색은 두 글자부터, 한 글자는 완성된 한글('빵'·'꽃'·'떡')일 때만 — 조합 중인 자모('ㅂ')로는 찾지 않는다 */
 const ksicSearchable = (query: string) => query.length >= 2 || /^[가-힣]$/.test(query);
 
-export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange: change, onAnswer, onCancel, inChat = false, refining = false, suggestions, coach = false, ksicQuery: composerQuery, onCarry, onComposer }: {
+export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange: change, onAnswer, onCancel, inChat = false, refining = false, suggestions, coach = false, ksicQuery: composerQuery, onCarry, onComposer, cardLabel, cardFoot }: {
   question: IntakeQuestion; snapshot: IntakeSnapshot; draft: AnswerDraft; editing: boolean; disabled: boolean;
   /** `submit`: in coach chat a finished pick is sent right away, as if the send button were pressed. */
   onChange: (value: AnswerDraft, submit?: boolean) => void; onAnswer: (value: IntakeValue, unknown?: boolean, questionId?: string, extra?: { ksic?: string }) => void;
@@ -61,6 +63,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   onCarry?: (questionId: string, text: string) => void;
   /** 코치 채팅: 입력창으로 손이 가야 할 때(문장 칩의 ○○ 채우기, '직접 적을래요') 입력창에 커서를 옮긴다. */
   onComposer?: (select?: string) => void;
+  /** 작업실 PC: 지금 질문을 흰 카드로 — 맨 위 작은 줄('질문 10 / 14')과 맨 아래 줄(직접 적기 안내 · 앞 질문 고치기). 없으면 예전 모양 */
+  cardLabel?: string; cardFoot?: ReactNode;
 }) {
   const onChange = (value: AnswerDraft) => change(value);
   const send = (value: AnswerDraft) => change(value, coach);
@@ -171,8 +175,9 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   // 건당 비용 칩은 판매 가격보다 큰 범위를 뺀다(9,500원 메뉴에 '300,000원 이상'이 나왔다)
   const ladder = question.id === "structure.unitCost" ? unitCostRanges(fullLadder, snapshot) : fullLadder;
   const ranges = months && months > 1 ? scaledAmountRanges(ladder, months) : ladder;
-  return <section className={`${styles.question} ${inChat ? styles.chatQuestion : ""}`} aria-labelledby="intake-question-heading" data-chat-question={inChat || undefined}>
+  return <section className={`${styles.question} ${inChat ? styles.chatQuestion : ""}`} aria-labelledby="intake-question-heading" data-chat-question={inChat || undefined} data-question-card={cardLabel || cardFoot ? true : undefined}>
     {inChat && <ChatSpeaker />}
+    {cardLabel && <p className={styles.questionCardLabel}>{cardLabel}</p>}
     {(!inChat || editing) && <div className={styles.questionMeta}>
       <span>{refining ? "선택 보완" : editing ? "답변 수정" : inChat ? "" : snapshot.coreComplete ? "선택 보완" : "기본 질문"}</span>
       {editing && <button type="button" className={styles.textButton} onClick={onCancel}>{snapshot.coreComplete ? "마무리로 돌아가기" : "현재 질문으로"}</button>}
@@ -276,6 +281,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       </div>
       </div>
     </form>
+    {cardFoot}
   </section>;
 }
 
@@ -454,7 +460,9 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
  * "채팅으로 수정하기" turn: a short intro with examples, the AI's tidy-up while it runs, then the proposed changes
  * to confirm or cancel. Requests outside this business never reach the AI (server-side filter).
  */
-export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss }: { snapshot: IntakeSnapshot; disabled: boolean; onSend: (text: string) => void; onApply: () => void; onDismiss: () => void }) {
+export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss, pro = false }: { snapshot: IntakeSnapshot; disabled: boolean; onSend: (text: string) => void; onApply: () => void; onDismiss: () => void;
+  /** 작업실 PC: 카드 위 작업 기록('바꿀 곳 N군데를 찾았어요') · 머리의 군데 수 · 지금 → 바꿀 글 화살표. 예시 칩은 입력창 위 추천 줄이 맡는다 */
+  pro?: boolean }) {
   const job = snapshot.intake.job?.kind === "edit" ? snapshot.intake.job : null;
   const running = !!job && ["queued", "running"].includes(job.status);
   const pending = !!job && job.status === "complete" && !!job.proposal?.length && !job.proposalStatus;
@@ -464,18 +472,19 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss }:
     {/* 장의 문장을 다시 쓰는 게 아니라 사업 내용(답변)을 바꾼다 — 약속과 하는 일이 같게(여정 점검 2026-10-23) */}
     {!job && <div className={styles.assistantMessage}><p>바꾸고 싶은 사업 내용(가격·고객·상품·목표 등)을 말씀해 주세요. 바꾼 뒤 &apos;계획서에 반영하기&apos;를 누르면 계획서를 다시 써요.</p></div>}
     {running && <JobProgress snapshot={snapshot} announce variant="chat" />}
+    {pending && pro && <WorkLog items={[editFoundItem(job!.proposal!.length)]} />}
     {pending && <div className={styles.changeCard} data-edit-proposal>
-      <b>이렇게 바꿀게요</b>
+      <b>{pro && <PencilLine size={14} className={styles.changeIcon} aria-hidden="true" />}이렇게 바꿀게요{pro && <span className={styles.changeCount}>{job!.proposal!.length}군데</span>}</b>
       {job!.proposal!.map(change => {
         const question = snapshot.questions.find(item => item.id === change.questionId);
         const current = snapshot.intake.answers[change.questionId];
         const before = question && current?.status === "answered" ? summaryAnswerText(question, current.value, snapshot.candidateIdeas) : "";
         const after = question ? summaryAnswerText(question, change.value, snapshot.candidateIdeas) : String(change.value);
-        return <p key={change.questionId}><span>{question?.label ?? change.questionId}</span>{before && <s>{before}</s>}<strong>{after}</strong></p>;
+        return <p key={change.questionId}><span>{question?.label ?? change.questionId}</span>{before && <s>{before}</s>}{pro && before && <ArrowRight size={13} className={styles.changeArrow} aria-hidden="true" />}<strong>{after}</strong></p>;
       })}
       <div className={styles.chipRow}><button type="button" className={`${styles.chip} ${styles.chipStrong}`} disabled={disabled} onClick={onApply}>바꾸기</button><button type="button" className={styles.chip} disabled={disabled} onClick={onDismiss}>취소</button></div>
     </div>}
-    {!running && !pending && <div className={styles.chipRow}>{examples.map(text => <button key={text} type="button" className={styles.chip} disabled={disabled} onClick={() => onSend(text)}>{text}</button>)}</div>}
+    {!running && !pending && !pro && <div className={styles.chipRow}>{examples.map(text => <button key={text} type="button" className={styles.chip} disabled={disabled} onClick={() => onSend(text)}>{text}</button>)}</div>}
   </section>;
 }
 
@@ -484,10 +493,17 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss }:
  * 바꿀 내용·궁금한 점을 바로 적으면 되고, 예전 화면에서는 대화로 고치기 화면으로 보낸다.
  * 고치는 길의 이름은 '대화로 고치기' · '직접 고치기' 두 가지로만 부른다(계획서 칸과 같다).
  */
-export function DocumentLockedTurn({ planId, chatEdit, onChatEdit }: { planId: string; chatEdit: boolean; onChatEdit?: () => void }) {
+export function DocumentLockedTurn({ planId, chatEdit, onChatEdit, pro = false }: { planId: string; chatEdit: boolean; onChatEdit?: () => void;
+  /** 작업실 PC: 안내 아래 복사 줄만 두고 단추 줄은 뺀다 — 계획서 보기는 칸 탭, 대화로 고치기는 늘 열린 입력창, 직접 고치기는 계획서 칸에 있다 */
+  pro?: boolean }) {
   const id = encodeURIComponent(planId);
+  const text = onChatEdit ? "사업계획서를 만들었어요. 바꿀 사업 내용이나 궁금한 점은 아래 입력창에 적어 주세요." : "사업계획서를 만들었어요. 이 대화는 기록으로 남겨 두고, 고칠 내용은 계획서에서 바꿀 수 있어요.";
+  if (pro) return <section className={styles.lockedTurn} aria-label="사업계획서 완성" data-document-locked>
+    <div className={styles.assistantMessage}><p>{text}</p></div>
+    <MessageMeta text={text} />
+  </section>;
   return <section className={styles.lockedTurn} aria-label="사업계획서 완성" data-document-locked>
-    <div className={styles.assistantMessage}><p>{onChatEdit ? "사업계획서를 만들었어요. 바꿀 사업 내용이나 궁금한 점은 아래 입력창에 적어 주세요." : "사업계획서를 만들었어요. 이 대화는 기록으로 남겨 두고, 고칠 내용은 계획서에서 바꿀 수 있어요."}</p></div>
+    <div className={styles.assistantMessage}><p>{text}</p></div>
     {/* 다 만든 뒤 할 일은 '계획서 보기'가 먼저다 — 예전엔 세 단추가 같은 무게라 무엇을 누를지 몰랐다(여정 점검 2026-10-22) */}
     <div className={styles.chipRow}>
       <Link className={`${styles.chip} ${styles.chipStrong}`} href={`/plan/document?planId=${id}`}>계획서 보기</Link>
@@ -501,9 +517,11 @@ export function DocumentLockedTurn({ planId, chatEdit, onChatEdit }: { planId: s
  * 작업실 대화 칸: 이번에 사업계획서 작성이 끝나면 진행 카드 자리에 남기는 마무리 말 — 다음에 할 일 두 가지를 바로 고르게 한다.
  * '계획서 보기'는 오른쪽(휴대폰은 계획서 탭)을 보여 주고, '홈페이지 만들기'는 홈페이지 탭으로 간다.
  */
-export function GenerationFinishedTurn({ planId, onPlan, onHomepage }: { planId: string; onPlan: () => void; onHomepage: () => void }) {
+const FINISHED_TEXT = "사업계획서를 다 만들었어요. 계획서를 확인해 보시고, 이 내용으로 홈페이지도 바로 만들 수 있어요.";
+export function GenerationFinishedTurn({ planId, onPlan, onHomepage, pro = false }: { planId: string; onPlan: () => void; onHomepage: () => void; pro?: boolean }) {
   return <section className={styles.lockedTurn} aria-label="사업계획서 작성 완료" data-generation-finished>
-    <div className={styles.assistantMessage}><p>사업계획서를 다 만들었어요. 계획서를 확인해 보시고, 이 내용으로 홈페이지도 바로 만들 수 있어요.</p></div>
+    <div className={styles.assistantMessage}><p>{FINISHED_TEXT}</p></div>
+    {pro && <MessageMeta text={FINISHED_TEXT} />}
     <div className={styles.chipRow}>
       <button type="button" className={`${styles.chip} ${styles.chipStrong}`} onClick={onPlan}>계획서 보기</button>
       <button type="button" className={styles.chip} onClick={onHomepage}>홈페이지 만들기</button>
@@ -550,7 +568,11 @@ function bubbleAnswerText(question: IntakeQuestion | undefined, text: string) {
 
 export const isDesignReplyText = (text: string) => text.includes("\n\n이렇게 제안한 이유\n") && text.includes("\n\n먼저 해볼 일 하나 · 선택 사항\n");
 
-export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = false }: { snapshot: IntakeSnapshot; onEdit: (id: string) => void; receipt?: string; readOnly?: boolean }) {
+export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = false, pro = false, log }: { snapshot: IntakeSnapshot; onEdit: (id: string) => void; receipt?: string; readOnly?: boolean;
+  /** 작업실 PC: AI 답 아래 시각 · 복사 줄, 판매 가격과 비용을 다 답하면 '남는 돈을 계산했어요' 기록 */
+  pro?: boolean;
+  /** 작업실 PC: 그 시각(at) 뒤에 온 첫 메시지 앞에 끼우는 작업 기록(계획서 작성 등). 시각이 없거나 뒤 메시지가 없으면 대화 끝에 */
+  log?: { at: string | null; node: ReactNode } }) {
   const lastUserId = [...snapshot.coach.messages].reverse().find(message => message.role === "user")?.id;
   const mode = { exploring: "아이디어를 찾고 있어요", startup: "생각한 사업이 있어요", operating: "사업을 운영 중이에요" }[snapshot.intake.mode];
   /*
@@ -563,10 +585,18 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
     ? snapshot.coach.messages.filter(message => message.role === "user" && message.id !== industryAnswerId && message.text.startsWith(industryLabel) && !snapshot.intake.notes.some(note => note.id.startsWith(`${message.id}:`))).map(message => message.id) : []);
   // 대화로 고치기의 [바꾸기]가 적용한 답 — 메시지 번호가 '편집 요청 번호:순번'이고 같은 요청의 '바꿨어요' 답이 있다
   const appliedEdit = (id: string) => /:\d+$/.test(id) && snapshot.coach.messages.some(other => other.role === "assistant" && other.id === `${id.replace(/:\d+$/, "")}:reply` && other.text.startsWith("바꿨어요"));
+  const margin = pro ? marginLogItem(snapshot) : null;
+  const logTime = log?.at ? Date.parse(log.at) : NaN;
+  let logPlaced = !log;
+  const placeLog = (message: { id: string; at: string }, body: ReactNode) => {
+    if (logPlaced || !Number.isFinite(logTime) || !(Date.parse(message.at) > logTime)) return body;
+    logPlaced = true;
+    return <Fragment key={`log:${message.id}`}>{log!.node}{body}</Fragment>;
+  };
   return <div className={styles.chatHistory} aria-label="지금까지의 대화">
     <div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div>
     <article className={styles.userMessage} data-coach-message="user"><p>{mode}</p></article>
-    {snapshot.coach.messages.map(message => {
+    {snapshot.coach.messages.map(message => placeLog(message, (() => {
       if (snapshot.intake.job?.kind === "design" && message.id === `${snapshot.intake.job.id}:reply` && snapshot.coach.design?.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
       // 사업 방향 요약 글(businessDesignReply)은 대화에 쌓지 않는다 — 앞 답을 고칠 때마다 한 벌씩 늘었다. 최신 방향은 아래 카드 한 곳에만 보인다.
       if (message.role === "assistant" && isDesignReplyText(message.text)) return null;
@@ -591,12 +621,15 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
           {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text.replace("\"계획서 다시 작성하기\"", "\"계획서에 반영하기\"")} /></> : <p>{bubbleAnswerText(labelled, text)}</p>}
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
+        {pro && message.role === "assistant" && <MessageMeta text={text} at={message.at} />}
         {receipt && message.id === lastUserId && !notes.length ? <p className={styles.messageStatus} data-receipt>{receipt}</p>
           : message.id === industryAnswerId && replacedIndustry.size > 0 && <p className={styles.messageStatus}>업종을 바꿨어요</p>}
         {/* 질문으로 남긴 글은 아래 'AI 답변 받기'가 따로 안내한다 — 질문 말풍선에 '입력은 저장됨'을 붙이지 않는다 */}
+        {margin?.anchor === message.id && <WorkLog items={[margin]} unit="" />}
         {notes.length > 0 && !notes.every(note => note.intent === "question") && <p className={styles.messageStatus}>{notes.some(note => note.status === "failed") ? "입력은 저장됨 · 자동 정리는 미완료" : notes.some(note => note.status === "queued" || note.status === "processing") ? "입력은 저장됨 · 자동 정리 중" : notes.some(note => note.status === "review") ? "입력은 저장됨 · 정리한 내용 확인 필요" : "입력은 저장됨"}</p>}
       </div>;
-    })}
+    })()))}
+    {!logPlaced && log!.node}
   </div>;
 }
 

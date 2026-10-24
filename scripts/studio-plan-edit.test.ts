@@ -47,6 +47,28 @@ import { PLAN_EDIT_MAX_LENGTH, planChapterComposeRequest, planChapterEditLabel, 
   assert.doesNotMatch(workspace, /registerEditHandler\(\s*["']plan-section/, "plan-section 처리기는 등록하지 않는다(대화 칸의 기존 채팅 수정을 쓴다)");
   const css = readFileSync(new URL("../app/plan/document/DocumentWorkspace.module.css", import.meta.url), "utf8");
   assert.match(css, /@media \(min-width:901px\) \{ \.chapterChatEdit \{ display:none; \} \}/, "도구 줄 단추는 좁은 화면에서만");
+
+  /* 작업실 PC 새 화면(1024px 이상, 2026-10-24 승인 시안) — 휴대폰·작업실 밖은 예전 그대로 */
+  assert.match(workspace, /const studioPc = studioHeader && wide;/, "새 화면은 머리줄이 있는 작업실 + 넓은 화면에서만");
+  assert.match(workspace, /useStudioHeaderCenter\(centerInHeader \? picker : null\)/, "장 고르기는 머리줄 가운데 알약으로");
+  assert.match(workspace, /\(isSample \|\| pane\) && !studioPc && grouped\.length > 0 && <aside/, "새 화면에는 왼쪽 목차 칸이 없다");
+  assert.match(workspace, /\{!studioPc && <div className=\{styles\.readingBar\}>/, "새 화면은 예전 도구 줄 대신 칸 위 얇은 줄");
+  assert.match(workspace, /\{studioPc && <div className=\{styles\.strip\}>/);
+  assert.match(workspace, /className=\{styles\.pager\} aria-label="문서 장 이동"/, "아래 가운데 떠 있는 장 넘기기");
+  assert.match(workspace, /!summaryMode && !continuous && !studioPc && <nav className=\{styles\.paging\}/, "예전 이전 장·다음 장 줄은 새 화면에서 뺀다");
+  assert.match(workspace, /const directInChapter = directEditable && !studioPc;/, "새 화면의 '직접 고치기'는 얇은 줄에 하나만");
+  assert.match(workspace, /previewFactChanges\(/, "대화 수정 제안을 본문에 미리 겹쳐 보인다");
+  assert.match(workspace, /const previewOn = EDIT_CHAT && studioPc && factEditable && ready && !props\.writing;/, "미리보기 읽기는 새 화면에서만");
+  assert.match(css, /\.pager \{ position:sticky; bottom:16px;/);
+  assert.match(css, /\.page\[data-studio-pc\] \.arrival \{ top:54px; \}/, "새 항목 알림은 얇은 줄(42px) 아래에 붙는다");
+  const picker = readFileSync(new URL("../app/plan/document/ChapterPicker.tsx", import.meta.url), "utf8");
+  assert.match(picker, /aria-haspopup="menu"/);
+  assert.match(picker, /role="menuitemradio"/);
+  for (const key of ["ArrowDown", "ArrowUp", "Home", "End", "Escape", "Tab"]) assert.match(picker, new RegExp(`event\\.key === "${key}"`), `장 목록 키보드: ${key}`);
+  assert.match(picker, /createPortal\(/, "목록은 body 에 띄워 아래 카드에 가리지 않는다");
+  const fact = readFileSync(new URL("../app/plan/document/FactEdit.tsx", import.meta.url), "utf8");
+  assert.match(fact, /job\?\.kind !== "edit" \|\| job\.status !== "complete" \|\| !job\.proposal\?\.length \|\| job\.proposalStatus/, "열려 있는(바꾸기·취소 전) 제안만 미리 보인다");
+  assert.match(fact, /const ranges = findFactRanges\(text, changes, before\);/, "금액은 사실 고치기와 같은 앞말 규칙으로 가린다");
 }
 
 /* 숨은 계획서 칸 — 새로 읽기 번호(refresh)·다시 보일 때 서버에서 바뀐 장(채팅 수정의 금액 바꿔 넣기 등)을 다시 받는다 */

@@ -4,7 +4,7 @@ import { announceHomepageStatus } from "../use-homepage";
 import { appendixFromDraft } from "../../../components/public-appendix-preview";
 import { apiMessage, fetchWithTimeout, isTimeoutError, koreanText, userErrorMessage } from "../../../lib/client/user-error";
 import { loadAuthSession } from "../../../lib/client/auth-session";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { LayoutTemplate, Maximize2, ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -31,12 +31,13 @@ import { homepageHref, journeyLabel, journeyNext, launchHref } from "../../../li
 import { readCoach } from "../../../lib/plan-builder/coach";
 import { NextServicesCard } from "../../../components/next-services";
 import frame from "../chat/page.module.css";
-import { Check, Rocket, Save } from "lucide-react";
+import { Check, ExternalLink, Globe, Link2, Monitor, Pencil, Rocket, RotateCw, Save, Smartphone } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { withRo } from "../../../lib/josa";
 import { useDialogFocus } from "../../../components/use-dialog-focus";
-import { useStudioDirty, useStudioHeaderActions, useStudioNav, useStudioPane, type StudioEditHandler } from "../studio/StudioContext";
+import { useStudioDirty, useStudioHeaderActions, useStudioHeaderCenter, useStudioNav, useStudioPane, type StudioEditHandler } from "../studio/StudioContext";
+import { nativePlatform } from "../../../lib/native-app";
 import { loadBrainwavePage } from "../../../components/brainwave-page";
 import { aiEditChanges, aiEditCostLine, aiEditErrorMessage, aiEditSummary, applyAiEditPatch, undoAiEditPatch } from "../../../lib/landing/ai-edit-proposal";
 import paneHeader from "../workspace/PaneHeaderActions.module.css";
@@ -45,6 +46,18 @@ import { closedForLaunch } from "../../../lib/launch-scope";
 
 /* 운영에서는 홈페이지 AI 수정 주소가 아직 닫혀 있다(lib/launch-scope) — 닫혀 있으면 대화로 고치기 권유·단추를 보이지 않는다 */
 const HOMEPAGE_CHAT_EDIT_OPEN = closedForLaunch("/api/projects/_/landing/ai-edit") === null;
+
+/* 작업실 PC 새 배치 기준 — 작업실(Studio)의 1024px 와 같다 */
+const WIDE_QUERY = "(min-width: 1024px)";
+const subscribeWide = (onChange: () => void) => {
+  const query = window.matchMedia(WIDE_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+};
+const readWide = () => window.matchMedia(WIDE_QUERY).matches;
+const serverWide = () => false;
+/* 새 배치에서 카드 본문(미리보기 + 설정)을 굴리는 상자 */
+const PRO_SCROLL_ID = "hp-studio-scroll";
 
 /*
  * 섹션을 넣고 빼고 끌어서 순서를 바꾸는 편집기.
@@ -657,7 +670,17 @@ export function HomepageScreen() {
    * 단추 묶음은 바뀔 때만 새로 만든다 — 매번 새로 만들면 작업실이 다시 그려질 때마다 등록이 되풀이된다.
    */
   const studioHeader = embedded && !!nav?.setHeaderActions;
-  const [previewView, setPreviewView] = useState<"mobile" | "pc">("mobile");
+  /*
+   * 작업실 PC(1024px 이상) 새 배치 — 오른쪽 칸 전체가 흰 카드 하나: 맨 위 공개 주소 줄 + 사이트가 카드 끝까지(시안 ③).
+   * 휴대폰 모양/컴퓨터 모양은 머리줄 가운데 알약('첫 화면 /launch/…')에서, 저장·공개하기는 머리줄 오른쪽에서 고른다.
+   * 킷 페이지(편집)와 결제 전 보기만 — 옛 블록 페이지·불러오는 중·막힘은 예전 모양 그대로.
+   */
+  const wideScreen = useSyncExternalStore(subscribeWide, readWide, serverWide);
+  const studioPro = embedded && wideScreen && phase === "ready" && !!draft && (editable ? !!draft.pageData?.brainwave : true);
+  /* 가운데 알약을 그릴 수 있는 작업실인지 — 없으면 휴대폰/컴퓨터 단추를 카드 맨 위 줄에 둔다 */
+  const hasCenter = !!nav?.setHeaderCenter;
+  /* 작업실 PC 는 컴퓨터 모양부터(시안) — 좁은 화면·예전 화면은 휴대폰 모양부터 */
+  const [previewView, setPreviewView] = useState<"mobile" | "pc">(() => (embedded && typeof window !== "undefined" && readWide() ? "pc" : "mobile"));
   const saveRef = useRef(save); saveRef.current = save;
   const publishRef = useRef(publish); publishRef.current = publish;
   const siteStatus = site?.status;
@@ -666,8 +689,44 @@ export function HomepageScreen() {
     <button type="button" role="radio" aria-checked={previewView === "mobile"} onClick={() => setPreviewView("mobile")}>휴대폰</button>
     <button type="button" role="radio" aria-checked={previewView === "pc"} onClick={() => setPreviewView("pc")}>컴퓨터</button>
   </span>;
+  /* 새 배치의 휴대폰/컴퓨터 — 글자 대신 그림 두 개(이름은 낭독기·말풍선으로) */
+  const deviceSwitch = <span className={styles.device} role="radiogroup" aria-label="미리보기 크기">
+    <button type="button" role="radio" aria-checked={previewView === "mobile"} aria-label="휴대폰 모양" title="휴대폰 모양" onClick={() => setPreviewView("mobile")}><Smartphone size={14} aria-hidden /></button>
+    <button type="button" role="radio" aria-checked={previewView === "pc"} aria-label="컴퓨터 모양" title="컴퓨터 모양" onClick={() => setPreviewView("pc")}><Monitor size={14} aria-hidden /></button>
+  </span>;
+  /*
+   * 결제 전에 [공개하기]를 누르면 — 예전 칸 안의 결제 안내 상자(19,000원)를 확인창으로 띄운다. 예시면 '내 사업으로 만들기'.
+   */
+  const openPayPrompt = async () => {
+    if (sample) {
+      if (await askConfirm({ title: "예시 홈페이지예요", message: "내 사업으로 만들면 이 페이지의 글과 사진을 바꿔 쓰고 공개할 수 있어요.", confirmLabel: "내 사업으로 만들기", cancelLabel: "닫기" })) go("/plan/chat?new=1");
+      return;
+    }
+    const ok = await askConfirm({
+      title: planPaid ? "결제하면 바로 공개할 수 있어요" : "사업계획서와 함께 열어요",
+      message: planPaid
+        ? `사진·글·버튼을 직접 고치고 인터넷에 공개하려면 결제가 필요해요. ${price.toLocaleString("ko-KR")}원.`
+        : `홈페이지는 사업계획서와 함께 열어요. 둘 다 ${price.toLocaleString("ko-KR")}원.`,
+      confirmLabel: planPaid ? "결제하고 홈페이지 고치기" : "함께 결제하기",
+      cancelLabel: "나중에 하기",
+    });
+    if (ok) go(blockedHref("pay"));
+  };
+  const payPromptRef = useRef(openPayPrompt); payPromptRef.current = openPayPrompt;
   const studioActions = useMemo(() => {
-    if (!studioHeader || !kitEditing) return null;
+    if (!studioHeader) return null;
+    /* 새 배치 — 저장(보조) · 🌐 공개하기(파랑). 결제 전이면 공개하기만 두고 누르면 결제 안내 */
+    if (studioPro) {
+      if (!editable) return <div className={paneHeader.group}>
+        <button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} onClick={() => void payPromptRef.current()}><Globe size={15} aria-hidden /><span>공개하기</span></button>
+      </div>;
+      const label = liveUpToDate ? "공개됨" : siteStatus === "published" ? "새 버전 공개" : siteStatus === "unpublished" ? "다시 공개" : "공개하기";
+      return <div className={paneHeader.group}>
+        <button type="button" className={paneHeader.btn} aria-label="저장" disabled={busy} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span className={paneHeader.label}>저장</span></button>
+        <button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Globe size={15} aria-hidden />}<span>{label}</span></button>
+      </div>;
+    }
+    if (!kitEditing) return null;
     const label = liveUpToDate ? "공개됨" : siteStatus === "published" ? "새 버전 공개" : siteStatus === "unpublished" ? "다시 공개" : "공개하기";
     return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}>
       {previewSwitch}
@@ -675,8 +734,56 @@ export function HomepageScreen() {
       {/* 처음 공개는 '홈페이지 공개하기' — 무엇을 공개하는지 머리줄에서도 읽히게(좁은 화면은 '공개하기'만) */}
       <button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />}<span>{label === "공개하기" && <span className={paneHeader.longLabel}>홈페이지 </span>}{label}</span></button>
     </div>;
-  }, [studioHeader, kitEditing, liveUpToDate, siteStatus, previewView, busy, action]); // eslint-disable-line react-hooks/exhaustive-deps -- previewSwitch 는 previewView 로만 바뀐다
+  }, [studioHeader, studioPro, editable, kitEditing, liveUpToDate, siteStatus, previewView, busy, action]); // eslint-disable-line react-hooks/exhaustive-deps -- previewSwitch 는 previewView 로만 바뀐다
   useStudioHeaderActions(studioActions);
+
+  /* 공개 주소 — 공개했으면 손님이 여는 주소, 아직이면 공개하면 생길 주소(지금 적어 둔 주소 끝부분) */
+  const livePublished = site?.status === "published";
+  const stripSlug = (livePublished ? site?.publishedSlug ?? site?.slug : draft?.slug || site?.slug) ?? "";
+  const stripPath = stripSlug ? `/launch/${stripSlug}` : "";
+  const [stripHost, setStripHost] = useState("oneulstart.com");
+  useEffect(() => { setStripHost(window.location.host); }, []);
+  const stripBadge = sample ? "예시" : livePublished ? (liveUpToDate || !editable ? "공개 중" : "공개 중 · 고친 내용 공개 전") : site?.status === "unpublished" ? "공개 멈춤" : "공개 전";
+  /* 미리보기를 맨 위(첫 화면)로 — 카드 본문과 휴대폰 틀 둘 다 */
+  const scrollPreviewTop = () => {
+    const behavior: ScrollBehavior = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    document.getElementById(PRO_SCROLL_ID)?.scrollTo({ top: 0, behavior });
+    document.querySelector<HTMLElement>(`#${PRO_SCROLL_ID} .hk-phone, #${PRO_SCROLL_ID} [data-hp-phone]`)?.scrollTo({ top: 0, behavior });
+  };
+  /* 가운데 알약 — '⟳ 첫 화면 /launch/…' + 휴대폰/컴퓨터. 바뀔 때만 새로 만든다(등록이 되풀이되지 않게) */
+  const centerNode = useMemo(() => {
+    if (!studioPro || !hasCenter) return null;
+    return <span className={styles.pill}>
+      <button type="button" className={styles.pillHome} onClick={scrollPreviewTop} title="첫 화면 맨 위부터 보기" aria-label={`첫 화면 맨 위부터 보기${stripPath ? ` (${stripPath})` : ""}`}>
+        <RotateCw size={14} aria-hidden /><span className={styles.pillLabel}>첫 화면</span>{stripPath && <span className={styles.pillPath}>{stripPath}</span>}
+      </button>
+      <span className={styles.pillRule} aria-hidden="true" />
+      {deviceSwitch}
+    </span>;
+  }, [studioPro, hasCenter, stripPath, previewView]); // eslint-disable-line react-hooks/exhaustive-deps -- deviceSwitch·scrollPreviewTop 은 previewView 로만 바뀐다
+  useStudioHeaderCenter(centerNode);
+  /* '내 주소 연결' — 아래 설정의 '내 도메인 연결' 칸을 펼쳐 데려간다(앱 안에서는 그 칸이 없어 단추도 없다) */
+  const [inApp, setInApp] = useState(false);
+  useEffect(() => { setInApp(nativePlatform() !== null); }, []);
+  const openDomain = () => {
+    const fold = document.getElementById("hk-domain");
+    if (fold instanceof HTMLDetailsElement) fold.open = true;
+    fold?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  };
+  const strip = studioPro ? <div className={styles.strip}>
+    <span className={styles.stripUrl} title={`${stripHost}${stripPath}`}><Globe size={14} aria-hidden /><b>{stripHost}</b><span>{stripPath}</span></span>
+    <span className={styles.stripBadge} data-live={livePublished || undefined}>{stripBadge}</span>
+    <span className={styles.stripGap} />
+    {/* 휴대폰/컴퓨터 — 보통은 머리줄 가운데 알약에. 알약을 못 그리거나 머리줄 가운데가 비좁은 PC(1120px 이하)면 여기에 */}
+    <span className={styles.stripDevice} data-always={hasCenter ? undefined : ""}>{deviceSwitch}</span>
+    {editable
+      ? <>
+        {!inApp && <button type="button" className={`${styles.stripBtn} ${styles.stripSoft}`} onClick={openDomain}><Link2 size={14} aria-hidden />{site?.customDomain ? site.customDomain : "내 주소 연결"}</button>}
+        <button type="button" className={styles.stripBtn} disabled={busy} onClick={() => setBuilderOpen(true)}><Pencil size={14} aria-hidden />직접 고치기</button>
+      </>
+      : <button type="button" className={`${styles.stripBtn} ${styles.stripSoft}`} onClick={() => void openPayPrompt()}>{sample ? "내 사업으로 만들기" : planPaid ? `결제하고 고치기 · ${price.toLocaleString("ko-KR")}원` : `함께 결제하기 · ${price.toLocaleString("ko-KR")}원`}</button>}
+    {livePublished && publicPath && <a className={styles.stripIcon} href={publicPath} target="_blank" rel="noreferrer" aria-label="공개한 홈페이지 새 창으로 열기" title="새 창으로 보기"><ExternalLink size={15} aria-hidden /></a>}
+  </div> : null;
 
   /*
    * 3단계: 대화로 홈페이지 고치기 — 작업실 대화 칸이 이 핸들러로 "이렇게 바꿀게요" 카드를 만들고 적용·되돌린다.
@@ -691,6 +798,8 @@ export function HomepageScreen() {
   const chatEditBusy = useRef(false);
   /* 토큰이 모자라 대화로 고치지 못했을 때 — 홈페이지 칸에 [토큰 충전하기]를 띄운다 */
   const [tokenShortage, setTokenShortage] = useState(false);
+  /* 대화 칸에 '이렇게 바꿀게요' 카드가 떠 있는 동안 바뀔 글 자리 — 미리보기에서 '바꿀 곳'으로 짚는다(적용·취소하면 지운다) */
+  const [pick, setPick] = useState<{ ids: string[]; texts: string[] } | null>(null);
   /* 바뀐 글을 미리보기에서 잠깐 반짝인다 — 글 자리를 못 찾으면(휴대폰 모양 미리보기) 미리보기 전체를 */
   const flashPreview = useCallback((ids: string[]) => {
     window.setTimeout(() => {
@@ -788,6 +897,7 @@ export function HomepageScreen() {
         if (!changes.length) throw new Error(`AI가 바꿀 글을 찾지 못했어요. 어느 부분을 어떻게 바꿀지 조금 더 구체적으로 말씀해 주세요.${cost ? ` (${cost})` : ""}`);
         const id = `homepage-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
         edits.set(id, { projectId: target, page: bw.page, before, patch: Object.fromEntries(changes.map(change => [change.id, change.after])), status: "proposed" });
+        if (mounted.current) setPick({ ids: changes.map(change => change.id), texts: changes.map(change => change.before) });
         /* 오래된 카드는 잊는다(적용한 것은 되돌리기를 위해 남긴다) */
         for (const [key, value] of edits) if (edits.size > 30 && value.status === "proposed" && key !== id) edits.delete(key);
         return { id, target: "homepage", summary: aiEditSummary(changes), changes: changes.map(({ label, before: was, after }) => ({ label, before: was, after })), cost };
@@ -806,10 +916,12 @@ export function HomepageScreen() {
         edit.appliedValues = Object.fromEntries(result.applied.map(id => [id, result.texts[id]]));
         if (mounted.current) {
           setMessage(`대화로 고친 글을 저장했어요${result.conflicts.length ? ` · 직접 고친 ${result.conflicts.length}곳은 그대로 두었어요` : ""}.${published ? " 손님 화면에는 [새 버전 공개]를 눌러야 반영돼요." : ""}`);
+          setPick(null);
           flashPreview(result.applied);
         }
       },
       dismiss(proposalId) {
+        if (mounted.current) setPick(null);
         if (edits.get(proposalId)?.status !== "applied") edits.delete(proposalId);
       },
       async undo(proposalId) {
@@ -833,7 +945,7 @@ export function HomepageScreen() {
   /* 계정이 바뀌거나 칸이 닫히면 이전 카드는 쓸 수 없다 — 등록을 다시 하는 것과는 따로(다시 등록해도 카드는 살아 있게) */
   useEffect(() => {
     const edits = chatEdits.current;
-    const unsubscribe = subscribePlanOwnerChange(() => edits.clear());
+    const unsubscribe = subscribePlanOwnerChange(() => { edits.clear(); setPick(null); });
     return () => { unsubscribe(); edits.clear(); };
   }, []);
   const tokenPayHref = screenPlanId ? `/plan/pay?planId=${encodeURIComponent(screenPlanId)}&product=tokens` : "";
@@ -850,8 +962,9 @@ export function HomepageScreen() {
   const Root = embedded ? "div" : "main";
   return (
     /* 작업실 안이면 main 대신 칸 본문(div) — 저장·공개 단추는 작업실 머리줄(넓은 화면)·칸 맨 위 줄(좁은 화면)에. 머리줄이 없는 작업실이면 예전처럼 칸 위 도구 줄(actions) */
-    <Root className={`${frame.page} ${styles.page}`} data-embedded={embedded ? "" : undefined} onClickCapture={paneLinkCapture(nav, screenPlanId)}><BusinessAppChrome title="홈페이지" backHref={back} actions={studioHeader ? undefined : headerActions}>
-    <div className={styles.frameScroll}><div className={styles.frameInner}>
+    /* 작업실 PC 새 배치(studioPro)면 바깥 스크롤 틀 대신 흰 카드 — 맨 위 공개 주소 줄(strip) + 그 아래만 굴러가는 본문 */
+    <Root className={`${frame.page} ${styles.page}`} data-embedded={embedded ? "" : undefined} data-studio-pro={studioPro ? "" : undefined} onClickCapture={paneLinkCapture(nav, screenPlanId)}><BusinessAppChrome title="홈페이지" backHref={back} actions={studioHeader ? undefined : headerActions}>
+    <div className={studioPro ? styles.proCard : styles.frameScroll}>{strip}<div className={studioPro ? styles.proScroll : styles.frameInner} id={studioPro ? PRO_SCROLL_ID : undefined}>
       {/* 작업실 좁은 화면 — 머리줄 대신 칸 맨 위에 저장·공개(넓은 화면에서는 머리줄 단추가 같은 일을 한다) */}
       {studioHeader && headerActions && <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{headerActions}</div>}
       {/* 휴대폰에서는 오른쪽 칸이 없어 대화 칸이 '홈페이지를 대화로 고치기'를 권하지 못한다 — 여기서 대화로 보낸다(결제 전·불러오는 중이면 숨김) */}
@@ -892,7 +1005,15 @@ export function HomepageScreen() {
         결제 전에는 만들어진 홈페이지를 보여만 준다.
         사기 전에 자기 사업이 어떻게 보이는지 확인할 수 있어야 한다.
       */}
-      {phase === "ready" && draft && !editable && (
+      {/* 새 배치의 결제 전 보기 — 안내 상자 없이 사이트만 카드 끝까지. 결제 안내는 [공개하기]·맨 위 줄 단추의 확인창으로 */}
+      {studioPro && draft && !editable && (
+        <div className={styles.proPreview} data-view={previewView} aria-label="홈페이지 미리보기">
+          {previewView === "mobile"
+            ? <div className={styles.proPhone} data-hp-phone=""><div inert aria-hidden="true"><LandingBlocksRenderer data={draft.pageData ?? createLandingPageData(draft, draft.templateId)} /></div></div>
+            : <div inert aria-hidden="true"><LandingBlocksRenderer data={draft.pageData ?? createLandingPageData(draft, draft.templateId)} /></div>}
+        </div>
+      )}
+      {!studioPro && phase === "ready" && draft && !editable && (
         <div className={styles.previewWrap}>
           <div className={styles.payBar}>
             <div>
@@ -1039,6 +1160,8 @@ export function HomepageScreen() {
           onSourceApplied={applySourceSite}
           nameCandidates={nameCandidates}
           previewView={studioHeader ? previewView : undefined}
+          studio={studioPro}
+          pick={pick}
           aiFill={projectId && site && !sample ? {
             running: aiFilling,
             /* 디자인을 바꾼 뒤 '이 디자인에 맞게 AI로 다시 채우기' — 바꾼 디자인은 아직 저장 전이라 먼저 저장하고 채운다 */

@@ -4,7 +4,7 @@ import { appendixFromDraft, PublicAppendixPreview } from "./public-appendix-prev
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { withRo } from "../lib/josa";
-import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, Palette, PauseCircle, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles, Undo2 } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, Palette, PauseCircle, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles, Target, Undo2 } from "lucide-react";
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
 import { landingEmailIssue, landingSlugIssue, privacyPolicyWithContact, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
 import { unansweredCount, useInquiries } from "../app/plan/inquiries/use-inquiries";
@@ -127,7 +127,13 @@ export function HomepageKitPanel({
   planId,
   nameCandidates = false,
   previewView,
+  studio = false,
+  pick,
 }: {
+  /** 작업실(PC) 배치 — 미리보기가 카드 끝까지 차고, 미리보기 위 이름·도구 줄 대신 아래 '홈페이지 설정' 칸에 도구·접는 칸을 모은다 */
+  studio?: boolean;
+  /** 대화로 고치기 제안이 떠 있는 동안 바뀔 글(글 자리 id · 지금 글) — 미리보기에서 그 글을 테두리로 짚는다 */
+  pick?: { ids: string[]; texts: string[] } | null;
   /** 계획서에 가게 이름 후보가 있고 아직 이름을 정하지 않았는지 — '채울 것'에 가게 이름을 넣는다 */
   nameCandidates?: boolean;
   /** 공개 멈추기 — 손님 주소로 안 열리게(초안·주소는 남는다) */
@@ -188,6 +194,45 @@ export function HomepageKitPanel({
    */
   const [ownView, setView] = useState<"mobile" | "pc">("mobile");
   const view = previewView ?? ownView;
+  /*
+   * '바꿀 곳' 표시 — 제안이 바꿀 글을 미리보기에서 찾아 테두리를 두르고, 컴퓨터 모양이면 그 자리에 이름표를 얹는다.
+   * 미리보기에는 글 자리 표시(data-bw-text, 편집기에서만 붙는다)가 없어 지금 글과 똑같은 글을 찾는다 — 단추 안 글이면 단추를 짚는다.
+   * 템플릿이 그린 요소에 표시용 속성만 붙인다(글·모양은 건드리지 않는다). 못 찾으면 아무것도 그리지 않는다.
+   */
+  const previewBodyRef = useRef<HTMLDivElement>(null);
+  const [pickBox, setPickBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const pickKey = pick ? JSON.stringify(pick) : "";
+  useEffect(() => {
+    const body = previewBodyRef.current;
+    setPickBox(null);
+    if (!body || !pickKey) return;
+    const { ids, texts } = JSON.parse(pickKey) as { ids: string[]; texts: string[] };
+    const norm = (value: string | null | undefined) => (value ?? "").replace(/\s+/g, " ").trim();
+    const byText = (text: string) => {
+      const want = norm(text);
+      if (!want) return [];
+      const hits = [...body.querySelectorAll<HTMLElement>("h1,h2,h3,h4,h5,h6,p,span,a,button,li,strong,em,b,small,div,label")].filter(el => norm(el.textContent) === want);
+      /* 가장 안쪽 것만 — 단추·링크 안의 글이면 그 단추를 */
+      return hits.filter(el => !hits.some(other => other !== el && el.contains(other))).slice(0, 1)
+        .map(el => { const box = el.parentElement?.closest<HTMLElement>("button, a"); return box && body.contains(box) && norm(box.textContent) === want ? box : el; });
+    };
+    const tagged = ids.flatMap(id => [...body.querySelectorAll<HTMLElement>(`[data-bw-text="${CSS.escape(id)}"]`)]);
+    const marked = tagged.length ? tagged : texts.flatMap(byText);
+    for (const el of marked) el.setAttribute("data-hk-pick", "");
+    const first = marked[0];
+    const place = () => {
+      if (!first || view === "mobile") { setPickBox(null); return; }
+      const outer = body.getBoundingClientRect();
+      const rect = first.getBoundingClientRect();
+      if (!rect.width && !rect.height) { setPickBox(null); return; }
+      setPickBox({ left: rect.left - outer.left - 4, top: rect.top - outer.top - 4, width: rect.width + 8, height: rect.height + 8 });
+    };
+    place();
+    first?.scrollIntoView?.({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    const observer = typeof ResizeObserver === "function" ? new ResizeObserver(place) : null;
+    observer?.observe(body);
+    return () => { observer?.disconnect(); for (const el of marked) el.removeAttribute("data-hk-pick"); };
+  }, [pickKey, view, draft.pageData]);
   /* AI 채우기 진행 — 보통 30초. 몇 초째인지 보여 줘야 언제까지 기다릴지 안다 */
   const [fillSeconds, setFillSeconds] = useState(0);
   useEffect(() => {
@@ -296,38 +341,235 @@ export function HomepageKitPanel({
   /* 공개 전에 비어 있으면 안 되는 것 — 법정 표기 */
   const missing = homepageMissingInfo(draft, { nameCandidates });
 
+  /*
+   * 공개 상태 줄 — 예전 화면은 맨 위에. 작업실(PC)은 카드 맨 위 줄이 주소·공개 상태를 보이므로,
+   * 공개한 뒤에만(주소 복사·공유·공개 멈추기) 미리보기 아래 설정 칸 맨 앞에 둔다.
+   */
+  const top = (
+    <header className="hk-top" data-in-chrome={inChrome || undefined}>
+      {/* 개요·문서·섹션 화면과 같은 머리 규칙 — [←] 제목 20px · 아래 13px */}
+      {!inChrome && <a href="/plan/overview" className="hk-back" aria-label="플랜 개요로">←</a>}
+      <div>
+        {!inChrome && <h3>내 사업 홈페이지</h3>}
+        {publicPath ? (
+          <p className="hk-url">
+            <span>{published ? "공개 중" : stopped ? "공개 멈춤" : "아직 비공개"}</span>
+            {unpublishedEdits ? <em className="hk-url-dirty">고친 내용은 아직 공개 전 · ‘새 버전 공개’를 누르면 손님 화면에 반영돼요</em> : null}
+            {/*
+              긴 주소(/launch/영문-이름-번호)는 글자로 늘어놓지 않는다(대표 요청 2026-10-15: URL 이 과하게 보인다).
+              공개 뒤에는 열기·주소 복사·공유 단추만, 공개 전에는 한 줄 안내만(그 주소는 아직 없어서 404).
+            */}
+            {/* 공개 뒤에는 주소를 글로도 보여 준다 — 단추만 있으니 어떤 주소인지 몰라 손님에게 말로 알려 줄 수 없었다(여정 점검 2026-10-22). 길면 말줄임 */}
+            {published
+              ? <><em className="hk-url-pending" title={publicUrl}>{publicUrl.replace(/^https?:\/\//, "")}</em><a className="hk-url-btn" href={publicPath} target="_blank" rel="noreferrer"><ExternalLink size={13} /> 홈페이지 열기</a>
+                <button type="button" className="hk-url-btn" onClick={copyUrl}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "복사됨" : "주소 복사"}</button>
+                <button type="button" className="hk-url-btn" onClick={shareUrl}><Share2 size={13} /> 공유</button>
+                {onUnpublish ? <button type="button" className="hk-url-btn hk-url-stop" disabled={busy} onClick={onUnpublish}>{action === "unpublishing" ? <Spinner /> : <PauseCircle size={13} />} 공개 멈추기</button> : null}</>
+              : <em className="hk-url-pending">{stopped ? "‘다시 공개’하면 같은 주소로 열려요" : "공개하면 주소가 생겨요"}</em>}
+          </p>
+        ) : <p className="hk-url">처음 공개하면 주소가 생겨요</p>}
+      </div>
+      {!inChrome && <div className="hk-actions">
+        <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={15} />} 저장</button>
+        <button type="button" className="hk-primary" data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={onPublish}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />} {liveUpToDate ? "공개됨" : published ? "새 버전 공개" : stopped ? "다시 공개" : "공개하기"}</button>
+      </div>}
+    </header>
+  );
+
+  /*
+   * 도구 한 줄 — '디자인'(템플릿·분위기)만. '내용 채우기'(AI로 채우기·최신 사업정보·사업 정보 적용) 줄은 뺐다
+   * (대표 요청 2026-10-15: AI 비용만 나가고, 사업 정보는 아래 칸을 고치면 바로 반영되면 된다).
+   * 작업실(PC)에서는 미리보기가 카드 끝까지 차므로 미리보기 아래 설정 칸으로 내린다.
+   */
+  const tools = (
+    <div className="hk-tools">
+      {bw && draft.pageData ? <div className="hk-tool-row" role="radiogroup" aria-label="분위기">
+        <span className="hk-tool-label"><Palette size={14} aria-hidden /> 디자인·색</span>
+        <button type="button" className="hk-tool-btn" disabled={busy} onClick={() => setPicking(true)} title={page ? `지금 디자인: ${page.ko}` : "디자인 바꾸기"}>
+          <LayoutTemplate size={14} /> 디자인 바꾸기
+        </button>
+        <span className="hk-themes">
+          {[{ id: undefined, label: "기본", note: "디자인 원래 색", tokens: null }, ...LANDING_THEMES].map((theme) => {
+            const on = (draft.pageData?.theme ?? undefined) === theme.id;
+            return <button key={theme.id ?? "base"} type="button" role="radio" aria-checked={on} className={on ? "on" : ""} disabled={busy} title={theme.note}
+              onClick={() => onChange({ ...draft, pageData: { ...draft.pageData!, theme: theme.id } })}>
+              <i aria-hidden style={theme.tokens ? { background: theme.tokens.accent } : undefined} />
+              {theme.label}
+            </button>;
+          })}
+        </span>
+      </div> : null}
+    </div>
+  );
+  /* 디자인을 바꾼 뒤 안내 · 디자인 고르기 · 접는 칸(연락 방법·사업자 정보·도메인·문의·전문가) */
+  const rest = <>
+    {/* 디자인을 바꾼 바로 뒤 — 되돌리기와 AI로 다시 채우기(채우는 단추는 여기에만 둔다: 늘 보이면 AI 비용만 나간다) */}
+    {beforeSwitch && bw && beforeSwitch.draft.pageData?.brainwave?.page !== bw.page ? (
+      <div className="hk-switch-note" role="status">
+        <span>{draft.pageData?.aiFill ? "디자인을 바꿨어요. AI가 쓴 글은 새 디자인 자리에 옮겨 담았어요. 칸 수가 달라 빠진 글은 되돌리면 그대로 있어요." : "디자인을 바꿨어요. 글은 사업 정보로 새로 채웠어요."}{beforeSwitch.carried ? ` 직접 고친 글 ${beforeSwitch.carried}곳은 새 디자인의 같은 자리로 옮겼어요.` : ""}</span>
+        <span className="hk-switch-actions">
+          <button type="button" disabled={busy} onClick={() => { onChange(beforeSwitch.draft); setBeforeSwitch(null); }}><Undo2 size={14} aria-hidden /> {withRo(beforeSwitch.from)} 되돌리기</button>
+          {aiFill ? <button type="button" disabled={busy} onClick={() => { setBeforeSwitch(null); aiFill.run(); }}><Sparkles size={14} aria-hidden /> 이 디자인에 맞게 AI로 다시 채우기</button> : null}
+        </span>
+      </div>
+    ) : null}
+    {picking && bw ? <BrainwaveTemplatePicker current={bw.page} aiFilled={Boolean(draft.pageData?.aiFill)} onPick={(id) => void pickTemplate(id)} onClose={() => setPicking(false)} /> : null}
+
+    {/* 손님 연락 방법 — 문의·예약 버튼과 휴대폰 아래 고정 버튼이 어디로 연결될지 */}
+    <Fold
+      step={studio ? 1 : 2}
+      id="hk-contact"
+      icon={<PhoneCall size={18} />}
+      title="손님 연락 방법"
+      badge={<em className={`hk-badge ${contactReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{contactReady ? contactInfo.label : formOff ? "문의 양식 — 꺼져 있음" : `${contactInfo.label} — 입력 필요`}</em>}
+      hint="문의·예약 버튼을 누르면 어디로 연결할지 정해요"
+    >
+      <div className="hk-contact-methods" role="radiogroup" aria-label="연결 방법">
+        {CONTACT_METHODS.map((method) => (
+          <label key={method} className={method === contact.method ? "on" : ""}>
+            <input type="radio" name="hk-contact-method" checked={method === contact.method} onChange={() => setContact({ method })} />
+            {CONTACT_METHOD_INFO[method].label}
+          </label>
+        ))}
+      </div>
+      <p className="hk-contact-hint">{contactInfo.hint} 모든 문의 버튼에 한 번에 적용돼요(버튼 하나만 따로 정한 것은 그대로예요).</p>
+      {formOff && <p className="hk-contact-hint" role="status">문의 양식이 꺼져 있어 손님이 문의 버튼을 눌러도 신청할 수 없어요. 아래 ‘사업자 정보’에서 문의 양식을 켜거나, 전화·카카오톡 등 다른 연결 방법을 골라 주세요.</p>}
+      <div className="hk-grid">
+        {contactInfo.field === "phone" ? (
+          <label className="wide"><span>전화번호</span><input inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder={contactInfo.placeholder} /></label>
+        ) : null}
+        {contactInfo.field && contactInfo.field !== "phone" ? (
+          <label className="wide"><span>{contactInfo.label} 주소</span>
+            <input inputMode="url" value={contact[contactInfo.field]} onChange={(e) => setContact({ [contactInfo.field as string]: e.target.value } as Partial<LandingContact>)}
+              onBlur={(e) => setContact({ [contactInfo.field as string]: normalizeWebUrl(e.target.value) } as Partial<LandingContact>)} placeholder={contactInfo.placeholder} />
+          </label>
+        ) : null}
+      </div>
+      {!contactReady && !formOff ? <p className="hk-contact-warn">{contactInfo.field === "phone" ? "전화번호" : "주소"}를 넣으면 버튼이 연결돼요. {draft.leadCaptureEnabled ? " 그 전까지는 문의 양식으로 연결돼요." : " 지금은 문의 양식도 꺼져 있어 손님이 연락할 곳이 없어요."}</p> : null}
+      <div className="hk-contact-quick">
+        <label className="hk-switch">
+          <input type="checkbox" checked={contact.quickBar} onChange={(e) => setContact({ quickBar: e.target.checked })} />
+          <span>휴대폰 화면 아래 고정 버튼 <small>{quickCount ? `손님 휴대폰에 ${quickCount}개가 떠 있어요(전화·카톡·예약 중 넣은 것).` : "전화번호·카카오톡 채널·예약 주소 중 하나를 넣으면 나타나요."}</small></span>
+        </label>
+        {contact.quickBar ? (
+          <div className="hk-grid">
+            {contactInfo.field !== "phone" ? <label><span>전화번호</span><input inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder="010-1234-5678" /></label> : null}
+            {contact.method !== "kakao" ? <label><span>카카오톡 채널</span><input inputMode="url" value={contact.kakaoUrl} onChange={(e) => setContact({ kakaoUrl: e.target.value })} onBlur={(e) => setContact({ kakaoUrl: normalizeWebUrl(e.target.value) })} placeholder="https://pf.kakao.com/_xxxxx" /></label> : null}
+            {contact.method !== "booking" ? <label><span>예약 페이지</span><input inputMode="url" value={contact.bookingUrl} onChange={(e) => setContact({ bookingUrl: e.target.value })} onBlur={(e) => setContact({ bookingUrl: normalizeWebUrl(e.target.value) })} placeholder="https://booking.naver.com/…" /></label> : null}
+          </div>
+        ) : null}
+      </div>
+      <div className="hk-fold-save">
+        <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={14} />} 연락 방법 저장</button>
+      </div>
+    </Fold>
+
+    {/* 2. 사업자 정보 — 접이식 */}
+    <Fold
+      step={studio ? 2 : 3}
+      id="hk-business"
+      icon={<ShieldCheck size={18} />}
+      title="사업자 정보"
+      badge={missing.length ? <em className="hk-badge hk-badge-warn">채울 것 {missing.length}개</em> : <em className="hk-badge hk-badge-ok">완료</em>}
+      /* 문의 양식을 켠 채 개인정보 문의처가 비면 공개가 막힌다(landingPublicationIssues) — '지금도 공개할 수 있어요'라고 하지 않는다 */
+      hint={missing.length
+        ? (draft.pageMode === "transaction" || missing.includes("개인정보 문의처")
+          ? "공개 전에 채워 주세요"
+          : "결제를 받기 전에 채워 주세요")
+        : "홈페이지 맨 아래에 나오는 사업자 정보예요"}
+    >
+      <div className="hk-grid">
+        <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(e) => update({ businessName: e.target.value })} /></label>
+        <label><span>대표자</span><input value={draft.businessRepresentative} onChange={(e) => update({ businessRepresentative: e.target.value })} placeholder="사업자등록증과 같은 이름" /></label>
+        <label><span>전화번호</span><input type="tel" inputMode="tel" autoComplete="tel" value={draft.businessPhone} onChange={(e) => update({ businessPhone: e.target.value, businessContact: e.target.value })} placeholder="010-0000-0000" /></label>
+        <label><span>이메일</span><input type="email" autoComplete="email" value={draft.businessEmail} onChange={(e) => update({ businessEmail: e.target.value })} onBlur={() => setEmailLeft(true)} placeholder="hello@mybusiness.kr" aria-invalid={emailMessage ? true : undefined} aria-describedby={emailMessage ? "hk-email-error" : undefined} />{emailMessage && <small id="hk-email-error" className="hk-slug-error" role="alert">{emailMessage}</small>}</label>
+        <label><span>사업자등록번호</span><input inputMode="numeric" value={draft.businessRegistrationNumber} onChange={(e) => update({ businessRegistrationNumber: e.target.value })} placeholder="000-00-00000" /></label>
+        <label><span>통신판매업 신고번호</span><input value={draft.mailOrderSalesNumber} onChange={(e) => update({ mailOrderSalesNumber: e.target.value })} placeholder="없으면 비워 두세요" /></label>
+        <div className="wide address-field"><label><span>사업장 주소</span><input value={draft.businessAddress} onChange={(e) => update({ businessAddress: e.target.value })} placeholder="고객 문의를 처리할 수 있는 실제 주소" /></label><AddressSearchButton onPick={(picked) => update({ businessAddress: picked.address })} /></div>
+        <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(e) => update({ openHours: e.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무" /></label>
+        <label className="wide hk-switch">
+          <input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(e) => update({ leadCaptureEnabled: e.target.checked })} />
+          <span>고객 문의 양식 받기 <small>홈페이지 아래에 이름·연락처 양식이 붙고, 들어온 문의는 메뉴의 ‘손님 문의’에 쌓여요.</small></span>
+        </label>
+        {/*
+         * 받을 연락처 — 예전 편집 화면에 있던 토글이 사라져 휴대폰 칸을 켤 방법이 없었다. 그래서 '문의자 이름·연락처 문자',
+         * 손님 '접수됐어요' 문자, [전화]·[문자] 바로 답하기가 늘 비어 있었다. 켜면 방침의 처리 항목도 함께 맞춘다
+         */}
+        {draft.leadCaptureEnabled ? <div className="wide hk-lead-fields">
+          <label className="hk-switch"><input type="checkbox" checked={draft.collectPhone} onChange={(e) => update({ collectPhone: e.target.checked, ...(e.target.checked || draft.collectEmail ? {} : { collectEmail: true }), privacyPolicy: leadPolicyItems(draft.privacyPolicy, e.target.checked, e.target.checked || draft.collectEmail ? draft.collectEmail : true) })} /><span>휴대폰 번호 받기 <small>전화·문자로 바로 연락할 수 있어요(추천)</small></span></label>
+          <label className="hk-switch"><input type="checkbox" checked={draft.collectEmail} onChange={(e) => update({ collectEmail: e.target.checked, ...(e.target.checked || draft.collectPhone ? {} : { collectPhone: true }), privacyPolicy: leadPolicyItems(draft.privacyPolicy, e.target.checked || draft.collectPhone ? draft.collectPhone : true, e.target.checked) })} /><span>이메일 받기</span></label>
+        </div> : null}
+        <label className="wide hk-switch">
+          <input type="checkbox" checked={draft.analyticsEnabled} onChange={(e) => update({ analyticsEnabled: e.target.checked })} />
+          <span>방문 수 세기 <small>동의한 손님만 세요. 주간 리포트의 '방문'과 '버튼 누름'이 여기서 나와요(끄면 0).</small></span>
+        </label>
+        {draft.leadCaptureEnabled ? <label><span>개인정보 문의처</span><input value={draft.privacyContact} onChange={(e) => update({ privacyContact: e.target.value, privacyPolicy: privacyPolicyWithContact(draft.privacyPolicy, e.target.value) })} placeholder="이메일 또는 전화번호" /></label> : null}
+        <label><span>문의 버튼 문구</span><input value={draft.ctaLabel} maxLength={40} onChange={(e) => update({ ctaLabel: e.target.value })} /></label>
+        <div className="wide hk-slug-field">
+          <label htmlFor="hk-slug"><span>무료 주소 끝부분</span></label>
+          <div className="slug-input" data-invalid={slugMessage ? "" : undefined}><em>/launch/</em><input id="hk-slug" ref={slugRef} value={draft.slug} maxLength={60} autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="url"
+            aria-invalid={slugMessage ? true : undefined} aria-describedby="hk-slug-help"
+            onChange={(e) => update({ slug: e.target.value.toLowerCase() })} onBlur={() => setSlugLeft(true)} /></div>
+          <small id="hk-slug-help" className={slugMessage ? "hk-slug-error" : "hk-slug-hint"} role={slugMessage ? "alert" : undefined}>
+            {slugMessage || (liveSlug && liveSlug !== draft.slug
+              ? `지금 손님 주소는 /launch/${liveSlug} 예요. ‘새 버전 공개’를 누르면 주소가 바뀌고 예전 주소로는 열리지 않아요.`
+              : "영어 소문자·숫자·- 로 3글자 이상 적어 주세요. 예: dongne-bbang")}
+          </small>
+        </div>
+      </div>
+      {/* 이 칸에서 고친 것을 바로 저장 — 위로 스크롤해 전체 저장을 찾지 않게 */}
+      <div className="hk-fold-save">
+        <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={14} />} 사업자 정보 저장</button>
+      </div>
+    </Fold>
+
+    {/* 3. 도메인 — 접이식. 카드 안의 자체 제목은 CSS 로 숨긴다(요약 줄과 중복) */}
+    {!inApp && <Fold
+      step={studio ? 3 : 4}
+      id="hk-domain"
+      icon={<Globe2 size={18} />}
+      title="내 도메인 연결"
+      badge={site?.customDomain ? <em className={`hk-badge ${domainReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{domainReady ? site.customDomain : `${site.customDomain} · 연결 확인 중`}</em> : null}
+      hint="www.mybrand.com 같은 내 주소 붙이기"
+    >
+      <LandingDomainConnector
+        onReadyChange={setDomainReady}
+        projectId={projectId}
+        initialCustomDomain={site?.customDomain ?? ""}
+        published={Boolean(published)}
+        demo={false}
+        onSiteUpdated={onSiteUpdated}
+      />
+    </Fold>}
+
+    {/* 5. 문의 알림 번호 — 문의 목록은 '내 문의' 화면에 */}
+    <Fold
+      step={(inApp ? 4 : 5) - (studio ? 1 : 0)}
+      id="hk-leads"
+      icon={<Inbox size={18} />}
+      title="문의 알림 · 손님 문의"
+      badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건{openLeads ? ` · 답할 것 ${openLeads}건` : ""}</em>}
+      hint={draft.leadCaptureEnabled ? "새 문의를 문자로 받을 번호를 정해요" : "문의 양식이 꺼져 있어요"}
+    >
+      <HomepageAlertSettings projectId={projectId} suggestedPhone={draft.businessPhone} />
+      {/* 문의 목록은 왼쪽 메뉴 '내 문의'에서 메신저처럼 본다(소유자 요청 2026-10-07). 여기서는 알림 번호만 정한다 */}
+      <a className="hk-inquiries-link" href="/plan/inquiries">
+        <span><strong>손님 문의에서 보기</strong><small>{leadsError ? "문의 수를 불러오지 못했어요 · 손님 문의에서 다시 확인해 주세요" : leads === null ? "문의를 확인하고 있어요" : leads.length ? `받은 문의 ${leads.length}건${openLeads ? ` · 답할 것 ${openLeads}건` : ""}` : "아직 들어온 문의가 없어요"}</small></span>
+        <ChevronDown size={18} aria-hidden style={{ transform: "rotate(-90deg)" }} />
+      </a>
+    </Fold>
+
+    {/* 6. 전문가 상담 — 담당자가 직접 고쳐 주는 개별 상담. 신청하면 운영자에게 문자가 간다 */}
+    <Fold step={(inApp ? 5 : 6) - (studio ? 1 : 0)} id="hk-expert" icon={<PhoneCall size={18} />} title="전문가 상담" hint="담당자가 사진·문구·디자인을 직접 다듬어 드려요">
+      <HomepageExpertConsult planId={planId ?? null} />
+    </Fold>
+  </>;
+
   return (
-    <section className="hk" aria-busy={busy}>
+    <section className="hk" aria-busy={busy} data-studio={studio || undefined}>
       {/* AI 채우기·저장·공개 중에는 입력 칸을 잠근다 — 예전엔 입력이 받아지는 것처럼 보였지만 고친 글이 조용히 버려졌다 */}
       <fieldset className="hk-lock" disabled={busy}>
-      <header className="hk-top" data-in-chrome={inChrome || undefined}>
-        {/* 개요·문서·섹션 화면과 같은 머리 규칙 — [←] 제목 20px · 아래 13px */}
-        {!inChrome && <a href="/plan/overview" className="hk-back" aria-label="플랜 개요로">←</a>}
-        <div>
-          {!inChrome && <h3>내 사업 홈페이지</h3>}
-          {publicPath ? (
-            <p className="hk-url">
-              <span>{published ? "공개 중" : stopped ? "공개 멈춤" : "아직 비공개"}</span>
-              {unpublishedEdits ? <em className="hk-url-dirty">고친 내용은 아직 공개 전 · ‘새 버전 공개’를 누르면 손님 화면에 반영돼요</em> : null}
-              {/*
-                긴 주소(/launch/영문-이름-번호)는 글자로 늘어놓지 않는다(대표 요청 2026-10-15: URL 이 과하게 보인다).
-                공개 뒤에는 열기·주소 복사·공유 단추만, 공개 전에는 한 줄 안내만(그 주소는 아직 없어서 404).
-              */}
-              {/* 공개 뒤에는 주소를 글로도 보여 준다 — 단추만 있으니 어떤 주소인지 몰라 손님에게 말로 알려 줄 수 없었다(여정 점검 2026-10-22). 길면 말줄임 */}
-              {published
-                ? <><em className="hk-url-pending" title={publicUrl}>{publicUrl.replace(/^https?:\/\//, "")}</em><a className="hk-url-btn" href={publicPath} target="_blank" rel="noreferrer"><ExternalLink size={13} /> 홈페이지 열기</a>
-                  <button type="button" className="hk-url-btn" onClick={copyUrl}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "복사됨" : "주소 복사"}</button>
-                  <button type="button" className="hk-url-btn" onClick={shareUrl}><Share2 size={13} /> 공유</button>
-                  {onUnpublish ? <button type="button" className="hk-url-btn hk-url-stop" disabled={busy} onClick={onUnpublish}>{action === "unpublishing" ? <Spinner /> : <PauseCircle size={13} />} 공개 멈추기</button> : null}</>
-                : <em className="hk-url-pending">{stopped ? "‘다시 공개’하면 같은 주소로 열려요" : "공개하면 주소가 생겨요"}</em>}
-            </p>
-          ) : <p className="hk-url">처음 공개하면 주소가 생겨요</p>}
-        </div>
-        {!inChrome && <div className="hk-actions">
-          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={15} />} 저장</button>
-          <button type="button" className="hk-primary" data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={onPublish}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />} {liveUpToDate ? "공개됨" : published ? "새 버전 공개" : stopped ? "다시 공개" : "공개하기"}</button>
-        </div>}
-      </header>
+      {!studio && top}
       {message ? <p className="hk-msg">{message}</p> : null}
       {/* 낭독기 알림 — 늘 붙어 있는 칸에 넣어야 빠짐없이 읽힌다(내용과 같이 생기는 칸은 놓칠 때가 있다). 실패·충돌은 alert로 */}
       <span style={SR_ONLY} role="status" aria-live="polite">{messageAlert ? "" : message}</span>
@@ -339,217 +581,44 @@ export function HomepageKitPanel({
         템플릿·에디터 버튼은 목업 바 오른쪽의 작은 버튼으로 — 예전의 큰 버튼
         두 개는 미리보기보다 목소리가 컸다(사용자 지적).
       */}
-      <p className="hk-step-head"><b className="hk-step-no" aria-hidden="true">1</b> 미리보기·고치기</p>
+      {!studio && <p className="hk-step-head"><b className="hk-step-no" aria-hidden="true">1</b> 미리보기·고치기</p>}
       <div className="hk-preview hk-mock" id="hk-preview">
-        <div className="hk-mock-bar">
+        {!studio && <div className="hk-mock-bar">
           <span className="hk-mock-title">미리보기</span>
           <span className="hk-mock-actions">
             <button type="button" className="hk-mock-edit" disabled={busy} onClick={onOpenEditor}>
               <Pencil size={14} /> 홈페이지 고치기
             </button>
           </span>
-        </div>
-        {/*
-          도구 한 줄 — '디자인'(템플릿·분위기)만. '내용 채우기'(AI로 채우기·최신 사업정보·사업 정보 적용) 줄은 뺐다
-          (대표 요청 2026-10-15: AI 비용만 나가고, 사업 정보는 아래 칸을 고치면 바로 반영되면 된다).
-        */}
-        <div className="hk-tools">
-          {bw && draft.pageData ? <div className="hk-tool-row" role="radiogroup" aria-label="분위기">
-            <span className="hk-tool-label"><Palette size={14} aria-hidden /> 디자인·색</span>
-            <button type="button" className="hk-tool-btn" disabled={busy} onClick={() => setPicking(true)} title={page ? `지금 디자인: ${page.ko}` : "디자인 바꾸기"}>
-              <LayoutTemplate size={14} /> 디자인 바꾸기
-            </button>
-            <span className="hk-themes">
-              {[{ id: undefined, label: "기본", note: "디자인 원래 색", tokens: null }, ...LANDING_THEMES].map((theme) => {
-                const on = (draft.pageData?.theme ?? undefined) === theme.id;
-                return <button key={theme.id ?? "base"} type="button" role="radio" aria-checked={on} className={on ? "on" : ""} disabled={busy} title={theme.note}
-                  onClick={() => onChange({ ...draft, pageData: { ...draft.pageData!, theme: theme.id } })}>
-                  <i aria-hidden style={theme.tokens ? { background: theme.tokens.accent } : undefined} />
-                  {theme.label}
-                </button>;
-              })}
-            </span>
-          </div> : null}
-        </div>
-        <div className="hk-preview-hint">
+        </div>}
+        {!studio && tools}
+        {!studio && <div className="hk-preview-hint">
           <span><Pencil size={14} aria-hidden /> 미리보기를 누르면 고칠 수 있어요</span>
           {previewView ? null : <span className="hk-view-switch" role="radiogroup" aria-label="미리보기 모양">
             <button type="button" role="radio" aria-checked={view === "mobile"} className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")}>휴대폰</button>
             <button type="button" role="radio" aria-checked={view === "pc"} className={view === "pc" ? "on" : ""} onClick={() => setView("pc")}>컴퓨터</button>
           </span>}
-        </div>
+        </div>}
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
-        <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} aria-busy={aiFill?.running || undefined} className={`hk-preview-body ${view === "mobile" ? "hk-preview-phone" : ""}`} onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="홈페이지 고치기">
+        <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} aria-busy={aiFill?.running || undefined} ref={previewBodyRef} className={`hk-preview-body ${view === "mobile" ? "hk-preview-phone" : ""}`} onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="홈페이지 고치기">
           {/* 미리보기 속 단추·입력칸은 진짜가 아니다 — inert로 Tab·낭독기에서 빼고, 바깥 '홈페이지 고치기' 단추 하나만 남긴다(휴대폰 틀은 스크롤되게 틀 안쪽에만) */}
           {view === "mobile"
             ? <div className="hk-phone"><div inert aria-hidden="true"><LandingBlocksRenderer data={draft.pageData!} /><PublicAppendixPreview appendix={appendixFromDraft(draft)} /></div></div>
             : <div inert aria-hidden="true"><LandingBlocksRenderer data={draft.pageData!} /><PublicAppendixPreview appendix={appendixFromDraft(draft)} /></div>}
           {/* AI가 채우는 동안 — 다른 화면과 같은 로딩 모양으로, 몇 초째인지 함께 */}
+          {/* 대화로 고칠 곳 — 제안 카드가 떠 있는 동안 그 글 위에 '바꿀 곳' 표시(컴퓨터 모양에서만 이름표, 휴대폰 틀은 테두리만) */}
+          {pickBox ? <span className="hk-target" aria-hidden="true" style={{ left: pickBox.left, top: pickBox.top, width: pickBox.width, height: pickBox.height }}><span className="hk-target-label"><Target size={12} /> 바꿀 곳</span></span> : null}
           {aiFill?.running ? <div className="hk-preview-loading">
             <PlanLoading note={`AI가 계획서를 읽고 홈페이지를 채우고 있어요. 보통 30초쯤 걸려요 · ${fillSeconds}초`} />
           </div> : null}
         </div>
       </div>
-      {/* 디자인을 바꾼 바로 뒤 — 되돌리기와 AI로 다시 채우기(채우는 단추는 여기에만 둔다: 늘 보이면 AI 비용만 나간다) */}
-      {beforeSwitch && bw && beforeSwitch.draft.pageData?.brainwave?.page !== bw.page ? (
-        <div className="hk-switch-note" role="status">
-          <span>{draft.pageData?.aiFill ? "디자인을 바꿨어요. AI가 쓴 글은 새 디자인 자리에 옮겨 담았어요. 칸 수가 달라 빠진 글은 되돌리면 그대로 있어요." : "디자인을 바꿨어요. 글은 사업 정보로 새로 채웠어요."}{beforeSwitch.carried ? ` 직접 고친 글 ${beforeSwitch.carried}곳은 새 디자인의 같은 자리로 옮겼어요.` : ""}</span>
-          <span className="hk-switch-actions">
-            <button type="button" disabled={busy} onClick={() => { onChange(beforeSwitch.draft); setBeforeSwitch(null); }}><Undo2 size={14} aria-hidden /> {withRo(beforeSwitch.from)} 되돌리기</button>
-            {aiFill ? <button type="button" disabled={busy} onClick={() => { setBeforeSwitch(null); aiFill.run(); }}><Sparkles size={14} aria-hidden /> 이 디자인에 맞게 AI로 다시 채우기</button> : null}
-          </span>
-        </div>
-      ) : null}
-      {picking && bw ? <BrainwaveTemplatePicker current={bw.page} aiFilled={Boolean(draft.pageData?.aiFill)} onPick={(id) => void pickTemplate(id)} onClose={() => setPicking(false)} /> : null}
-
-      {/* 손님 연락 방법 — 문의·예약 버튼과 휴대폰 아래 고정 버튼이 어디로 연결될지 */}
-      <Fold
-        step={2}
-        id="hk-contact"
-        icon={<PhoneCall size={18} />}
-        title="손님 연락 방법"
-        badge={<em className={`hk-badge ${contactReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{contactReady ? contactInfo.label : formOff ? "문의 양식 — 꺼져 있음" : `${contactInfo.label} — 입력 필요`}</em>}
-        hint="문의·예약 버튼을 누르면 어디로 연결할지 정해요"
-      >
-        <div className="hk-contact-methods" role="radiogroup" aria-label="연결 방법">
-          {CONTACT_METHODS.map((method) => (
-            <label key={method} className={method === contact.method ? "on" : ""}>
-              <input type="radio" name="hk-contact-method" checked={method === contact.method} onChange={() => setContact({ method })} />
-              {CONTACT_METHOD_INFO[method].label}
-            </label>
-          ))}
-        </div>
-        <p className="hk-contact-hint">{contactInfo.hint} 모든 문의 버튼에 한 번에 적용돼요(버튼 하나만 따로 정한 것은 그대로예요).</p>
-        {formOff && <p className="hk-contact-hint" role="status">문의 양식이 꺼져 있어 손님이 문의 버튼을 눌러도 신청할 수 없어요. 아래 ‘사업자 정보’에서 문의 양식을 켜거나, 전화·카카오톡 등 다른 연결 방법을 골라 주세요.</p>}
-        <div className="hk-grid">
-          {contactInfo.field === "phone" ? (
-            <label className="wide"><span>전화번호</span><input inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder={contactInfo.placeholder} /></label>
-          ) : null}
-          {contactInfo.field && contactInfo.field !== "phone" ? (
-            <label className="wide"><span>{contactInfo.label} 주소</span>
-              <input inputMode="url" value={contact[contactInfo.field]} onChange={(e) => setContact({ [contactInfo.field as string]: e.target.value } as Partial<LandingContact>)}
-                onBlur={(e) => setContact({ [contactInfo.field as string]: normalizeWebUrl(e.target.value) } as Partial<LandingContact>)} placeholder={contactInfo.placeholder} />
-            </label>
-          ) : null}
-        </div>
-        {!contactReady && !formOff ? <p className="hk-contact-warn">{contactInfo.field === "phone" ? "전화번호" : "주소"}를 넣으면 버튼이 연결돼요. {draft.leadCaptureEnabled ? " 그 전까지는 문의 양식으로 연결돼요." : " 지금은 문의 양식도 꺼져 있어 손님이 연락할 곳이 없어요."}</p> : null}
-        <div className="hk-contact-quick">
-          <label className="hk-switch">
-            <input type="checkbox" checked={contact.quickBar} onChange={(e) => setContact({ quickBar: e.target.checked })} />
-            <span>휴대폰 화면 아래 고정 버튼 <small>{quickCount ? `손님 휴대폰에 ${quickCount}개가 떠 있어요(전화·카톡·예약 중 넣은 것).` : "전화번호·카카오톡 채널·예약 주소 중 하나를 넣으면 나타나요."}</small></span>
-          </label>
-          {contact.quickBar ? (
-            <div className="hk-grid">
-              {contactInfo.field !== "phone" ? <label><span>전화번호</span><input inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder="010-1234-5678" /></label> : null}
-              {contact.method !== "kakao" ? <label><span>카카오톡 채널</span><input inputMode="url" value={contact.kakaoUrl} onChange={(e) => setContact({ kakaoUrl: e.target.value })} onBlur={(e) => setContact({ kakaoUrl: normalizeWebUrl(e.target.value) })} placeholder="https://pf.kakao.com/_xxxxx" /></label> : null}
-              {contact.method !== "booking" ? <label><span>예약 페이지</span><input inputMode="url" value={contact.bookingUrl} onChange={(e) => setContact({ bookingUrl: e.target.value })} onBlur={(e) => setContact({ bookingUrl: normalizeWebUrl(e.target.value) })} placeholder="https://booking.naver.com/…" /></label> : null}
-            </div>
-          ) : null}
-        </div>
-        <div className="hk-fold-save">
-          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={14} />} 연락 방법 저장</button>
-        </div>
-      </Fold>
-
-      {/* 2. 사업자 정보 — 접이식 */}
-      <Fold
-        step={3}
-        id="hk-business"
-        icon={<ShieldCheck size={18} />}
-        title="사업자 정보"
-        badge={missing.length ? <em className="hk-badge hk-badge-warn">채울 것 {missing.length}개</em> : <em className="hk-badge hk-badge-ok">완료</em>}
-        /* 문의 양식을 켠 채 개인정보 문의처가 비면 공개가 막힌다(landingPublicationIssues) — '지금도 공개할 수 있어요'라고 하지 않는다 */
-        hint={missing.length
-          ? (draft.pageMode === "transaction" || missing.includes("개인정보 문의처")
-            ? "공개 전에 채워 주세요"
-            : "결제를 받기 전에 채워 주세요")
-          : "홈페이지 맨 아래에 나오는 사업자 정보예요"}
-      >
-        <div className="hk-grid">
-          <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(e) => update({ businessName: e.target.value })} /></label>
-          <label><span>대표자</span><input value={draft.businessRepresentative} onChange={(e) => update({ businessRepresentative: e.target.value })} placeholder="사업자등록증과 같은 이름" /></label>
-          <label><span>전화번호</span><input type="tel" inputMode="tel" autoComplete="tel" value={draft.businessPhone} onChange={(e) => update({ businessPhone: e.target.value, businessContact: e.target.value })} placeholder="010-0000-0000" /></label>
-          <label><span>이메일</span><input type="email" autoComplete="email" value={draft.businessEmail} onChange={(e) => update({ businessEmail: e.target.value })} onBlur={() => setEmailLeft(true)} placeholder="hello@mybusiness.kr" aria-invalid={emailMessage ? true : undefined} aria-describedby={emailMessage ? "hk-email-error" : undefined} />{emailMessage && <small id="hk-email-error" className="hk-slug-error" role="alert">{emailMessage}</small>}</label>
-          <label><span>사업자등록번호</span><input inputMode="numeric" value={draft.businessRegistrationNumber} onChange={(e) => update({ businessRegistrationNumber: e.target.value })} placeholder="000-00-00000" /></label>
-          <label><span>통신판매업 신고번호</span><input value={draft.mailOrderSalesNumber} onChange={(e) => update({ mailOrderSalesNumber: e.target.value })} placeholder="없으면 비워 두세요" /></label>
-          <div className="wide address-field"><label><span>사업장 주소</span><input value={draft.businessAddress} onChange={(e) => update({ businessAddress: e.target.value })} placeholder="고객 문의를 처리할 수 있는 실제 주소" /></label><AddressSearchButton onPick={(picked) => update({ businessAddress: picked.address })} /></div>
-          <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(e) => update({ openHours: e.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무" /></label>
-          <label className="wide hk-switch">
-            <input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(e) => update({ leadCaptureEnabled: e.target.checked })} />
-            <span>고객 문의 양식 받기 <small>홈페이지 아래에 이름·연락처 양식이 붙고, 들어온 문의는 메뉴의 ‘손님 문의’에 쌓여요.</small></span>
-          </label>
-          {/*
-           * 받을 연락처 — 예전 편집 화면에 있던 토글이 사라져 휴대폰 칸을 켤 방법이 없었다. 그래서 '문의자 이름·연락처 문자',
-           * 손님 '접수됐어요' 문자, [전화]·[문자] 바로 답하기가 늘 비어 있었다. 켜면 방침의 처리 항목도 함께 맞춘다
-           */}
-          {draft.leadCaptureEnabled ? <div className="wide hk-lead-fields">
-            <label className="hk-switch"><input type="checkbox" checked={draft.collectPhone} onChange={(e) => update({ collectPhone: e.target.checked, ...(e.target.checked || draft.collectEmail ? {} : { collectEmail: true }), privacyPolicy: leadPolicyItems(draft.privacyPolicy, e.target.checked, e.target.checked || draft.collectEmail ? draft.collectEmail : true) })} /><span>휴대폰 번호 받기 <small>전화·문자로 바로 연락할 수 있어요(추천)</small></span></label>
-            <label className="hk-switch"><input type="checkbox" checked={draft.collectEmail} onChange={(e) => update({ collectEmail: e.target.checked, ...(e.target.checked || draft.collectPhone ? {} : { collectPhone: true }), privacyPolicy: leadPolicyItems(draft.privacyPolicy, e.target.checked || draft.collectPhone ? draft.collectPhone : true, e.target.checked) })} /><span>이메일 받기</span></label>
-          </div> : null}
-          <label className="wide hk-switch">
-            <input type="checkbox" checked={draft.analyticsEnabled} onChange={(e) => update({ analyticsEnabled: e.target.checked })} />
-            <span>방문 수 세기 <small>동의한 손님만 세요. 주간 리포트의 '방문'과 '버튼 누름'이 여기서 나와요(끄면 0).</small></span>
-          </label>
-          {draft.leadCaptureEnabled ? <label><span>개인정보 문의처</span><input value={draft.privacyContact} onChange={(e) => update({ privacyContact: e.target.value, privacyPolicy: privacyPolicyWithContact(draft.privacyPolicy, e.target.value) })} placeholder="이메일 또는 전화번호" /></label> : null}
-          <label><span>문의 버튼 문구</span><input value={draft.ctaLabel} maxLength={40} onChange={(e) => update({ ctaLabel: e.target.value })} /></label>
-          <div className="wide hk-slug-field">
-            <label htmlFor="hk-slug"><span>무료 주소 끝부분</span></label>
-            <div className="slug-input" data-invalid={slugMessage ? "" : undefined}><em>/launch/</em><input id="hk-slug" ref={slugRef} value={draft.slug} maxLength={60} autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="url"
-              aria-invalid={slugMessage ? true : undefined} aria-describedby="hk-slug-help"
-              onChange={(e) => update({ slug: e.target.value.toLowerCase() })} onBlur={() => setSlugLeft(true)} /></div>
-            <small id="hk-slug-help" className={slugMessage ? "hk-slug-error" : "hk-slug-hint"} role={slugMessage ? "alert" : undefined}>
-              {slugMessage || (liveSlug && liveSlug !== draft.slug
-                ? `지금 손님 주소는 /launch/${liveSlug} 예요. ‘새 버전 공개’를 누르면 주소가 바뀌고 예전 주소로는 열리지 않아요.`
-                : "영어 소문자·숫자·- 로 3글자 이상 적어 주세요. 예: dongne-bbang")}
-            </small>
-          </div>
-        </div>
-        {/* 이 칸에서 고친 것을 바로 저장 — 위로 스크롤해 전체 저장을 찾지 않게 */}
-        <div className="hk-fold-save">
-          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={14} />} 사업자 정보 저장</button>
-        </div>
-      </Fold>
-
-      {/* 3. 도메인 — 접이식. 카드 안의 자체 제목은 CSS 로 숨긴다(요약 줄과 중복) */}
-      {!inApp && <Fold
-        step={4}
-        id="hk-domain"
-        icon={<Globe2 size={18} />}
-        title="내 도메인 연결"
-        badge={site?.customDomain ? <em className={`hk-badge ${domainReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{domainReady ? site.customDomain : `${site.customDomain} · 연결 확인 중`}</em> : null}
-        hint="www.mybrand.com 같은 내 주소 붙이기"
-      >
-        <LandingDomainConnector
-          onReadyChange={setDomainReady}
-          projectId={projectId}
-          initialCustomDomain={site?.customDomain ?? ""}
-          published={Boolean(published)}
-          demo={false}
-          onSiteUpdated={onSiteUpdated}
-        />
-      </Fold>}
-
-      {/* 5. 문의 알림 번호 — 문의 목록은 '내 문의' 화면에 */}
-      <Fold
-        step={inApp ? 4 : 5}
-        id="hk-leads"
-        icon={<Inbox size={18} />}
-        title="문의 알림 · 손님 문의"
-        badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건{openLeads ? ` · 답할 것 ${openLeads}건` : ""}</em>}
-        hint={draft.leadCaptureEnabled ? "새 문의를 문자로 받을 번호를 정해요" : "문의 양식이 꺼져 있어요"}
-      >
-        <HomepageAlertSettings projectId={projectId} suggestedPhone={draft.businessPhone} />
-        {/* 문의 목록은 왼쪽 메뉴 '내 문의'에서 메신저처럼 본다(소유자 요청 2026-10-07). 여기서는 알림 번호만 정한다 */}
-        <a className="hk-inquiries-link" href="/plan/inquiries">
-          <span><strong>손님 문의에서 보기</strong><small>{leadsError ? "문의 수를 불러오지 못했어요 · 손님 문의에서 다시 확인해 주세요" : leads === null ? "문의를 확인하고 있어요" : leads.length ? `받은 문의 ${leads.length}건${openLeads ? ` · 답할 것 ${openLeads}건` : ""}` : "아직 들어온 문의가 없어요"}</small></span>
-          <ChevronDown size={18} aria-hidden style={{ transform: "rotate(-90deg)" }} />
-        </a>
-      </Fold>
-
-      {/* 6. 전문가 상담 — 담당자가 직접 고쳐 주는 개별 상담. 신청하면 운영자에게 문자가 간다 */}
-      <Fold step={inApp ? 5 : 6} id="hk-expert" icon={<PhoneCall size={18} />} title="전문가 상담" hint="담당자가 사진·문구·디자인을 직접 다듬어 드려요">
-        <HomepageExpertConsult planId={planId ?? null} />
-      </Fold>
+      {studio ? <div className="hk-studio-settings">
+        <p className="hk-studio-settings-head">홈페이지 설정</p>
+        {published || stopped ? top : null}
+        {tools}
+        {rest}
+      </div> : rest}
       </fieldset>
     </section>
   );

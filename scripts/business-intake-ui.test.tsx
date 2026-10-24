@@ -958,6 +958,79 @@ async function main() {
     assert.match(queued, /대기 중 · 다 쓰면 반영할게요/);
     assert.match(queued, />취소<\/button>/);
 
+    // 작업실 PC(새 모양, 2026-10-24) — 제안 카드: 군데 수 · 지금 → 바꿀 글 화살표 · [바꾸기] [취소] · 되돌릴 수 있다는 안내. 휴대폰은 예전 [그대로 두기]
+    const proCard = renderToStaticMarkup(<StudioEditTurns pro turns={[{ ...base, status: "proposed", proposal }]} onApply={noop} onDismiss={noop} onUndo={noop} onRetry={noop} />);
+    assert.match(proCard, new RegExp(`${proposal.changes.length}군데`));
+    assert.match(proCard, />취소<\/button>/);
+    assert.ok(!proCard.includes("그대로 두기"));
+    assert.match(proCard, /바꾼 뒤에도 되돌릴 수 있어요/);
+    assert.ok(!renderToStaticMarkup(<StudioEditTurns pro turns={[{ ...base, status: "proposed", proposal, archived: true }]} onApply={noop} onDismiss={noop} onUndo={noop} onRetry={noop} />).includes("되돌릴 수 있어요"), "단추 없는 기록 카드에는 되돌리기 안내도 없다");
+    assert.ok(!proposed.includes("군데") && !proposed.includes("되돌릴 수 있어요"), "휴대폰 카드는 예전 모양 그대로");
+    // 다음 요청 줄 — 입력창 바로 위 한 줄(연필은 입력창으로 되돌리기, ✕ 는 취소)
+    const dockQueue = renderToStaticMarkup(<QueuedStudioRequests dock items={[item("q1", "가격을 2만원으로", { label: "3장 시장과 고객 고치기" })]} generating onCancel={noop} onEdit={noop} />);
+    assert.match(dockQueue, /다음 요청/);
+    assert.match(dockQueue, /\[3장 시장과 고객\] 가격을 2만원으로/);
+    assert.match(dockQueue, /기다리는 요청 고치기/);
+    assert.match(dockQueue, /기다리는 요청 취소/);
+    assert.match(dockQueue, /대기 중 · 다 쓰면 반영할게요/);
+    assert.ok(!dockQueue.includes("data-studio-item"), "입력창 위 줄은 대화 끝 따라가기 대상이 아니다");
+
+    // 작업 기록 — 이미 있는 데이터에서만, 걸린 시간은 시작·끝 시각이 다 있을 때만
+    const workLog = await import("../app/plan/chat/intake-ui/work-log");
+    const { WorkLog, MessageMeta } = await import("../app/plan/chat/intake-ui/WorkLog");
+    assert.equal(workLog.formatDuration(36_000), "36초");
+    assert.equal(workLog.formatDuration(192_000), "3분 12초");
+    assert.equal(workLog.formatDuration(120_000), "2분");
+    assert.equal(workLog.formatDuration(400), null, "1초 미만은 붙이지 않는다");
+    assert.equal(workLog.formatDuration(3 * 60 * 60 * 1000), null, "시각이 어긋나 보이면 붙이지 않는다");
+    assert.equal(workLog.clockLabel("not-a-date"), "");
+    const sections = [{ key: "a", title: "사업 개요", done: true }, { key: "b", title: "고객", done: true }, { key: "c", title: "가격", done: false }];
+    assert.equal(workLog.planLogItem({ total: 3, done: 2, startedAt: at, sections }), null, "다 쓰기 전에는 기록하지 않는다(진행 카드가 맡는다)");
+    const doneSections = sections.map(section => ({ ...section, done: true }));
+    const planItem = workLog.planLogItem({ total: 3, done: 3, startedAt: at, sections: doneSections }, Date.parse(at) + 192_000);
+    assert.equal(planItem?.text, "계획서 3개 항목을 썼어요");
+    assert.equal(planItem?.sub, "3분 12초");
+    assert.deepEqual(planItem?.detail, ["사업 개요", "고객", "가격"]);
+    assert.equal(workLog.planLogItem({ total: 3, done: 3, startedAt: at, sections: doneSections })?.sub, undefined, "끝나는 걸 못 봤으면 시간을 붙이지 않는다");
+    assert.equal(workLog.editFoundItem(0), null);
+    assert.equal(workLog.editFoundItem(3)?.text, "바꿀 곳 3군데를 찾았어요");
+    const base0 = fixture();
+    assert.equal(workLog.designLogItem(base0), null, "사업 방향이 없으면 기록도 없다");
+    assert.equal(workLog.documentCheckItem({ ...base0, hasDocuments: true, documentStatus: "current" })?.id, "current");
+    assert.equal(workLog.documentCheckItem({ ...base0, hasDocuments: true, documentStatus: "stale" }), null);
+    const money = (cost: number | string): IntakeSnapshot => ({ ...base0, coach: { ...base0.coach, messages: [{ id: "m-price", role: "user", text: "판매 가격: 9000", at }, { id: "m-cost", role: "user", text: "비용: 3000", at }] }, intake: { ...base0.intake, answers: { ...base0.intake.answers, price: { status: "answered", value: 9000, messageId: "m-price", at }, "structure.unitCost": { status: "answered", value: cost, messageId: "m-cost", at } } } });
+    const margin = workLog.marginLogItem(money("3,000원"));
+    assert.equal(margin?.anchor, "m-cost", "둘 중 나중에 답한 메시지 뒤에 붙인다");
+    assert.match(margin!.sub!, /6,000원$/);
+    assert.match(workLog.marginLogItem(money(12000))!.sub!, /3,000원 손해$/);
+    assert.equal(workLog.marginLogItem(base0), null);
+    const logMarkup = renderToStaticMarkup(<WorkLog items={[planItem, workLog.editFoundItem(2), null]} />);
+    assert.match(logMarkup, /aria-expanded="false"/, "목록이 있는 줄만 눌러서 펼친다");
+    assert.match(logMarkup, /<p[^>]*data-work-log-item="edit-found"/);
+    assert.equal(renderToStaticMarkup(<WorkLog items={[null, false]} />), "");
+    const meta = renderToStaticMarkup(<MessageMeta text="답" at={at} />);
+    assert.match(meta, /<time/);
+    assert.match(meta, /답 복사하기/);
+    assert.ok(!renderToStaticMarkup(<MessageMeta text="답" />).includes("<time"), "시각을 모르면 시각을 쓰지 않는다");
+    // 대화 기록 — PC 에서만 AI 답 아래 메타 줄, 작업 기록은 그 시각 뒤 첫 메시지 앞에
+    const talk: IntakeSnapshot = { ...base0, coach: { ...base0.coach, messages: [{ id: "u1", role: "user", text: "가격을 바꿔 줘", at: "2026-09-16T04:00:00.000Z" }, { id: "a1", role: "assistant", text: "바꿀 내용을 정리했어요.", at: "2026-09-16T04:00:05.000Z" }] } };
+    assert.ok(!renderToStaticMarkup(<ConversationHistory snapshot={talk} onEdit={noop} />).includes("data-message-meta"));
+    const proTalk = renderToStaticMarkup(<ConversationHistory pro snapshot={talk} onEdit={noop} log={{ at, node: <p data-test-log="1">기록</p> }} />);
+    assert.match(proTalk, /data-message-meta/);
+    assert.ok(proTalk.indexOf("data-test-log") < proTalk.indexOf("가격을 바꿔 줘"), "작성을 시작한 뒤에 온 말 앞에 기록이 놓인다");
+    const lateLog = renderToStaticMarkup(<ConversationHistory pro snapshot={talk} onEdit={noop} log={{ at: null, node: <p data-test-log="1">기록</p> }} />);
+    assert.ok(lateLog.indexOf("data-test-log") > lateLog.indexOf("바꿀 내용을 정리했어요"), "시각을 모르면 대화 끝에");
+    // 계획서 완성 안내 — PC 는 단추 줄 대신 복사 줄(계획서 보기 · 직접 고치기는 칸에, 대화로 고치기는 늘 열린 입력창)
+    const lockedPro = renderToStaticMarkup(<DocumentLockedTurn pro planId="p1" chatEdit onChatEdit={noop} />);
+    assert.ok(!lockedPro.includes("계획서 보기") && lockedPro.includes("data-message-meta"));
+    assert.match(renderToStaticMarkup(<DocumentLockedTurn planId="p1" chatEdit onChatEdit={noop} />), /계획서 보기/, "휴대폰은 예전 단추 줄 그대로");
+    // 지금 질문 카드 — 머리 줄과 꼬리 줄을 줄 때만 카드
+    const cardQuestion = renderToStaticMarkup(<QuestionForm inChat cardLabel="질문 3 / 14" cardFoot={<p>보기에 없으면 아래에 바로 적어 주세요</p>} question={activeQuestion} snapshot={original} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
+    assert.match(cardQuestion, /data-question-card="true"/);
+    assert.match(cardQuestion, /질문 3 \/ 14/);
+    assert.match(cardQuestion, /보기에 없으면 아래에 바로 적어 주세요/);
+    assert.ok(!chatQuestion.includes("data-question-card"), "카드 정보가 없으면 예전 모양");
+
     // 화면 연결 — 소스 점검
     const intake = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
     // 쓰는 동안 보낸 요청: 남은 질문이 없을 때만 대기열(질문 답은 예전 입력창 그대로) · 진행 카드가 그걸 알린다
@@ -995,6 +1068,11 @@ async function main() {
     // 새로고침해도 서버에 남은 채팅 수정(정리 중 · 고르기 전 제안)이 있으면 채팅 수정 화면을 다시 연다 — 대화에 '아래에서 확인해 주세요'만 남던 문제
     assert.match(intake, /const editJobOpen = !!editJob && \(\["queued", "running"\]\.includes\(editJob\.status\) \|\| editJob\.status === "complete" && !!editJob\.proposal\?\.length && !editJob\.proposalStatus\);/);
     assert.match(intake, /const chatEditMode = coach && \(searchParams\.get\("edit"\) === "chat" \|\| chatEditLocal \|\| editJobOpen\);/);
+    // 새 모양은 넓은 작업실에서만 — 휴대폰 작업실 · 예전 대화 화면은 그대로
+    assert.match(intake, /const pro = embedded && wide;/);
+    assert.match(intake, /data-studio-pro=\{pro \|\| undefined\}/);
+    // 추천 칩은 입력창에 글만 채운다(보내지 않는다)
+    assert.match(intake, /setStudioText\(chip\.fill\); setInputHint\(""\); focusComposer\(\);/);
     // 메신저식 '읽음'은 달지 않는다
     assert.ok(!intake.includes(': "읽음"'));
     // 다른 칸을 보면 대상 칩을 거둔다(적던 글이 있으면 둔다)

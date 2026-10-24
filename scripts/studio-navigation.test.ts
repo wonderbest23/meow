@@ -213,7 +213,8 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ ...base, fresh: true, steps: null }), "대화 중");
   assert.equal(studioStatusText({ ...base, loading: true, steps: null }), "불러오는 중", "사업을 불러오는 동안 '대화 중'으로 미리 말하지 않는다");
   assert.equal(studioStatusText({ ...base, fresh: true, loading: true, steps: null }), "대화 중");
-  assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 6, total: 14, complete: false } }), "대화 중 · 질문 6/14");
+  assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 6, total: 14, complete: false } }), "대화 중 · 질문 7/14", "지금 묻는 질문 번호(답한 수 + 1) — 대화 칸의 '질문 7 / 14'와 같다");
+  assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 14, total: 14, complete: false } }), "대화 중 · 질문 14/14", "질문 수를 넘지 않는다");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 14, total: 14, complete: true } }), "대화 중 · 마무리");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo") }), "대화 중", "질문 진행을 모르면 숫자 없이");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), generation: { done: 6, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 6/10장");
@@ -254,7 +255,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   // journeySteps 가 coach.ready 로 대화를 done 으로 봐도 작업실은 대화 active — 부제는 질문 수, 칩·휴대폰 탭 ✓ 없음
   const readyOnly = studioSteps(steps("done", "todo", "todo", "todo"), false);
   assert.deepEqual(readyOnly.map(step => step.state), ["active", "todo", "todo", "todo", "todo"]);
-  assert.equal(studioStatusText({ ...base, steps: readyOnly, intake: { answered: 1, total: 14, complete: false } }), "대화 중 · 질문 1/14", "첫 답 뒤에도 '사업 방향 정리됨'이 아니다");
+  assert.equal(studioStatusText({ ...base, steps: readyOnly, intake: { answered: 1, total: 14, complete: false } }), "대화 중 · 질문 2/14", "첫 답 뒤에도 '사업 방향 정리됨'이 아니다");
   assert.deepEqual(states(studioChips(readyOnly)), ["current", "upcoming", "upcoming", "upcoming"], "대화 칩에 ✓ 가 없다");
   assert.deepEqual(studioSteps(steps("active", "todo", "todo", "todo"), true).map(step => step.state), ["done", "todo", "todo", "todo", "todo"]);
   assert.equal(studioStatusText({ ...base, steps: studioSteps(steps("done", "todo", "todo", "todo"), true) }), "사업 방향 정리됨 · 계획서 만들 차례");
@@ -374,5 +375,37 @@ console.log("studio navigation ok");
   const studio = readFileSync(new URL("../app/plan/studio/Studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /const chatOnly = !isSamplePlan\(planId\) && !chatComplete && RIGHT_TABS\.every\(id => !!locks\[id\]\)/);
   assert.match(studio, /\{!wide && !chatOnly && <div className=\{styles\.narrowTabs\}/);
-  assert.match(studio, /\{wide && !chatOnly && <div className=\{styles\.wideTabs\}/);
+  // PC 는 한 줄 머리줄 — 대화만 할 때는 탭 대신 단계 안내(1 대화 — 2 계획서 …)와 잠김 안내
+  assert.match(studio, /\{missing \? null : chatOnly \? <>\n\s*<ol className=\{styles\.stepper\}/);
+  assert.match(studio, /질문을 마치면 사업계획서부터 차례로 열려요/);
+}
+
+// 새 PC 작업실(대표 승인 시안 2026-10-24) — 한 줄 머리줄 · 가운데 알약 · 오른쪽 카드 · 지금까지 정한 내용
+{
+  const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+  const studio = read("../app/plan/studio/Studio.tsx");
+  const studioCss = read("../app/plan/studio/Studio.module.css");
+  const chrome = read("../app/plan/BusinessAppChrome.tsx");
+  // 머리줄은 PC 에서만 대신 그린다(휴대폰은 예전 머리줄) — 서랍은 BusinessAppChrome 이 그대로 연다
+  assert.match(studio, /const topBar = wide \? \(menu: ChromeMenu\) =>/);
+  assert.match(chrome, /\{topBar \? topBar\(\{ button: menuButton, open: \(\) => setOpen\(true\), isOpen: open \}\) : <header className=\{styles\.header\}>/);
+  // 예전 넓은 탭 줄 · 머리줄 진행 단계 목록은 없다(머리줄 한 줄의 탭 · 진행 막대로)
+  assert.ok(!studio.includes("styles.wideTabs") && !studioCss.includes(".wideTabs"), "예전 넓은 탭 줄을 다시 그리지 않는다");
+  // 가운데 알약 — PC 에서만 통로를 준다(휴대폰은 칸이 자기 안에 그린다) · 보이는 칸의 것만 · 같은 것을 다시 주면 무시
+  assert.match(studio, /setHeaderCenter: wide \? setHeaderCenter : undefined,/);
+  assert.match(studio, /const centerSlot = \(id: StudioTab\) => \{\n\s*const node = centerNodes\[id\];\n\s*if \(!node \|\| !isVisible\(id\)\) return null;/);
+  // 휴대폰 머리줄 단추는 그대로(PC 는 한 줄 머리줄이 맡는다)
+  assert.match(studio, /const headerSide = !wide && side\.length \?/);
+  // 탭의 ✓ 는 진행 칩과 같은 값(유지보수는 끝나는 단계가 아니라 없다)
+  assert.match(studio, /const tabDone = \(item: RightTab\) => item !== "operations" && chipFor\(/);
+  // 대화 칸 폭과 머리줄 왼쪽 칸이 같은 값 · 오른쪽 칸은 흰 카드
+  assert.match(studioCss, /--studio-chat-w:clamp\(360px,29vw,460px\)/);
+  assert.match(studioCss, /\.topBar \{[^}]*grid-template-columns:var\(--studio-chat-w/);
+  assert.match(studioCss, /\.panes \{ background:#fff; border:1px solid #e3e7ec; border-radius:14px; overflow:hidden;/);
+
+  // 지금까지 정한 내용 — 남는 돈은 가격과 한 건 비용을 둘 다 숫자로 답했을 때만 계산한다(지어내지 않는다)
+  const summary = read("../app/plan/studio/StudioIntakeSummary.tsx");
+  assert.match(summary, /if \(price !== undefined && unitCost !== undefined\) \{/);
+  assert.match(summary, /질문을 다 마치면 30~40초 동안 사업 방향을 한 장으로 정리하고, 사업계획서를 만들 수 있어요\./);
+  assert.match(summary, /\{item\.now && <small>지금 묻는 중<\/small>\}/);
 }

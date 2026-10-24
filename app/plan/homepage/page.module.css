@@ -376,3 +376,80 @@
 .studioNarrowBar > :first-child { margin-right:auto; }
 /* 휴대폰 작업실 — 홈페이지를 대화로 고치기(대화 탭으로 가서 입력창을 홈페이지 고치기로 연다) */
 .studioChatEdit { min-height:44px; width:100%; margin:0 0 12px; border:1px solid var(--app-line, #e5e8eb); border-radius:12px; background:#fff; color:#191f28; font:inherit; font-size:15px; font-weight:700; cursor:pointer; }
+
+/*
+ * 작업실 PC(1024px 이상) 새 배치(data-studio-pro) — 오른쪽 칸이 흰 카드 하나(테두리·둥근 모서리는 작업실이 그린다).
+ * 맨 위 공개 주소 줄(strip) 아래로 사이트가 카드 끝까지 차고, 그 아래 '홈페이지 설정'(디자인·연락·사업자·도메인·문의)이 이어진다.
+ * 이 상자(proScroll)만 굴러간다. 미리보기 위 '미리보기' 이름 줄·휴대폰/컴퓨터 단추는 없다(머리줄 가운데 알약으로).
+ */
+/*
+ * 칸 본문 자리(paneBody)는 내용만큼 늘어나 칸(.pane) 전체가 굴러갔다 — 그러면 주소 줄도 같이 밀려 올라간다.
+ * 새 배치는 칸(위치를 가진 .pane) 크기에 그대로 붙이고, 안의 proScroll 만 굴린다.
+ */
+.page[data-studio-pro] { position: absolute; inset: 0; height: auto; background: #fff; }
+.proCard { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #fff; }
+.proScroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; position: relative; }
+.proScroll > .aiFillNotice { margin: 12px 16px 0; }
+.proScroll > .nextRow { max-width: none; margin: 0; padding: 24px max(20px, calc((100% - 880px) / 2)) 40px; background: #f7f8fa; }
+
+/* 공개 주소 줄 — 🌐 주소 · 공개 상태 · (빈칸) · 내 주소 연결 · 직접 고치기 · ↗ */
+.strip { height: 42px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; border-bottom: 1px solid #eef0f3; font-size: 12.5px; color: #4e5968; min-width: 0; }
+.stripUrl { display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 10px; border-radius: 7px; background: #f3f5f7; min-width: 0; white-space: nowrap; overflow: hidden; }
+.stripUrl svg { flex: none; color: #8b95a1; }
+.stripUrl b { flex: none; color: #191f28; font-weight: 600; }
+.stripUrl span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.stripBadge { flex: none; padding: 2px 7px; border-radius: 5px; background: #f1f3f6; color: #4e5968; font-size: 11px; font-weight: 650; white-space: nowrap; }
+.stripBadge[data-live] { background: #e8f3ff; color: #1b64da; }
+.stripGap { flex: 1; min-width: 4px; }
+.stripBtn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: #4e5968; font: inherit; font-size: 12.5px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.stripBtn:hover:not(:disabled) { background: #f3f5f7; color: #191f28; }
+.stripBtn:disabled { opacity: .5; cursor: default; }
+.stripBtn.stripSoft { background: #e8f3ff; color: #1b64da; }
+.stripBtn.stripSoft:hover:not(:disabled) { background: #dbeafe; color: #1b64da; }
+.stripIcon { flex: none; display: grid; place-items: center; width: 30px; height: 28px; border-radius: 7px; color: #4e5968; }
+.stripIcon:hover { background: #f3f5f7; color: #191f28; }
+.stripBtn:focus-visible, .stripIcon:focus-visible, .pillHome:focus-visible, .device button:focus-visible { outline: 3px solid #8bb9ff; outline-offset: 2px; }
+/* 좁은 PC(1024~1180px) — 주소 줄이 비좁으면 '직접 고치기' 글자만 남기고 주소는 말줄임 */
+@media (max-width: 1180px) { .strip { gap: 6px; } .stripUrl b { display: none; } }
+
+/* 머리줄 가운데 알약 — ⟳ 첫 화면 /launch/… | 휴대폰·컴퓨터 */
+.pill { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; min-width: 0; overflow: hidden; height: 32px; padding: 0 4px; border: 1px solid #e3e7ec; border-radius: 999px; background: #fff; box-shadow: 0 1px 1px rgba(16, 24, 40, .03); color: #191f28; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.pillHome { flex: 0 1 auto; display: inline-flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; height: 26px; padding: 0 6px 0 8px; border: 0; border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.pillHome:hover { background: #f3f5f7; }
+.pillHome svg { flex: none; color: #8b95a1; }
+.pillPath { min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; color: #8b95a1; font-weight: 500; }
+.pillRule { flex: none; width: 1px; height: 16px; margin: 0 2px; background: #e3e7ec; }
+.device { display: inline-flex; flex: none; gap: 2px; }
+.device button { display: grid; place-items: center; width: 28px; height: 24px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: #8b95a1; cursor: pointer; }
+.device button:hover { color: #4e5968; }
+.device button[aria-checked="true"] { background: #e8f3ff; color: #1b64da; }
+.pillLabel { flex: none; }
+/* 좁은 PC — 머리줄 가운데 자리가 좁으면 주소, 더 좁으면 '첫 화면' 글자를 빼고 ⟳ · 휴대폰/컴퓨터만 */
+@media (max-width: 1240px) { .pillPath { display: none; } }
+.stripDevice { display: none; flex: none; padding: 2px; border-radius: 999px; background: #f3f5f7; }
+.stripDevice[data-always] { display: inline-flex; }
+/* 좁은 PC(1120px 이하) — 머리줄 가운데 자리가 휴대폰/컴퓨터 단추도 담지 못해 알약을 접고 주소 줄로 옮긴다 */
+@media (max-width: 1120px) { .pill { display: none; } .stripDevice { display: inline-flex; } }
+
+/* 킷 패널(전역 hk-*)을 카드 안에 펴기 — 테두리·둥근 모서리·높이 제한을 걷어 사이트가 카드 끝까지 */
+.page[data-studio-pro] :global(.hk) { gap: 0; }
+.page[data-studio-pro] :global(.hk-msg) { margin: 0; padding: 8px 16px; border-bottom: 1px solid #eef0f3; background: #f4f9ff; font-size: 13px; }
+.page[data-studio-pro] :global(.hk-preview) { border: 0; border-radius: 0; box-shadow: none; }
+.page[data-studio-pro] :global(.hk-preview-body) { max-height: none; background: #fff; }
+.page[data-studio-pro] :global(.hk-preview-body.hk-preview-phone) { padding: 28px 16px 36px; background: #f2f4f6; }
+.page[data-studio-pro] :global(.hk-phone) { width: 390px; max-width: 100%; height: min(720px, calc(100dvh - 170px)); border-radius: 28px; }
+.page[data-studio-pro] :global(.hk-studio-settings) { display: grid; gap: 12px; padding: 28px max(20px, calc((100% - 880px) / 2)) 40px; border-top: 1px solid #eef0f3; background: #f7f8fa; }
+.page[data-studio-pro] :global(.hk-studio-settings-head) { margin: 0 0 2px; color: #191f28; font-size: 15px; font-weight: 700; }
+.page[data-studio-pro] :global(.hk-studio-settings .hk-tools) { border: 1px solid #e6e6ee; border-radius: 14px; background: #fff; }
+.page[data-studio-pro] :global(.hk-studio-settings .hk-top) { padding: 12px 14px; border: 1px solid #e6e6ee; border-radius: 14px; background: #fff; }
+.page[data-studio-pro] :global(.hk-studio-settings .hk-url) { flex-wrap: wrap; }
+
+/* 결제 전 보기(새 배치) — 안내 상자 없이 사이트만. 휴대폰 모양이면 옅은 바탕 가운데 휴대폰 틀 */
+.proPreview { background: #fff; }
+.proPreview[data-view="mobile"] { padding: 28px 16px 36px; background: #f2f4f6; }
+.proPhone { width: 390px; max-width: 100%; height: min(720px, calc(100dvh - 170px)); margin: 0 auto; overflow-y: auto; overscroll-behavior: contain; border-radius: 28px; background: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .08); scrollbar-width: thin; }
+
+/* 대화로 고칠 곳 — 제안 카드가 떠 있는 동안 바뀔 글을 짚는다(컴퓨터 모양: 겉 테두리 + '◎ 바꿀 곳' 이름표, 휴대폰 틀: 글 테두리만) */
+.page :global(.hk-target) { position: absolute; z-index: 4; border: 2px solid #3182f6; border-radius: 9px; box-shadow: 0 0 0 4px rgba(49, 130, 246, .22); pointer-events: none; }
+.page :global(.hk-target-label) { position: absolute; left: -2px; top: -26px; display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 6px 6px 6px 0; background: #3182f6; color: #fff; font-size: 11.5px; font-weight: 650; white-space: nowrap; }
+.page :global(.hk-preview-phone [data-hk-pick]) { outline: 2px solid #3182f6; outline-offset: 3px; border-radius: 6px; }
