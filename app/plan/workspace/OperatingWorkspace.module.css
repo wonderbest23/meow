@@ -37,7 +37,7 @@
 .notes { margin: 24px 0; }
 .notes > div { display: grid; grid-template-columns: 120px minmax(0,1fr); gap: 20px; padding: 18px 0; border-bottom: 1px solid #e2e7ed; }
 .notes dt { color: #687589; font-size: 14px; }
-.notes dd { margin: 0; font-size: 15px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.notes dd { margin: 0; font-size: 15px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: balance; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
 .root .warning { color: #80561a; background: #fff7e9; padding: 12px; font-size: 13px; line-height: 1.7; border-left: 3px solid #d7a24d; }
 .error { border-left: 3px solid #bd464b; padding: 12px; background: #fff3f3; margin: 16px 0; }
