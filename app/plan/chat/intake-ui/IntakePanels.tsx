@@ -193,11 +193,12 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       <div hidden={showMention}>
       {inChat && question.id === "industry" && !manualIndustry && <div className={styles.ksicCandidates} role="group" aria-label="표준산업분류 후보">
         {!coach && <label className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><input type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></label>}
-        {ksicShown.length > 0 && <p className={styles.ksicLead}>{coach && ksicSearchable(ksicQuery.trim()) ? "찾은 업종이에요. 가까운 걸 눌러 주세요." : snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : recommendFirst ? "이야기해 주신 내용과 가까운 업종이에요. 맞는 걸 눌러 주세요." : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
+        {/* 대화(코치)에서는 '찾은 업종이에요…' 같은 안내를 빼고 추천 칩 하나를 눈에 띄게 한다(대표 요청 2026-10-24) — 여러 업종이 섞인 경우만 알린다 */}
+        {ksicShown.length > 0 && (!coach || snapshot.structure?.fallback === "compound") && <p className={styles.ksicLead}>{snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : recommendFirst ? "이야기해 주신 내용과 가까운 업종이에요. 맞는 걸 눌러 주세요." : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
         {ksicSearchable(ksicQuery.trim()) && ksicSearched && ksicShown.length === 0 && <p className={styles.ksicLead}>{ksicSearch.failed ? "업종 검색이 잠시 연결되지 않았어요. 아래에서 골라 주시거나 잠시 후 다시 입력해 주세요." : coach ? "맞는 업종을 못 찾았어요. 다른 이름으로 찾거나 아래에서 골라 주세요." : "맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다."}</p>}
         <div className={styles.ksicChips}>{ksicShown.map((item, index) => {
-          // 검색 결과가 아니라 처음 추천한 후보 목록이면 첫 후보에 '추천'을 단다
-          const recommended = recommendFirst && index === 0 && !ksicSearchable(ksicQuery.trim());
+          // 첫 후보에 '추천'을 단다 — 대화(코치)에서는 검색 결과도 가장 가까운 첫 후보를 추천으로 강조해 바로 누르게 한다
+          const recommended = index === 0 && (coach ? ksicShown.length > 0 && !draft.ksic : recommendFirst && !ksicSearchable(ksicQuery.trim()));
           return <button key={item.code} type="button" className={styles.ksicChip} data-recommended={recommended || undefined} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{recommended && <em className={styles.ksicBadge}>추천</em>}{item.name}{ksicNameHint(item.code) && <small className={styles.ksicHint}> ({ksicNameHint(item.code)})</small>}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>;
         })}</div>
         {recommendFirst && <button className={styles.textButton} type="button" disabled={disabled} aria-expanded="false" aria-controls="intake-industry-options" onClick={() => setManualIndustry(true)}><ListFilter size={16} aria-hidden="true" />목록에 없으면 직접 선택하기</button>}

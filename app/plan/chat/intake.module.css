@@ -858,3 +858,19 @@
 
 /* 고치기 카드의 [바꾸기]·[취소]·[그대로 두기]·[되돌리기] — 휴대폰에서 누르는 상자 44px(점검 2026-10-23) */
 .page[data-coach] .changeCard .chip, .page[data-coach] .studioEditTurn .chip { min-height: 44px; }
+
+/*
+ * 대화(코치) 업종 고르기 — 누르기 쉽게 칩을 키우고, 가장 가까운 첫 후보를 '추천'으로 강조한다(대표 요청 2026-10-24).
+ * 추천 칩은 나타날 때 살짝 커지며 파란 물결이 두 번 퍼진 뒤 멈춘다(움직임 줄이기 설정이면 색만).
+ */
+.page[data-coach] .ksicChip, .page[data-coach] .chatQuestion .option, .page[data-coach] .unknownChoice { min-height: 44px; padding: 10px 15px; border-radius: 22px; font-size: 14px; }
+.page[data-coach] .ksicChip strong, .page[data-coach] .chatQuestion .option strong, .page[data-coach] .unknownChoice strong { font-size: 14px; }
+.page[data-coach] .ksicChip[data-recommended] { min-height: 48px; padding: 11px 18px; border: 1.5px solid #3182f6; background: #eef5ff; color: #1b64da; box-shadow: 0 2px 10px rgba(49, 130, 246, .16); animation: ksicRecIn .36s cubic-bezier(.2, .9, .3, 1.2) both, ksicRecPulse 1.6s ease-out .4s 2; }
+.page[data-coach] .ksicChip[data-recommended] strong { font-size: 15px; font-weight: 700; color: #1b64da; }
+.page[data-coach] .ksicChip[data-recommended]:hover { background: #e3eeff; border-color: #1b64da; }
+.page[data-coach] .ksicChip[data-recommended] .ksicHint { color: #3f6fb8; }
+.page[data-coach] .ksicChips { width: 100%; }
+.page[data-coach] .ksicChips > .ksicChip[data-recommended] { flex-basis: 100%; justify-content: flex-start; }
+@keyframes ksicRecIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes ksicRecPulse { 0% { box-shadow: 0 0 0 0 rgba(49, 130, 246, .38), 0 2px 10px rgba(49, 130, 246, .16); } 100% { box-shadow: 0 0 0 12px rgba(49, 130, 246, 0), 0 2px 10px rgba(49, 130, 246, .16); } }
+@media (prefers-reduced-motion: reduce) { .page[data-coach] .ksicChip[data-recommended] { animation: none; } }

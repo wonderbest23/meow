@@ -6,22 +6,26 @@
  * 맨 위 54pt는 상태 표시줄(9:41 · 신호 · 와이파이 · 배터리)이고 그 아래 790pt에 화면 그림을 놓는다 —
  * 그림은 390×844 휴대폰 화면을 찍어 위에서부터 390×790만 잘라 둔 것이라 앱 머리줄이 상태 표시줄에 가려지지 않는다.
  *
+ * 화면 안을 움직이고 싶으면(첫 화면 진열 띠) 그림 대신 children 을 넘긴다 — 상태 표시줄 아래 390×790pt 칸(.viewport, 넘치는 것은 잘림)에 그대로 놓인다.
+ *
  * 크기는 바깥에서 정한 너비(width) 하나로 정해지고, 안쪽 치수는 모두 그 너비 기준(container query 단위 cqw)이라
  * 작은 카드에서도 큰 진열 띠에서도 같은 모양으로 줄고 는다. 높이는 비율로 미리 잡혀 그림이 늦게 와도 아래가 밀리지 않는다.
  */
-import type { HTMLAttributes } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import styles from "./iphone-mockup.module.css";
 
 type Props = {
-  src: string;
-  alt: string;
+  src?: string;
+  alt?: string;
   /** 그림 파일의 실제 크기 — 기본은 390×790pt를 2배로 줄인 780×1580 */
   width?: number;
   height?: number;
   loading?: "eager" | "lazy";
+  /** 그림 대신 화면 칸에 놓을 것 — 주면 src·alt·width·height·loading 은 쓰지 않는다 */
+  children?: ReactNode;
 } & Omit<HTMLAttributes<HTMLDivElement>, "children">;
 
-export function IphoneMockup({ src, alt, width = 780, height = 1580, loading = "lazy", className, ...rest }: Props) {
+export function IphoneMockup({ src, alt, width = 780, height = 1580, loading = "lazy", className, children, ...rest }: Props) {
   return <div className={className ? `${styles.device} ${className}` : styles.device} {...rest}>
     <div className={styles.frame}>
       <span className={`${styles.button} ${styles.action}`} aria-hidden="true" />
@@ -31,7 +35,9 @@ export function IphoneMockup({ src, alt, width = 780, height = 1580, loading = "
       <div className={styles.bezel}>
         <div className={styles.screen}>
           <StatusBar />
-          <img className={styles.shot} src={src} alt={alt} width={width} height={height} loading={loading} decoding="async" />
+          {children
+            ? <div className={styles.viewport}>{children}</div>
+            : <img className={styles.shot} src={src} alt={alt ?? ""} width={width} height={height} loading={loading} decoding="async" />}
           <span className={styles.island} aria-hidden="true" />
           <span className={styles.homeBar} aria-hidden="true" />
         </div>
