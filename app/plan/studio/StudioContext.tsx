@@ -31,6 +31,11 @@ export type StudioNav = {
    * node 를 null 로 주면 내린다. 작업실 밖에서는 이 함수가 없다(예전처럼 BusinessAppChrome actions 를 쓴다).
    */
   setHeaderActions?: (tab: StudioTab, node: ReactNode | null) => void;
+  /**
+   * 새 작업실 머리줄(PC) 가운데 알약 — 칸이 자기 맥락을 올린다(계획서: 장 고르기 '1장 사업 개요 1/5 ⌄', 홈페이지: 페이지 주소 + 휴대폰/컴퓨터).
+   * 그 칸이 보일 때만 머리줄 가운데에 나온다. node 를 null 로 주면 내린다. 휴대폰과 작업실 밖에서는 없다.
+   */
+  setHeaderCenter?: (tab: StudioTab, node: ReactNode | null) => void;
   /** 2단계: 숨겨진 칸에 새 소식이 생겼다(대화 새 답변, 계획서 작성 진행) — 휴대폰 탭에 점을 찍는다 */
   markActivity?: (tab: StudioTab) => void;
   /** 2단계: 칸이 다른 탭을 보여 달라고 한다(예: 계획서 작성이 시작되면 계획서 탭으로) — 주소의 값은 건드리지 않는다 */
@@ -120,4 +125,16 @@ export function useStudioHeaderActions(node: ReactNode | null) {
     nav.setHeaderActions(tab, node);
   }, [nav, tab, node]);
   useEffect(() => () => { if (nav?.setHeaderActions && tab) nav.setHeaderActions(tab, null); }, [nav, tab]);
+}
+
+/** 새 작업실 머리줄 가운데 알약 등록 — 작업실 밖·휴대폰에서는 아무 일도 하지 않는다(그때는 칸 안에 예전처럼 그린다) */
+export function useStudioHeaderCenter(node: ReactNode | null) {
+  const nav = useStudioNav();
+  const pane = useStudioPane();
+  const tab = pane?.tab;
+  useEffect(() => {
+    if (!nav?.setHeaderCenter || !tab) return;
+    nav.setHeaderCenter(tab, node);
+  }, [nav, tab, node]);
+  useEffect(() => () => { if (nav?.setHeaderCenter && tab) nav.setHeaderCenter(tab, null); }, [nav, tab]);
 }
