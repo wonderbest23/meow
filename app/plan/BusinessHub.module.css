@@ -78,7 +78,7 @@
 
 .careBlock { margin-bottom:28px; padding-bottom:28px; border-bottom:1px solid var(--app-line); }
 .careBlock h2 { margin:0 0 8px; }
-.careBlock p { margin:0 0 16px; }
+.careBlock p { margin:0 0 24px; }
 .careActions { display:flex; flex-wrap:wrap; gap:10px; }
 .careActions a { text-decoration:none; }
 /* PC 폭이 넉넉하지 않을 때(본문이 화면 오른쪽 끝까지 닿을 때) 오른쪽 아래 상담 버튼이 오른쪽 정렬 단추(변경 범위 확인 등)를 덮었다 — 그만큼 비워 둔다 */
@@ -130,6 +130,16 @@
 .empty h1, .empty h2 { margin:0 0 8px; text-wrap:balance; }
 .empty p { margin:0; }
 /* 이동하는 파란 단추 끝의 › (대표 규칙 2026-10-24) — 글과 꺾쇠 사이 */
-.primary > :global(.lucide-chevron-right) { flex: none; margin-left: 6px; }
+.primary > :global(.lucide-chevron-right), .secondary > :global(.lucide-chevron-right) { flex: none; margin-left: 6px; }
 /* 빈 화면은 화면 세로 가운데에 — 위쪽 여백만 주던 때는 휴대폰에서 위로 몰려 보였다(대표 요청 2026-10-24) */
 .empty { min-height:calc(100dvh - 200px); align-content:center; padding-block:24px; }
+
+/*
+ * 내 사업 빈 목록 — 빈 블록은 남은 높이의 세로 가운데, '완성 예시 보기'는 맨 아래(점검 r38).
+ * 예전엔 빈 블록이 100dvh 기준 최소 높이를 따로 가져 휴대폰에서 위로 쏠리고, 예시 줄이 블록 아래에 떠 있었다.
+ */
+.content[data-empty-list] { box-sizing: border-box; display: flex; flex-direction: column; min-height: 100%; }
+.content[data-empty-list] > .empty { flex: 1 0 auto; width: 100%; min-height: 0; padding-block: 24px; }
+.content[data-empty-list] > .samples { margin-top: auto; }
+/* 설명 없이 제목 바로 아래 단추면 제목→단추 24px(제목 아래 8 + 16) */
+.empty h1 + .primary { margin-top: 16px; }

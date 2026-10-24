@@ -20,7 +20,7 @@ export function MissingBusinessBody({ title = MISSING_BUSINESS_TITLE, detail = M
     <p>{detail}</p>
     {/* 어디로 가는 단추인지 보이게 > 아이콘을 붙인다(대표 요청 2026-10-24) */}
     {action ?? <Link className={styles.primary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></Link>}
-    {action ? <Link className={styles.secondary} href="/plan">내 사업으로</Link> : null}
+    {action ? <Link className={styles.secondary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></Link> : null}
     {children}
   </section>;
 }

@@ -22,6 +22,12 @@ export type ConsentItem = {
   note?: ReactNode;
 };
 
+/** "개인정보 수집·이용 동의" → ["개인정보 수집·이용 ", "동의"] — 마지막 낱말을 따로 떼어 (필수)와 묶는다 */
+function lastWordSplit(label: string): [string, string] {
+  const at = label.lastIndexOf(" ");
+  return at < 0 ? ["", label] : [label.slice(0, at + 1), label.slice(at + 1)];
+}
+
 export function ConsentList({ items, values, onChange, allLabel = "약관 전체동의", className }: {
   items: ConsentItem[];
   values: Record<string, boolean>;
@@ -44,7 +50,8 @@ export function ConsentList({ items, values, onChange, allLabel = "약관 전체
           <input type="checkbox" checked={Boolean(values[item.key])} onChange={(event) => onChange({ ...values, [item.key]: event.target.checked })} />
           <span className={styles.check} aria-hidden="true"><Check /></span>
           <span className={styles.text}>
-            <span>{item.label}<em>{item.required === false ? "(선택)" : "(필수)"}</em></span>
+            {/* '(필수)'만 다음 줄로 떨어지지 않게 마지막 낱말과 한 덩어리로 묶는다(점검 r38 · 360px) */}
+            <span>{lastWordSplit(item.label)[0]}<span className={styles.keep}>{lastWordSplit(item.label)[1]}<em>{item.required === false ? "(선택)" : "(필수)"}</em></span></span>
             {item.note ? <small>{item.note}</small> : null}
           </span>
         </label>

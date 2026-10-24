@@ -23,7 +23,7 @@
 .empty, .placeholder { display: grid; justify-items: center; gap: 8px; padding: 48px 24px; color: #6b7280; text-align: center; }
 .empty strong { color: #161c2d; font-size: 15px; text-wrap: balance; }
 .empty p, .placeholder p { margin: 0; font-size: 13px; line-height: 1.6; }
-.emptyRefresh { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; height: 36px; padding: 0 14px; border: 1px solid #dfe3ea; border-radius: 18px; background: #fff; color: #4b5161; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.emptyRefresh { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; height: 44px; padding: 0 16px; border: 1px solid #dfe3ea; border-radius: 22px; background: #fff; color: #4b5161; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .placeholder { align-content: center; height: 100%; }
 /* 문의가 하나도 없으면 — 목록·내용 두 칸을 접고 빈 화면 안내를 칸 가운데(세로·가로)에(대표 규칙 2026-10-24) */
 .wrap[data-empty] { grid-template-columns: minmax(0, 1fr); }

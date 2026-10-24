@@ -3,6 +3,7 @@
 .root button:disabled { opacity: .5; cursor: not-allowed; }
 .root button:hover:not(:disabled), .root a:hover { background: #f1f5fb; }
 .root .inlineButton { min-height: 32px; padding: 4px 10px; margin-left: 4px; font-size: 13px; vertical-align: baseline; }
+.root .inlineButton > svg { flex: none; margin-left: -4px; }
 .root button:focus-visible, .root a:focus-visible, .root input:focus-visible, .root textarea:focus-visible, .root select:focus-visible { outline: 2px solid #276deb; outline-offset: 3px; }
 .root .primary { color: white; background: #286fe8; border-color: #286fe8; }
 .root .primary:hover:not(:disabled) { background: #1b5dcf; }

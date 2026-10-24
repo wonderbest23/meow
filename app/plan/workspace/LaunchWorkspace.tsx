@@ -142,7 +142,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   useStudioHeaderActions(headerNode);
 
   return <div className={styles.launch}>
-    {sample && <p className={styles.notice} role="note">예시라 저장되지 않아요. <a className={styles.textLink} href={newChatHref()}>대화로 내 사업 시작하기</a></p>}
+    {sample && <p className={styles.notice} role="note">예시라 저장되지 않아요. <a className={styles.textLink} href={newChatHref()}>대화로 내 사업 시작하기<ChevronRight size={18} aria-hidden="true" /></a></p>}
     {config === "confirm" ? <div className={styles.setup}>
       {/* 작업실 안에서는 탭 이름(개업 준비)과 같아 숨긴다(CSS) */}
       <span className={`${styles.eyebrow} ${styles.tabEyebrow}`}>{journeyLabel("launch", readCoach(plan.answers)?.stage === "operating")}</span>

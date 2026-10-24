@@ -81,6 +81,8 @@ export function resolvePlanLandingContent(source: PlanLandingSource) {
     // 사진을 고를 글 — 넓은 업종 이름 대신 이 사업의 업종(업종 코드·가이드 이름)을 앞에 둔다('카페 · 음식점' 반찬가게가 카페 사진을 받던 문제)
     photoText: [coach ? specificIndustryLabel({ answers: source.answers }) : "", text(business?.name), text(business?.description).slice(0, 200), text(field("offer")?.value) || text(get("market/products", "main_offer"))].filter(Boolean).join(" "),
     city: text(business?.region) || text(get("overview/summary", "city")),
+    // 사업 한 줄 소개 — 첫 화면 설명 자리에 상품 이름 대신 쓴다(상품 이름은 아래 '제공 내용'에 이미 있다)
+    businessDescription: text(business?.description),
     mainOffer: text(field("offer")?.value) || text(get("market/products", "main_offer")),
     firstTarget: text(field("customer")?.value) || text(get("market/segments", "first_target")),
     priceValue: formatPriceText(price ? `${price.basis === "proposal" ? "제안 가격 · " : ""}${text(price.value)}` : text(get("market/products", "price_value"))),
@@ -114,7 +116,9 @@ function identityCopy(identity: { headline: string; pitch: string; names: Array<
 }
 
 export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
-  const { businessName, mainOffer, offerDetail, firstTarget, whyFirst, problems, solutions, whyBetter, offerTypes, priceValue, city, buyerTypes, industry, sectorText, photoText, identityHeadline, identityPitch } = resolvePlanLandingContent(source);
+  const { businessName, mainOffer, offerDetail, firstTarget, whyFirst, problems, solutions, whyBetter, offerTypes, priceValue, city, buyerTypes, industry, sectorText, photoText, identityHeadline, identityPitch, businessDescription } = resolvePlanLandingContent(source);
+  /* 한 줄 소개가 상품 이름과 같으면(첫 답을 그대로 소개로 쓴 사업) 없는 것으로 본다 — 같은 줄이 두 번 나온다 */
+  const intro = businessDescription && businessDescription !== mainOffer && businessDescription !== businessName ? businessDescription : "";
   const contactEmail = text(source.contactEmail);
   // 업종 사진 한 벌 — 업종 이름만으로는 넓어서('유통·온라인 판매') 상호·대표 상품 글까지 함께 본다
   const photos = businessPhotoSet(photoText, industry);
@@ -200,12 +204,15 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
     /*
      * 상품 설명이 따로 없으면 예전에는 상품 이름을 한 번 더 적었다. 그러면 첫 화면
      * 설명과 '제공 내용' 칸에 같은 문장이 두 번 나왔다. 사업 소개가 있으면 그걸 쓴다.
+     * 설계 소개(pitch)도 없으면 사업 한 줄 소개(business.description) — 그것도 없을 때만 상품 이름(점검 r38: 430px 첫 화면과 제공 내용에 '수제 쿠키 6개입 선물 상자'가 두 번).
      */
     offerDescription: offerDetail
       ? clamp(sentence(offerDetail, "."), 600)
       : identityPitch
         ? clamp(sentence(identityPitch, "."), 600)
-        : mainOffer ? clamp(mainOffer, 600) : base.offerDescription,
+        : intro
+          ? clamp(intro, 600)
+          : mainOffer ? clamp(mainOffer, 600) : base.offerDescription,
     priceLabel: priceValue ? clamp(priceValue, 100) : base.priceLabel,
     /*
      * 계획서의 실적은 홈페이지에 싣지 않는다.

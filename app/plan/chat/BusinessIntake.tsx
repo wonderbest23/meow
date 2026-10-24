@@ -881,6 +881,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     if (!route.unknown && route.questionId === "business" && typeof route.value === "string" && route.value.trim() && (plan.intake.mode === "startup" || plan.intake.mode === "operating")) void answerSuggestions.request(route.value.trim(), plan.intake.mode, plan.planId);
     void send({ action: "answer", questionId: route.questionId, value: route.value, ...(route.unknown ? { unknown: true } : {}) }, { answer: questionDraft, composer: captureComposer() });
   };
+  // 입력창 위 안내('찾은 업종 중 가까운 걸 눌러 주세요' 등)는 그 질문에만 맞는 말 — 다음 질문으로 넘어가면 지운다
+  // 예전엔 업종을 고른 뒤 3/14…8/14 질문에도 업종 검색 안내가 남았다(r37 휴대폰 점검)
+  const hintQuestionId = question?.id ?? null;
+  useEffect(() => { setInputHint(""); }, [hintQuestionId]);
   // A chip that finishes its answer presses "send" for the user, after the draft it wrote has rendered.
   useEffect(() => {
     const id = autoSubmit.current;

@@ -12,6 +12,8 @@
 .row input:focus-visible + .check { outline: 2px solid var(--consent-accent); outline-offset: 2px; }
 
 .text { display: grid; gap: 4px; min-width: 0; color: #333d4b; font-size: 15px; line-height: 1.45; word-break: keep-all; }
+.text > span:first-child { text-wrap: balance; }
+.text .keep { white-space: nowrap; }
 .text em { margin-left: 4px; color: #6b7684; font-style: normal; }
 .text small { color: #6b7684; font-size: 12.5px; line-height: 1.55; }
 

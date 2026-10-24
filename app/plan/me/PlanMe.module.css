@@ -40,7 +40,11 @@
 
 .cardAction {
   margin-left: auto;
-  padding: 8px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px; /* 누르는 자리 44px(점검 r38) */
+  padding: 0 10px 0 14px;
   border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 10px;
   background: var(--surface, var(--app-surface));
@@ -169,7 +173,8 @@
 
 .logout {
   margin-left: auto;
-  padding: 11px 18px;
+  min-height: 44px;
+  padding: 0 18px;
   border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 10px;
   background: var(--surface, var(--app-surface));
@@ -291,7 +296,7 @@
 
 /* 회원 탈퇴 — 안내 글은 왼쪽 정렬로 단추 바로 위에(가운데 정렬 + 큰 위아래 여백으로 칸이 비어 보였다) */
 .deleteNote {
-  margin: 0 0 14px;
+  margin: 0 0 24px;
   color: var(--text-muted, var(--app-muted));
   font-size: 13px;
   line-height: 1.65;
@@ -305,10 +310,13 @@
   font: inherit;
   font-size: 13px;
   font-weight: 700;
-  padding: 10px 16px;
+  min-height: 44px;
+  padding: 0 16px;
   border-radius: 10px;
   cursor: pointer;
 }
+/* 회원 탈퇴 — 제목→글 8px, 글→단추 24px(대표 규칙 · 점검 r38) */
+.cardHead:has(+ .deleteNote) { margin-bottom: 8px; }
 .dangerBtn:hover:not(:disabled) {
   background: var(--app-danger-bg);
   border-color: #e79aa9;
@@ -366,3 +374,5 @@
 
 /* 화면에는 안 보이고 읽기 프로그램만 읽는 제목 — 같은 이름이 위 머리말에 이미 있다 */
 .srTitle { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* 머리줄 단추는 누르는 자리만 44px — 칸 높이는 예전처럼(위아래 -6px) */
+.cardHead > .cardAction, .cardHead > .logout { margin-block: -6px; }
