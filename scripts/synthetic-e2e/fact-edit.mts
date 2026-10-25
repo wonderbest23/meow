@@ -35,7 +35,7 @@ await wait(400);
 const loadsBeforeSave = stateLoads;
 log.finish = await page.evaluate(() => { const pop = document.querySelector("[data-fact-popover]"); if (!pop) return "auto-sent"; const button = [...pop.querySelectorAll<HTMLButtonElement>("button")].find(el => /이대로 보내기|바꾸기/.test(el.innerText) && !el.disabled); button?.click(); return button?.innerText ?? "none"; });
 await wait(2500);
-log.afterSave = await page.evaluate(() => ({ popover: !!document.querySelector("[data-fact-popover]"), reflect: document.querySelector("[data-fact-reflect]")?.textContent?.slice(0, 140) ?? null, customerChip: document.querySelector("[data-fact-chip=customer]")?.textContent }));
+log.afterSave = await page.evaluate(() => ({ popover: !!document.querySelector("[data-fact-popover]"), reflect: [...document.querySelectorAll<HTMLElement>("button")].find(el => el.innerText.trim() === "계획서에 반영하기" && el.getBoundingClientRect().width > 0)?.innerText ?? null, customerChip: document.querySelector("[data-fact-chip=customer]")?.textContent }));
 log.reloadedAfterSave = stateLoads > loadsBeforeSave;
 await page.screenshot({ path: `${out}fact-4-stale.png` });
 log.reflect = await clickText("계획서에 반영하기"); await wait(800);

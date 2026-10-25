@@ -52,7 +52,7 @@ import { PLAN_EDIT_MAX_LENGTH, planChapterComposeRequest, planChapterEditLabel, 
   assert.match(workspace, /const studioPc = studioHeader && wide;/, "새 화면은 머리줄이 있는 작업실 + 넓은 화면에서만");
   assert.match(workspace, /useStudioHeaderCenter\(centerInHeader \? picker : null\)/, "장 고르기는 머리줄 가운데 알약으로");
   assert.match(workspace, /\(isSample \|\| pane\) && !studioPc && grouped\.length > 0 && <aside/, "새 화면에는 왼쪽 목차 칸이 없다");
-  assert.match(workspace, /\{!studioPc && <div className=\{styles\.readingBar\}>/, "새 화면은 예전 도구 줄 대신 칸 위 얇은 줄");
+  assert.match(workspace, /\{!studioPc && <div className=\{styles\.readingBar\}( data-fact-mode=\{factMode \|\| undefined\})?>/, "새 화면은 예전 도구 줄 대신 칸 위 얇은 줄");
   assert.match(workspace, /\{studioPc && <div className=\{styles\.strip\}>/);
   assert.match(workspace, /className=\{styles\.pager\} aria-label="문서 장 이동"/, "아래 가운데 떠 있는 장 넘기기");
   assert.match(workspace, /!summaryMode && !continuous && !studioPc && <nav className=\{styles\.paging\}/, "예전 이전 장·다음 장 줄은 새 화면에서 뺀다");
