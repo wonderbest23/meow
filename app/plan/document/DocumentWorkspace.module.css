@@ -198,7 +198,7 @@
 .executiveSummary dl { margin: 0; }
 .executiveSummary dl > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 14px; padding: 8px 0; border-bottom: 1px solid var(--app-line); font-size: 14px; line-height: 1.8; }
 .executiveSummary dt { color: var(--app-muted); }
-.executiveSummary dd { margin: 0; color: var(--app-body); word-break: keep-all; overflow-wrap: anywhere; }
+.executiveSummary dd { margin: 0; color: var(--app-body); word-break: keep-all; overflow-wrap: anywhere; text-wrap: balance; } /* 짧은 값 + 꼬리표('3,000원 계산')만 다음 줄로 떨어지지 않게(r39 430px 점검) */
 .executiveSummary dd > span { display: inline; margin-left: 8px; font-size: 11px; color: var(--app-muted); white-space: nowrap; }
 .executiveSummary dd > span[data-basis=proposal] { color: #916c18; }
 .summaryNote { margin: 0; padding-top: 16px; font-size: 12px; line-height: 1.8; color: var(--app-muted); }
@@ -518,10 +518,13 @@
 .stripActions { display:flex; flex:none; align-items:center; gap:6px; }
 .page .stripActions :is(button, .nextButton) { min-height:32px; padding:4px 12px; border-radius:8px; font-size:13px; font-weight:600; white-space:nowrap; }
 .stripActions .secondary { background:#fff; color:#191f28; border:1px solid #e3e7ec; }
+/* '계획서에 반영하기'(아이콘 + 글) — 아이콘이 18px 로 글에 붙고 기본 테두리가 남아 깨져 보였다(r39 점검) */
+.page .stripActions .primary { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--app-primary); }
+.stripActions .primary svg { flex:none; width:15px; height:15px; }
 
 /* 장 고르기 알약 — 작업실 머리줄 가운데(작업실이 그린다) 또는 칸 위 얇은 줄 안 */
 .picker { position:relative; display:inline-flex; min-width:0; max-width:100%; }
-.pickerButton { display:inline-flex; align-items:center; gap:7px; min-width:0; max-width:100%; height:32px; padding:0 10px 0 12px; border:1px solid #e3e7ec; border-radius:999px; background:#fff; color:#191f28; font:inherit; font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; box-shadow:0 1px 1px rgba(16,24,40,.03); }
+.pickerButton { display:inline-flex; align-items:center; gap:7px; min-width:0; max-width:100%; height:38px; padding:0 10px 0 12px; border:1px solid #e3e7ec; border-radius:999px; background:#fff; color:#191f28; font:inherit; font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; box-shadow:0 1px 1px rgba(16,24,40,.03); }
 .pickerButton:hover:not(:disabled) { background:#f9fafb; }
 .pickerButton:focus-visible { outline:3px solid #90baff; outline-offset:2px; }
 .pickerButton > svg { flex:none; color:#8b95a1; }

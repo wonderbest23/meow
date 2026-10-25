@@ -66,6 +66,11 @@
 .checklist > small { margin-top:8px; color:var(--app-muted); font-size:12px; line-height:1.7; }
 /* 작업실 칸 안(data-embedded) — 휴대폰에서 화면 아래에 고정하던 단계 단추 줄을 칸 스크롤 안의 아래 붙임으로. 고정하면 작업실 아래 탭 줄을 덮는다 */
 @media(max-width:760px) { [data-embedded] .stepActions { position:sticky; left:auto; right:auto; bottom:0; margin:0; } [data-embedded] .launch { padding-bottom:0; } }
+/*
+ * 칸 본문 좌우 여백(24px)만큼 단추 줄을 넓혀 단추가 본문 글과 같은 줄에서 시작하게 하고(예전엔 16px 더 안쪽), 확인 목록의 마지막 줄 선은 뺀다 —
+ * 바로 아래 단추 줄 위 선과 24px 사이로 선이 두 번 그어져 보였다(r39 휴대폰 점검)
+ */
+@media(max-width:760px) { [data-embedded] .stepActions { margin:0 -24px; padding-inline:24px; } [data-embedded] .confirmList > div:last-child { border-bottom:0; } }
 /* 작업실 칸 안 — 확인 화면 맨 위 '사업 시작하기'는 작업실 탭 이름과 같아 빼고, 제목을 칸 위에 바로 붙인다 */
 [data-embedded] .tabEyebrow { display:none; }
 [data-embedded] .setup > .tabEyebrow + h2 { margin-top:4px; }
@@ -87,6 +92,7 @@
 /* 확인 목록 한 줄이 '포함)'처럼 끝 몇 글자만 다음 줄로 넘지 않게(휴대폰 점검 2026-10-24) */
 .checklist label span { text-wrap:pretty; }
 /* 개업 준비를 마친 화면 — 제목→글 8px(제목 아래 기본 여백이 커서 떨어져 보였다) */
-.finish h2 { margin-bottom:0; }
-.finish h2 + p { margin-top:8px; }
+/* 두 클래스로 — 내 사업 화면 틀의 .content h2(아래 16px)와 특이도가 같아 운영 빌드 CSS 순서에 따라 16px 이 이겼다(r39 점검) */
+.launch .finish h2, .launch h2[tabindex]:has(+ p) { margin-bottom:0; }
+.launch .finish h2 + p, .launch h2[tabindex] + p { margin-top:8px; }
 @media (min-width:1024px) { .studioNarrowOnly { display:none !important; } }
