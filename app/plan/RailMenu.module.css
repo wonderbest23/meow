@@ -47,12 +47,13 @@
 .menu .spring { flex: 1; min-height: 16px; }
 .menu .divider { height: 1px; margin: 8px 4px; background: #e5e8eb; }
 
-/* 로그인 전 — 머리말과 같은 '로그인 · 회원가입' 두 단추 */
+/* 로그인 전 — 머리말과 같은 '로그인 · 회원가입' 두 단추. 머리말 로그인·시작하기와 같은 44px 높이·12px 모서리·굵기, 끝에 › */
 .menu .auth { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px 0 0; }
-.menu .auth a { display: flex; align-items: center; justify-content: center; height: 38px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; }
+.menu .auth a { display: flex; align-items: center; justify-content: center; gap: 2px; min-width: 0; height: 44px; border-radius: 12px; font-size: 14px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.menu .auth a svg { flex: none; width: 16px; height: 16px; margin-right: -4px; }
 .menu .login { border: 1px solid #d1d6db; background: #fff; color: #191f28; }
 .menu .login:hover { background: #f9fafb; }
-.menu .signup { border: 1px solid #1f2125; background: #1f2125; color: #fff; }
+.menu .signup { border: 1px solid #191f28; background: #191f28; color: #fff; }
 .menu .signup:hover { background: #000; }
 
 /* 로그인 후 — 동그란 머리글자 + 내 계정 / 이메일 */
@@ -69,7 +70,8 @@
   .menu .logoMark { display: block !important; width: 36px; height: 36px; }
   .menu .auth { grid-template-columns: 1fr; }
   .menu .signup { display: none; }
-  .menu .auth a { height: 36px; font-size: 12px; }
+  .menu .auth a { height: 44px; font-size: 12px; }
+  .menu .auth a svg { width: 14px; height: 14px; }
 }
 
 /* 내 문의 — 답할 문의 수 */
@@ -92,3 +94,4 @@
 :global([data-rail-open]) .menu .accountName { font-size: 16px; }
 :global([data-rail-open]) .menu .accountMail { font-size: 13px; }
 :global([data-rail-open]) .menu .auth a { height: 48px; font-size: 16px; }
+:global([data-rail-open]) .menu .auth a svg { width: 18px; height: 18px; }

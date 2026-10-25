@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, Headphones, MessagesSquare, SquarePen } from "lucide-react";
+import { ChevronRight, FileText, Headphones, MessagesSquare, SquarePen } from "lucide-react";
 import { unansweredCount, useInquiries } from "./inquiries/use-inquiries";
 import styles from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
@@ -104,8 +104,8 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
     ) : (
       /* /account?next= 는 로그인 팝업이 받아 이 화면에서 연다 */
       <div className={menu.auth}>
-        <a className={menu.login} href={`/account?next=${loginNext}`}>로그인</a>
-        <a className={menu.signup} href={`/account?mode=register&next=${loginNext}`}>회원가입</a>
+        <a className={menu.login} href={`/account?next=${loginNext}`}>로그인<ChevronRight aria-hidden="true" /></a>
+        <a className={menu.signup} href={`/account?mode=register&next=${loginNext}`}>회원가입<ChevronRight aria-hidden="true" /></a>
       </div>
     )}
   </div>;
