@@ -219,6 +219,7 @@
   padding: 0 8px;
   display: inline-flex;
   align-items: center;
+  gap: 2px;
   color: var(--app-accent, #3272db);
   font-size: 14px;
   font-weight: 700;

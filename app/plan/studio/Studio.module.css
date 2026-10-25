@@ -88,20 +88,22 @@
 .headerSlot { display:flex; align-items:center; gap:8px; min-width:0; flex-shrink:0; }
 
 /*
- * PC 한 줄 머리줄(52px) — 왼쪽 칸은 대화 칸 폭, 오른쪽은 탭 · 가운데 알약 · 진행 · 칸 단추.
+ * PC 한 줄 머리줄(56px) — 왼쪽 칸은 대화 칸 폭, 오른쪽은 탭 · 가운데 알약 · 진행 · 칸 단추.
  * 시안의 옅은 글자(#8b95a1)는 회색 바탕에서 3:1 이 안 돼 글자는 #5f6b7c(4.9:1) 이상으로 쓴다.
+ * 단추 높이는 세 가지로 맞춘다(r39 점검 — 32·36·40px 이 섞여 작고 들쭉날쭉해 보였다):
+ * 아이콘·사업명 36px, 탭 묶음 · 칸 단추 40px(탭 하나는 34px), 가운데 알약 38px(칸 모듈 쪽).
  */
-.topBar { height:52px; flex-shrink:0; display:grid; grid-template-columns:var(--studio-chat-w, 420px) minmax(0,1fr); background:var(--studio-shell, #f5f6f8); color:#191f28; position:relative; z-index:3; letter-spacing:-0.01em; }
+.topBar { height:56px; flex-shrink:0; display:grid; grid-template-columns:var(--studio-chat-w, 420px) minmax(0,1fr); background:var(--studio-shell, #f5f6f8); color:#191f28; position:relative; z-index:3; letter-spacing:-0.01em; }
 .topBar :is(button,a):focus-visible { outline:3px solid #8bb9ff; outline-offset:2px; }
 .tbLeft { display:flex; align-items:center; gap:8px; min-width:0; padding:0 10px; }
 .tbRight { display:flex; align-items:center; gap:12px; min-width:0; padding:0 10px 0 0; }
-.iconButton { width:32px; height:32px; flex-shrink:0; display:inline-grid; place-items:center; border:0; border-radius:8px; background:transparent; color:#4e5968; text-decoration:none; }
+.iconButton { width:36px; height:36px; flex-shrink:0; display:inline-grid; place-items:center; border:0; border-radius:9px; background:transparent; color:#4e5968; text-decoration:none; }
 .iconButton:hover { background:#e9ecf0; color:#191f28; }
 .iconButton svg { display:block; }
 .mark { width:24px; height:24px; flex-shrink:0; border-radius:6px; display:block; }
 .biz { flex:1; min-width:0; line-height:1.2; }
 .topBar .bizTitle { margin:0; min-width:0; font:inherit; }
-.bizName { max-width:calc(100% + 8px); min-height:32px; margin:0 -4px; display:inline-flex; align-items:center; gap:3px; padding:6px 4px; border:0; border-radius:8px; background:transparent; color:#191f28; font-size:14.5px; font-weight:700; line-height:1.25; }
+.bizName { max-width:calc(100% + 8px); min-height:36px; margin:0 -4px; display:inline-flex; align-items:center; gap:3px; padding:6px 4px; border:0; border-radius:8px; background:transparent; color:#191f28; font-size:14.5px; font-weight:700; line-height:1.25; }
 .bizName span { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .bizName svg { flex-shrink:0; color:#8b95a1; }
 .bizName:hover span { text-decoration:underline; text-underline-offset:3px; text-decoration-color:#c9d0da; }
@@ -111,7 +113,7 @@
 
 /* 탭 — 회색 받침 위 흰 알약(고른 탭). 끝난 단계는 ✓ */
 .seg { display:inline-flex; align-items:center; gap:2px; flex-shrink:0; padding:3px; border-radius:10px; background:#e9ecf0; }
-.seg button { position:relative; height:32px; padding:0 11px; display:inline-flex; align-items:center; gap:5px; border:0; border-radius:7px; background:transparent; color:#4e5968; font-size:13px; font-weight:500; white-space:nowrap; transition:background .15s,color .15s; }
+.seg button { position:relative; height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:5px; border:0; border-radius:7px; background:transparent; color:#4e5968; font-size:13.5px; font-weight:500; white-space:nowrap; transition:background .15s,color .15s; }
 .seg button:hover { color:#191f28; }
 .seg button[aria-selected=true] { background:#fff; color:#191f28; font-weight:650; box-shadow:0 1px 2px rgba(16,24,40,.08), 0 0 0 .5px rgba(16,24,40,.05); }
 .seg .dot { top:3px; right:3px; box-shadow:0 0 0 2px #e9ecf0; }
@@ -154,15 +156,14 @@
 @media (max-width:1280px) { .tbRight { gap:8px; } .seg button { padding:0 9px; } .stepper li + li { margin-left:16px; } .stepper li + li::before { left:-14px; width:12px; } }
 @media (max-width:1360px) {
   .progress { display:none; }
-  .tbActs .headerSlot button[aria-label]:has(> svg) { width:36px; min-height:36px; padding:0; gap:0; }
+  .tbActs .headerSlot button[aria-label]:has(> svg) { width:40px; min-height:40px; padding:0; gap:0; }
   .tbActs .headerSlot button[aria-label]:has(> svg) > span { position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   .tbActs .headerSlot :is(button,a) small { display:none; }
 }
 @media (max-width:1180px) {
   .lockNote { display:none; }
-  .seg { padding:2px; }
   .tbRight { gap:6px; }
-  .seg button { height:32px; padding:0 5px; gap:3px; font-size:12.5px; }
+  .seg button { padding:0 6px; gap:3px; font-size:12.5px; }
   .centerWrap { min-width:160px; }
   .tbLeft { gap:6px; }
   .tbActs { gap:6px; }
@@ -185,6 +186,8 @@
 .narrowTabs button { position:relative; }
 .narrowTabs button { display:inline-flex; align-items:center; justify-content:center; gap:3px; }
 .tabCheck { flex-shrink:0; color:#1b64da; }
+/* 360px 폰 — '✓ 개업·운영'이 칸보다 3px 넓어 끝 글자가 잘렸다(r39 점검). 탭 사이 · 안쪽 여백과 글자를 조금 줄인다 */
+@media (max-width:374px) { .narrowTabs { gap:2px; } .narrowTabs button { padding:0 4px; gap:2px; font-size:14.5px; } }
 .dot { position:absolute; top:7px; right:7px; width:8px; height:8px; border-radius:50%; background:#f04452; box-shadow:0 0 0 2px var(--app-raised); }
 
 /* 앱(키보드가 뜨면 화면이 줄어듦) — 낮은 화면에서 입력 중이면 탭 줄을 접어 입력창 자리를 남긴다 */

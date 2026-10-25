@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useReducer, u
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
-import { AlertCircle, ArrowDown, ArrowRight, ArrowUp, Bookmark, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, PencilLine, RefreshCw, Sparkles, Target, Undo2, X, MessageCircle } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, PencilLine, RefreshCw, Sparkles, Target, Undo2, X, MessageCircle } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
@@ -1666,7 +1666,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
                 <p>{nextStep === "design" ? (designFailed ? "저장한 답변은 그대로예요. 아래에서 다시 정리해 주세요." : "기본 질문이 끝나서 바로 정리를 시작했어요. 30~40초 뒤에 사업계획서를 만들 수 있어요.") : nextStep === "prepare" ? "아직 사업계획서 문서는 만들지 않았어요. 아래 방향이 맞으면 2단계에서 문서를 작성해요." : nextStep === "open" ? "사업계획서 문서를 열어 확인하세요." : refinement?.prompt ?? "이어서 사업 내용을 정해볼까요?"}</p>
                 </>}
                 {(nextStep === "prepare" || nextStep === "open") && !(coach && currentIdentity(plan)) && <DesignDirection snapshot={plan} continued={!!currentIdentity(plan)} />}
-                {!nextStep && refinement && <button type="button" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "살펴볼 사업 정하기" : "사업 소개 정하기"}<ArrowRight size={17} aria-hidden="true" /></button>}
+                {!nextStep && refinement && <button type="button" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "살펴볼 사업 정하기" : "사업 소개 정하기"}<ChevronRight size={17} aria-hidden="true" /></button>}
                 {/* 작업실 안: 작성 중이면 진행 카드, 방금 끝났으면 마무리 말이 다음 단계 단추 자리를 대신한다 */}
                 {studioTurn ?? <NextStepAction reflect={pro ? planSide ? "link" : "none" : "button"} preparing={preparing} payNote={payNote} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce minimal={coach && !!currentIdentity(plan)} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}
                 </>}

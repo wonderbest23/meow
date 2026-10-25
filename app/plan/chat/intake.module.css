@@ -40,7 +40,7 @@
 .summaryToggle b { min-width: 20px; padding: 0 6px; border-radius: 10px; background: #edf4ff; font-size: 12px; line-height: 20px; text-align: center; }
 .summarySheetHeader { display: none; }
 .intentPrompt { padding: 20px 0; border-top: 1px solid var(--intake-line); }
-.intentPrompt > p, .noteReceipt > p { margin: 12px 0; line-height: 1.6; }
+.intentPrompt > p, .noteReceipt > p { margin: 12px 0; line-height: 1.6; word-break: keep-all; text-wrap: pretty; }
 .intentActions { display: flex; flex-wrap: wrap; gap: 8px; }
 .intentActions button { min-height: 44px; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .noteReceipt { padding: 4px 0 16px; }
@@ -260,7 +260,9 @@
 .jobChatNote { margin-top: 8px; color: var(--intake-muted); font-size: 12px; line-height: 1.6; word-break: keep-all; text-wrap: pretty; }
 /* 코치 채팅 1단계 결과(DesignResult): 이름 · 요약 · 버튼만 */
 .result { display: grid; gap: 20px; width: 100%; margin-top: 6px; }
-.resultBlock { display: grid; gap: 10px; }
+.resultBlock { display: grid; gap: 8px; }
+/* 바깥 .complete 의 p·h2·button 아래 여백(22·12·12px)이 결과 안으로 새어 '사업 이름'→이름이 32px 벌어졌다(r39 점검) — 간격은 gap 이 맡는다 */
+.result :is(.resultLabel, .resultName, .resultHeadline, .resultNames button, .resultSummary p) { margin: 0; }
 .resultLabel { margin: 0; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
 .resultName { margin: 0; color: #111418; font-size: 24px; font-weight: 700; line-height: 1.3; word-break: keep-all; }
 .resultNames { display: flex; flex-wrap: wrap; gap: 8px; }

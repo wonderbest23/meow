@@ -6,7 +6,7 @@ import { apiMessage, fetchWithTimeout, isTimeoutError, koreanText, userErrorMess
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { LayoutTemplate, Maximize2, ArrowRight, ChevronRight } from "lucide-react";
+import { LayoutTemplate, Maximize2, ChevronRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
 import { HomepageKitPanel, homepageMissingInfo, withBusinessName } from "../../../components/homepage-kit-panel";
@@ -1051,7 +1051,7 @@ export function HomepageScreen() {
               )}
               {/* 홈페이지는 나중에 해도 된다 — 결제 단추 하나뿐이라 개업 준비로 넘어갈 길이 없었다(여정 점검 2026-10-22) */}
               {!sample && screenPlanId && <Link className={styles.ctaSecondary} href={launchHref(screenPlanId)} onClick={() => setActivePlan(screenPlanId)}>
-                {journeyLabel("launch", !!screenPlan && readCoach(screenPlan.answers)?.stage === "operating")} 먼저
+                {journeyLabel("launch", !!screenPlan && readCoach(screenPlan.answers)?.stage === "operating")} 먼저<ChevronRight size={16} aria-hidden="true" />
               </Link>}
             </div>
           </div>
@@ -1119,7 +1119,7 @@ export function HomepageScreen() {
           <span className={styles.builderOpenText} title="글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿔요">
             <strong>자유 편집 열기</strong>
           </span>
-          <ArrowRight size={16} />
+          <ChevronRight size={16} aria-hidden="true" />
         </button>
       )}
 

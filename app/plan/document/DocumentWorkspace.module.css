@@ -518,10 +518,13 @@
 .stripActions { display:flex; flex:none; align-items:center; gap:6px; }
 .page .stripActions :is(button, .nextButton) { min-height:32px; padding:4px 12px; border-radius:8px; font-size:13px; font-weight:600; white-space:nowrap; }
 .stripActions .secondary { background:#fff; color:#191f28; border:1px solid #e3e7ec; }
+/* '계획서에 반영하기'(아이콘 + 글) — 아이콘이 18px 로 글에 붙고 기본 테두리가 남아 깨져 보였다(r39 점검) */
+.page .stripActions .primary { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--app-primary); }
+.stripActions .primary svg { flex:none; width:15px; height:15px; }
 
 /* 장 고르기 알약 — 작업실 머리줄 가운데(작업실이 그린다) 또는 칸 위 얇은 줄 안 */
 .picker { position:relative; display:inline-flex; min-width:0; max-width:100%; }
-.pickerButton { display:inline-flex; align-items:center; gap:7px; min-width:0; max-width:100%; height:32px; padding:0 10px 0 12px; border:1px solid #e3e7ec; border-radius:999px; background:#fff; color:#191f28; font:inherit; font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; box-shadow:0 1px 1px rgba(16,24,40,.03); }
+.pickerButton { display:inline-flex; align-items:center; gap:7px; min-width:0; max-width:100%; height:38px; padding:0 10px 0 12px; border:1px solid #e3e7ec; border-radius:999px; background:#fff; color:#191f28; font:inherit; font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; box-shadow:0 1px 1px rgba(16,24,40,.03); }
 .pickerButton:hover:not(:disabled) { background:#f9fafb; }
 .pickerButton:focus-visible { outline:3px solid #90baff; outline-offset:2px; }
 .pickerButton > svg { flex:none; color:#8b95a1; }
