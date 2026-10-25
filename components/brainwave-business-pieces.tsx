@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ImagePlus } from "lucide-react";
+import { ChevronRight, ImagePlus } from "lucide-react";
 import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
@@ -140,7 +140,7 @@ export function kitPieces({ overrides, hidden, onPick }: BusinessDesignProps, cl
       event.stopPropagation();
       if (onPick) onPick("button", buttonId, event.currentTarget);
       else runBrainwaveButton(overrides.links, buttonId);
-    }}><span>{scaled(textId, label)}</span><ArrowRight size={18} aria-hidden /></button>;
+    }}><span>{scaled(textId, label)}</span><ChevronRight size={18} aria-hidden /></button>;
   };
   const Photo = ({ id, url, className, kenburns }: { id: string; url: string; className?: string; kenburns?: boolean }) => (
     // eslint-disable-next-line @next/next/no-img-element

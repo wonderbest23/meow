@@ -854,7 +854,7 @@ export function SupportChatWidget() {
                         onClick={() => trackFunnel("consult_cta_click", { variant: "soft" })}
                       >
                         지금까지 답한 내용으로 사업계획서를 시작할 수 있어요
-                        <b>{consultFilled}개 항목이 그대로 넘어가요. 사업 방향 정리까지는 무료예요 →</b>
+                        <b>{consultFilled}개 항목이 그대로 넘어가요. 사업 방향 정리까지는 무료예요<ChevronRight size={14} aria-hidden="true" style={{ verticalAlign: "-2px" }} /></b>
                       </a>
                     )}
                     {/*
@@ -884,7 +884,7 @@ export function SupportChatWidget() {
                         onClick={() => trackFunnel("consult_cta_click", { variant: "main", withPicks: true })}
                       >
                         마음에 드는 추천이 없어도 괜찮아요
-                        <b>지금까지 내용 그대로 시작하기 →</b>
+                        <b>지금까지 내용 그대로 시작하기<ChevronRight size={14} aria-hidden="true" style={{ verticalAlign: "-2px" }} /></b>
                       </a>
                     )}
 
@@ -932,7 +932,7 @@ export function SupportChatWidget() {
                     {!consultThinking && consultEscalate && (
                       <div className="consult-escalate" role="status">
                         <span>{consultEscalate}</span>
-                        <button type="button" onClick={handoffFromConsult}>담당자에게 이 대화 남기기 →</button>
+                        <button type="button" onClick={handoffFromConsult}>담당자에게 이 대화 남기기<ChevronRight size={14} aria-hidden="true" style={{ verticalAlign: "-2px" }} /></button>
                       </div>
                     )}
                     {consultTurns.length > 0 && !consultEscalate && (

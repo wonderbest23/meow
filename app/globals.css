@@ -4856,6 +4856,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .platform-legal-page { min-height: 100vh; background: #f6f5ff; }
 .platform-legal-header { height: var(--topbar-h); flex: none; padding: 0 max(24px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid #cccae3; background: white; display: flex; align-items: center; justify-content: space-between; }
 .platform-legal-header img { height: var(--topbar-logo-h); width: auto; display: block; }
+.platform-legal-header > a:first-child { display: flex; align-items: center; min-height: 44px; } /* 로고 누르는 자리(점검 r39) */
 .platform-legal-header > a:last-child { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; color: #585667; font-size: 12px; font-weight: 700; } /* 누르는 자리 44px(감사 2026-10-23) */
 .platform-legal-header svg { width: 15px; }
 .platform-legal-layout { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 42px 0 80px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 42px; align-items: start; }
@@ -7674,8 +7675,8 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .manual-payment-page.loading, .manual-payment-page.error { place-content: center; justify-items: center; gap: 10px; text-align: center; display: grid; }
 .manual-payment-page.loading > svg, .manual-payment-page.error > svg { width: 34px; color: #3272db; }
 .manual-payment-page.error h1 { margin: 6px 0 0; font-size: 22px; }
-.manual-payment-page.error p { margin: 0 0 6px; color: #585667; font-size: 12px; }
-.manual-payment-page.error a { min-height: 40px; padding: 0 13px; border: 1px solid #cccae3; border-radius: 7px; background: white; color: #333d4b; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; }
+.manual-payment-page.error p { margin: 0 0 14px; color: #585667; font-size: 14px; } /* 글→단추 24px(gap 10 + 14) */
+.manual-payment-page.error a { min-height: 44px; padding: 0 16px; border: 1px solid #cccae3; border-radius: 8px; background: white; color: #333d4b; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; } /* 누르는 자리 44px·글자 14px(점검 r39) */
 .manual-payment-page.error a svg { width: 14px; }
 
 .admin-payment-page { min-height: 100dvh; padding-bottom: 50px; background: #f6f5ff; color: #0d0a2c; }
@@ -10065,7 +10066,7 @@ body {
     -webkit-overflow-scrolling: touch;
   }
   .platform-legal-layout > aside a {
-    min-height: 38px;
+    min-height: 44px;
     padding: 0 12px;
     border: 1px solid #cccae3;
     border-radius: 8px;
@@ -10078,6 +10079,8 @@ body {
   .platform-legal-header img {
     width: auto;
   }
+  /* 원문 링크도 휴대폰에서 누르는 자리 44px(점검 r39) */
+  .platform-legal-document > footer a { min-height: 44px; }
   /* 시행일·원문 링크가 10px이라 읽기 어려웠다 */
   .platform-legal-document > header small,
   .platform-legal-document > footer a {
@@ -16885,6 +16888,9 @@ button.account-kakao-btn svg { display: inline-block !important; }
 /* 상담 → 담당자 권유 — 답 바로 아래 한 줄 */
 .consult-escalate { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 4px 0 2px; padding: 10px 12px; border-radius: 10px; background: #fff7ed; border: 1px solid #f3dcbf; font-size: 12.5px; color: #7a4f0f; }
 .consult-escalate button { border: 0; border-radius: 999px; background: #1c1d21; color: #fff; font: inherit; font-size: 12.5px; font-weight: 700; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+/* 누르는 자리 PC 32px·휴대폰 44px(점검 r39) */
+.consult-escalate button { min-height: 32px; display: inline-flex; align-items: center; gap: 2px; }
+@media (pointer: coarse) { .consult-escalate button { min-height: 44px; } }
 
 /* 버튼 오른쪽 화살표: 평소 꺾쇠(›), 마우스를 올리면 가로선이 자라 화살표(→)가 된다(components/cta-arrow.tsx). */
 .cta-arrow { width: 1.1em; height: 1.1em; flex: 0 0 auto; margin-right: -2px; overflow: visible; }

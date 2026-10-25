@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ImagePlus } from "lucide-react";
+import { ChevronRight, ImagePlus } from "lucide-react";
 import { BUSINESS_TEMPLATE_PROFILES, businessTemplateManifest } from "../lib/landing/brainwave/business-content";
 import { BusinessConsult0_290 } from "./brainwave-business-consult";
 import { BusinessShop0_1102 } from "./brainwave-business-shop";
@@ -104,7 +104,7 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
             event.stopPropagation();
             if (onPick) onPick("button", id, event.currentTarget);
             else runBrainwaveButton(overrides.links, id);
-          }}><span style={overrides.sizes?.[textId] ? { fontSize: 16 * overrides.sizes[textId] } : undefined}>{text(textId)}</span><ArrowRight size={18} aria-hidden /></button>;
+          }}><span style={overrides.sizes?.[textId] ? { fontSize: 16 * overrides.sizes[textId] } : undefined}>{text(textId)}</span><ChevronRight size={18} aria-hidden /></button>;
         })}
         {emptySlot ? <button type="button" className={styles.photoSlot} data-bw-image={emptySlot} onClick={event => { event.stopPropagation(); onPick!("image", emptySlot, event.currentTarget); }}><ImagePlus size={20} aria-hidden /> 사진 넣기</button> : null}
         {imageIds.map(id => <img key={id} className={styles.photo} {...responsivePhotoProps(overrides.images![id])} src={overrides.images![id]} alt="" data-bw-image={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("image", id, event.currentTarget); } : undefined} />)}

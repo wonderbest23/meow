@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { ChevronRight, RefreshCw } from "lucide-react";
 import { LEAD_NOTIFICATION_LABELS, LEAD_NOTIFICATION_MAX_ATTEMPTS, type LeadNotificationSummary } from "../lib/landing/lead-notification-types";
 import { Spinner } from "../app/plan/PlanLoading";
 
@@ -42,7 +42,7 @@ export function HomepageLeadNotification({ value, busy, onRetry, phoneHref }: { 
   const canRetry = value.attempts < LEAD_NOTIFICATION_MAX_ATTEMPTS && ["pending", "retry", "blocked"].includes(value.status);
   return <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
     <small>{LEAD_NOTIFICATION_LABELS[value.status]}{message ? ` · ${message}` : ""}</small>
-    {value.errorCode === "recipient_missing" && phoneHref ? <a href={phoneHref} style={{ fontSize: 12, fontWeight: 700, color: "#365f98" }}>번호 등록하러 가기 →</a> : null}
+    {value.errorCode === "recipient_missing" && phoneHref ? <a href={phoneHref} style={{ fontSize: 12, fontWeight: 700, color: "#365f98", display: "inline-flex", alignItems: "center", minHeight: 32 }}>번호 등록하러 가기<ChevronRight size={14} aria-hidden="true" /></a> : null}
     {canRetry ? <button type="button" disabled={busy} onClick={onRetry} title="문의 알림 다시 보내기" aria-label="문의 알림 다시 보내기" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", border: "1px solid #d8e1ed", borderRadius: 6, background: "transparent", color: "#365f98", fontSize: 12 }}>{busy ? <Spinner /> : <RefreshCw size={13} />} 재시도</button> : null}
   </div>;
 }

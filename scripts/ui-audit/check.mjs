@@ -137,7 +137,8 @@ function INPAGE() {
       const vis = [...E.querySelectorAll("*")].filter(x => shown(x) && (x.children.length === 0 || isLeaf(x)) && !(fixedAnc(x) && !fixedAnc(E)));
       const u = union(vis.length ? vis : [E]);
       const A = area(E);
-      for (const x of otherEls) { const q = R(x); if (q.top >= u.bottom - 2) A.bottom = Math.min(A.bottom, q.top); else if (q.bottom <= u.top + 2) A.top = Math.max(A.top, q.bottom); }
+      // 옆 칸(PC 사이드바 등)처럼 가로로 겹치지 않는 글은 위아래 경계로 보지 않는다(점검 r39 — 사이드바 글자가 영역을 줄여 오탐)
+      for (const x of otherEls) { const q = R(x); if (q.right <= u.left || q.left >= u.right) continue; if (q.top >= u.bottom - 2) A.bottom = Math.min(A.bottom, q.top); else if (q.bottom <= u.top + 2) A.top = Math.max(A.top, q.bottom); }
       A.h = A.bottom - A.top;
       const item = { E: id(E), h: id(h), alone: others < 40, others, label: txt(h).slice(0, 40), cls: cls(E) };
       if (item.alone && A.h > 200) {

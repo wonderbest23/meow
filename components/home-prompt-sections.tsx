@@ -75,8 +75,9 @@ function focusHeroPrompt() {
   input.focus({ preventScroll: true });
 }
 
+/* 다른 화면으로 가는 줄·카드 끝은 › (대표 규칙 2026-10-24 — → 쓰지 않음, 점검 r39) */
 function Arrow() {
-  return <svg className={styles.arrow} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
+  return <ChevronRight className={styles.arrow} size={20} aria-hidden="true" />;
 }
 
 /** signedIn — 로그인했는지(확인 전이면 null). '계획 다음의 일' 카드가 내 사업 또는 예시로 간다 */
@@ -131,7 +132,7 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
         {STARTS.map(card => <article key={card.title} className={styles.panel}>
           <h3>{card.title}</h3>
           <p>{card.body}</p>
-          <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action} <span aria-hidden="true">→</span></a>
+          <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action}<ChevronRight size={18} aria-hidden="true" /></a>
         </article>)}
       </div>
     </section>
@@ -159,7 +160,7 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
         {afterCards(signedIn).map(card => <a key={card.id} id={card.id} href={card.href} className={`${styles.panel} ${styles.panelAnchor}`}>
           <h3>{card.title}</h3>
           <p>{card.body}</p>
-          <span className={styles.panelLink}>{card.action} <span aria-hidden="true">→</span></span>
+          <span className={styles.panelLink}>{card.action}<ChevronRight size={18} aria-hidden="true" /></span>
         </a>)}
       </div>
     </section>

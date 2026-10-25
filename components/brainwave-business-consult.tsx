@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, MessageCircle } from "lucide-react";
+import { ChevronRight, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { kitPieces, revealProps, useKitMotion, type BusinessDesignProps } from "./brainwave-business-pieces";
 import motion from "./brainwave-business-motion.module.css";
@@ -69,7 +69,7 @@ export function BusinessConsult0_290({ overrides, hidden, sectionOrder, onPick, 
             const url = photo(imageId);
             return <article key={name} className={styles.card}>
               {url ? Photo({ id: imageId, url: url, className: styles.cardImage }) : PhotoSlot({ id: imageId, className: styles.cardSlot })}
-              <div className={styles.cardName}>{Text({ id: name, as: "strong" })}<ArrowRight size={16} aria-hidden /></div>
+              <div className={styles.cardName}>{Text({ id: name, as: "strong" })}<ChevronRight size={16} aria-hidden /></div>
             </article>;
           })}
         </div>
