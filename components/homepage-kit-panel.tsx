@@ -453,7 +453,7 @@ export function HomepageKitPanel({
       <div className="hk-contact-quick">
         <label className="hk-switch">
           <input type="checkbox" checked={contact.quickBar} onChange={(e) => setContact({ quickBar: e.target.checked })} />
-          <span>휴대폰 화면 아래 고정 버튼 <small>{quickCount ? `손님 휴대폰에 ${quickCount}개가 떠 있어요(전화·카톡·예약 중 넣은 것).` : "전화번호·카카오톡 채널·예약 주소 중 하나를 넣으면 나타나요."}</small></span>
+          <span>휴대폰 화면 아래 고정 버튼 <small>{quickCount ? `손님 휴대폰에 ${quickCount}개가 떠 있어요(넣어 둔 전화·카톡·예약·문의 양식).` : "전화번호·카카오톡 채널·예약 주소를 넣거나 문의 양식을 켜면 나타나요."}</small></span>
         </label>
         {contact.quickBar ? (
           <div className="hk-grid">

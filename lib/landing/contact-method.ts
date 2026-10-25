@@ -150,15 +150,18 @@ export function withContactLinks<T extends DraftLike>(config: T): T["pageData"] 
 
 export type QuickAction = { key: "phone" | "kakao" | "booking" | "store" | "form"; label: string; href: string };
 
-/** 휴대폰 화면 아래 고정 버튼 — 넣어 둔 연락처만, 최대 3개. 하나뿐이면 문의 양식을 곁들인다 */
+/**
+ * 휴대폰 화면 아래 고정 버튼 — 사장님이 넣어 둔 연락 수단만, 최대 3개(전화 → 카톡 → 예약·구매 → 문의 양식 순).
+ * 문의 양식이 켜져 있으면 그것만으로도 '문의하기'가 뜬다. 연락 방법이 없던 예전 초안은 기본값(고정 버튼 켬)으로 본다.
+ */
 export function quickActions(contact: LandingContact | undefined, phone: string, leadCaptureEnabled: boolean): QuickAction[] {
-  if (!contact?.quickBar) return [];
+  const value = contact ?? DEFAULT_CONTACT;
+  if (!value.quickBar) return [];
   const actions: QuickAction[] = [];
-  if (phone) actions.push({ key: "phone", label: "전화", href: `tel:${phone}` });
-  if (isWebUrl(contact.kakaoUrl)) actions.push({ key: "kakao", label: "카톡 문의", href: contact.kakaoUrl.trim() });
-  if (isWebUrl(contact.bookingUrl)) actions.push({ key: "booking", label: "예약", href: contact.bookingUrl.trim() });
-  else if (isWebUrl(contact.storeUrl)) actions.push({ key: "store", label: "구매", href: contact.storeUrl.trim() });
-  if (!actions.length) return [];
-  if (actions.length === 1 && leadCaptureEnabled) actions.push({ key: "form", label: "문의 남기기", href: "#landing-contact" });
+  if (phone) actions.push({ key: "phone", label: "전화하기", href: `tel:${phone}` });
+  if (isWebUrl(value.kakaoUrl)) actions.push({ key: "kakao", label: "카톡 문의", href: value.kakaoUrl.trim() });
+  if (isWebUrl(value.bookingUrl)) actions.push({ key: "booking", label: "예약하기", href: value.bookingUrl.trim() });
+  else if (isWebUrl(value.storeUrl)) actions.push({ key: "store", label: "구매하기", href: value.storeUrl.trim() });
+  if (leadCaptureEnabled) actions.push({ key: "form", label: "문의하기", href: "#landing-contact" });
   return actions.slice(0, 3);
 }
