@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Building2, CheckCircle2, Clipboard, Clock3, FileCheck2, Home, ShieldCheck } from "lucide-react";
+import { Building2, ChevronRight, CheckCircle2, Clipboard, Clock3, FileCheck2, Home, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -77,7 +77,7 @@ function TransferStatus() {
   };
 
   if (loading) return <main className="manual-payment-page"><PlanLoading fullPage note="주문을 확인하고 있어요" /></main>;
-  if (!order || !bank) return <main className="manual-payment-page error"><ShieldCheck /><h1>주문을 확인할 수 없어요</h1><p>{message || "로그인 상태와 주문번호를 확인해 주세요."}</p><Link href="/account">로그인 확인</Link><Link href="/"><Home /> 홈으로</Link></main>;
+  if (!order || !bank) return <main className="manual-payment-page error"><ShieldCheck /><h1>주문을 확인할 수 없어요</h1><p>{message || "로그인 상태와 주문번호를 확인해 주세요."}</p><Link href="/account">로그인하기</Link><Link href="/"><Home /> 홈으로</Link></main>;
   const copy = statusCopy[order.status] ?? statusCopy.awaiting_deposit;
   const expired = Date.parse(order.expiresAt) <= Date.now() && order.status === "awaiting_deposit";
 
@@ -90,7 +90,7 @@ function TransferStatus() {
         <dl><div><dt>입금 금액</dt><dd>{order.amount.toLocaleString("ko-KR")}원</dd></div><div><dt>입금자명</dt><dd>{order.depositorName}</dd></div><div><dt>입금 기한</dt><dd>{new Date(order.expiresAt).toLocaleString("ko-KR")}</dd></div></dl>
         {order.status === "awaiting_deposit" ? <button className="manual-deposit-report" disabled={reporting} onClick={() => void report()}>{reporting ? <Spinner /> : <CheckCircle2 />} 입금했어요</button> : <div className="manual-deposit-waiting"><Spinner /><span><strong>관리자가 확인하고 있어요</strong><small>화면을 닫아도 주문 상태는 저장돼요.</small></span></div>}
       </>}
-      {order.status === "done" && order.projectId && <Link className="manual-project-start" href={`/?view=project&project=${encodeURIComponent(order.projectId)}`}>내 사업 자료 확인하기 <ArrowRight /></Link>}
+      {order.status === "done" && order.projectId && <Link className="manual-project-start" href={`/?view=project&project=${encodeURIComponent(order.projectId)}`}>내 사업 자료 확인하기 <ChevronRight /></Link>}
       <section className="manual-receipt-status"><FileCheck2 /><span><strong>현금영수증</strong><small>{order.cashReceiptStatus === "issued" ? "발급 완료" : order.cashReceiptType === "NONE" ? "구매자 번호 없이 발급 예정" : "입금 확인 후 발급 예정"}</small></span></section>
       {message && <p className="manual-payment-message" role="status">{message}</p>}
       <footer><p><strong>관리자 입금 확인 전에는 제작이 시작되지 않아요.</strong> 확인 후 맞춤 제작이 시작되면 단순 변심 환불이 제한됩니다. 결과물 미제공·계약 불일치·중대한 하자 등 법정 권리는 보장됩니다.</p><nav><Link href="/refund">취소·환불 기준</Link><Link href="/terms">이용약관</Link><Link href="/">홈으로</Link></nav></footer>

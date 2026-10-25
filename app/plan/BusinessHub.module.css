@@ -141,5 +141,16 @@
 .content[data-empty-list] { box-sizing: border-box; display: flex; flex-direction: column; min-height: 100%; }
 .content[data-empty-list] > .empty { flex: 1 0 auto; width: 100%; min-height: 0; padding-block: 24px; }
 .content[data-empty-list] > .samples { margin-top: auto; }
+/*
+ * PC — 빈 블록을 '예시 줄 위 남은 칸'이 아니라 내용 영역 전체의 세로 가운데에(점검 r39).
+ * 예전엔 아래 여백 110px과 예시 줄만큼 블록이 위로 올라가 로그인 전 화면이 가운데보다 70px쯤 위에 있었다.
+ * 위아래 같은 1fr 칸 사이에 블록을 두고, 예시 줄은 아래 칸 바닥에 붙인다.
+ */
+@media (min-width: 901px) {
+  .content[data-empty-list] { display: grid; grid-template-rows: 1fr auto auto 1fr; padding-bottom: 40px; }
+  .content[data-empty-list]::before { content: ""; }
+  .content[data-empty-list] > .empty { padding-block: 24px; }
+  .content[data-empty-list] > .samples { align-self: end; margin-top: 40px; }
+}
 /* 설명 없이 제목 바로 아래 단추면 제목→단추 24px(제목 아래 8 + 16) */
 .empty :is(h1, h2) + .primary { margin-top: 16px; }

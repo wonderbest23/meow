@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useRef, useState, type CSSProperties } from "reac
 import { isLandingKit, landingKitCredit } from "../lib/landing/kits";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import type { BrainwavePageData } from "./brainwave-page";
-import { ArrowRight, CalendarCheck, Check, ChevronDown, MessageCircle, PencilLine, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
+import { CalendarCheck, Check, ChevronDown, ChevronRight, MessageCircle, PencilLine, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
 import { draftPhone, quickActions, withContactLinks } from "../lib/landing/contact-method";
 import { landingCollectedItems, privacyPolicyWithContact, type LandingDraft } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
@@ -171,7 +171,7 @@ export function PublicLandingClient({
           <span>{config.heroLabel}</span>
           <h1>{config.headline}</h1>
           <p>{config.subheadline}</p>
-          <button onClick={moveToForm}>{config.ctaLabel}<ArrowRight /></button>
+          <button onClick={moveToForm}>{config.ctaLabel}<ChevronRight /></button>
           <small><ShieldCheck /> {config.leadCaptureEnabled ? "신청 정보는 안내 목적으로만 사용됩니다." : "현재는 사업 소개만 공개되어 있습니다."}</small>
         </div>
       </section>
@@ -226,7 +226,7 @@ export function PublicLandingClient({
             ]} values={{ privacy: privacyAgreed, marketing: marketingAgreed }} onChange={(next) => { setPrivacyAgreed(Boolean(next.privacy)); setMarketingAgreed(Boolean(next.marketing)); }} />
             <details className="public-privacy-policy"><summary>개인정보처리방침 전문</summary><p>{privacyPolicyWithContact(config.privacyPolicy, config.privacyContact)}</p><small>문의: {config.privacyContact}</small></details>
             {error && !errorField && <p className="public-form-error" role="alert">{error}</p>}
-            <button type="submit" disabled={submitting}>{submitting ? <Spinner /> : "문의 보내기"}<ArrowRight /></button>
+            <button type="submit" disabled={submitting}>{submitting ? <Spinner /> : "문의 보내기"}</button>
           </form>
         )}
       </section>

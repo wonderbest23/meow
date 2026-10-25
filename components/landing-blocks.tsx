@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Check } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { themeStyle } from "../lib/landing/themes";
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 import type { Config, Slot } from "@puckeditor/core";
@@ -399,7 +399,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
             <span>{eyebrow}</span>
             <h1>{title}</h1>
             <p>{description}</p>
-            <a href="#landing-contact">{buttonLabel}<ArrowRight /></a>
+            <a href="#landing-contact">{buttonLabel}<ChevronRight /></a>
           </div>
           {/*
             * 끌어다 놓은 사진이 있으면 그쪽이 이긴다 — 없을 때만 예전 대표 이미지.
@@ -616,7 +616,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, title, description, price, buttonLabel, ...style }) => (
-        <section className={`landing-block landing-block-offer ${styleClass(style)}`} style={blockBg(style)}><div><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p></div><aside><strong>{price}</strong><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></aside></section>
+        <section className={`landing-block landing-block-offer ${styleClass(style)}`} style={blockBg(style)}><div><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p></div><aside><strong>{price}</strong><a href="#landing-contact">{buttonLabel}<ChevronRight /></a></aside></section>
       ),
     },
     /* 메뉴·가격표 — 음식점·매장 템플릿의 핵심. 값을 모르면 방문자는 문의하지 않는다 */
@@ -750,7 +750,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, title, description, buttonLabel, ...style }) => (
-        <section className={`landing-block landing-block-cta ${styleClass(style)}`} style={blockBg(style)}><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></section>
+        <section className={`landing-block landing-block-cta ${styleClass(style)}`} style={blockBg(style)}><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p><a href="#landing-contact">{buttonLabel}<ChevronRight /></a></section>
       ),
     },
     /*
