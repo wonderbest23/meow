@@ -218,6 +218,8 @@
 /* 빈 화면(로그인 안내·사업 없음) — 대화 영역 가운데에 아이콘·제목·설명·버튼을 세로로 모은다 */
 /* 빈 화면은 대화 칸 세로 가운데에(대표 규칙 2026-10-24) — 제목→글 8px, 글→단추 24px */
 .inputContent:has(> .empty) { box-sizing: border-box; display: grid; align-content: center; min-height: 100%; }
+/* 첫 질문(지금 어느 단계세요? + 선택지)도 대화 칸 세로 가운데에 — 대화가 시작되면 이 묶음이 사라져 원래처럼 아래부터 쌓인다 */
+.inputContent:has(> [data-coach-entry]) { box-sizing: border-box; display: grid; align-content: center; min-height: 100%; }
 .empty { display: grid; justify-items: center; gap: 0; max-width: 440px; margin: 0 auto; padding: 24px 0; text-align: center; }
 .empty h1 { margin: 0 0 8px; font-size: 23px; line-height: 1.4; word-break: keep-all; text-wrap: balance; }
 .emptyIcon { display: grid; place-items: center; width: 60px; height: 60px; margin-bottom: 16px; border-radius: 16px; background: color-mix(in srgb, var(--intake-blue) 10%, transparent); color: var(--intake-blue); }
@@ -690,8 +692,10 @@
   .page[data-coach] .workspace[data-coach-layout="chat"] { grid-template-columns: minmax(0, 1fr) 0px 0px; }
   .page[data-coach] .workspace[data-coach-layout="chat"] > .splitHandle, .page[data-coach] .workspace[data-coach-layout="chat"] > .summaryPane { visibility: hidden; overflow: hidden; padding: 0; border: 0; }
 }
-.page[data-coach] [data-coach-entry] { padding-top: 12px; }
-.page[data-coach] [data-coach-entry] .chipRow { margin-top: 10px; }
+/* 첫 질문 묶음은 가운데 정렬이라 위 여백을 두지 않는다(두면 그만큼 아래로 치우친다) */
+.page[data-coach] [data-coach-entry] { padding-top: 0; }
+/* 첫 질문 묶음은 대화 칸 가운데에 혼자 서 있다 — 상태 블록 규칙대로 글→단추 24px */
+.page[data-coach] [data-coach-entry] .chipRow { margin-top: 24px; }
 .page[data-coach] [data-coach-entry] .textLink { display: inline-block; margin-top: 18px; color: #6b7280; font-size: 12px; }
 .page[data-coach] .composerRow textarea, .page[data-coach] .composerRow textarea:focus, .page[data-coach] .composerRow textarea:focus-visible { border: 0; outline: none; box-shadow: none; background: transparent; }
 .page[data-coach] .sendPartial { justify-self: start; }

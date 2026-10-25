@@ -3733,11 +3733,12 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .public-benefits article h3 { margin-top: 30px; }
   .public-proof > div { padding: 22px; grid-template-columns: 1fr; }
   .public-faq summary { min-height: 68px; font-size: 15px; }
-  .public-lead-section { width: calc(100% - 20px); margin: 45px auto; padding: 30px 20px; border-radius: 19px; grid-template-columns: 1fr; gap: 28px; }
-  .public-lead-section input, .public-lead-section textarea { font-size: 16px; }
+  /* 한 줄 격자 — 1fr 은 입력칸의 기본 최소 너비(약 334px)까지 늘어나 360px 휴대폰에서 4px 넘쳤다. minmax(0, 1fr) 로 칸 안에 가둔다 */
+  .public-lead-section { width: calc(100% - 20px); margin: 45px auto; padding: 30px 20px; border-radius: 19px; grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .public-lead-section input, .public-lead-section textarea { min-width: 0; font-size: 16px; }
   .public-consent strong { font-size: 13px; }
   .public-consent small { font-size: 11px; }
-  .public-lead-section.brochure { grid-template-columns: 1fr; }
+  .public-lead-section.brochure { grid-template-columns: minmax(0, 1fr); }
   .public-landing-footer { width: calc(100% - 28px); grid-template-columns: 1fr; }
   .public-footer-brand { grid-row: auto; }
   .public-business-information { grid-template-columns: 1fr; }
@@ -14602,7 +14603,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
   .landing-block-page.kit-b2b .landing-block-hero h1 { font-size: 36px; line-height: 44px; }
   .landing-block-page.kit-app .landing-block-hero figure { width: min(240px, 100%); }
   .landing-block-page.kit-b2b .landing-block-hero figure { justify-self: center; }
-  .public-landing.kit .public-lead-section { padding: 64px 20px; grid-template-columns: 1fr; gap: 32px; }
+  .public-landing.kit .public-lead-section { padding: 64px 20px; grid-template-columns: minmax(0, 1fr); gap: 32px; }
   .public-landing.kit .public-lead-section > div h2 { font-size: 28px; line-height: 38px; }
 }
 
