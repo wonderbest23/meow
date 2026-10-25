@@ -19,8 +19,8 @@
 .actions button { min-height: 50px; padding: 0 12px; border: 0; border-radius: 12px; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
 .cancel { background: #f2f4f6; color: #4e5968; }
 .cancel:hover { background: #e5e8eb; }
-.confirm { background: #3182f6; color: #fff; }
-.confirm:hover { background: #1b64da; }
+.confirm { background: #1b64da; color: #fff; }
+.confirm:hover { background: #1957c2; }
 .confirm[data-danger] { background: #f04452; }
 .confirm[data-danger]:hover { background: #d22030; }
 .actions button:focus-visible { outline: 2px solid #3182f6; outline-offset: 2px; }

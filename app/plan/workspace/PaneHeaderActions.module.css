@@ -12,7 +12,7 @@
 
 /* 그 칸에서 가장 먼저 누를 단추 — 파란 단추 하나만 */
 .primary { border-color:var(--app-primary); background:var(--app-primary); color:#fff; }
-.primary:hover:not(:disabled) { background:#246cd4; }
+.primary:hover:not(:disabled) { background:#1957c2; }
 .primary small { font-size:12px; font-weight:500; opacity:.85; }
 .primary small::after { content:"·"; margin-left:6px; }
 /* 공개됨처럼 이미 끝난 상태 — 파랗게 켜 두면 눌러야 하는 줄 안다 */

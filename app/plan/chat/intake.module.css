@@ -971,7 +971,7 @@ button.workLogRow { min-height: 32px; }
 .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended] strong { color: #191f28; font-size: 13px; font-weight: 600; }
 .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended]:hover { border-color: #3182f6; background: #e8f3ff; }
 .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended] .ksicHint { color: #4e5968; }
-.page[data-embedded][data-studio-pro] .ksicBadge { margin-right: 6px; padding: 1px 5px; border-radius: 4px; background: #3182f6; font-size: 10.5px; line-height: 16px; }
+.page[data-embedded][data-studio-pro] .ksicBadge { margin-right: 6px; padding: 1px 5px; border-radius: 4px; background: #1b64da; font-size: 10.5px; line-height: 16px; }
 .page[data-embedded][data-studio-pro] .chatQuestion .suggestionChip svg { color: #3182f6; }
 .page[data-embedded][data-studio-pro] .chatQuestion .stepLegend, .page[data-embedded][data-studio-pro] .chatQuestion .ksicLead { color: #8b95a1; font-size: 12px; }
 .page[data-embedded][data-studio-pro] .chatQuestion .multiSendHint { margin: 8px 0 0; color: #8b95a1; font-size: 12px; }
@@ -993,8 +993,8 @@ button.workLogRow { min-height: 32px; }
 .page[data-embedded][data-studio-pro] .changeCard .chipRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 4px 14px 12px; }
 .page[data-embedded][data-studio-pro] .changeCard .chip, .page[data-embedded][data-studio-pro] .studioEditTurn .chip { min-height: 32px; padding: 0 12px; border: 1px solid #e3e7ec; border-radius: 7px; background: #fff; color: #191f28; font-size: 12.5px; font-weight: 600; }
 .page[data-embedded][data-studio-pro] .changeCard .chip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip:hover:not(:disabled) { background: #f7f9fb; border-color: #c9d3de; }
-.page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong, .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong { border-color: #3182f6; background: #3182f6; color: #fff; box-shadow: 0 1px 2px rgba(27, 100, 218, .3); }
-.page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong:hover:not(:disabled) { border-color: #1b64da; background: #1b64da; }
+.page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong, .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong { border-color: #1b64da; background: #1b64da; color: #fff; box-shadow: 0 1px 2px rgba(27, 100, 218, .3); }
+.page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong:hover:not(:disabled) { border-color: #1957c2; background: #1957c2; }
 .changeUndoNote { margin-left: auto; color: #8b95a1; font-size: 11.5px; }
 .page[data-embedded][data-studio-pro] .studioEditTurn .changeCard { margin-top: 0; }
 .page[data-embedded][data-studio-pro] .lockedTurn .chipRow .chip, .page[data-embedded][data-studio-pro] .editTurn .chipRow .chip { min-height: 32px; padding: 0 12px; border-radius: 9px; font-size: 13px; }
@@ -1039,15 +1039,16 @@ button.workLogRow { min-height: 32px; }
 .composerAction { display: inline-flex; align-items: center; gap: 4px; min-width: 0; height: 32px; margin-left: -4px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #8b95a1; font-size: 12px; white-space: nowrap; }
 .composerAction:hover { background: #f2f4f6; color: #4e5968; }
 .composerAction[aria-pressed="true"] { background: #e8f3ff; color: #1b64da; }
-.page[data-embedded][data-studio-pro] .sendButton { flex: 0 0 32px; width: 32px; height: 32px; margin-left: auto; background: #3182f6; }
+.page[data-embedded][data-studio-pro] .sendButton { flex: 0 0 32px; width: 32px; height: 32px; margin-left: auto; background: #1b64da; }
 .page[data-embedded][data-studio-pro] .sendButton:disabled { background: #d1d6dc; color: #fff; }
+.page[data-embedded][data-studio-pro] .sendButton:hover:not(:disabled) { background: #1957c2; }
 .page[data-embedded][data-studio-pro] .sendButton svg { width: 18px; height: 18px; }
 .page[data-embedded][data-studio-pro] .resumeNotice { width: auto; max-width: 100%; margin: 0 0 14px; padding: 0; border-radius: 0; background: none; align-items: flex-start; }
 .page[data-embedded][data-studio-pro] .resumeNotice p { font-size: 14.5px; line-height: 1.65; color: #191f28; }
 .page[data-embedded][data-studio-pro] .resumeNotice button { width: 32px; height: 32px; color: #8b95a1; }
 .page[data-embedded][data-studio-pro] .lockedTurn .chipRow, .page[data-embedded][data-studio-pro] .editTurn .chipRow { margin: -4px 0 14px; }
-.page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong { border-color: #3182f6; background: #3182f6; color: #fff; }
-.page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong:hover { border-color: #1b64da; background: #1b64da; }
+.page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong { border-color: #1b64da; background: #1b64da; color: #fff; }
+.page[data-embedded][data-studio-pro] .lockedTurn .chip.chipStrong:hover { border-color: #1957c2; background: #1957c2; }
 /* 휴대폰 작업실: 자판이 열리면 진행 줄을 접는다 · 다 답한 뒤 줄은 요약 단추만 오른쪽에(r37 휴대폰 점검) */
 .page[data-embedded][data-keyboard]:not([data-studio-pro]) .paneBar { display: none; }
 .page[data-embedded]:not([data-studio-pro]) .paneBar[data-done] { justify-content: flex-end; }

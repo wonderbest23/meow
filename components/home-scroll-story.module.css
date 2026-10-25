@@ -17,7 +17,7 @@
 .aiLabel { display: block; color: #7b8795; font-size: 11px; margin-bottom: 6px; }
 .assistant strong { color: #2775df; font-weight: 650; }
 .composer { margin: 0 20px 18px; border: 1px solid #e4e9f0; border-radius: 8px; padding: 8px 10px 8px 16px; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #6b7684; font-size: 12px; }
-.send { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: #fff; background: #3182f6; flex: none; }
+.send { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: #fff; background: #1b64da; flex: none; }
 .send svg { width: 18px; height: 18px; }
 .briefContent { padding: 25px 32px; }
 .briefLabel { color: #2775df; font-size: 12px; }
@@ -88,7 +88,7 @@
 .typingComposer { position: absolute; left: 24px; right: 24px; bottom: 20px; min-height: 56px; padding: 10px 12px 10px 18px; border: 1px solid #4b5d75; border-radius: 8px; background: #1c2838; display: flex; gap: 12px; align-items: center; opacity: calc(1 - var(--send)); transform: translateY(calc(var(--send) * -12px)); }
 .typingText { flex: 1; color: #e5edf7; font-size: 13px; line-height: 1.6; }
 .typingText > span { opacity: clamp(0, var(--type) * 48 - var(--character) + 6, 1); }
-.sendButton { width: 36px; height: 36px; display: grid; place-items: center; background: #3182f6; border-radius: 50%; flex: none; transform: scale(calc(1 - var(--send) * .12)); }
+.sendButton { width: 36px; height: 36px; display: grid; place-items: center; background: #1b64da; border-radius: 50%; flex: none; transform: scale(calc(1 - var(--send) * .12)); }
 .sendButton > svg { width: 19px; height: 19px; color: #fff; }
 .paperFooter { position: absolute; bottom: 24px; left: 28px; right: 28px; display: flex; justify-content: space-between; font-size: 8px; color: #92a39a; opacity: var(--paper); }
 .paperRear { z-index: 1; padding: 30px; background: #e1eae5; border: 1px solid #c8d6ce; color: #62786b; opacity: var(--paper); transform: translateX(calc(var(--spread) * var(--fan))) rotate(calc(var(--spread) * 9deg)); box-shadow: 0 20px 40px #223e2e20; }

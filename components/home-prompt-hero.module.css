@@ -130,7 +130,7 @@
   cursor: pointer;
 }
 .iconButton:hover { background: #f2f4f6; }
-.iconButton[data-listening] { background: #e8f3ff; color: var(--brand-primary-hover, #1260d9); }
+.iconButton[data-listening] { background: #e8f3ff; color: var(--brand-primary-hover, #1957c2); }
 
 .send {
   width: 48px;
@@ -138,7 +138,7 @@
   flex: 0 0 auto;
   border: 0;
   border-radius: var(--brand-radius, 10px);
-  background: var(--brand-primary, #3182f6);
+  background: var(--brand-primary, #1b64da);
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -146,7 +146,7 @@
   cursor: pointer;
   transition: background 160ms ease;
 }
-.send:hover { background: var(--brand-primary-hover, #1260d9); }
+.send:hover { background: var(--brand-primary-hover, #1957c2); }
 
 /* 전역 'button svg 숨김'(globals.css) 때문에 아이콘 단추가 빈칸이 됐다 — 이 화면의 아이콘은 되살린다 */
 .hero .iconButton svg, .hero .send svg, .hero .play svg { display: block !important; flex: 0 0 auto; }
