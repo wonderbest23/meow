@@ -605,3 +605,5 @@
 @media (min-width:1024px) { .factChips button { min-height:32px; } }
 /* 태블릿 폭(761~900px) — 문서 옆 목차가 보이는데 도구 줄에 '목차' 단추도 있어 같은 목차가 두 번이었다(r40 768px 점검). 옆 목차가 있으면 단추는 뺀다 */
 @media (min-width:761px) and (max-width:900px) { .layout:has(> .sidebar) .tocToggle { display:none; } }
+/* 태블릿 폭(761~900px) — 도구 줄과 장 머리에 '대화로 고치기'가 함께 보였다. 도구 줄 단추가 있으면 장 머리 것은 뺀다(대표 결정 r40, 장 머리 '직접 고치기'는 그대로) */
+@media (min-width:761px) and (max-width:900px) { .page:has(.chapterChatEdit) .chapterChatAction { display:none; } }

@@ -12,7 +12,8 @@ const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.ur
 const homepage = read("app/plan/homepage/HomepageScreen.tsx");
 assert.doesNotMatch(homepage, /결제하고 고치기|홈페이지 고치고 공개하기/, "예전 결제 문구가 남아 있다");
 const payLabels = homepage.match(/결제하고 공개하기 · \$\{price\.toLocaleString\("ko-KR"\)\}원/g) ?? [];
-assert.ok(payLabels.length >= 3, `휴대폰 결제 카드 · PC 맨 위 줄 · 공개 확인창이 같은 문구여야 한다 (지금 ${payLabels.length}곳)`);
+/* r40: PC 칸 위 줄의 같은 단추는 뺐다(머리줄 [공개하기] 하나) — 휴대폰 결제 카드 · 공개 확인창 둘 */
+assert.ok(payLabels.length >= 2, `휴대폰 결제 카드 · 공개 확인창이 같은 문구여야 한다 (지금 ${payLabels.length}곳)`);
 assert.match(homepage, /useState\(HOMEPAGE_PRODUCT_AMOUNT\)/, "금액은 기존 상수에서 시작한다");
 
 const menu = read("app/plan/homepage/PublishedMenu.tsx");

@@ -106,7 +106,7 @@ const local = createBusinessTemplate({ ...content, businessName: "퇴근필라",
 const localHtml = render(local);
 assert.ok(localHtml.indexOf(">퇴근필라<") < localHtml.indexOf("<h1"), "brand bar first");
 assert.match(localHtml, /<h1[^>]*>퇴근필라<\/h1><p[^>]*>퇴근 후, 붐비지 않는 4인 기구 필라테스<\/p><button[^>]*data-bw-btn="0:2372"/);
-for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "오시는 길·영업시간", "주소는 문의 주시면 안내해 드려요", "영업시간은 문의 주시면 안내해 드려요", ">문의해 보세요<"]) assert.ok(localHtml.includes(label), label);
+for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "오시는 길과 영업시간", "주소는 문의 주시면 안내해 드려요", "영업시간은 문의 주시면 안내해 드려요", ">문의해 보세요<"]) assert.ok(localHtml.includes(label), label);
 assert.ok(!localHtml.includes("네이버 지도"), "no map link until there is an address");
 assert.ok(!localHtml.includes('href="#visit"'), "no hours/address chips until they are known");
 assert.ok(!/Coworking|Brainwave|자리 예약|새벽커피|이메일 주소|Subscribe/.test(localHtml), "no raw kit or sample copy");
@@ -208,7 +208,7 @@ assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "muna
 assert.ok(warmHtml.includes("--landing-accent:#9a5b34"), "lead form/footer follow the theme accent");
 // 병원 디자인을 병원이 아닌 가게가 고르면 '진료 시간'이 아니라 '영업시간'
 const bakeryClinicHtml = render(createBusinessTemplate({ ...content, businessName: "소금빵집", offer: "식빵·소금빵", description: "아침마다 굽는 동네 빵집" }, "0-2385"));
-assert.ok(!bakeryClinicHtml.includes("진료") && bakeryClinicHtml.includes("오시는 길·영업시간"), "non-medical business on clinic design");
+assert.ok(!bakeryClinicHtml.includes("진료") && bakeryClinicHtml.includes("오시는 길과 영업시간"), "non-medical business on clinic design");
 // 갤러리형: 공개 화면에 사진이 없으면 '작업 사례' 제목만 남기지 않는다
 const bareGalleryHtml = render(createBusinessTemplate({ ...content, businessName: "소금빵집", image: "" }, "0-421"));
 assert.ok(!bareGalleryHtml.includes("작업 사례"), "empty works section hidden publicly");

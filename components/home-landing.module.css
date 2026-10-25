@@ -113,6 +113,15 @@
   .headerShell :global(.site-header) :global(.home-header-nav) { display: none; }
   .headerShell :global(.site-header) :global(.header-actions) { margin-left: auto; }
 }
+/*
+ * 태블릿 폭(768~1023px) — 고객센터 둥근 단추가 본문 오른쪽 끝(이용 요금 '출시 기념가' · 자주 묻는 질문 '+')을 덮었다.
+ * 본문 좌우 여백을 넓히고 단추는 그 바깥 여백(오른쪽 끝)으로 옮긴다(대표 결정 r40). 휴대폰·PC는 그대로.
+ */
+/* 단추는 60px 그대로(globals.css 의 얼굴 단추) — 오른쪽 12px + 60px + 틈 12px 를 본문·바닥글 여백으로 둔다 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .content { padding: 0 84px; }
+  :global(body):has(.page) :global(.support-chat-widget:not(.open)) { right: 12px; bottom: 24px; }
+}
 @media (max-width: 640px) {
   .content { padding: 0 16px; }
   .headerShell :global(.site-header) { height: 60px; min-height: 60px; padding: 0 16px; }
@@ -166,6 +175,9 @@
   vertical-align: middle;
 }
 .page :global(.home-footer-credits) { line-height: 2; }
+@media (min-width: 768px) and (max-width: 1023px) {
+  .page :global(.home-footer) { padding-inline: 84px; }
+}
 @media (max-width: 640px) {
   .page :global(.home-footer) { margin-top: 88px; padding: 28px 16px calc(96px + env(safe-area-inset-bottom)); }
 }

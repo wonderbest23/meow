@@ -19,7 +19,7 @@ export const LANDING_THEMES = [
   { id: "warm", label: "따뜻한", note: "카페·베이커리·공방", tokens: { ink: "#2b2118", accent: "#9a5b34", strong: "#7a4424", highlight: "#e0a458", soft: "#f6eee4", paper: "#fffaf4" } },
   /* 모던은 보조색이 회색이라, 사진 위 '문의하기'(보조색 바탕 + 진한 글씨)가 흐린 회색 단추로 보였다 — 그 단추만 흰 바탕·검은 글씨(pop) */
   { id: "modern", label: "모던", note: "인테리어·사진·IT", tokens: { ink: "#141414", accent: "#141414", strong: "#141414", highlight: "#8a8a8a", soft: "#f2f2f0", paper: "#ffffff", pop: "#ffffff", onPop: "#141414" } },
-  { id: "fresh", label: "산뜻한", note: "병원·운동·청소", tokens: { ink: "#12302d", accent: "#0e9384", strong: "#0b6f63", highlight: "#63c9b8", soft: "#ecf7f5", paper: "#ffffff" } },
+  { id: "fresh", label: "산뜻한", note: "병원·운동·청소", tokens: { ink: "#12302d", accent: "#0b7f72", strong: "#0b6f63", highlight: "#63c9b8", soft: "#ecf7f5", paper: "#ffffff" } },
   { id: "luxe", label: "고급", note: "웨딩·숙박·전문직", tokens: { ink: "#1b2233", accent: "#1f2a44", strong: "#1f2a44", highlight: "#c9a86a", soft: "#f4f1ea", paper: "#fdfcf9" } },
   { id: "vivid", label: "생기", note: "미용·반려동물·키즈", tokens: { ink: "#2a1c17", accent: "#e8603c", strong: "#c24a2a", highlight: "#ffb547", soft: "#fff1ea", paper: "#ffffff" } },
 ] as const;
