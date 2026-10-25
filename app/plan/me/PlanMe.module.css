@@ -97,6 +97,12 @@
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
+/* 사업 이름 링크는 글 높이(17px)만큼만 눌렸다 — 줄 모양은 그대로 두고 누르는 자리만 위아래로 넓힌다(점검 r40) */
+.row dd a {
+  display: inline-block;
+  padding: 12px 0;
+  margin: -12px 0;
+}
 
 /* 결제 내역 */
 .tableWrap {

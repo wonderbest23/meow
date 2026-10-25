@@ -4868,7 +4868,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .platform-legal-layout > aside a.active { border-left: 3px solid #3272db; background: white; color: #0d0a2c; font-weight: 800; }
 .platform-legal-document { border: 1px solid #cccae3; border-radius: 8px; background: white; overflow: hidden; }
 .platform-legal-document > header { padding: 46px 50px 38px; border-bottom: 1px solid #dfdef1; background: #f9f9ff; }
-.platform-legal-document > header > span { color: #3272db; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; }
+.platform-legal-document > header > span { color: #1b64da; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; }
 .platform-legal-document > header > span svg { width: 16px; }
 .platform-legal-document h1 { margin: 14px 0 10px; font-size: 34px; letter-spacing: 0; }
 .platform-legal-document > header p { max-width: 680px; margin: 0 0 15px; color: #585667; font-size: 14px; line-height: 1.7; }
@@ -16892,6 +16892,8 @@ button.account-kakao-btn svg { display: inline-block !important; }
 /* 누르는 자리 PC 32px·휴대폰 44px(점검 r39) */
 .consult-escalate button { min-height: 32px; display: inline-flex; align-items: center; gap: 2px; }
 @media (pointer: coarse) { .consult-escalate button { min-height: 44px; } }
+/* 약관 원문 링크 — 태블릿(768)처럼 손가락으로 누르는 화면이면 너비와 상관없이 44px(점검 r40) */
+@media (pointer: coarse) { .platform-legal-document > footer a { min-height: 44px; } }
 
 /* 버튼 오른쪽 화살표: 평소 꺾쇠(›), 마우스를 올리면 가로선이 자라 화살표(→)가 된다(components/cta-arrow.tsx). */
 .cta-arrow { width: 1.1em; height: 1.1em; flex: 0 0 auto; margin-right: -2px; overflow: visible; }

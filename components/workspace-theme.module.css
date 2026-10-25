@@ -8,7 +8,7 @@
   --app-line-strong: #c6d1de;
   --app-text: #202632;
   --app-body: #465365;
-  --app-muted: #6d7b8e;
+  --app-muted: #5f6d80; /* 흰 바탕 5.3:1 · 회색 바탕(#f2f5f8) 4.8:1 — 예전 #6d7b8e 는 4.3:1(점검 r40) */
   --app-accent: #35669c;
   --app-primary: var(--brand-primary, #1b64da);
   --app-selected: #e3edfc;
