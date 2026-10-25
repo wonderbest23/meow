@@ -182,7 +182,7 @@ export function businessTemplateDefaults(content: BusinessContent): Set<string> 
   const values = [
     name, content.headline ?? "", content.offer, content.description, content.customer, content.price, content.cta,
     "이용 안내", "제공 내용", "이용 대상", "가격 안내", "01", "02", "03",
-    "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING, "진료 시간·오시는 길", CLINIC_HOURS_PENDING, "찾아오시는 길", "운영 시간", "오시는 길", "작업 사례", "이런 일을 해요",
+    "오시는 길과 영업시간", "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING, "진료 시간·오시는 길", CLINIC_HOURS_PENDING, "찾아오시는 길", "운영 시간", "오시는 길", "작업 사례", "이런 일을 해요",
     /* 마무리 띠는 사업 이름 없이 '문의해 보세요'(2026-10-24, 이름은 바로 위 제목에 이미 있다). 예전 '○○에 문의해 보세요'도 자동 문구로 본다 */
     `${name} 문의`, `${name}에 문의해 보세요`, "문의해 보세요",
     [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
@@ -192,7 +192,7 @@ export function businessTemplateDefaults(content: BusinessContent): Set<string> 
 
 /*
  * 템플릿 전용 기본 글. 병원 디자인의 '진료 시간·오시는 길'은 병원일 때만 쓴다 — 빵집이 병원 디자인을
- * 고르면 '진료 시간'이 손님에게 그대로 보였다. 병원이 아니면 동네 가게와 같은 '오시는 길·영업시간'.
+ * 고르면 '진료 시간'이 손님에게 그대로 보였다. 병원이 아니면 동네 가게와 같은 '오시는 길과 영업시간'.
  */
 function templateLabels(content: BusinessContent, page: string, profile: Profile): Value | undefined {
   if (page !== "0-2385") return profile.labels;
@@ -214,7 +214,8 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
     ...content, headline: content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`, contactInvite: "문의해 보세요",
     contactDescription: [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
     offerLabel: "제공 내용", customerLabel: "이용 대상", priceLabel: "가격 안내", one: "01", two: "02", three: "03",
-    visitTitle: "오시는 길·영업시간", address: LOCAL_ADDRESS_PENDING, hoursLabel: "영업시간", hours: LOCAL_HOURS_PENDING,
+    /* 기본 제목 — '오시는 길·영업시간'은 768px 에서 '·영업시간'이 줄 첫머리로 갈렸다(대표 결정 r40). 이미 저장된 글은 그대로 둔다 */
+    visitTitle: "오시는 길과 영업시간", address: LOCAL_ADDRESS_PENDING, hoursLabel: "영업시간", hours: LOCAL_HOURS_PENDING,
     addressLabel: "오시는 길", worksTitle: "작업 사례", servicesTitle: "이런 일을 해요",
     ...templateLabels(content, page, profile),
   };

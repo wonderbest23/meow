@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { locallyDeletedPlanIds, planWasDeleted } from "../../lib/plan-builder/plan-store";
+import { loadState, locallyDeletedPlanIds, planWasDeleted } from "../../lib/plan-builder/plan-store";
 import styles from "./DeletedBusinessGuard.module.css";
 
 /* 화면으로 돌아올 때마다 서버에 묻지 않게 — 이 기기에서 지운 것은 바로 알고, 서버 확인은 이 간격마다 한 번 */
@@ -21,8 +21,13 @@ export default function DeletedBusinessGuard() {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     if (!planId) return;
-    // 처음 열 때는 이 기기 기록만 본다 — 화면이 스스로 서버 목록을 읽어 지운 사업이면 '사업을 찾지 못했어요'를 띄운다
-    let alive = true, lastServerCheck = Date.now(), checking = false;
+    /*
+     * 처음 열 때 — 이 기기에 있는 사업이면 이 기기 기록만 본다. 이 기기에 없는 사업(지운 사업 주소를 바로 열었을 때 등)이면
+     * 서버의 지운 사업 번호(deletedPlanIds)에 바로 물어, '사업을 찾지 못했어요' 대신 '삭제된 사업이에요'를 띄운다(대표 결정 r40).
+     * 서버 기록에 없으면(다른 계정의 사업 등) 예전처럼 화면의 '사업을 찾지 못했어요'.
+     */
+    const knownHere = loadState().plans.some(plan => plan.id === planId);
+    let alive = true, lastServerCheck = knownHere ? Date.now() : 0, checking = false;
     const check = async () => {
       if (checking || document.hidden) return;
       const now = Date.now();

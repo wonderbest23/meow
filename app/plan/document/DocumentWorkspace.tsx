@@ -383,7 +383,7 @@ export default function DocumentWorkspace(props: Props) {
   /* PC 새 화면은 '직접 고치기'가 칸 위 얇은 줄에 하나만 있다 — 장 머리에는 '대화로 고치기'만 */
   const directInChapter = directEditable && !studioPc;
   const chapterActions = (index: number, name: string) => !pane || isSample || !planId || factMode || editing || !(chatEdit || directInChapter) ? undefined : <>
-    {chatEdit && <button type="button" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 대화로 고치기`} onClick={() => askChatEdit(index)}><MessageSquare size={14} aria-hidden="true" />대화로 고치기</button>}
+    {chatEdit && <button type="button" className={`${styles.chapterAction} ${styles.chapterChatAction}`} aria-label={`${index + 1}장 ${name} — 대화로 고치기`} onClick={() => askChatEdit(index)}><MessageSquare size={14} aria-hidden="true" />대화로 고치기</button>}
     {directInChapter && <button type="button" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 직접 고치기`} onClick={directEdit}><PenLine size={14} aria-hidden="true" />직접 고치기</button>}
   </>;
   const actionButtons = factMode ? <>
@@ -515,8 +515,8 @@ export default function DocumentWorkspace(props: Props) {
           {/* PC 새 화면: 칸 위 얇은 줄 — 문서 이름 · 계획서 종류 왼쪽, 상세/요약 · 직접 고치기 오른쪽(고치는 중이면 그 단추들) */}
           {studioPc && <div className={styles.strip}>
             <FileText size={15} aria-hidden="true" className={styles.stripIcon} />
-            {/* 사업명은 머리줄에, 계획서 종류 · 항목 수는 읽는 데 필요 없어 이름만(r37 글 점검) — 예시는 '예시' 표시를 남긴다 */}
-            <span className={styles.stripTitle}>{isSample ? "예시 사업계획서" : "사업계획서"}</span>
+            {/* 사업명은 머리줄에, 계획서 종류 · 항목 수는 읽는 데 필요 없어 이름만(r37 글 점검) — 예시는 머리줄 '예시 · 사업명'에 이미 있어 여기선 '사업계획서'만(대표 결정 r40) */}
+            <span className={styles.stripTitle}>사업계획서</span>
             {!centerInHeader && picker}
             <span className={styles.stripSpace} />
             {/* 문서가 아직 없으면(작성 전) 보기 바꾸기 · 직접 고치기를 두지 않는다(r37 점검) */}

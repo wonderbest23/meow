@@ -807,7 +807,8 @@ export function HomepageScreen() {
         {!inApp && <button type="button" className={`${styles.stripBtn} ${styles.stripSoft}`} onClick={openDomain}><Link2 size={14} aria-hidden />{site?.customDomain ? site.customDomain : "내 주소 연결"}</button>}
         <button type="button" className={styles.stripBtn} disabled={busy} onClick={() => setBuilderOpen(true)}><Pencil size={14} aria-hidden />직접 고치기</button>
       </>
-      : <button type="button" className={`${styles.stripBtn} ${styles.stripSoft}`} onClick={() => void openPayPrompt()}>{sample ? "내 사업으로 만들기" : planPaid ? `결제하고 공개하기 · ${price.toLocaleString("ko-KR")}원` : `함께 결제하기 · ${price.toLocaleString("ko-KR")}원`}</button>}
+      /* 홈페이지만 결제할 때는 머리줄 [공개하기] 하나 — 같은 결제 안내를 여는 '결제하고 공개하기 · 금액'을 여기 또 두지 않는다(대표 결정 r40) */
+      : (sample || !planPaid) && <button type="button" className={`${styles.stripBtn} ${styles.stripSoft}`} onClick={() => void openPayPrompt()}>{sample ? "내 사업으로 만들기" : `함께 결제하기 · ${price.toLocaleString("ko-KR")}원`}</button>}
     {livePublished && publicPath && <a className={styles.stripIcon} href={publicPath} target="_blank" rel="noreferrer" aria-label="공개한 홈페이지 새 창으로 열기" title="새 창으로 보기"><ExternalLink size={15} aria-hidden /></a>}
   </div> : null;
 
@@ -1032,7 +1033,7 @@ export function HomepageScreen() {
         결제 전에는 만들어진 홈페이지를 보여만 준다.
         사기 전에 자기 사업이 어떻게 보이는지 확인할 수 있어야 한다.
       */}
-      {/* 새 배치의 결제 전 보기 — 안내 상자 없이 사이트만 카드 끝까지. 결제 안내는 [공개하기]·맨 위 줄 단추의 확인창으로 */}
+      {/* 새 배치의 결제 전 보기 — 안내 상자 없이 사이트만 카드 끝까지. 결제 안내는 머리줄 [공개하기]의 확인창으로 */}
       {studioPro && draft && !editable && (
         <div className={styles.proPreview} data-view={previewView} aria-label="홈페이지 미리보기">
           {previewView === "mobile"
