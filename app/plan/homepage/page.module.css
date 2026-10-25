@@ -345,7 +345,7 @@
 .headerActions button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 8px; background: var(--app-surface); color: var(--app-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .headerActions button:disabled { opacity: .5; cursor: default; }
 .headerActions .headerPrimary { border-color: #3272db; background: #3272db; color: #fff; }
-.headerActions .headerPrimary[data-done] { border-color: #dbe7fb; background: #eef4fe; color: #3272db; opacity: 1 !important; cursor: default !important; }
+.headerActions .headerPrimary[data-done] { border-color: #dbe7fb; background: #eef4fe; color: #1b64da; opacity: 1 !important; cursor: default !important; }
 @media (max-width: 480px) { .headerActions button { padding: 0 10px; } }
 /* 아주 좁은 폰(340px 이하)에서만 저장 글자를 빼고 아이콘만 — 이름은 aria-label 로 남는다 */
 @media (max-width: 340px) { .headerActions button:not(.headerPrimary) span { display: none; } }

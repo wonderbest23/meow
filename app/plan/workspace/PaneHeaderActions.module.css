@@ -40,3 +40,5 @@
 
 /* 휴대폰(칸 안 단추 줄)은 누르는 자리 44px(휴대폰 점검 2026-10-24) */
 @media (max-width: 1023px) { .btn { min-height:44px; } }
+/* 휴대폰 · 컴퓨터 보기 바꾸기도 터치 화면에서는 누르는 자리 44px — 보이는 크기(34px)는 그대로, 위아래로 5px 씩(r40 768px 점검) */
+@media (max-width: 1023px) { .segment button { position:relative; } .segment button::after { content:""; position:absolute; inset:-5px 0; } }

@@ -398,6 +398,8 @@ export default function Studio() {
       /* PC 는 대화 칸이 늘 보이고, 질문 중이면 그 맨 위 진행 줄이 번호를 보인다 */
       questionCount: wide,
       generation: generation ? { done: generation.done, total: generation.total, active: generation.active, stalled: generationStalled } : null,
+      /* PC 는 대화 칸 작성 줄이, 휴대폰 계획서 탭은 진행 카드가 항목 수를 보인다 */
+      generationCount: wide || tab === "plan",
       documents: hubState ? { done: hubState.documents.length, total: hubState.keys.length } : null,
       homepage,
       launch: launchState ? { configured: launchState.configured, total: launchList.length, done: launchList.filter(step => ["done", "skipped"].includes(launchStatus(launchState, step))).length } : null,

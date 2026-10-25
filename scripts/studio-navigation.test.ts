@@ -219,6 +219,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 14, total: 14, complete: true } }), "대화 중 · 마무리");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo") }), "대화 중", "질문 진행을 모르면 숫자 없이");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), generation: { done: 6, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 6/10 항목");
+  assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), generation: { done: 6, total: 10, active: true, stalled: false }, generationCount: true }), "사업계획서 만드는 중", "같은 화면에 항목 수가 보이면(PC 대화 칸 · 계획서 칸 진행 카드) 머리줄은 수를 되풀이하지 않는다(r40 점검)");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), generation: { done: 6, total: 10, active: true, stalled: true } }), "사업계획서 · 6/10 항목에서 멈춤");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo") }), "사업 방향 정리됨 · 계획서 만들 차례");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), documents: { done: 3, total: 10 } }), "사업계획서 · 3/10 항목");
