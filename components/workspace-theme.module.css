@@ -8,7 +8,7 @@
   --app-line-strong: #c6d1de;
   --app-text: #202632;
   --app-body: #465365;
-  --app-muted: #6d7b8e;
+  --app-muted: #5f6b7c; /* 흰 바탕 4.9:1 · #f2f5f8 바탕 4.6:1 — 예전 #6d7b8e 는 4.3:1 · 3.9:1 로 작은 글이 기준(4.5:1)에 못 미쳤다(r40 점검) */
   --app-accent: #35669c;
   --app-primary: var(--brand-primary, #1b64da);
   --app-selected: #e3edfc;

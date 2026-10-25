@@ -536,7 +536,7 @@
 .pickerButton > b { min-width:0; overflow:hidden; text-overflow:ellipsis; font-weight:600; }
 .pickerMenu { position:fixed; z-index:1000; display:grid; gap:2px; width:max-content; min-width:240px; max-width:min(360px, calc(100vw - 32px)); max-height:min(70vh, 480px); overflow:auto; padding:6px; border:1px solid #e3e7ec; border-radius:12px; background:#fff; box-shadow:0 12px 32px rgba(16,24,40,.14); animation:factRise .14s ease-out; }
 .pickerMenu button { display:flex; align-items:baseline; gap:10px; width:100%; min-height:38px; padding:8px 10px; border:0; border-radius:8px; background:transparent; color:#333d4b; font:inherit; font-size:14px; text-align:left; cursor:pointer; }
-.pickerMenu button > span { flex:none; font-size:12px; color:#8b95a1; font-variant-numeric:tabular-nums; }
+.pickerMenu button > span { flex:none; font-size:12px; color:#5f6b7c; font-variant-numeric:tabular-nums; }
 .pickerMenu button > strong { font-weight:600; word-break:keep-all; overflow-wrap:anywhere; }
 .pickerMenu button:is(:hover, :focus-visible) { background:#f2f4f6; outline:none; }
 .pickerMenu button[aria-checked=true] { background:#e8f3ff; color:#1b64da; }
@@ -566,7 +566,7 @@
 .page[data-studio-pc] .body :global(.tiptap[contenteditable=false]) :is(h1, h2, h3, h4, h5, h6) { display:block; margin:26px 0 10px; font-size:17px; line-height:1.5; font-weight:700; letter-spacing:-0.015em; color:#191f28; }
 .page[data-studio-pc] .body :global(.tiptap) { font-size:15px; line-height:1.85; color:#333d4b; }
 .page[data-studio-pc] .body :global(.tiptap[contenteditable=false]) table { font-size:13.5px; border-collapse:collapse; }
-.page[data-studio-pc] .body :global(.tiptap[contenteditable=false]) th { padding:9px 12px; border:0; border-top:1px solid #e3e7ec; border-bottom:1px solid #e3e7ec; background:#f8f9fb; color:#8b95a1; font-size:12px; font-weight:600; }
+.page[data-studio-pc] .body :global(.tiptap[contenteditable=false]) th { padding:9px 12px; border:0; border-top:1px solid #e3e7ec; border-bottom:1px solid #e3e7ec; background:#f8f9fb; color:#5f6b7c; font-size:12px; font-weight:600; }
 .page[data-studio-pc] .body :global(.tiptap[contenteditable=false]) td { padding:11px 12px; border:0; border-bottom:1px solid #eef0f3; color:#191f28; line-height:1.5; }
 .page[data-studio-pc] .body :global(.tiptap[contenteditable=false]) td:first-child { color:#4e5968; }
 .page[data-studio-pc] .body :global(.tiptap[contenteditable=false]) :is(td, th) > p { margin:0; }
@@ -603,3 +603,5 @@
 
 /* PC(1024px 이상)는 누르는 자리 32px 이면 된다 — 휴대폰 44px 로 키운 직접 고치기 칩을 PC 에서는 예전 크기 가까이 */
 @media (min-width:1024px) { .factChips button { min-height:32px; } }
+/* 태블릿 폭(761~900px) — 문서 옆 목차가 보이는데 도구 줄에 '목차' 단추도 있어 같은 목차가 두 번이었다(r40 768px 점검). 옆 목차가 있으면 단추는 뺀다 */
+@media (min-width:761px) and (max-width:900px) { .layout:has(> .sidebar) .tocToggle { display:none; } }

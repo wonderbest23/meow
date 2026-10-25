@@ -254,6 +254,8 @@ export type StudioStatusInput = {
   intake?: { answered: number; total: number; complete: boolean } | null;
   /** 대화 칸 맨 위 진행 줄이 질문 번호를 보이고 있다(작업실 PC) — 머리줄은 번호를 되풀이하지 않는다 */
   questionCount?: boolean;
+  /** 대화 칸 작성 줄(PC)이나 계획서 칸 진행 카드가 작성한 항목 수를 보이고 있다 — 머리줄은 수를 되풀이하지 않는다 */
+  generationCount?: boolean;
   /** 이번 계획서 작성 — active 는 아직 쓸 장이 남음, stalled 는 남은 채로 작업이 멈춤 */
   generation?: { done: number; total: number; active: boolean; stalled: boolean } | null;
   /** 이 기기 저장본의 계획서 장 수(작성 중이 아닐 때) */
@@ -283,7 +285,8 @@ export function studioStatusText(input: StudioStatusInput): string {
   if (input.fresh) return "대화 중";
   if (!input.steps) return input.loading ? "불러오는 중" : "대화 중";
   /* 작성 단위는 장 안의 항목이다 — 대화 칸 '계획서 10개 항목을 썼어요' · 진행 카드와 같은 말(r37 점검: 머리줄만 '2/10장'이었다) */
-  if (generation?.active && !generation.stalled) return `사업계획서 만드는 중 · ${generation.done}/${generation.total} 항목`;
+  /* 같은 화면에 항목 수가 이미 보이면(PC 대화 칸 작성 줄 · 계획서 칸 진행 카드) 머리줄은 말만 — 768px 계획서 칸에서 '3/10'이 두 번 보였다(r40 점검) */
+  if (generation?.active && !generation.stalled) return input.generationCount ? "사업계획서 만드는 중" : `사업계획서 만드는 중 · ${generation.done}/${generation.total} 항목`;
   if (generation?.active && generation.stalled) return `사업계획서 · ${generation.done}/${generation.total} 항목에서 멈춤`;
   const state = (id: JourneyStepId) => input.steps!.find(step => step.id === id)?.state ?? "todo";
   if (state("chat") !== "done") {
