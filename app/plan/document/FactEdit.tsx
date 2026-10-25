@@ -8,7 +8,7 @@ import type { IntakeQuestion } from "../../../lib/plan-builder/intake-questions"
 import { EDITABLE_FACT_IDS, factNeedles, findFactRanges, parseWon, type EditableFact } from "../../../lib/plan-builder/fact-highlight";
 import { isShortCell } from "../../../lib/plan-builder/table-cells";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
-import { QuestionForm, RewriteConfirm } from "../chat/intake-ui/IntakePanels";
+import { QuestionForm } from "../chat/intake-ui/IntakePanels";
 import { choiceDraftSubmission, emptyAnswer, incompleteChoiceText, numericAnswer, readIntakePayload, summaryAnswerText, type AnswerDraft } from "../chat/intake-ui/model";
 import { wonLabel } from "../../../lib/plan-builder/intake-options";
 
@@ -203,14 +203,12 @@ function draftSubmission(question: IntakeQuestion, draft: AnswerDraft): { value:
   return { value: draft.text.trim() };
 }
 
-/** The card above the document: every editable fact as a chip, plus "계획서에 반영하기" once something changed. */
-export function FactCard({ edit, onPick, onReflect }: { edit: ReturnType<typeof useFactEdit>; onPick: (questionId: string, anchor: DOMRect) => void; onReflect: () => void }) {
-  const stale = edit.snapshot?.documentStatus === "stale";
+/** The card above the document: every editable fact as a chip. "계획서에 반영하기" lives once, in the edit bar above (대표 결정 r39). */
+export function FactCard({ edit, onPick }: { edit: ReturnType<typeof useFactEdit>; onPick: (questionId: string, anchor: DOMRect) => void }) {
   return <section className={styles.factCard} aria-label="고칠 수 있는 내용" data-fact-card>
     <strong>고칠 수 있는 곳만 표시했어요</strong>
     {!edit.snapshot && !edit.error && <p role="status">사업 정보를 불러오고 있어요…</p>}
     {edit.facts.length > 0 && <div className={styles.factChips}>{edit.facts.map(fact => <button key={fact.questionId} type="button" data-fact-chip={fact.questionId} disabled={edit.busy} onClick={event => onPick(fact.questionId, event.currentTarget.getBoundingClientRect())}><small>{fact.label}</small>{factShown(fact)}</button>)}</div>}
-    {stale && edit.snapshot && <div className={styles.factReflect} data-fact-reflect><RewriteConfirm snapshot={edit.snapshot} disabled={edit.busy} label="계획서에 반영하기" className={styles.primary} onConfirm={onReflect} /></div>}
     {edit.error && <p className={styles.factError} role="alert">{edit.error.message} {edit.error.href && <Link href={edit.error.href}>{edit.error.label}</Link>}</p>}
   </section>;
 }

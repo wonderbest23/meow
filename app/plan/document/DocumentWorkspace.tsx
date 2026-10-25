@@ -391,7 +391,7 @@ export default function DocumentWorkspace(props: Props) {
       if (factsUnapplied && factSavedHere && !await askConfirm({ message: "고친 내용을 아직 계획서에 반영하지 않았어요. 반영하지 않고 마칠까요?", confirmLabel: "그냥 마치기", cancelLabel: "계속 고치기" })) return;
       setFactMode(false); setFactPick(null);
     }}>수정 마치기</button>
-    {/* 아래 단추도 위 카드와 같은 확인창을 바로 연다 — 예전엔 위로 데려가기만 해서 같은 이름의 단추를 또 눌러야 했다 */}
+    {/* 반영 단추는 여기 하나뿐 — 노란 카드에도 있어 두 번 보였다(대표 결정 r39). 바로 다시 쓸까요? 확인창을 연다 */}
     {factsUnapplied && facts.snapshot && <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" className={styles.primary} onConfirm={() => void reflectFacts()} />}
   </> : isSample ? <>
     {/* 예시 계획서 — 예전엔 누를 수 없는 회색 '예시 · 읽기 전용'만 있어 고장 난 것처럼 보였고 다음으로 갈 길이 없었다. 예시라는 표시는 문서 제목 위에 있다 */}
@@ -528,7 +528,8 @@ export default function DocumentWorkspace(props: Props) {
               {stripEdit}
             </>}
           </div>}
-          {!studioPc && <div className={styles.readingBar}>
+          {/* 고치는 중이면 휴대폰도 이 줄(위에 붙어 있다)에 '수정 마치기 · 계획서에 반영하기' — 아래 단추 줄은 문서 끝에 있어 보이지 않았다(대표 결정 r39) */}
+          {!studioPc && <div className={styles.readingBar} data-fact-mode={factMode || undefined}>
             <button className={styles.tocToggle} onClick={() => setModal("toc")} disabled={!grouped.length}><List size={19} aria-hidden="true" /><span className={styles.tocLabel}>목차</span></button>
             {props.summary && <div className={styles.viewSelector} role="group" aria-label="문서 보기 방식">
               <button aria-pressed={!summaryMode} onClick={() => { setSummaryMode(false); scroller()?.scrollTo({ top: 0 }); }}>상세 계획서</button>
@@ -548,7 +549,7 @@ export default function DocumentWorkspace(props: Props) {
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} pc={studioPc} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
                             {props.writing && arrival && arrival.index !== chapter && !continuous && <button type="button" className={styles.arrival} onClick={() => { setChapter(arrival.index); const id = arrival.id; setArrival(null); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })); }}>새 항목이 써졌어요 · <b>{arrival.title}</b> 보기<ChevronRight size={18} aria-hidden="true" /></button>}
-              {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onReflect={() => void reflectFacts()} />}
+              {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} />}
               {props.notice && !props.writing && !factMode && <div className={`${styles.notice} ${styles.noticeRow}`} role="status"><span>{props.notice}</span>{factEditable && facts.snapshot?.documentStatus === "stale"
                 /* 반영 단추는 바로 '다시 쓸까요?' 확인창을 연다 — 예전엔 고치기 화면만 열려 같은 단추를 또 찾아 눌러야 했다 */
                 ? <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" className={styles.noticeAction} onConfirm={() => void reflectFacts()} />
@@ -581,7 +582,7 @@ export default function DocumentWorkspace(props: Props) {
               ? <button type="button" className={styles.pagerNext} onClick={() => selectChapter(chapter + 1)} aria-label={`다음 장: ${chapter + 2}장 ${grouped[chapter + 1][0]}`}><span>{chapter + 2}장 {grouped[chapter + 1][0]}</span><ChevronRight size={16} aria-hidden="true" /></button>
               : <button type="button" className={styles.pagerNext} onClick={readAll}><span>전체 이어 읽기</span></button>}
           </nav>}
-          {hasActions && <footer className={styles.actions} data-next={showNext || undefined} data-single={singleAction || undefined}>{actionButtons}</footer>}
+          {hasActions && <footer className={styles.actions} data-next={showNext || undefined} data-single={singleAction || undefined} data-fact-mode={factMode || undefined}>{actionButtons}</footer>}
         </div>
       </div>}
     </BusinessAppChrome>

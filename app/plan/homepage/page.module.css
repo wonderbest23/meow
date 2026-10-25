@@ -209,6 +209,9 @@
   .payBar { padding: 14px; }
   .payActions { width: 100%; }
   .payActions > * { flex: 1; }
+  /* '결제하고 공개하기 · 19,000원'은 한 줄로 — 360px 에서 세 줄로 접혔다. 건너뛰는 길은 그 아래 줄에 */
+  .payActions > .cta { flex-basis: 100%; white-space: nowrap; }
+  .payActions > .ctaSecondary { justify-content: center; }
 }
 
 /* 안내 옆 행동 두 가지 — 전체 화면으로 보기 / 다음 단계 */
@@ -231,6 +234,8 @@
   gap: 8px;
   flex-wrap: wrap;
 }
+/* 결제 상자 안에서는 단추 위 여백을 두지 않는다 — 제목 없이 단추만 있을 때 위가 비어 보였다 */
+.payActions > .cta, .payActions > .ctaSecondary { margin-top: 0; }
 
 .ghost {
   height: 40px;
