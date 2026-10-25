@@ -11,7 +11,7 @@
 .heading { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:24px; }
 .eyebrow { display:block; color:var(--app-muted); font-size:13px; font-weight:600; margin-bottom:10px; }
 .primary,.secondary { display:flex; align-items:center; justify-content:center; min-height:52px; padding:14px 22px; border:0; border-radius:8px; font-size:16px; font-weight:600; line-height:1.5; transition:background .15s,transform .15s; text-align:center; }
-.primary { color:#fff; background:var(--app-primary); }.primary:hover { background:#246cd4; }.primary:active,.secondary:active { transform:scale(.98); }.secondary { background:var(--app-raised); color:var(--app-text); }
+.primary { color:#fff; background:var(--app-primary); }.primary:hover { background:#1957c2; }.primary:active,.secondary:active { transform:scale(.98); }.secondary { background:var(--app-raised); color:var(--app-text); }
 /* 빈 화면 — 새 대화의 로그인 안내와 같은 모양: 아이콘·제목·설명·버튼을 가운데에 세로로 모은다 */
 .empty { display:grid; justify-items:center; max-width:440px; margin:0 auto; padding:clamp(40px,14vh,140px) 0 48px; text-align:center; }.empty img { display:block; margin-bottom:28px; }.empty h1 { margin-bottom:12px; word-break:keep-all; }.empty p { max-width:400px; color:var(--app-muted, #6b7280); line-height:1.7; word-break:keep-all; white-space:pre-line; }.empty .primary,.empty .secondary { width:100%; margin-top:24px; max-width:320px; }
 .emptyIcon { display:grid; place-items:center; width:60px; height:60px; margin:0 0 20px; background:color-mix(in srgb, var(--app-primary) 10%, transparent); color:var(--app-primary); border-radius:16px; }

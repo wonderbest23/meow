@@ -23,9 +23,10 @@
    * 첫 화면과 앱 화면이 함께 쓰는 단추 색·모서리(점검 2026-10-23) — 앱 주 색(workspace-theme 의 --app-primary)과 같은 값이다.
    * 예전엔 첫 화면 보내기 #1b64da, 앱 #3182f6 으로 파랑이 둘이었다. 첫 화면의 검정 단추(머리말 '시작하기'·마지막 '대화로 시작하기')는
    * 승인 디자인의 강조라 그대로 둔다.
+   * 대표 결정(2026-10-25): 흰 글씨 대비 4.5:1 이상 — #3182f6(3.7:1)에서 #1b64da(5.4:1)로, 마우스를 올리면 #1957c2(6.6:1).
    */
-  --brand-primary: #3182f6;
-  --brand-primary-hover: #1260d9;
+  --brand-primary: #1b64da;
+  --brand-primary-hover: #1957c2;
   --brand-radius: 10px;
 }
 
@@ -14667,7 +14668,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-editor-right button { min-height: 36px; min-width: 36px; padding: 0 10px; border: 1px solid #dfe3ea; border-radius: 6px; background: #fff; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
 .bw-editor-right button:disabled { opacity: .4; cursor: default; }
 .bw-editor-right button svg { width: 16px; height: 16px; }
-.bw-editor-right .bw-editor-save { background: #3182f6; border-color: #3182f6; color: #fff; font-weight: 700; }
+.bw-editor-right .bw-editor-save { background: #1b64da; border-color: #1b64da; color: #fff; font-weight: 700; }
 .bw-editor-error { margin: 0; padding: 8px 16px; background: #fff1f1; color: #b91c1c; font-size: 13px; }
 .bw-editor-error p { margin: 0; }
 .bw-editor-error-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -14711,7 +14712,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-btn-label { display: grid; gap: 5px; font-size: 12.5px; color: #5e5e72; }
 .bw-btn-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .bw-btn-actions button { min-height: 38px; padding: 0 16px; border: 1px solid #dfe3ea; border-radius: 8px; background: #fff; font-size: 13.5px; font-weight: 700; cursor: pointer; }
-.bw-btn-actions .bw-btn-apply { background: #3182f6; border-color: #3182f6; color: #fff; }
+.bw-btn-actions .bw-btn-apply { background: #1b64da; border-color: #1b64da; color: #fff; }
 
 /* 등장 애니메이션 — 공개 화면·미리보기. 숨김은 JS 가 .bw-anim 을 붙일 때만 생긴다 */
 .bw-anim { opacity: 0; transform: translateY(16px); transition: opacity .55s ease, transform .55s ease; }
@@ -14797,7 +14798,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-ai-row { display: flex; gap: 8px; }
 .bw-ai-row input { flex: 1; min-height: 42px; padding: 0 14px; border: 1px solid #dfe3ea; border-radius: 8px; font-size: 14px; }
 .bw-ai-row input:focus { outline: 2px solid #3182f6; border-color: transparent; }
-.bw-ai-row button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 8px; background: #3182f6; color: #fff; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+.bw-ai-row button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 8px; background: #1b64da; color: #fff; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
 .bw-ai-row button:disabled { opacity: .45; cursor: default; }
 .bw-ai-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 12.5px; color: #5d6270; }
 .bw-ai-meta b { color: #161c2d; }
@@ -16430,7 +16431,7 @@ button.account-kakao-btn svg { display: inline-block !important; }
   cursor: pointer;
   white-space: nowrap;
 }
-.bw-ins-steps button.on { border-color: #3182f6; background: #3182f6; color: #fff; }
+.bw-ins-steps button.on { border-color: #1b64da; background: #1b64da; color: #fff; }
 .bw-ins-done {
   min-height: 38px;
   border: 0;
@@ -17162,7 +17163,7 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 .bw-save-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 .bw-save-actions button { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
 .bw-save-actions .secondary { border: 1px solid #d6dbe5; background: #fff; color: #161c2d; }
-.bw-save-actions .primary { border: 0; background: #3182f6; color: #fff; } /* 편집기의 다른 주요 단추(적용 등)와 같은 파랑 — 보라였다(감사 r36) */
+.bw-save-actions .primary { border: 0; background: #1b64da; color: #fff; } /* 편집기의 다른 주요 단추(적용 등)와 같은 파랑 — 보라였다(감사 r36) */
 .bw-save-actions button:disabled { opacity: .7; cursor: default; }
 .bw-save-actions svg { width: 16px; height: 16px; }
 .bw-save-popup .bw-save-url > div > button, .bw-save-popup .bw-save-url > div > a { height: 44px; min-height: 44px; padding: 0 12px; }

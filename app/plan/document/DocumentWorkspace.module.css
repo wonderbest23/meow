@@ -122,7 +122,7 @@
 .paging button { display:flex; align-items:center; gap:6px; background:var(--app-raised); border:0; border-radius:8px; padding:13px 16px; font-size:14px; color:var(--app-body); }
 .actions { display:grid; grid-template-columns:1fr 1.25fr; gap:12px; padding:16px max(24px,calc((100% - 752px)/2)); padding-bottom:max(16px,env(safe-area-inset-bottom)); flex-shrink:0; background:var(--app-surface); border-top:1px solid var(--app-line); }
 .actions button { min-height:54px; padding:12px; border:0; border-radius:8px; font-size:16px; font-weight:600; word-break:keep-all; }
-.primary { background:var(--app-primary); color:#fff; }.primary:hover { background:#2272eb; }
+.primary { background:var(--app-primary); color:#fff; }.primary:hover { background:#1957c2; }
 .secondary { background:var(--app-soft); color:var(--app-accent); }
 .empty { padding:60px 24px; text-align:center; }
 /* 작업실 칸 안: 빈 문서 안내를 칸 가운데에 · 다음 할 일은 파란 단추 하나(r37 점검) */
@@ -246,7 +246,7 @@
 .actions[data-next] { grid-template-columns:1fr 1.6fr; }
 .actions[data-single] { grid-template-columns:1fr; }
 .nextButton { display:flex; align-items:center; justify-content:center; gap:8px; min-height:54px; padding:8px 16px; border-radius:8px; background:var(--app-primary); color:#fff; text-decoration:none; font-size:16px; font-weight:600; word-break:keep-all; }
-.nextButton:hover { background:#246cd4; }
+.nextButton:hover { background:#1957c2; }
 .nextButton span { font-size:13px; font-weight:500; opacity:.85; }
 .nextButton span::after { content:"·"; margin-left:8px; }
 

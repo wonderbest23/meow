@@ -251,7 +251,7 @@
 @media (min-width: 901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .payBar { left: 208px; } }
 .payBarInner { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 920px; margin: 0 auto; }
 .payBarNote { margin: 0; color: var(--text-muted, #6b7684); font-size: 14px; line-height: 1.5; }
-.payBarButton { flex: 0 1 380px; min-height: 56px; padding: 0 20px; border: 0; border-radius: 12px; background: var(--blue, var(--app-primary, #3182f6)); color: #fff; font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.payBarButton { flex: 0 1 380px; min-height: 56px; padding: 0 20px; border: 0; border-radius: 12px; background: var(--blue, var(--app-primary, #1b64da)); color: #fff; font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .payBarButton:disabled { opacity: .6; cursor: default; }
 .payBarButton:active:not(:disabled) { transform: scale(.98); }
 @media (max-width: 640px) {
