@@ -198,7 +198,7 @@
 .executiveSummary dl { margin: 0; }
 .executiveSummary dl > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 14px; padding: 8px 0; border-bottom: 1px solid var(--app-line); font-size: 14px; line-height: 1.8; }
 .executiveSummary dt { color: var(--app-muted); }
-.executiveSummary dd { margin: 0; color: var(--app-body); word-break: keep-all; overflow-wrap: anywhere; }
+.executiveSummary dd { margin: 0; color: var(--app-body); word-break: keep-all; overflow-wrap: anywhere; text-wrap: balance; } /* 짧은 값 + 꼬리표('3,000원 계산')만 다음 줄로 떨어지지 않게(r39 430px 점검) */
 .executiveSummary dd > span { display: inline; margin-left: 8px; font-size: 11px; color: var(--app-muted); white-space: nowrap; }
 .executiveSummary dd > span[data-basis=proposal] { color: #916c18; }
 .summaryNote { margin: 0; padding-top: 16px; font-size: 12px; line-height: 1.8; color: var(--app-muted); }
