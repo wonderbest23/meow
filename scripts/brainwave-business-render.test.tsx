@@ -187,7 +187,14 @@ const withContact = { ...publicDraft, businessPhone: "010-1234-5678", contact: {
 const publicHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: withContact }));
 assert.ok(publicHtml.includes('aria-label="빠른 연락"') && publicHtml.includes('href="tel:01012345678"') && publicHtml.includes('href="https://pf.kakao.com/_munap"'));
 assert.ok(publicHtml.includes("has-quickbar"));
-assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: publicDraft })).includes("빠른 연락"), "no contacts, no bar");
+assert.ok(publicHtml.includes(" 전화하기</a>") && publicHtml.includes(" 문의하기</a>"));
+assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: { ...publicDraft, leadCaptureEnabled: false } })).includes("빠른 연락"), "no contacts, no bar");
+assert.ok(renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: { ...publicDraft, leadCaptureEnabled: true } })).includes('href="#landing-contact"'), "form alone shows 문의하기");
+// 양식 제목은 화면에서 숨겨도(globals.css) 양식 이름으로 읽힌다
+assert.ok(publicHtml.includes('<h2 id="landing-contact-title">') && publicHtml.includes('aria-labelledby="landing-contact-title"'));
+// 머리줄에 늘 보이는 문의 단추가 있는 디자인(병원·갤러리)만 표식 — 휴대폰 고정 줄을 겹쳐 띄우지 않는다
+for (const page of ["0-2385", "0-421"]) assert.equal(count(render(createBusinessTemplate(content, page)), "data-bw-sticky-cta"), 1, `sticky cta ${page}`);
+for (const page of ["0-290", "0-2226", "0-1102"]) assert.equal(count(render(createBusinessTemplate(content, page)), "data-bw-sticky-cta"), 0, `no sticky cta ${page}`);
 // 소개·문의 페이지의 사업자 표기는 채운 칸만('등록 전' 줄 없음), 판매 페이지는 빈 칸도 드러낸다
 const footerHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: withContact }));
 assert.ok(footerHtml.includes("전화 010-1234-5678") && !footerHtml.includes("등록 전"));

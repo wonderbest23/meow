@@ -53,7 +53,7 @@ export function BusinessGallery0_421({ overrides, hidden, sectionOrder, onPick, 
   const map = mapUrl(address);
 
   const sections: Record<string, () => ReactNode> = {
-    [HEADER]: () => <header key={HEADER} data-bw-node={HEADER} className={styles.header}>
+    [HEADER]: () => <header key={HEADER} data-bw-node={HEADER} data-bw-sticky-cta className={styles.header}>
       {Text({ id: "0:1099", as: "strong", className: styles.brand })}
       {Button({ buttonId: "0:1101", textId: "I0:1101;0:4613", className: styles.headerButton })}
     </header>,

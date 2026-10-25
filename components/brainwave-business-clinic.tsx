@@ -59,7 +59,7 @@ export function BusinessClinic0_2385({ overrides, hidden, sectionOrder, onPick, 
   const knownHours = hours && hours !== CLINIC_HOURS_PENDING && hours !== LOCAL_HOURS_PENDING ? hours : "";
 
   const sections: Record<string, () => ReactNode> = {
-    [HEADER]: () => <header key={HEADER} data-bw-node={HEADER} className={styles.header}>
+    [HEADER]: () => <header key={HEADER} data-bw-node={HEADER} data-bw-sticky-cta className={styles.header}>
       {Text({ id: "0:2552", as: "strong", className: styles.brand })}
       {Button({ buttonId: "0:2554", textId: "I0:2554;0:4613", className: styles.headerButton })}
     </header>,

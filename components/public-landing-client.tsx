@@ -199,7 +199,7 @@ export function PublicLandingClient({
 
       <section id="landing-contact" className={`public-lead-section ${config.leadCaptureEnabled ? "" : "brochure"}`} ref={formRef}>
         {/* 제목 위 작은 '신청하기' 꼬리표는 바로 아래 큰 제목('문의하기' 등)과 같은 말이라 뺐다 */}
-        <div><h2>{config.ctaLabel}</h2>{config.leadCaptureEnabled && <p>남겨 주시면 확인하고 연락드릴게요.</p>}</div>
+        <div><h2 id="landing-contact-title">{config.ctaLabel}</h2>{config.leadCaptureEnabled && <p>남겨 주시면 확인하고 연락드릴게요.</p>}</div>
         {!config.leadCaptureEnabled ? (
           /* 신청폼이 꺼져 있을 때 — 방문자에게는 사장님용 안내('신청폼을 켤 수 있습니다') 대신 연락할 방법을 보여 준다 */
           (() => {
@@ -213,7 +213,7 @@ export function PublicLandingClient({
           /* 문의·예약 모두 받는 양식이라 '신청' 대신 '문의', 가게가 손님에게 하는 말투로 */
           <div className="public-lead-success"><Check /><h3>문의가 접수됐어요</h3><p>남겨 주신 연락처로 곧 연락드릴게요.</p></div>
         ) : (
-          <form onSubmit={submit} noValidate>
+          <form onSubmit={submit} noValidate aria-labelledby="landing-contact-title">
             <label><span>이름</span><input name="name" required maxLength={100} autoComplete="name" placeholder="성함 또는 닉네임" aria-invalid={errorField === "name" || undefined} aria-describedby={errorField === "name" ? "public-form-field-error" : undefined} onInput={() => { if (errorField === "name") { setErrorField(null); setError(""); } }} />{errorField === "name" && <span id="public-form-field-error" className="public-form-field-error" role="alert">{error}</span>}</label>
             {config.collectEmail && <label><span>이메일</span><input name="email" type="email" autoComplete="email" required={!config.collectPhone} maxLength={200} placeholder="example@email.com" aria-invalid={errorField === "email" || undefined} aria-describedby={errorField === "email" ? "public-form-field-error" : undefined} onInput={() => { if (errorField === "email") { setErrorField(null); setError(""); } }} />{errorField === "email" && <span id="public-form-field-error" className="public-form-field-error" role="alert">{error}</span>}</label>}
             {config.collectPhone && <label><span>전화번호</span><input name="phone" type="tel" inputMode="tel" autoComplete="tel" required={!config.collectEmail} maxLength={30} placeholder="010-0000-0000" aria-invalid={errorField === "phone" || undefined} aria-describedby={errorField === "phone" ? "public-form-field-error" : undefined} onInput={() => { if (errorField === "phone") { setErrorField(null); setError(""); } }} />{errorField === "phone" && <span id="public-form-field-error" className="public-form-field-error" role="alert">{error}</span>}</label>}

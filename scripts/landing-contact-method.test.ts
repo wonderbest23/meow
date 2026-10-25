@@ -58,9 +58,13 @@ assert.equal(noNumber.pageData!.brainwave!.links[buttons[0].button], undefined);
 // 휴대폰 아래 고정 버튼
 assert.deepEqual(quickActions({ ...DEFAULT_CONTACT, kakaoUrl: "https://pf.kakao.com/_a", bookingUrl: "https://booking.naver.com/b" }, "0212345678", true).map(a => a.key), ["phone", "kakao", "booking"]);
 assert.deepEqual(quickActions(DEFAULT_CONTACT, "01012345678", true).map(a => a.key), ["phone", "form"], "one contact plus the form");
+assert.deepEqual(quickActions(DEFAULT_CONTACT, "01012345678", true).map(a => a.label), ["전화하기", "문의하기"]);
+assert.deepEqual(quickActions({ ...DEFAULT_CONTACT, kakaoUrl: "https://pf.kakao.com/_a" }, "01012345678", true).map(a => a.key), ["phone", "kakao", "form"]);
+assert.deepEqual(quickActions(DEFAULT_CONTACT, "", true).map(a => a.key), ["form"], "form alone is a contact method");
+assert.deepEqual(quickActions(undefined, "01012345678", false).map(a => a.key), ["phone"], "old drafts without contact settings");
 assert.deepEqual(quickActions({ ...DEFAULT_CONTACT, quickBar: false }, "01012345678", true), []);
-assert.deepEqual(quickActions(DEFAULT_CONTACT, "", true), [], "nothing entered, no bar");
-assert.deepEqual(quickActions({ ...DEFAULT_CONTACT, kakaoUrl: "javascript:alert(1)" }, "", true), []);
+assert.deepEqual(quickActions(DEFAULT_CONTACT, "", false), [], "nothing entered, no bar");
+assert.deepEqual(quickActions({ ...DEFAULT_CONTACT, kakaoUrl: "javascript:alert(1)" }, "", false), []);
 
 // 예전 초안(연락 방법 없음)도 그대로 읽힌다
 assert.equal(landingDraftSchema.parse({ ...draft, contact: undefined }).contact, undefined);
