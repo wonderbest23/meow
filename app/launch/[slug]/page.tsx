@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { PublicLandingClient } from "../../../components/public-landing-client";
 import { loadBrainwavePageServer } from "../../../lib/landing/brainwave/load";
 import { getPublishedLandingBySlug } from "../../../lib/landing/repository";
-import { landingShareMetadata, shareOrigin } from "../../../lib/landing/share-card";
+import { landingLayoutHintFromHeaders } from "../../../lib/landing/layout-hint";
+import { jsonLdText, landingLocalBusinessJsonLd } from "../../../lib/landing/local-business-jsonld";
+import { landingCanonicalUrl, landingShareMetadata, shareOrigin } from "../../../lib/landing/share-card";
 
 export async function generateMetadata(
   context: { params: Promise<{ slug: string }> },
@@ -25,5 +27,12 @@ export default async function PublicLandingPage(
   const published = await getPublishedLandingBySlug(slug);
   if (!published) notFound();
   const bw = published.config.pageData?.brainwave ? await loadBrainwavePageServer(published.config.pageData.brainwave.page) : null;
-  return <PublicLandingClient slug={slug} config={published.config} brainwavePage={bw} />;
+  const requestHeaders = await headers();
+  const origin = shareOrigin(requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"), requestHeaders.get("x-forwarded-proto"));
+  // 가게 정보가 실제로 채워진 홈페이지만 검색용 가게 정보(JSON-LD)를 싣는다 — lib/landing/local-business-jsonld.ts
+  const business = landingLocalBusinessJsonLd(published.config, landingCanonicalUrl(origin, `/launch/${encodeURIComponent(slug)}`));
+  return <>
+    {business ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdText(business) }} /> : null}
+    <PublicLandingClient slug={slug} config={published.config} brainwavePage={bw} layoutHint={landingLayoutHintFromHeaders(requestHeaders)} />
+  </>;
 }
