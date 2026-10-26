@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import "@puckeditor/core/puck.css";
+/* puck.css 는 바깥 글꼴 CSS 를 @import 해 모든 화면의 첫 표시를 막는다 — @import 없는 판 + 같은 글꼴 선언(puck-inter-font.css) */
+import "@puckeditor/core/no-external.css";
+import "./puck-inter-font.css";
 import "./release-20260916.css";
 import { LoginDialogHost } from "../components/login-dialog";
 import { SupportChatWidget } from "../components/support-chat-widget";

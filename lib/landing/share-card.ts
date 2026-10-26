@@ -58,7 +58,16 @@ export function shareImage(config: LandingDraft): string | null {
   return url;
 }
 
-export function landingShareMetadata(config: LandingDraft, origin: string): Metadata {
+/*
+ * 대표 주소(canonical) — 같은 홈페이지가 ?뒤에 붙은 값·www 주소로도 열려 검색에 여러 개로 잡히지 않게 한 주소를 알린다(점검 r42-B).
+ * www.oneulstart.com 은 oneulstart.com 으로 모은다. 연결한 내 도메인은 들어온 그 도메인 그대로(그 주소가 손님에게 알린 주소다).
+ */
+export function landingCanonicalUrl(origin: string, path: string): string {
+  const base = origin === "https://www.oneulstart.com" ? SHARE_FALLBACK_ORIGIN : origin;
+  return `${base}${path}`;
+}
+
+export function landingShareMetadata(config: LandingDraft, origin: string, path = "/"): Metadata {
   const name = config.businessName.trim();
   const tagline = shareTagline(config);
   const lead = config.headline.trim() && config.headline.trim() !== name ? config.headline.trim() : tagline;
@@ -75,12 +84,14 @@ export function landingShareMetadata(config: LandingDraft, origin: string): Meta
   const image = shareImage(config);
   const sized = image?.startsWith("https://images.unsplash.com/") ? { width: 1200, height: 630 } : {};
   const images = image ? [{ url: image, ...sized, alt: name }] : undefined;
+  const url = landingCanonicalUrl(origin, path);
   return {
     metadataBase: new URL(origin),
     title,
     description,
     robots: { index: true, follow: true },
-    openGraph: { type: "website", siteName: name, locale: "ko_KR", title, description, ...(images ? { images } : {}) },
+    alternates: { canonical: url },
+    openGraph: { type: "website", siteName: name, locale: "ko_KR", title, description, url, ...(images ? { images } : {}) },
     twitter: { card: image ? "summary_large_image" : "summary", title, description, ...(image ? { images: [image] } : {}) },
   };
 }
