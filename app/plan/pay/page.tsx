@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import PlanLoading from "../PlanLoading";
 import PlanCheckout from "./PlanCheckout";
 import AppFrame from "../AppFrame";
 import { payBackHref } from "../../../lib/plan-builder/journey";
@@ -14,7 +15,7 @@ export default async function PlanPayPage({ searchParams }: { searchParams: Prom
   /* 머리줄 ← 도 카드의 '나중에 하기'와 같은 곳 — 그 사업의 계획서(홈페이지 상품이면 홈페이지) */
   return (
     <AppFrame title="결제" backHref={payBackHref(one(query.product), one(query.planId))}>
-      <Suspense fallback={null}>
+      <Suspense fallback={<PlanLoading fill note="결제 화면을 불러오고 있어요" />}>
         {/* 영수증 메일은 발송 설정이 있을 때만 약속한다 */}
         <PlanCheckout receiptByEmail={landingEmailConfiguration() !== null} />
       </Suspense>

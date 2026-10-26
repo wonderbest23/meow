@@ -82,7 +82,7 @@ export default function PlanList() {
         <p role="status" className={mine.status} data-empty={notice ? undefined : ""}>{notice}</p>
         {plans.length === 0 && error ? <div role="alert" className={styles.error}><p>사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><button type="button" className={styles.primary} onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</button></div> : plans.length === 0 ? (
           /* 로그인 여부를 아직 모르면 자리만 잡아 둔다 — '사업이 없어요'를 먼저 보였다가 '로그인하면…'으로 바뀌며 화면이 한 번 흔들렸다(점검 r38) */
-          !authChecked ? <section className={styles.empty} aria-hidden="true" /> : <BusinessEmptyState kind={signedIn === false ? "loggedOut" : "plans"} />
+          !authChecked ? <section className={styles.empty} aria-hidden="true" /> : <BusinessEmptyState heading="h2" kind={signedIn === false ? "loggedOut" : "plans"} />
         ) : <>
           {/*
             목록만 보여 준다(대표 요청 2026-10-14: '내 사업인데 새 대화 단추가 왜 있나', 꾸밈이 AI 같고 복잡하다).
@@ -103,7 +103,7 @@ export default function PlanList() {
                 const menu = event.currentTarget as HTMLDetailsElement;
                 if (event.key !== "Escape" || !menu.open) return;
                 event.preventDefault(); menu.open = false; menu.querySelector("summary")?.focus();
-              }}><summary aria-label={`${p.title} 관리`} data-plan-menu={p.id}><MoreHorizontal size={20} /></summary><div><button onClick={() => {setEditing(p.id);setName(p.title);setNotice("");}}>이름 변경</button><button onClick={() => remove(p.id,p.title)}>삭제</button></div></details>}
+              }}><summary aria-label={`${p.title || "이름 없는 사업"} 관리`} data-plan-menu={p.id}><MoreHorizontal size={20} /></summary><div><button onClick={() => {setEditing(p.id);setName(p.title);setNotice("");}}>이름 변경</button><button onClick={() => remove(p.id,p.title)}>삭제</button></div></details>}
             </article>; })}
           </div>
         </>}

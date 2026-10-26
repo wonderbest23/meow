@@ -18,6 +18,7 @@ import { AddressSearchButton } from "../../../components/address-search";
 import { DocLink } from "../../../components/doc-sheet";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed } from "../../../lib/plan-builder/plan-store";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
+import { fetchWithTimeout, koreanText } from "../../../lib/client/user-error";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -132,8 +133,9 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   useEffect(() => {
     let alive = true;
     setInfoFailed(false);
-    fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}&planId=${encodeURIComponent(planId)}`)
-      .then((r) => r.json())
+    fetchWithTimeout(`/api/plan/access?planType=${encodeURIComponent(planType)}&planId=${encodeURIComponent(planId)}`)
+      /* 오류 응답(JSON 이어도)은 실패로 — 가격 없이 그리면 화면이 깨졌다 */
+      .then((r) => { if (!r.ok) throw new Error("access"); return r.json(); })
       .then((d) => {
         if (alive) setInfo({ price: d.price, productName: d.productName, paid: d.paid, payable: d.payable, authenticated: d.authenticated, unavailable: d.unavailable === true });
       })
@@ -142,8 +144,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       });
     if ((isHomepage || isBundle || product === "plan") && planId) {
       // 홈페이지 가격·구매 여부는 홈페이지 API가 안다 — 계획서·묶음 화면도 묶음 권유를 정하려고 함께 본다
-      fetch(`/api/plan/landing?planId=${encodeURIComponent(planId)}`)
-        .then((r) => r.json())
+      fetchWithTimeout(`/api/plan/landing?planId=${encodeURIComponent(planId)}`)
+        .then((r) => { if (!r.ok) throw new Error("landing"); return r.json(); })
         .then((d) => {
           if (alive) setHomepageInfo({ price: d.price, editable: Boolean(d.editable) });
         })
@@ -177,7 +179,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       if (!res.ok || !data.clientId || !data.orderId) {
         setPhase("error");
         setPaymentsClosed(data.error === "payments_unavailable" || data.error === "paid_launch_blocked");
-        setMessage(data.message ?? "결제를 시작하지 못했어요.");
+        setMessage(koreanText(data.message, "결제를 시작하지 못했어요. 잠시 후 다시 시도해 주세요."));
         started.current = false;
         return;
       }
@@ -196,7 +198,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         returnUrl: `${window.location.origin}/api/payments/plan/return`,
         fnError: (result: { errorMsg?: string; resultMsg?: string }) => {
           setPhase("error");
-          setMessage(result?.errorMsg ?? result?.resultMsg ?? "결제가 취소됐어요.");
+          setMessage(koreanText(result?.errorMsg ?? result?.resultMsg, "결제가 취소됐어요."));
           started.current = false;
         },
       });
@@ -218,7 +220,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       const startRes = await fetch("/api/payments/iap/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, product, terms: agreements }) });
       const start = (await startRes.json().catch(() => ({}))) as { productId?: string; appAccountToken?: string; message?: string; error?: string };
       if (!startRes.ok || !start.productId || !start.appAccountToken) {
-        setPhase("error"); setPaymentsClosed(start.error === "paid_launch_blocked"); setMessage(start.message ?? "결제를 시작하지 못했어요."); started.current = false; return;
+        setPhase("error"); setPaymentsClosed(start.error === "paid_launch_blocked"); setMessage(koreanText(start.message, "결제를 시작하지 못했어요. 잠시 후 다시 시도해 주세요.")); started.current = false; return;
       }
       setPhase("opening");
       let purchase: Awaited<ReturnType<typeof nativePurchase>>;
@@ -233,7 +235,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       const doneRes = await fetch("/api/payments/iap/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ platform: native, product, planId, planType, jws: purchase.jws, purchaseToken: purchase.purchaseToken }) });
       const done = (await doneRes.json().catch(() => ({}))) as { ok?: boolean; message?: string };
       if (!doneRes.ok || !done.ok) {
-        setPhase("error"); setMessage(done.message ?? "결제는 됐지만 반영하지 못했어요. 앱을 다시 열면 다시 시도해요."); started.current = false; return;
+        setPhase("error"); setMessage(koreanText(done.message, "결제는 됐지만 반영하지 못했어요. 앱을 다시 열면 다시 시도해요.")); started.current = false; return;
       }
       if (native === "ios") await finishNativePurchase(purchase.transactionId).catch(() => undefined);
       window.location.assign(laterHref);
@@ -381,6 +383,12 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
             {extra.price.toLocaleString("ko-KR")}원
             <span>{extra.unit} · 부가세 포함</span>
           </div>
+        ) : infoFailed ? (
+          /* 홈페이지 상품도 결제 여부를 못 받았으면 알린다 — 예전엔 가격만 보이고 실패가 드러나지 않았다(점검 r41-A) */
+          <div className={styles.price} role="alert">
+            <span>결제 정보를 확인하지 못했어요. 연결을 확인해 주세요.</span>
+            <button type="button" className={styles.retry} onClick={() => setInfoAttempt((n) => n + 1)}>다시 확인하기</button>
+          </div>
         ) : isHomepage ? (
           <div className={styles.price}>
             {(homepageInfo?.price ?? HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원
@@ -391,11 +399,6 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
             {info.price.toLocaleString("ko-KR")}원
             <span>사업계획서 1부 · 1회 결제 · 부가세 포함</span>
             {!info.paid && homepageInfo?.editable !== true && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small><ChevronRight size={18} aria-hidden="true" /></Link>}
-          </div>
-        ) : infoFailed ? (
-          <div className={styles.price} role="alert">
-            <span>결제 정보를 확인하지 못했어요. 연결을 확인해 주세요.</span>
-            <button type="button" className={styles.retry} onClick={() => setInfoAttempt((n) => n + 1)}>다시 확인하기</button>
           </div>
         ) : (
           /* 가격 확인 전 — 자리를 비워두면 화면이 덜컥거린다 */

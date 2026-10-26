@@ -13,7 +13,7 @@
 .tree .caret[data-open] { transform:rotate(90deg); }
 
 .list { display:flex; flex-direction:column; gap:2px; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:2px 0 6px 10px; }
-.empty { margin:4px 8px 8px; color:#6b7684; font-size:12px; line-height:1.5; }
+.empty { margin:4px 8px 8px; color:#6b7684; font-size:12px; line-height:1.5; text-wrap:balance; }
 
 .plan { display:flex; flex-direction:column; }
 .tree .planRow { display:flex; align-items:center; gap:6px; width:100%; min-height:36px; padding:0 8px; border:0; border-radius:8px; background:transparent; color:#4e5968; font:inherit; font-size:13px; font-weight:600; text-align:left; cursor:pointer; }

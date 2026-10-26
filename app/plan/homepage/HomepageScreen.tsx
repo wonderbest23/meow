@@ -263,7 +263,7 @@ export function HomepageScreen() {
          */
         if (!alive) return;
         // 다른 화면과 같은 말(MissingBusiness) — 갈 곳은 새 대화가 아니라 내 사업 목록
-        setBlocked(lastHydrationFailed() ? { title: MISSING_BUSINESS_TITLE, detail: "사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.", missing: [], cta: "retry" } : { title: MISSING_BUSINESS_TITLE, detail: MISSING_BUSINESS_DETAIL, missing: [], cta: "list" });
+        setBlocked(lastHydrationFailed() ? { title: "사업을 불러오지 못했어요", detail: "연결을 확인하고 다시 시도해 주세요.", missing: [], cta: "retry" } : { title: MISSING_BUSINESS_TITLE, detail: MISSING_BUSINESS_DETAIL, missing: [], cta: "list" });
         setPhase("blocked");
         return;
       }

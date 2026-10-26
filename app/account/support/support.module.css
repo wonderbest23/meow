@@ -36,7 +36,7 @@
 .success { display:flex; align-items:flex-start; gap:10px; padding:16px 0; margin:0 0 20px; color:#087f5b; font-size:15px; line-height:1.7; }
 .success svg { flex-shrink:0; margin-top:3px; }
 .error { margin-top:20px; padding:16px; border:1px solid #f4d0cd; background:#fff6f5; border-radius:8px; color:#b42318; line-height:1.7; font-size:14px; }
-.error p { margin:0; }.error button { margin-top:12px; }
+.error p { margin:0; text-wrap:balance; }.error button { margin-top:12px; }
 .historyHeading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; }
 .historyHeading h2 { font-size:18px; margin:0; }
 .iconButton { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; border:1px solid #e5e8eb; border-radius:8px; color:#4e5968; background:#fff; }

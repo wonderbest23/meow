@@ -399,7 +399,7 @@ export function PlanDocumentBody() {
   if (missing) return pane ? <div className={`${frame.page} ${styles.page}`} data-embedded=""><div className={hub.scroll}><div className={hub.content}><MissingBusinessBody /></div></div></div> : <MissingBusinessScreen chromeTitle="사업계획서" />;
   /* 작업실 안에서는 작업실 머리줄의 사업명이 h1 — 칸 안의 제목은 h2 */
   const FailedHeading = pane ? "h2" : "h1";
-  const failedBody = <div><FailedHeading style={{ fontSize: 20, margin: "0 0 8px" }}>사업계획서를 불러오지 못했어요</FailedHeading><p style={{ color: "#667085", margin: "0 0 16px" }}>연결을 확인하고 다시 불러와 주세요. 작성한 내용은 서버에 그대로 있어요.</p><button type="button" onClick={() => window.location.reload()} style={{ padding: "10px 18px", borderRadius: 10, border: 0, background: "#236be5", color: "#fff", fontWeight: 700 }}>다시 불러오기</button></div>;
+  const failedBody = <div><FailedHeading style={{ fontSize: 20, margin: "0 0 8px" }}>사업계획서를 불러오지 못했어요</FailedHeading><p style={{ color: "#667085", margin: "0 0 24px", textWrap: "balance" }}>연결을 확인하고 다시 불러와 주세요. 작성한 내용은 서버에 그대로 있어요.</p><button type="button" onClick={() => window.location.reload()} style={{ padding: "10px 18px", borderRadius: 10, border: 0, background: "#236be5", color: "#fff", fontWeight: 700 }}>다시 불러오기</button></div>;
   if (loadFailed) return pane ? <div data-embedded="" style={{ height: "100%", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>{failedBody}</div> : <main style={{ minHeight: "60vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
     {failedBody}
   </main>;

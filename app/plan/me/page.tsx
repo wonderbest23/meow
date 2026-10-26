@@ -13,6 +13,7 @@ import styles from "./PlanMe.module.css";
 import PlanLoading from "../PlanLoading";
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import { askConfirm } from "../../../components/confirm-dialog";
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 
 /*
  * /plan/me — 마이페이지.
@@ -149,14 +150,14 @@ export default function PlanMePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId, reason }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message ?? "환불 요청을 접수하지 못했어요.");
+      const data: unknown = await response.json().catch(() => null);
+      if (!response.ok || data === null) throw new Error(apiMessage(data, "환불 요청을 접수하지 못했어요. 잠시 후 다시 시도해 주세요."));
       setRefunds((current) => ({ ...current, [orderId]: { orderId, status: "received" } }));
       setRefundFor(null);
       setRefundReason("");
       setRefundMessage("환불 요청이 접수됐어요. 처리 결과는 이 화면에서 확인할 수 있어요.");
     } catch (error) {
-      setRefundMessage(error instanceof Error ? error.message : "환불 요청을 접수하지 못했어요.");
+      setRefundMessage(userErrorMessage(error, "환불 요청을 접수하지 못했어요. 잠시 후 다시 시도해 주세요."));
     } finally {
       setRefundBusy(false);
     }
@@ -179,13 +180,13 @@ export default function PlanMePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(account.email ? { email: deleteEmail.trim() } : { confirm: deleteEmail.trim() }),
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message ?? "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      const data: unknown = await response.json().catch(() => null);
+      if (!response.ok || data === null) throw new Error(apiMessage(data, "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요."));
       clearLocalState();
       router.push("/");
       router.refresh();
     } catch (error) {
-      setDeleteMessage(error instanceof Error ? error.message : "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      setDeleteMessage(userErrorMessage(error, "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요."));
     } finally {
       setDeleteBusy(false);
     }

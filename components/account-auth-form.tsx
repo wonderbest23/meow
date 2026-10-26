@@ -12,6 +12,7 @@ import accountStyles from "../app/account/Account.module.css";
 import styles from "./account-auth-form.module.css";
 import { DocLink } from "./doc-sheet";
 import { Eye, EyeOff } from "lucide-react";
+import { apiMessage, userErrorMessage } from "../lib/client/user-error";
 
 /*
  * 로그인·회원가입·비밀번호 찾기 폼 — /account 화면과 로그인 팝업(login-dialog)이 같이 쓴다.
@@ -57,9 +58,14 @@ function loadGoogleScript(): Promise<GoogleAccountsId | null> {
 
 export type AuthMode = "login" | "register" | "recover" | "reset";
 
+const FAILED = "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.";
+/* fetch 가 TypeError 로 끝나면 연결이 끊긴 것 — 서버 문제처럼 말하지 않는다 */
+const OFFLINE = "인터넷 연결을 확인하고 다시 시도해 주세요.";
+
+/* HTML 오류 페이지(502 등)·끊긴 연결도 한국어 안내로 — "Unexpected token '<'"·"Failed to fetch" 가 그대로 보이지 않게 */
 async function payload<T>(response: Response): Promise<T> {
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message ?? "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok || data === null) throw new Error(apiMessage(data, FAILED));
   return data as T;
 }
 
@@ -163,7 +169,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
       })
       .catch((error) => {
         setMessageError(true);
-        setMessage(error instanceof Error ? error.message : `${provider === "apple" ? "애플" : "구글"} 로그인에 실패했어요.`);
+        setMessage(userErrorMessage(error, `${provider === "apple" ? "애플" : "구글"} 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.`));
         setBusy(false);
       });
   };
@@ -293,7 +299,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
         return;
       }
     } catch (error) {
-      setMessageError(true); setMessage(error instanceof Error ? error.message : "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      setMessageError(true); setMessage(error instanceof TypeError ? OFFLINE : userErrorMessage(error, FAILED));
       // 실패하면 초점을 이메일 칸으로 — 어디에도 초점이 없으면(body) 키보드·낭독기 사용자가 다시 고칠 곳을 잃는다
       window.requestAnimationFrame(() => { const active = document.activeElement; if (!active || active === document.body) emailInput.current?.focus(); });
     } finally { setBusy(false); }

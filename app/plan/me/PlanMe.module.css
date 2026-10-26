@@ -98,8 +98,9 @@
   overflow-wrap: anywhere;
 }
 /* 사업 이름 링크는 글 높이(17px)만큼만 눌렸다 — 줄 모양은 그대로 두고 누르는 자리만 위아래로 넓힌다(점검 r40) */
+/* block — inline-block 은 기준선이 마지막 줄이라, 이름이 두 줄이면 왼쪽 '계획서 완성'이 둘째 줄에 붙었다(점검 r41-A) */
 .row dd a {
-  display: inline-block;
+  display: block;
   padding: 12px 0;
   margin: -12px 0;
 }
