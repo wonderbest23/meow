@@ -9,72 +9,72 @@
 /* 제목 줄 오른쪽은 닫기 단추(오른쪽 위 36px) 자리로 비워 둔다 — 좁은 화면·글자 확대에서 '오늘창업'이 단추 밑에 깔렸다 */
 .pane .brand { display: flex; align-items: center; gap: 14px; margin: 0 4px 20px; padding-right: 36px; min-width: 0; }
 .pane .brand img { width: 52px; height: 52px; border-radius: 16px; flex: none; }
-.pane .brand strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 22px; font-weight: 700; }
-.pane .title { margin: 0 4px 16px; padding-right: 36px; font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
+.pane .brand strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.375rem; font-weight: 700; }
+.pane .title { margin: 0 4px 16px; padding-right: 36px; font-size: 1.375rem; font-weight: 700; overflow-wrap: anywhere; }
 @media (max-width: 300px) { .pane .brand { gap: 10px; }.pane .brand img { width: 40px; height: 40px; border-radius: 12px; } }
 
 .pane .card { display: grid; gap: 12px; margin: 0 0 12px; padding: 18px 16px; border-radius: 18px; background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); }
 .pane .cardHead { display: flex; align-items: center; justify-content: space-between; }
-.pane .cardHead b { font-size: 15px; font-weight: 700; }
-.pane .cardHead a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; margin: -12px -8px; padding: 0 8px; justify-content: center; color: #6b7684; font-size: 13px; text-decoration: none; }
+.pane .cardHead b { font-size: .9375rem; font-weight: 700; }
+.pane .cardHead a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; margin: -12px -8px; padding: 0 8px; justify-content: center; color: #6b7684; font-size: .8125rem; text-decoration: none; }
 
 .pane .greeting { display: flex; gap: 10px; align-items: flex-start; }
 .pane .greeting img { width: 40px; height: 40px; border-radius: 12px; flex: none; }
-.pane .greeting b { display: block; font-size: 13px; font-weight: 700; }
-.pane .greeting p { margin: 2px 0 0; font-size: 15px; line-height: 1.5; }
+.pane .greeting b { display: block; font-size: .8125rem; font-weight: 700; }
+.pane .greeting p { margin: 2px 0 0; font-size: .9375rem; line-height: 1.5; }
 
 .pane .ways { display: grid; gap: 10px; margin: 2px 0 0 50px; padding: 0; list-style: none; }
-.pane .ways li { display: flex; gap: 8px; align-items: flex-start; color: #333d4b; font-size: 14px; line-height: 1.55; }
+.pane .ways li { display: flex; gap: 8px; align-items: flex-start; color: #333d4b; font-size: .875rem; line-height: 1.55; }
 .pane .ways li svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: #6b7684; }
 .pane .ways li b { font-weight: 700; margin-right: 4px; }
 .pane .ways .notice { color: #191f28; font-weight: 600; }
 .pane .ways .notice svg { color: #246bd1; }
 .pane .ways .notice button { padding: 0; border: 0; background: none; color: #246bd1; font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 
-.pane .primary { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; margin: 4px 0 0; border: 0; border-radius: 14px; background: #246bd1; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+.pane .primary { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 52px; margin: 4px 0 0; border: 0; border-radius: 14px; background: #246bd1; color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer; }
 .pane .primary:hover { background: #1b5bb7; }
 .pane .primary svg { width: 18px; height: 18px; }
-.pane .secondary { height: 44px; border: 0; border-radius: 12px; background: #f2f4f6; color: #333d4b; font-size: 14px; font-weight: 600; cursor: pointer; }
+.pane .secondary { height: 44px; border: 0; border-radius: 12px; background: #f2f4f6; color: #333d4b; font-size: .875rem; font-weight: 600; cursor: pointer; }
 .pane .secondary:hover { background: #e5e8eb; }
 
-.pane .muted { margin: 0; color: #6b7684; font-size: 13px; }
+.pane .muted { margin: 0; color: #6b7684; font-size: .8125rem; }
 .pane .emptyPlans { display: grid; gap: 8px; }
-.pane .emptyPlans a { display: inline-flex; align-items: center; min-height: 44px; width: fit-content; color: #246bd1; font-size: 14px; font-weight: 600; text-decoration: none; }
+.pane .emptyPlans a { display: inline-flex; align-items: center; min-height: 44px; width: fit-content; color: #246bd1; font-size: .875rem; font-weight: 600; text-decoration: none; }
 .pane .plans { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .pane .plans a { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "text arrow" "bar arrow"; align-items: center; gap: 6px 10px; padding: 10px 4px; border-radius: 10px; color: inherit; text-decoration: none; }
 .pane .plans a:hover { background: #f9fafb; }
 .pane .planText { grid-area: text; display: grid; gap: 2px; min-width: 0; }
-.pane .planText b { overflow: hidden; font-size: 14px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.pane .planText small { color: #6b7684; font-size: 12px; }
+.pane .planText b { overflow: hidden; font-size: .875rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.pane .planText small { color: #6b7684; font-size: .75rem; }
 .pane .bar { grid-area: bar; display: block; height: 4px; border-radius: 4px; background: #e5e8eb; overflow: hidden; }
 .pane .bar i { display: block; height: 100%; border-radius: 4px; background: #246bd1; }
 .pane .plans a > svg { grid-area: arrow; width: 18px; height: 18px; color: #b0b8c1; }
 
-.pane .account { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.pane .account { margin: 0; font-size: .875rem; font-weight: 600; overflow-wrap: anywhere; }
 .pane .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.pane .ghost, .pane .dark { display: flex; align-items: center; justify-content: center; gap: 2px; height: 44px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.pane .ghost, .pane .dark { display: flex; align-items: center; justify-content: center; gap: 2px; height: 44px; border-radius: 10px; font-size: .875rem; font-weight: 600; text-decoration: none; cursor: pointer; }
 .pane .ghost { border: 1px solid #d1d6db; background: #fff; color: #191f28; }
 .pane .dark { border: 1px solid #1f2125; background: #1f2125; color: #fff; }
 .pane .toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; cursor: pointer; }
-.pane .toggle span { display: grid; gap: 2px; font-size: 14px; font-weight: 600; }
-.pane .toggle small { color: #6b7684; font-size: 12px; font-weight: 400; }
+.pane .toggle span { display: grid; gap: 2px; font-size: .875rem; font-weight: 600; }
+.pane .toggle small { color: #6b7684; font-size: .75rem; font-weight: 400; }
 .pane .toggle input { flex: none; width: 44px; height: 26px; margin: 0; appearance: none; border-radius: 26px; background: #d1d6db; position: relative; cursor: pointer; transition: background .2s; }
 .pane .toggle input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); transition: transform .2s; }
 .pane .toggle input:checked { background: #246bd1; }
 .pane .toggle input:checked::after { transform: translateX(18px); }
-.pane .listButton { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 0 2px; border: 0; background: none; color: #333d4b; font-size: 14px; font-weight: 500; text-align: left; text-decoration: none; cursor: pointer; }
+.pane .listButton { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; padding: 0 2px; border: 0; background: none; color: #333d4b; font-size: .875rem; font-weight: 500; text-align: left; text-decoration: none; cursor: pointer; }
 .pane .listButton:disabled { color: #8b95a1; cursor: default; }
 .pane .listButton svg { width: 18px; height: 18px; color: #b0b8c1; }
 .pane .listButton + .listButton { border-top: 1px solid #f2f4f6; }
 
 /* 아래 탭 막대 — 홈 · 대화 · 설정 */
 .tabs { display: grid; grid-template-columns: repeat(3, 1fr); flex: none; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid #e5e8eb; background: rgba(255, 255, 255, .96); backdrop-filter: blur(12px); }
-.tabs button { display: grid; justify-items: center; gap: 2px; min-height: 52px; padding: 6px 0 0; border: 0; background: transparent; color: #6b7684; font-size: 12px; font-weight: 600; cursor: pointer; }
+.tabs button { display: grid; justify-items: center; gap: 2px; min-height: 52px; padding: 6px 0 0; border: 0; background: transparent; color: #6b7684; font-size: .75rem; font-weight: 600; cursor: pointer; }
 .tabs button[aria-current="page"] { color: #191f28; }
 .tabs .tabIcon { position: relative; display: grid; place-items: center; }
 .tabs .tabIcon svg { width: 22px; height: 22px; }
 .tabs button[aria-current="page"] .tabIcon svg { fill: currentColor; fill-opacity: .12; }
-.tabs .tabIcon em { position: absolute; top: -5px; left: 14px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #f04452; color: #fff; font-size: 10px; font-style: normal; font-weight: 700; line-height: 17px; text-align: center; }
+.tabs .tabIcon em { position: absolute; top: -5px; left: 14px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #f04452; color: #fff; font-size: .625rem; font-style: normal; font-weight: 700; line-height: 1.0625rem; text-align: center; }
 
 /* 창 자체(둥근 모서리)는 전역 클래스라 globals.css 맨 끝에 둔다 — CSS 모듈에 전역만 쓴 선택자는 webpack 빌드가 거부한다 */
 

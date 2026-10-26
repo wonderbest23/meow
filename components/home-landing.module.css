@@ -61,21 +61,21 @@
 }
 .headerShell :global(.site-header) :global(.brand) { min-height: 44px; flex: 0 0 auto; }
 .headerShell :global(.site-header) :global(.brand-logo) { height: 32px; width: auto; filter: none; }
-.headerShell :global(.site-header) :global(.home-header-nav) { margin-left: auto; display: flex; gap: 4px; font-size: 15px; }
+.headerShell :global(.site-header) :global(.home-header-nav) { margin-left: auto; display: flex; gap: 4px; font-size: .9375rem; }
 .headerShell :global(.site-header) :global(.home-header-nav) a {
   min-height: 44px;
   padding: 0 12px;
   display: inline-flex;
   align-items: center;
   color: #4e5968;
-  font-size: 15px;
+  font-size: .9375rem;
   font-weight: 500;
   opacity: 1;
   text-decoration: none;
 }
 .headerShell :global(.site-header) :global(.home-header-nav) a:hover { color: #191f28; }
 .headerShell :global(.site-header) :global(.header-actions) { gap: 4px; flex: 0 0 auto; }
-.headerShell :global(.site-header) :global(.header-login) { min-height: 44px; padding: 0 12px; color: #191f28; font-size: 15px; font-weight: 700; }
+.headerShell :global(.site-header) :global(.header-login) { min-height: 44px; padding: 0 12px; color: #191f28; font-size: .9375rem; font-weight: 700; }
 /* 회원가입은 로그인 창에서 고를 수 있다 — 승인 목업처럼 로그인 · 시작하기 둘만 둔다 */
 .headerShell :global(.site-header) :global(.header-signup) { display: none; }
 .headerShell :global(.site-header) :global(.account-link) {
@@ -100,7 +100,7 @@
   color: #fff !important;
   display: inline-flex;
   align-items: center;
-  font-size: 16px !important;
+  font-size: 1rem !important;
   font-weight: 800 !important;
   white-space: nowrap;
 }
@@ -136,7 +136,7 @@
   .headerShell :global(.site-header) { height: 60px; min-height: 60px; padding: 0 16px; }
   .headerShell :global(.site-header) :global(.brand-logo) { height: 28px; }
   .headerShell :global(.site-header) :global(.header-login) { padding: 0 10px; }
-  .headerShell :global(.site-header) :global(.small-start) { padding: 0 14px !important; font-size: 15px !important; }
+  .headerShell :global(.site-header) :global(.small-start) { padding: 0 14px !important; font-size: .9375rem !important; }
   /* 휴대폰 폭에서 내 계정 아이콘은 ☰ 메뉴(내 사업 · 내 계정) 안으로 — 머리말에는 '내 사업' · 시작하기 · ☰ 만 */
   .headerShell :global(.site-header) :global(.account-link) { display: none; }
 }

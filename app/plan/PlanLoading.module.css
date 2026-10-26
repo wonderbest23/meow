@@ -1,18 +1,18 @@
 .wrap { width:100%; min-width:0; min-height:320px; margin:0 auto; padding:40px 24px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; letter-spacing:0; }
 .status { display:flex; align-items:center; gap:12px; min-width:0; color:var(--app-text,#202b3a); letter-spacing:0; }
-.status p { margin:0; font-size:16px; font-weight:600; line-height:1.65; word-break:keep-all; overflow-wrap:anywhere; }
+.status p { margin:0; font-size:1rem; font-weight:600; line-height:1.65; word-break:keep-all; overflow-wrap:anywhere; }
 .dots { display:flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0; height:24px; }
 .dots i { display:block; width:8px; height:8px; border-radius:50%; background:var(--app-primary,#3182f6); animation:loadingDot 1.4s ease-in-out infinite; }
 .dots i:nth-child(2) { animation-delay:.16s; }
 .dots i:nth-child(3) { animation-delay:.32s; }
 /* 화면 로딩: 얇은 원(트랙 + 돌아가는 호) + 작은 회색 글씨 */
 .loader { display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center; opacity:0; animation:loaderIn .24s ease .15s forwards; }
-.loader p { max-width:24em; margin:0; color:#6b7684; font-size:14px; font-weight:500; line-height:1.6; word-break:keep-all; }
+.loader p { max-width:24em; margin:0; color:#6b7684; font-size:.875rem; font-weight:500; line-height:1.6; word-break:keep-all; }
 .ring { display:block; width:32px; height:32px; box-sizing:border-box; border:3px solid #e5e8eb; border-top-color:var(--app-primary,#246bd1); border-radius:50%; animation:loadingSpin .75s cubic-bezier(.45,.05,.55,.95) infinite; }
 /* 늦어질 때 — 다시 시도 단추는 눌려야 한다(고정 로딩은 원래 눌리지 않게 둔다) */
 .slow { pointer-events:auto !important; }
-.loader p.slowNote { margin-top:-10px; font-size:13px; }
-.retry { min-height:44px; padding:0 20px; border:1px solid #d1d6db; border-radius:10px; background:#fff; color:#333d4b; font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
+.loader p.slowNote { margin-top:-10px; font-size:.8125rem; }
+.retry { min-height:44px; padding:0 20px; border:1px solid #d1d6db; border-radius:10px; background:#fff; color:#333d4b; font:inherit; font-size:.9375rem; font-weight:600; cursor:pointer; }
 .retry:focus-visible { outline:3px solid #9ec5ff; outline-offset:2px; }
 .fullPage { min-height:100dvh; }
 .fill { flex:1; min-height:240px; max-width:none; }

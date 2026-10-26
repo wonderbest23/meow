@@ -11,15 +11,15 @@
 .row input:checked + .check svg { opacity: 1; }
 .row input:focus-visible + .check { outline: 2px solid var(--consent-accent); outline-offset: 2px; }
 
-.text { display: grid; gap: 4px; min-width: 0; color: #333d4b; font-size: 15px; line-height: 1.45; word-break: keep-all; }
+.text { display: grid; gap: 4px; min-width: 0; color: #333d4b; font-size: .9375rem; line-height: 1.45; word-break: keep-all; }
 .text > span:first-child { text-wrap: balance; }
 .text .keep { white-space: nowrap; }
 .text em { margin-left: 4px; color: #6b7684; font-style: normal; }
-.text small { color: #6b7684; font-size: 12.5px; line-height: 1.55; }
+.text small { color: #6b7684; font-size: .78125rem; line-height: 1.55; }
 
 /* 전체동의 — 굵게, 아래 선 */
 .all { padding: 12px 0 14px; border-bottom: 1px solid #e5e8eb; }
-.all .text { color: #191f28; font-size: 16px; }
+.all .text { color: #191f28; font-size: 1rem; }
 .all .text strong { font-weight: 700; }
 
 /* 항목 줄 — 오른쪽 › */

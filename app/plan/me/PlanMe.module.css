@@ -9,7 +9,7 @@
 
 .title {
   margin: 0 0 26px;
-  font-size: 26px;
+  font-size: 1.625rem;
   font-weight: 800;
   letter-spacing: 0;
   color: var(--text-strong, var(--app-text));
@@ -32,7 +32,7 @@
 
 .cardTitle {
   margin: 0;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 800;
   letter-spacing: 0;
   color: var(--text-strong, var(--app-text));
@@ -50,7 +50,7 @@
   background: var(--surface, var(--app-surface));
   color: var(--text-body, var(--app-body));
   font: inherit;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   text-decoration: none;
   cursor: pointer;
@@ -83,7 +83,7 @@
 .row dt {
   flex: none;
   width: 84px;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 600;
   color: var(--text-muted, var(--app-muted));
 }
@@ -91,7 +91,7 @@
 .row dd {
   margin: 0;
   min-width: 0;
-  font-size: 14.5px;
+  font-size: .90625rem;
   font-weight: 600;
   color: var(--text-strong, var(--app-text));
   line-height: 1.55;
@@ -113,14 +113,14 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13.5px;
+  font-size: .84375rem;
 }
 
 .table th {
   padding: 0 10px 9px;
   border-bottom: 1px solid var(--border-soft, var(--app-line));
   color: var(--text-muted, var(--app-muted));
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   text-align: left;
   white-space: nowrap;
@@ -149,7 +149,7 @@
   border-radius: 999px;
   background: var(--surface-muted, var(--app-raised));
   color: var(--text-body, var(--app-body));
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
 }
 
@@ -168,7 +168,7 @@
   padding: 4px 0 2px;
   text-align: left;
   color: var(--text-muted, var(--app-muted));
-  font-size: 13.5px;
+  font-size: .84375rem;
 }
 /* '새 대화로 시작하기' — 글 속 링크라도 누르는 자리 44px(감사 2026-10-23) */
 .empty a {
@@ -187,7 +187,7 @@
   background: var(--surface, var(--app-surface));
   color: var(--text-body, var(--app-body));
   font: inherit;
-  font-size: 13.5px;
+  font-size: .84375rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -202,17 +202,17 @@
     padding: 26px 16px 56px;
   }
   .title {
-    font-size: 21px;
+    font-size: 1.3125rem;
   }
   .card {
     padding: 18px 16px;
   }
   .row dt {
     width: 70px;
-    font-size: 13px;
+    font-size: .8125rem;
   }
   .row dd {
-    font-size: 14px;
+    font-size: .875rem;
   }
   .cardHead {
     flex-wrap: wrap;
@@ -238,7 +238,7 @@
   background: var(--app-surface);
   color: var(--text-body, var(--app-body));
   font: inherit;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   padding: 6px 10px;
   border-radius: 8px;
@@ -262,7 +262,7 @@
   border-radius: 10px;
   padding: 10px 12px;
   font: inherit;
-  font-size: 13px;
+  font-size: .8125rem;
   resize: vertical;
 }
 .refundForm > div {
@@ -274,7 +274,7 @@
   background: var(--blue, var(--app-primary));
   color: #fff;
   font: inherit;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   padding: 9px 14px;
   border-radius: 9px;
@@ -289,7 +289,7 @@
   background: var(--app-surface);
   color: var(--text-muted, var(--app-muted));
   font: inherit;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   padding: 9px 14px;
   border-radius: 9px;
@@ -297,7 +297,7 @@
 }
 .refundMessage {
   margin: 10px 0 0;
-  font-size: 13px;
+  font-size: .8125rem;
   color: var(--blue, var(--app-accent));
 }
 
@@ -305,7 +305,7 @@
 .deleteNote {
   margin: 0 0 24px;
   color: var(--text-muted, var(--app-muted));
-  font-size: 13px;
+  font-size: .8125rem;
   line-height: 1.65;
 }
 
@@ -315,7 +315,7 @@
   background: var(--app-surface);
   color: var(--app-danger);
   font: inherit;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   min-height: 44px;
   padding: 0 16px;
@@ -339,7 +339,7 @@
 }
 .deleteForm > p {
   margin: 0;
-  font-size: 13px;
+  font-size: .8125rem;
   line-height: 1.7;
   color: var(--text-body, var(--app-body));
 }
@@ -351,7 +351,7 @@
   border-radius: 10px;
   padding: 11px 13px;
   font: inherit;
-  font-size: 14px;
+  font-size: .875rem;
 }
 .deleteForm > div {
   display: flex;
@@ -361,7 +361,7 @@
 .deleteForm > .deleteError,
 .deleteError {
   margin: 0;
-  font-size: 13px;
+  font-size: .8125rem;
   color: var(--app-danger);
 }
 .deleteForm input[aria-invalid="true"] {
@@ -374,7 +374,7 @@
   .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
   .table tr { padding: 10px 0; border-bottom: 1px solid var(--border-soft, var(--app-line)); }
   .table td { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 0; white-space: normal; }
-  .table td[data-label]::before { content: attr(data-label); color: var(--text-muted, var(--app-muted)); font-size: 13px; flex: none; }
+  .table td[data-label]::before { content: attr(data-label); color: var(--text-muted, var(--app-muted)); font-size: .8125rem; flex: none; }
   .table td[colspan] { display: block; }
   .table textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
 }

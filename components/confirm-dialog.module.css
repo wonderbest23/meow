@@ -4,19 +4,19 @@
 .dialog[open] { animation: confirm-in .16s ease-out; }
 
 .body { display: grid; gap: 8px; padding: 26px 24px 20px; text-align: center; }
-.body h2 { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.4; }
-.body p { margin: 0; color: #4e5968; font-size: 15px; line-height: 1.55; white-space: pre-line; word-break: keep-all; text-wrap: pretty; }
-.field { width: 100%; min-height: 48px; margin-top: 8px; padding: 0 14px; border: 1px solid #d1d6db; border-radius: 10px; background: #fff; color: #191f28; font: inherit; font-size: 16px; text-align: left; }
+.body h2 { margin: 0; font-size: 1.125rem; font-weight: 700; line-height: 1.4; }
+.body p { margin: 0; color: #4e5968; font-size: .9375rem; line-height: 1.55; white-space: pre-line; word-break: keep-all; text-wrap: pretty; }
+.field { width: 100%; min-height: 48px; margin-top: 8px; padding: 0 14px; border: 1px solid #d1d6db; border-radius: 10px; background: #fff; color: #191f28; font: inherit; font-size: 1rem; text-align: left; }
 .field:focus { outline: none; border-color: #3182f6; box-shadow: 0 0 0 3px #3182f622; }
-.field[readonly] { background: #f9fafb; color: #4e5968; font-size: 14.5px; }
-.body h2 + p { color: #6b7684; font-size: 14.5px; }
+.field[readonly] { background: #f9fafb; color: #4e5968; font-size: .90625rem; }
+.body h2 + p { color: #6b7684; font-size: .90625rem; }
 /* 항목 목록 — 가운데 정렬 문장 대신 왼쪽 정렬로 한 줄에 하나씩 */
-.list { margin: 4px 0 0; padding: 12px 14px 12px 32px; border-radius: 10px; background: #f9fafb; color: #333d4b; font-size: 14.5px; line-height: 1.6; text-align: left; word-break: keep-all; }
+.list { margin: 4px 0 0; padding: 12px 14px 12px 32px; border-radius: 10px; background: #f9fafb; color: #333d4b; font-size: .90625rem; line-height: 1.6; text-align: left; word-break: keep-all; }
 .list li + li { margin-top: 2px; }
 
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 16px; }
 .actions[data-single] { grid-template-columns: 1fr; }
-.actions button { min-height: 50px; padding: 0 12px; border: 0; border-radius: 12px; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.actions button { min-height: 50px; padding: 0 12px; border: 0; border-radius: 12px; font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; }
 .cancel { background: #f2f4f6; color: #4e5968; }
 .cancel:hover { background: #e5e8eb; }
 .confirm { background: #1b64da; color: #fff; }

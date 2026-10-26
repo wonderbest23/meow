@@ -19,7 +19,7 @@
 .heading {
   margin: 0;
   color: #191f28;
-  font-size: clamp(32px, 4vw, 52px);
+  font-size: clamp(2rem, 4vw, 3.25rem);
   line-height: 1.15;
   font-weight: 900;
   letter-spacing: -0.03em;
@@ -27,7 +27,7 @@
   /* 마지막 줄에 한 낱말만 남지 않게 */
   text-wrap: balance;
 }
-.lead { margin: 0; max-width: 720px; color: #333d4b; font-size: 18px; line-height: 1.7; word-break: keep-all; text-wrap: balance; }
+.lead { margin: 0; max-width: 720px; color: #333d4b; font-size: 1.125rem; line-height: 1.7; word-break: keep-all; text-wrap: balance; }
 .sectionHead { display: flex; flex-direction: column; gap: 12px; }
 .center { align-items: center; text-align: center; }
 .centerText { text-align: center; }
@@ -46,7 +46,7 @@
   justify-content: space-between;
   gap: 12px;
   color: #191f28;
-  font-size: 19px;
+  font-size: 1.1875rem;
   font-weight: 700;
   text-decoration: none;
   word-break: keep-all;
@@ -68,9 +68,9 @@
   gap: 10px;
   text-align: left;
 }
-.panel h3 { margin: 0; font-size: 22px; line-height: 1.35; font-weight: 800; word-break: keep-all; }
-.panel p { margin: 0; color: #4e5968; font-size: 16px; line-height: 1.7; word-break: keep-all; text-wrap: balance; }
-.panelLink { margin-top: auto; min-height: 44px; display: inline-flex; align-items: center; gap: 4px; color: #191f28; font-size: 15px; font-weight: 700; text-decoration: none; }
+.panel h3 { margin: 0; font-size: 1.375rem; line-height: 1.35; font-weight: 800; word-break: keep-all; }
+.panel p { margin: 0; color: #4e5968; font-size: 1rem; line-height: 1.7; word-break: keep-all; text-wrap: balance; }
+.panelLink { margin-top: auto; min-height: 44px; display: inline-flex; align-items: center; gap: 4px; color: #191f28; font-size: .9375rem; font-weight: 700; text-decoration: none; }
 a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; text-underline-offset: 3px; }
 .panelAnchor { text-decoration: none; transition: box-shadow 160ms ease, transform 160ms cubic-bezier(0.16, 1, 0.3, 1); scroll-margin-top: 96px; }
 .panelAnchor:hover { box-shadow: 0 8px 28px rgba(25, 31, 40, .08); transform: translateY(-2px); }
@@ -85,7 +85,7 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
   color: #191f28;
   display: inline-flex;
   align-items: center;
-  font-size: 15px;
+  font-size: .9375rem;
   text-decoration: none;
   white-space: nowrap;
 }
@@ -97,8 +97,8 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 /* 휴대폰 화면 카드 — 같은 3:4 칸 안 옅은 바탕 위에 작은 아이폰 틀(components/iphone-mockup)을 통째로 */
 .resultPhone { display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 6px; background: linear-gradient(180deg, #f2f4f6, #e8ebee); box-shadow: 0 0 0 1px #e5e8eb; }
 .resultPhone > * { width: 56%; }
-.result h3 { margin: 4px 0 0; color: #191f28; font-size: 19px; font-weight: 800; }
-.result p { margin: 0; color: #4e5968; font-size: 15px; line-height: 1.7; word-break: keep-all; }
+.result h3 { margin: 4px 0 0; color: #191f28; font-size: 1.1875rem; font-weight: 800; }
+.result p { margin: 0; color: #4e5968; font-size: .9375rem; line-height: 1.7; word-break: keep-all; }
 .outlineAction {
   align-self: flex-start;
   min-height: 48px;
@@ -109,21 +109,21 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
   text-decoration: none;
 }
 .outlineAction:hover { background: #fff; }
 
 /* 이용 요금 */
-.priceName { font-size: 19px !important; font-weight: 700 !important; }
+.priceName { font-size: 1.1875rem !important; font-weight: 700 !important; }
 /* 출시 기념가 — 결제 화면과 같은 표시. 카드 오른쪽 위에 얹어 세 카드의 가격 줄 높이가 같게 둔다 */
-.launchTag { position: absolute; top: 24px; right: 24px; padding: 3px 10px; border-radius: 999px; background: #e8f3ff; color: var(--brand-primary-hover, #1957c2); font-size: 12px; font-weight: 700; line-height: 1.5; }
+.launchTag { position: absolute; top: 24px; right: 24px; padding: 3px 10px; border-radius: 999px; background: #e8f3ff; color: var(--brand-primary-hover, #1957c2); font-size: .75rem; font-weight: 700; line-height: 1.5; }
 .panel:has(.launchTag) .priceName { padding-right: 84px; }
-.price { color: #191f28; font-size: 36px; line-height: 1.2; font-weight: 900; letter-spacing: -0.02em; }
-.panel .price + p { font-size: 15px; }
+.price { color: #191f28; font-size: 2.25rem; line-height: 1.2; font-weight: 900; letter-spacing: -0.02em; }
+.panel .price + p { font-size: .9375rem; }
 .featured { outline: 2px solid #191f28; outline-offset: -2px; }
-.note { margin: 0; color: #4e5968; font-size: 14px; line-height: 1.6; text-align: center; word-break: keep-all; }
+.note { margin: 0; color: #4e5968; font-size: .875rem; line-height: 1.6; text-align: center; word-break: keep-all; }
 
 /* 자주 묻는 질문 */
 .faq { max-width: 860px; gap: 16px; }
@@ -138,7 +138,7 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
   justify-content: space-between;
   gap: 12px;
   color: #191f28;
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 700;
   line-height: 1.45;
   list-style: none;
@@ -148,13 +148,13 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 }
 .faqList summary::-webkit-details-marker { display: none; }
 .faqList summary:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
-.plus { flex: 0 0 auto; font-size: 24px; font-weight: 400; line-height: 1; transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1); }
+.plus { flex: 0 0 auto; font-size: 1.5rem; font-weight: 400; line-height: 1; transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1); }
 .faqList details[open] .plus { transform: rotate(45deg); }
-.faqList p { margin: 0 0 20px; color: #4e5968; font-size: 16px; line-height: 1.75; word-break: keep-all; text-wrap: pretty; }
+.faqList p { margin: 0 0 20px; color: #4e5968; font-size: 1rem; line-height: 1.75; word-break: keep-all; text-wrap: pretty; }
 
 /* 마지막 */
 .closing { margin-top: 140px; align-items: center; gap: 22px; text-align: center; }
-.closingTitle { margin: 0; color: #191f28; font-size: clamp(40px, 6vw, 84px); line-height: 1.1; font-weight: 900; letter-spacing: -0.04em; word-break: keep-all; text-wrap: balance; }
+.closingTitle { margin: 0; color: #191f28; font-size: clamp(2.5rem, 6vw, 5.25rem); line-height: 1.1; font-weight: 900; letter-spacing: -0.04em; word-break: keep-all; text-wrap: balance; }
 /* 마지막 단추는 승인 디자인의 검정 강조 그대로 — 모서리만 공통 값(--brand-radius) */
 .closingAction {
   min-height: 52px;
@@ -165,7 +165,7 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 800;
   text-decoration: none;
 }
@@ -199,20 +199,20 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 @media (max-width: 640px) {
   .section { --anchor-top: 84px; margin-top: 88px; gap: 24px; }
   .features { margin-top: 72px; }
-  .lead { font-size: 16px; }
-  .linkList a { min-height: 58px; font-size: 17px; }
+  .lead { font-size: 1rem; }
+  .linkList a { min-height: 58px; font-size: 1.0625rem; }
   .panel { padding: 22px; }
-  .panel h3 { font-size: 20px; }
+  .panel h3 { font-size: 1.25rem; }
   /* 결과물은 휴대폰에서 한 칸씩 — 두 칸이면 화면 사진 글씨가 너무 작아 읽을 수 없었다(모바일 점검 r37) */
   .grid4 { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   /* 구간 제목은 휴대폰에서 모두 가운데로 — 왼쪽·가운데가 섞여 있었다(모바일 점검 r37) */
   .heading, .sectionHead { text-align: center; }
   .sectionHead { align-items: center; }
-  .result h3 { font-size: 17px; text-align: center; }
-  .result p { font-size: 14px; }
-  .faqList summary { font-size: 17px; }
+  .result h3 { font-size: 1.0625rem; text-align: center; }
+  .result p { font-size: .875rem; }
+  .faqList summary { font-size: 1.0625rem; }
   .closing { margin-top: 104px; }
-  .chips a { padding: 0 14px; font-size: 14px; }
+  .chips a { padding: 0 14px; font-size: .875rem; }
 }
 
 /* 숫자와 단위가 다음 줄로 혼자 떨어지지 않게(점검 r38 · '10회') */
