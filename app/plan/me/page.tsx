@@ -6,6 +6,7 @@ import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { hydrateFromServer, lastHydrationFailed, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
+import { businessDisplayName } from "../../../lib/plan-builder/business-name";
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
 import { displayOrderName } from "../../../lib/payments/order-display";
 import PlanGate from "../PlanGate";
@@ -262,7 +263,7 @@ export default function PlanMePage() {
             {myPlans.slice(0, 5).map((plan) => (
               <div className={styles.row} key={plan.id}>
                 <dt>{businessHubState(plan).complete ? "계획서 완성" : "진행 중"}</dt>
-                <dd><Link href={businessEntryHref(plan)}>{plan.title || "이름 없는 사업"}</Link></dd>
+                <dd><Link href={businessEntryHref(plan)}>{businessDisplayName(plan.title)}</Link></dd>
               </div>
             ))}
           </dl>

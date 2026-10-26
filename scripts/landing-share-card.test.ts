@@ -40,7 +40,18 @@ cafe.pageData!.brainwave!.texts["0:2377"] = "출근길에 들르는 동네 핸�
 const meta = landingShareMetadata(cafe, "https://oneulstart.com");
 assert.equal(String(meta.metadataBase), "https://oneulstart.com/");
 assert.ok(String(meta.title).startsWith("새벽커피 | "));
-assert.equal(meta.description, "출근길에 들르는 동네 핸드드립 카페");
+// 첫 화면 제목이 가게 이름과 같아 제목이 '새벽커피 | 한 줄 소개'면, 설명은 같은 소개를 또 쓰지 않고 첫 화면 부제목(대표 결정 r41)
+assert.equal(cafe.headline, "새벽커피");
+assert.equal(meta.title, "새벽커피 | 출근길에 들르는 동네 핸드드립 카페");
+assert.equal(meta.description, cafe.subheadline);
+assert.notEqual(meta.description, "출근길에 들르는 동네 핸드드립 카페");
+// 부제목이 없거나 한 줄 소개와 같으면 지금처럼 한 줄 소개
+assert.equal(landingShareMetadata({ ...cafe, subheadline: "" }, "https://oneulstart.com").description, "출근길에 들르는 동네 핸드드립 카페");
+assert.equal(landingShareMetadata({ ...cafe, subheadline: "출근길에 들르는 동네 핸드드립 카페" }, "https://oneulstart.com").description, "출근길에 들르는 동네 핸드드립 카페");
+// 첫 화면 제목이 따로 있으면 제목은 '가게 이름 | 첫 화면 제목', 설명은 한 줄 소개 그대로(두 번 나오지 않으니)
+const titled = landingShareMetadata({ ...cafe, headline: "아침 7시에 문 여는 커피집" }, "https://oneulstart.com");
+assert.equal(titled.title, "새벽커피 | 아침 7시에 문 여는 커피집");
+assert.equal(titled.description, "출근길에 들르는 동네 핸드드립 카페");
 const og = meta.openGraph as { siteName: string; images: Array<{ url: string; width?: number }> };
 assert.equal(og.siteName, "새벽커피");
 assert.match(og.images[0].url, /^https:\/\/images\.unsplash\.com\/.*w=1200.*h=630/);
@@ -63,4 +74,4 @@ assert.equal(shareOrigin("evil.com/<script>", "https"), SHARE_FALLBACK_ORIGIN);
 assert.equal(shareOrigin(null, null), SHARE_FALLBACK_ORIGIN);
 assert.equal(shareOrigin("localhost:3000", "http"), "http://localhost:3000");
 
-console.log("landing-share-card: designed defaults for every sector, share card title/description/photo, origin");
+console.log("landing-share-card: designed defaults for every sector, share card title/description (no repeated tagline)/photo, origin");

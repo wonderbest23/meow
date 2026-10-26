@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import PlanLoading, { Spinner } from "../../plan/PlanLoading";
+import { reorderHref, type ReorderTarget } from "../../../lib/payments/reorder";
 
 type TransferOrder = {
   orderId: string;
@@ -18,6 +19,7 @@ type TransferOrder = {
   depositReportedAt: string | null;
   cashReceiptType: "PERSONAL" | "BUSINESS" | "NONE" | null;
   cashReceiptStatus: "not_requested" | "requested" | "issued";
+  reorder?: ReorderTarget | null;
 };
 
 type BankAccount = { bankName: string; accountNumber: string; accountHolder: string };
@@ -28,7 +30,7 @@ const statusCopy: Record<string, { title: string; body: string }> = {
   done: { title: "입금 확인이 완료됐어요", body: "내 사업 프로젝트가 생성되었어요. 지금 바로 결과물 제작을 시작할 수 있어요." },
   canceled: { title: "취소된 주문이에요", body: "입금했다면 고객센터에 주문번호를 남겨 주세요." },
   refunded: { title: "환불이 완료됐어요", body: "실제 계좌 반영 시점은 은행 처리 시간에 따라 달라질 수 있어요." },
-  expired: { title: "입금 기한이 지났어요", body: "홈으로 돌아가 새 주문을 만들어 주세요." },
+  expired: { title: "입금 기한이 지났어요", body: "아래 단추로 새 주문을 만들어 주세요." },
 };
 
 async function responsePayload<T>(response: Response): Promise<T> {
@@ -80,11 +82,13 @@ function TransferStatus() {
   if (!order || !bank) return <main className="manual-payment-page error"><ShieldCheck /><h1>주문을 확인할 수 없어요</h1><p>{message || "로그인 상태와 주문번호를 확인해 주세요."}</p><Link href={`/account?next=${encodeURIComponent(`/payment/transfer?orderId=${orderId}`)}`}>로그인하기<ChevronRight /></Link><Link href="/"><Home /> 홈으로</Link></main>;
   const copy = statusCopy[order.status] ?? statusCopy.awaiting_deposit;
   const expired = Date.parse(order.expiresAt) <= Date.now() && order.status === "awaiting_deposit";
+  /* 입금 기한이 지난 주문 — 같은 사업·같은 상품 결제 화면으로 가는 주 단추(대표 결정 r41). 주문에서 모르면 내 사업으로 */
+  const reorder = expired || order.status === "expired";
 
   return <main className="manual-payment-page">
     <header><Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026-sm.webp" width="384" height="96" alt="오늘창업" /></Link><span><ShieldCheck /> 안전한 계좌이체 주문</span></header>
     <section className={`manual-payment-card status-${expired ? "expired" : order.status}`}>
-      <div className="manual-payment-state">{order.status === "done" ? <CheckCircle2 /> : <Clock3 />}<span><small>{order.orderId}</small><h1>{expired ? "입금 기한이 지났어요" : copy.title}</h1><p>{expired ? statusCopy.expired.body : copy.body}</p></span></div>
+      <div className="manual-payment-state">{order.status === "done" ? <CheckCircle2 /> : <Clock3 />}<span><small>{order.orderId}</small><h1>{expired ? "입금 기한이 지났어요" : copy.title}</h1><p>{expired ? statusCopy.expired.body : copy.body}</p>{reorder && <Link className="manual-reorder" href={reorderHref(order.reorder)}>새로 주문하기<ChevronRight aria-hidden="true" /></Link>}</span></div>
       {["awaiting_deposit", "deposit_reported"].includes(order.status) && !expired && <>
         <section className="manual-bank-account"><div><Building2 /><span><small>{bank.bankName}</small><strong>{bank.accountNumber}</strong><em>예금주 {bank.accountHolder}</em></span></div><button onClick={() => void copyAccount()}><Clipboard /> {copied ? "복사했어요" : "계좌 복사"}</button></section>
         <dl><div><dt>입금 금액</dt><dd>{order.amount.toLocaleString("ko-KR")}원</dd></div><div><dt>입금자명</dt><dd>{order.depositorName}</dd></div><div><dt>입금 기한</dt><dd>{new Date(order.expiresAt).toLocaleString("ko-KR")}</dd></div></dl>

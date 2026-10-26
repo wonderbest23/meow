@@ -14,6 +14,7 @@ import { announcePlanTitle, hydrateFromServer, setActivePlan } from "../../../li
 import BusinessBrief from "./BusinessBrief";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { businessChatHref, chatEntryIntent } from "../../../lib/plan-builder/business-hub";
+import { businessDisplayName } from "../../../lib/plan-builder/business-name";
 import BusinessEmptyState from "../BusinessEmptyState";
 import hubStyles from "../BusinessHub.module.css";
 import ChatLoading from "./loading";
@@ -282,7 +283,7 @@ function BusinessCoach() {
             {(busy || working) && <div className={styles.thinking} role="status"><CoachSpeaker /><div className={styles.thinkingLine}><p>{working ? PHASES[plan!.job!.phase] : "요청을 보내고 있어요"}</p><div className={chatUi.typingDots} aria-hidden="true"><i /><i /><i /></div></div><small>{working && plan?.job?.durable ? "화면을 닫아도 서버에서 계속 만들어요." : "완료될 때까지 이 화면을 유지해 주세요."}</small></div>}
             {plan?.job?.status === "failed" && !busy && <div className={styles.jobError} role="alert"><p>답변을 완성하지 못했어요. 입력한 내용은 저장돼 있어요.</p><button className={styles.secondary} onClick={() => void submit("", "message", true)}>이 내용으로 다시 시도</button></div>}
             {generating && <div className={styles.readyNotice} role="status"><span className={styles.resultLabel}>계획서 작성 중</span><p>{completed}/{targetKeys.length}개 항목 완료</p><progress aria-label="대화 내 문서 제작 진행" value={completed} max={targetKeys.length} /><small>서버에서 계속 제작해요. 나중에 이 대화로 돌아와 확인할 수 있어요.</small><button className={styles.secondary} onClick={() => setView("brief")}>제작 상태 보기</button></div>}
-            {hasBrief && !blocked && <CoachResultCard className={styles.readyNotice} label={documentCurrent ? "계획서 완성" : needsDocumentUpdate ? "수정한 사업안" : "함께 정리한 사업안"} title={plan?.title ?? "내 사업안"} description={needsDocumentUpdate ? "바꾼 내용을 계획서에도 반영할 수 있어요." : "고객 · 상품 · 비용 · 시작 방법"} onOpen={() => { setView("brief"); if (window.matchMedia("(min-width:901px)").matches) document.querySelector<HTMLElement>('[aria-label="내 사업안 결과"] h1')?.focus(); }} />}
+            {hasBrief && !blocked && <CoachResultCard className={styles.readyNotice} label={documentCurrent ? "계획서 완성" : needsDocumentUpdate ? "수정한 사업안" : "함께 정리한 사업안"} title={plan ? businessDisplayName(plan.title) : "내 사업안"} description={needsDocumentUpdate ? "바꾼 내용을 계획서에도 반영할 수 있어요." : "고객 · 상품 · 비용 · 시작 방법"} onOpen={() => { setView("brief"); if (window.matchMedia("(min-width:901px)").matches) document.querySelector<HTMLElement>('[aria-label="내 사업안 결과"] h1')?.focus(); }} />}
             {started && !blocked && plan?.job?.status !== "failed" && !!plan?.coach.suggestions.length && <div className={styles.suggestions} aria-label="이어서 대화하기">{plan.coach.suggestions.map((suggestion, index) => <button key={suggestion} style={{ animationDelay: `${index * 60}ms` }} onClick={() => { pendingId.current = null; void submit(suggestion); }}><span>{suggestion}</span><ChevronRight size={18} aria-hidden="true" /></button>)}</div>}
             <div ref={end} />
           </div>

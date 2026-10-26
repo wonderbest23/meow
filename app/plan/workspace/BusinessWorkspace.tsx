@@ -12,6 +12,7 @@ import { isCoachJobActive, readCoachJob } from "../../../lib/plan-builder/coach-
 import { journeyLabel, journeyNext } from "../../../lib/plan-builder/journey";
 import { JOURNEY_LABELS } from "../../../lib/plan-builder/journey-steps";
 import { currentBusinessDesign, currentNextAction } from "../../../lib/plan-builder/coach";
+import { businessDisplayName } from "../../../lib/plan-builder/business-name";
 import frame from "../chat/page.module.css";
 import styles from "../BusinessHub.module.css";
 import LaunchWorkspace from "./LaunchWorkspace";
@@ -221,7 +222,7 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
       {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : requested ? "사업을 찾지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : requested ? "지웠거나 다른 계정에서 만든 사업일 수 있어요. 내 사업 목록에서 다시 골라 주세요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{loadError && !signedOut ? <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 시도</button> : signedOut ? <Link className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기<ChevronRight size={18} aria-hidden="true" /></Link> : <Link className={styles.primary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></Link>}<Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인할게요.</p>}
         {/* 유지보수 화면에는 유지보수만 — 사업 요약·내 자료 탭과 '대화 이어가기'는 헷갈린다(소유자 지적 2026-10-07). 대화는 왼쪽 목록의 '대화'로 */}
-        {!embedded && <WorkspaceIdentity title={plan.title} status={hub.status} action={view === "operations" ? undefined : hub.coach ? <Link className={styles.titleAction} href={chat}>대화 이어가기</Link> : <button type="button" className={styles.titleAction} onClick={openLegacy}>사업계획서 열기</button>} />}
+        {!embedded && <WorkspaceIdentity title={businessDisplayName(plan.title)} status={hub.status} action={view === "operations" ? undefined : hub.coach ? <Link className={styles.titleAction} href={chat}>대화 이어가기</Link> : <button type="button" className={styles.titleAction} onClick={openLegacy}>사업계획서 열기</button>} />}
         {/* 탭 줄은 유지보수에서도 그대로 둔다 — 유지보수로 오면 탭 줄이 사라지고 제목까지 바뀌어 다른 화면으로 넘어간 줄 알았다(여정 점검 2026-10-22) */}
         {/* 작업실 칸에는 탭 줄·사업명 줄이 없다(작업실 탭이 대신한다) — 칸 안에서 다른 화면을 열었으면 돌아가는 단추 하나 */}
         {!embedded && <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"} />}

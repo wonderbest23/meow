@@ -63,7 +63,13 @@ export function landingShareMetadata(config: LandingDraft, origin: string): Meta
   const tagline = shareTagline(config);
   const lead = config.headline.trim() && config.headline.trim() !== name ? config.headline.trim() : tagline;
   const title = clip(lead ? `${name} | ${lead}` : name, 70);
-  const description = clip(tagline || config.subheadline, 150);
+  /*
+   * 첫 화면 제목이 비었거나 가게 이름과 같으면 제목이 '가게 이름 | 한 줄 소개'라, 설명까지 한 줄 소개면 같은 문장이 두 번 보였다.
+   * 그때는 설명을 첫 화면 부제목으로 — 부제목도 없거나 같으면 지금처럼 한 줄 소개(대표 결정 r41).
+   */
+  const subheadline = config.subheadline.trim();
+  const repeated = !!tagline && lead === tagline;
+  const description = clip(repeated && subheadline && subheadline !== tagline ? subheadline : tagline || config.subheadline, 150);
   const image = shareImage(config);
   const sized = image?.startsWith("https://images.unsplash.com/") ? { width: 1200, height: 630 } : {};
   const images = image ? [{ url: image, ...sized, alt: name }] : undefined;

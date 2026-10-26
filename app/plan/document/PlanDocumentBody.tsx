@@ -20,6 +20,7 @@ import type { DocumentReviewSource } from "./DocumentSourceReview";
 import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
 import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 import { businessHubState } from "../../../lib/plan-builder/business-hub";
+import { businessDisplayName } from "../../../lib/plan-builder/business-name";
 import { showNotice } from "../../../components/confirm-dialog";
 import { saveFile, saveUrl, SAVE_UNSUPPORTED_MESSAGE } from "../../../lib/save-file";
 import { useStudioDirty, useStudioNav, useStudioPane } from "../studio/StudioContext";
@@ -171,7 +172,7 @@ export function PlanDocumentBody() {
           setCoachHref(`/plan/chat?planId=${encodeURIComponent(p.id)}`);
         }
         setDocumentPlanId(p.id);
-        setTitle(p.title);
+        setTitle(businessDisplayName(p.title));
         const coachState = readCoach(p.answers);
         const identityNow = coachState ? currentBusinessDesign(coachState)?.identity : undefined;
         setIdentity(identityNow ? { headline: identityNow.headline, pitch: identityNow.pitch } : undefined);
@@ -357,7 +358,7 @@ export function PlanDocumentBody() {
     }).map(item => item.key));
     setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) && !replace.has(item.key) ? shown : item; }));
     for (const key of Object.keys(plan.sections)) if (writtenForCurrentRun(plan, key)) appliedKeys.current.add(key);
-    setTitle(plan.title);
+    setTitle(businessDisplayName(plan.title));
     updateSourceStatus(plan);
   }
   useEffect(() => {
