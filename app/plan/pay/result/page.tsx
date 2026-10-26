@@ -4,7 +4,7 @@ import PlanPayResult from "./PlanPayResult";
 import AppFrame from "../../AppFrame";
 import { payResultBackHref } from "../../../../lib/plan-builder/journey";
 
-export const metadata = { title: "결제 결과 · 오늘창업" };
+export const metadata = { title: "결제 결과 | 오늘창업" };
 
 const one = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value) ?? null;
 

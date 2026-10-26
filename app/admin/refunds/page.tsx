@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, RefreshCw, RotateCcw, XCircle } from "lucide-react";
+import { CheckCircle2, ChevronRight, RefreshCw, RotateCcw, XCircle } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminNav from "../AdminNav";
@@ -175,7 +175,7 @@ export default function AdminRefundsPage() {
               <dl>
                 <div><dt>접수 일시</dt><dd>{dateTime(selected.createdAt)}</dd></div>
                 <div><dt>마지막 처리</dt><dd>{dateTime(selected.updatedAt)}</dd></div>
-                {selected.customerEmail && <div><dt>이 고객 결제</dt><dd><Link href={`/admin/payments?q=${encodeURIComponent(selected.customerEmail)}`}>결제 주문 보기 →</Link></dd></div>}
+                {selected.customerEmail && <div><dt>이 고객 결제</dt><dd><Link href={`/admin/payments?q=${encodeURIComponent(selected.customerEmail)}`}>결제 주문 보기<ChevronRight className="admin-link-chevron" aria-hidden="true" /></Link></dd></div>}
               </dl>
               {basis ? (
                 <section className="admin-cash-receipt"><header><RotateCcw /><div><strong>환불 판단 근거</strong><small>약관의 남은 만큼 환불 기준으로 계산한 값 — 최종 금액은 직접 정해요</small></div></header>

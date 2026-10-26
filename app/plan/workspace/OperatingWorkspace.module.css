@@ -20,6 +20,8 @@
 .root textarea { resize: vertical; }
 .root fieldset { padding: 0; border: 0; margin: 0 0 28px; display: grid; gap: 16px; min-width: 0; }
 .root legend { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+/* 묶음 제목 바로 아래 안내는 8px(제목→본문) — 예전엔 16+10px 로 벌어졌다 */
+.root legend + .note { margin-top: -8px; }
 .root .note, .root .meta { font-size: 13px; line-height: 1.7; color: #687589; margin: 10px 0; }
 .twoColumns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-items: start; }
 .editorHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
@@ -32,7 +34,7 @@
 .comparison caption { text-align: left; margin-bottom: 12px; font-size: 16px; font-weight: 700; }
 .comparison th, .comparison td { padding: 14px 10px; border-bottom: 1px solid #e2e7ed; text-align: right; white-space: nowrap; }
 .comparison th:first-child { text-align: left; }
-.comparison thead { background: #f4f6f8; color: #667387; font-size: 12px; }
+.comparison thead { background: #f4f6f8; color: #5f6c7e; font-size: 12px; }
 .comparison small { display: block; color: #738096; font-size: 12px; margin-top: 3px; }
 .notes { margin: 24px 0; }
 .notes > div { display: grid; grid-template-columns: 120px minmax(0,1fr); gap: 20px; padding: 18px 0; border-bottom: 1px solid #e2e7ed; }
@@ -42,12 +44,13 @@
 .root .warning { color: #80561a; background: #fff7e9; padding: 12px; font-size: 13px; line-height: 1.7; border-left: 3px solid #d7a24d; }
 .error { border-left: 3px solid #bd464b; padding: 12px; background: #fff3f3; margin: 16px 0; }
 .error p { font-size: 14px; line-height: 1.6; margin: 0 0 10px; }
+.error p:last-child { margin-bottom: 0; }
 /* 칸 아래 입력 확인 안내 — 고칠 칸 바로 밑에(예전엔 폼 위에 떠 어느 칸인지 몰랐다) */
 .root .fieldError { color: #b3363c; font-size: 13px; font-weight: 600; line-height: 1.5; }
 .root input[aria-invalid=true], .root textarea[aria-invalid=true] { border-color: #bd464b; box-shadow: 0 0 0 1px #bd464b; }
 .root .success { color: #227353; font-size: 14px; line-height: 1.6; }
 /* 아래는 다음 묶음(맡길 수 있는 일)이 40px 띄운다 — 빈 칸 아래 여백까지 더해 90px 넘게 벌어지지 않게 */
-.empty { padding: 52px 16px 12px; text-align: center; color: #77859a; }
+.empty { padding: 52px 16px 12px; text-align: center; color: #687589; }
 .empty h3 { font-size: 18px; color: #394759; }
 .empty p { font-size: 14px; }
 .report { margin-top: 30px; }
