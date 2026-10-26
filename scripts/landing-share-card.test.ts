@@ -43,8 +43,11 @@ assert.ok(String(meta.title).startsWith("새벽커피 | "));
 // 첫 화면 제목이 가게 이름과 같아 제목이 '새벽커피 | 한 줄 소개'면, 설명은 같은 소개를 또 쓰지 않고 첫 화면 부제목(대표 결정 r41)
 assert.equal(cafe.headline, "새벽커피");
 assert.equal(meta.title, "새벽커피 | 출근길에 들르는 동네 핸드드립 카페");
-assert.equal(meta.description, cafe.subheadline);
-assert.notEqual(meta.description, "출근길에 들르는 동네 핸드드립 카페");
+// 다만 계획서 내용이 모자라 채운 자동 문장('동네 직장인을 위한 서비스입니다.')이면 바꾸지 않고 지금처럼 한 줄 소개(대표 결정 r41-2)
+assert.equal(cafe.subheadline, "동네 직장인을 위한 서비스입니다.");
+assert.equal(meta.description, "출근길에 들르는 동네 핸드드립 카페");
+const written = landingShareMetadata({ ...cafe, subheadline: "출근길 커피가 늦다 — 7시에 문 열고 3분 안에 드려요." }, "https://oneulstart.com");
+assert.equal(written.description, "출근길 커피가 늦다 — 7시에 문 열고 3분 안에 드려요.", "사장님·AI가 쓴 부제목이면 그 문장");
 // 부제목이 없거나 한 줄 소개와 같으면 지금처럼 한 줄 소개
 assert.equal(landingShareMetadata({ ...cafe, subheadline: "" }, "https://oneulstart.com").description, "출근길에 들르는 동네 핸드드립 카페");
 assert.equal(landingShareMetadata({ ...cafe, subheadline: "출근길에 들르는 동네 핸드드립 카페" }, "https://oneulstart.com").description, "출근길에 들르는 동네 핸드드립 카페");
@@ -74,4 +77,4 @@ assert.equal(shareOrigin("evil.com/<script>", "https"), SHARE_FALLBACK_ORIGIN);
 assert.equal(shareOrigin(null, null), SHARE_FALLBACK_ORIGIN);
 assert.equal(shareOrigin("localhost:3000", "http"), "http://localhost:3000");
 
-console.log("landing-share-card: designed defaults for every sector, share card title/description (no repeated tagline)/photo, origin");
+console.log("landing-share-card: designed defaults for every sector, share card title/description (no repeated tagline, no filler subheadline)/photo, origin");

@@ -439,6 +439,19 @@ export function landingPublicationIssues(value: LandingDraft) {
   return [...new Set(issues)];
 }
 
+/*
+ * 계획서에 문제·해결 같은 내용이 모자랄 때 첫 화면 부제목을 채우는 자동 문장('고객을 위한 서비스입니다.' 등).
+ * 사장님이나 AI가 쓴 문장이 아니라 빈자리를 메운 말이다 — 공유 카드 설명 같은 곳에 앞세우지 않는다(대표 결정 r41-2).
+ */
+export function fallbackSubheadline(customer: string, model: string): string {
+  return `${customer || "고객"}을 위한 ${model || "서비스"}입니다.`;
+}
+/* 자동 문장 모양('○○을 위한 △△입니다.' 한 문장) — 고객·상품 칸 값은 사업마다 달라 모양으로 본다 */
+const FALLBACK_SUBHEADLINE = /^[^.!?\n]+을 위한 [^.!?\n]+입니다\.$/;
+export function isFallbackSubheadline(text: string | null | undefined): boolean {
+  return FALLBACK_SUBHEADLINE.test((text ?? "").trim());
+}
+
 export function createLandingDraft(input: {
   title: string;
   oneLiner: string;
@@ -472,7 +485,7 @@ export function createLandingDraft(input: {
      */
     heroLabel: "지금 문의를 받고 있습니다",
     headline: input.oneLiner || input.title,
-    subheadline: `${input.customer || "고객"}을 위한 ${input.model || "서비스"}입니다.`,
+    subheadline: fallbackSubheadline(input.customer, input.model),
     ctaLabel: "문의하기",
     accentColor: template.accentColor,
     backgroundTone: template.backgroundTone,
