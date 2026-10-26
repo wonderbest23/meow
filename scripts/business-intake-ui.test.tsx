@@ -571,6 +571,15 @@ async function main() {
   assert.equal(changedHistory.split(original.nextQuestion!.prompt).length - 1, 1, "the industry question is asked once in the history");
   assert.ok(changedHistory.includes("업종을 바꿨어요") && !chatHistory.includes("업종을 바꿨어요"), "only a changed industry carries the note");
   assert.equal((changedHistory.match(/data-coach-message="user"/g) ?? []).length, 2);
+  // 다른 답도 연필로 고치면 예전 답 말풍선은 숨기고 새 답 아래에 '답을 바꿨어요'(점검 r42 — 예전 답과 새 답이 같은 질문으로 두 번 보였다)
+  {
+    const first = previewIntakeAnswer(preview, command({ revision: preview.coach.revision, requestId: "1b6f0d52-3c1e-4c7a-8d2b-5e9f7a1c3d01", value: "동네 미용실 예약 앱" }))!;
+    const second = previewIntakeAnswer(first, command({ revision: first.coach.revision, requestId: "1b6f0d52-3c1e-4c7a-8d2b-5e9f7a1c3d02", value: "동네 네일숍 예약 앱" }))!;
+    const history = renderToStaticMarkup(<ConversationHistory snapshot={second} onEdit={noop} />);
+    assert.ok(history.includes("동네 네일숍 예약 앱") && !history.includes("동네 미용실 예약 앱"), "the replaced answer is not shown next to the new one");
+    assert.ok(history.includes("답을 바꿨어요") && !renderToStaticMarkup(<ConversationHistory snapshot={first} onEdit={noop} />).includes("답을 바꿨어요"), "only a changed answer carries the note");
+    assert.equal((history.match(/data-coach-message="user"/g) ?? []).length, 3);
+  }
   // 탐색 중 '직접 적을래요'로 쓴 사업 소개: 손님이 쓴 적 없는 '사업 소개: ' 머리말 없이 보인다
   const exploringBase = fixture("exploring");
   const typedIdea = { ...exploringBase, coach: { ...exploringBase.coach, messages: [{ id: "typed-idea", role: "user" as const, text: "사업 소개: 어르신 댁 정리 서비스", at }] }, intake: { ...exploringBase.intake, answers: { ...exploringBase.intake.answers, business: { status: "answered" as const, value: "어르신 댁 정리 서비스", messageId: "typed-idea", at } } } };

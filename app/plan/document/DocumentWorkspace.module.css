@@ -297,11 +297,14 @@
 .factPopover { position:fixed; z-index:40; width:min(380px, calc(100vw - 24px)); max-height:min(70dvh, 560px); overflow:auto; display:grid; gap:10px; padding:14px; border:1px solid var(--app-line-strong); border-radius:16px; background:#fff; box-shadow:0 14px 36px #11141826; animation:factRise .18s ease-out; }
 .factPopover header { display:flex; align-items:center; justify-content:space-between; }
 .factPopover header b { font-size:14px; }
-.factPopover header button { border:0; background:none; color:#6b7280; cursor:pointer; }
+.factPopover header button { display:inline-grid; place-items:center; min-width:32px; min-height:32px; border:0; border-radius:8px; background:none; color:#6b7280; cursor:pointer; }
+.factPopover:focus { outline:none; }
 .factPopover footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .factPopover footer small { font-size:11px; color:#6b7280; }
 .factPopover footer .primary { min-height:34px; padding:6px 14px; border:0; border-radius:8px; font-size:13px; font-weight:600; }
 .factPopover footer .primary:disabled { background:#d1d5db; }
+/* 휴대폰은 누르는 자리 44px(점검 r42 — 닫기가 아이콘 크기뿐이었다) */
+@media (pointer: coarse) { .factPopover header button, .factPopover footer .primary { min-width:44px; min-height:44px; } }
 @media (prefers-reduced-motion: reduce) { .factCard, .factPopover, .factBody :global(mark[data-fact]) { animation:none; } }
 .factPopover header > div { display:grid; gap:2px; min-width:0; }
 .factPopover header small { font-size:12px; color:#6b7280; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
