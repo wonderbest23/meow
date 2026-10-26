@@ -394,6 +394,10 @@
 }
 .noticeAction svg { flex:none; width:16px; height:16px; }
 .noticeRow .factError { flex-basis:100%; font-size:13px; }
+/* 반영이 잠시 실패했을 때 안내 옆 [다시 시도] — 대화 칸 알림과 같은 일(대표 결정 r42). 누르는 자리 PC 32px · 휴대폰 44px */
+.factRetry { display:inline-flex; align-items:center; gap:4px; min-height:32px; margin-left:8px; padding:4px 10px; border:1px solid #e5b3b7; border-radius:8px; background:#fff; color:#ad343d; font-size:13px; font-weight:600; vertical-align:middle; cursor:pointer; }
+.factRetry:disabled { opacity:.5; cursor:default; }
+@media (max-width:1023px) { .factRetry { min-height:44px; } }
 
 /* 내려받기 창 — 어떤 문서를 받는지 한 줄로 */
 /* 내려받은 뒤 잠깐 보이는 알림 — 아래 단추 줄 위 가운데 */

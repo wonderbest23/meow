@@ -165,6 +165,8 @@ export default function DocumentWorkspace(props: Props) {
     const result = await facts.post({ action: "prepare" });
     if (result) { setFactMode(false); setFactPick(null); props.onReflected?.(); }
   }
+  /* 반영이 잠시 실패했을 때 안내 옆 [다시 시도] — 확인창 없이 같은 요청을 다시(대화 칸 알림과 같다 · 대표 결정 r42) */
+  const retryReflect = () => void reflectFacts();
   const [celebrate, setCelebrate] = useState(false);
   /* 내려받은 뒤 잠깐 보이는 알림 */
   const [toast, setToast] = useState<string | null>(null);
@@ -549,11 +551,11 @@ export default function DocumentWorkspace(props: Props) {
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} pc={studioPc} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
                             {props.writing && arrival && arrival.index !== chapter && !continuous && <button type="button" className={styles.arrival} onClick={() => { setChapter(arrival.index); const id = arrival.id; setArrival(null); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })); }}>새 항목이 써졌어요 · <b>{arrival.title}</b> 보기<ChevronRight size={18} aria-hidden="true" /></button>}
-              {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} />}
+              {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onRetry={retryReflect} />}
               {props.notice && !props.writing && !factMode && <div className={`${styles.notice} ${styles.noticeRow}`} role="status"><span>{props.notice}</span>{factEditable && facts.snapshot?.documentStatus === "stale"
                 /* 반영 단추는 바로 '다시 쓸까요?' 확인창을 연다 — 예전엔 고치기 화면만 열려 같은 단추를 또 찾아 눌러야 했다 */
                 ? <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" className={styles.noticeAction} onConfirm={() => void reflectFacts()} />
-                : factEditable ? <button type="button" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>직접 고치기</button> : coachHref && <Link className={styles.noticeAction} href={coachHref}>대화로 고치기</Link>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}</span>}</div>}
+                : factEditable ? <button type="button" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>직접 고치기</button> : coachHref && <Link className={styles.noticeAction} href={coachHref}>대화로 고치기</Link>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}{facts.error.retry && <button type="button" className={styles.factRetry} disabled={facts.busy} onClick={retryReflect}><RefreshCw size={15} aria-hidden="true" />다시 시도</button>}</span>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter} data-changing={(studioPc && list.some(section => previews.has(section.key))) || undefined}>
                 <DocumentChapterHeading number={index + 1} title={name} pc={studioPc} lead={studioPc && index === 0 ? props.identity : undefined}
                   actions={studioPc && list.some(section => previews.has(section.key)) ? <><span className={styles.changingBadge}><i aria-hidden="true" />대화로 고치는 중</span>{chapterActions(index, name)}</> : chapterActions(index, name)} />
