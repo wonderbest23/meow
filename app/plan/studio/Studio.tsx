@@ -200,6 +200,8 @@ export default function Studio() {
   /* ── 사업 불러오기 — 작업실이 한 번 불러온 뒤에 오른쪽 칸을 만든다(동시에 부르면 먼저 부른 칸이 옛 저장본을 받는다) ── */
   const [ready, setReady] = useState(false);
   const [plan, setPlan] = useState<Plan | null>(null);
+  const planNow = useRef<Plan | null>(null);
+  planNow.current = plan;
   const [missing, setMissing] = useState(false);
   /*
    * 로그인이 풀려서 못 찾았다 — 세션이 끝나면 서버가 빈 목록(로그인 안 됨)을 주고 이 기기 저장본도 비워져, 예전엔
@@ -247,8 +249,10 @@ export default function Studio() {
       .then((data: { plans?: Plan[] } | null) => {
         const found = data?.plans?.find(item => item.id === planId) ?? null;
         if (!found) return;
+        /* 다른 창에서 이름을 바꿨으면(서버 것이 더 새것) 머리줄 이름도 따라간다 — 예전엔 처음 이름을 계속 보였다(점검 r42) */
+        const fresher = newer(planNow.current, found) === found;
         setPlan(current => newer(current, found));
-        setTitle(current => current || found.title);
+        setTitle(current => (fresher && found.title) || current || found.title);
         setMissing(false);
         setSignedOut(false);
       })

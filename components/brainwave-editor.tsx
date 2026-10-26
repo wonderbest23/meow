@@ -126,6 +126,9 @@ export function BrainwaveEditor({
   const overRef = useRef(over);
   /* 편집기를 연 순간의 모습 — '고친 곳' 수를 여기서부터 센다 */
   const openedOver = useRef(over);
+  const openedPage = useRef(init.page);
+  /* 디자인을 바꾼 바로 뒤 모습 — 바꾼 디자인에서는 디자인 바꾸기 1곳 + 그 뒤에 고친 곳만 센다 */
+  const designBase = useRef<{ page: string; over: Over } | null>(null);
   const elementVersions = useRef<Record<string, number>>({});
   const session = useRef(0);
   const mounted = useRef(true);
@@ -800,6 +803,7 @@ export function BrainwaveEditor({
     setBusinessContent(source);
     setSourceSnapshot(undefined);
     setOver(generated);
+    designBase.current = { page: next, over: generated };
     /* 예전엔 기록을 비워, 고친 글이 사라진 뒤 되돌릴 길이 없었다 — 바꾸기 전 모습을 한 번 되돌릴 수 있게 남긴다 */
     setHistory((h) => [...h.slice(-40), before]); setFuture([]);
     setContentMode("business");
@@ -906,9 +910,14 @@ export function BrainwaveEditor({
    * '고친 곳' — 이번에 편집기를 연 뒤 바꾼 것만 센다. 예전엔 AI 가 만든 기본본과 비교해
    * 아무것도 안 고쳤는데 열자마자 '고친 자리 5개'가 떴다.
    */
-  const opened = openedOver.current;
+  /*
+   * 디자인을 바꾸면 자동 저장 뒤 init.page 가 새 디자인이 되어, 새 디자인의 글 전부를 처음 글과 비교해 '고친 곳 212개'가 떴다(점검 r42).
+   * 연 순간의 디자인과 견주고, 바꾼 디자인에서는 바꾼 직후 모습을 기준으로 센다.
+   */
+  const redesigned = page !== openedPage.current;
+  const opened = redesigned && designBase.current?.page === page ? designBase.current.over : openedOver.current;
   const edits = (now: Record<string, string | number>, before: Record<string, string | number>) => new Set([...Object.keys(now), ...Object.keys(before)].filter((id) => now[id] !== before[id])).size;
-  const changed = page !== init.page ? 1 : edits(over.texts, opened.texts) + edits(over.images, opened.images) + edits(over.links, opened.links) + edits(over.sizes, opened.sizes)
+  const changed = redesigned && opened === openedOver.current ? 1 : (redesigned ? 1 : 0) + edits(over.texts, opened.texts) + edits(over.images, opened.images) + edits(over.links, opened.links) + edits(over.sizes, opened.sizes)
     + over.hidden.filter((id) => !opened.hidden.includes(id)).length + opened.hidden.filter((id) => !over.hidden.includes(id)).length + (over.order.join() !== opened.order.join() ? 1 : 0);
 
   /*

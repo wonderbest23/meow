@@ -12,7 +12,7 @@ import { newChatHref } from "../../../lib/plan-builder/studio";
 import styles from "./LaunchWorkspace.module.css";
 import { wonLabel } from "../../../lib/plan-builder/intake-options";
 import MarketingKitPanel from "./MarketingKit";
-import { useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import { useStudioDirty, useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import { useHomepageStatus } from "../use-homepage";
 import paneHeader from "./PaneHeaderActions.module.css";
 import { ChevronRight } from "lucide-react";
@@ -70,6 +70,8 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   const effectiveNote = note ?? record?.note ?? "";
   const effectiveChecked = checked ?? record?.checked ?? [];
   const drafting = note !== null || material !== null || checked !== null;
+  /* 저장 안 한 체크·메모 — 새로고침·작업실 밖으로 나갈 때 묻는다(점검 r42: 메모를 적고 새로고침하면 아무 안내 없이 사라졌다) */
+  useStudioDirty("launch-draft", !sample && drafting, "저장하지 않은 체크·메모가 있어요. 나가면 사라져요.");
   const done = steps.filter(s => launchStatus(state, s) === "done").length;
   const skipped = steps.filter(s => launchStatus(state, s) === "skipped").length;
   function top() { window.requestAnimationFrame(() => { heading.current?.scrollIntoView({ block: "start", behavior: "smooth" }); heading.current?.focus({ preventScroll: true }); }); }

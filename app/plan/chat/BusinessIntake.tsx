@@ -753,7 +753,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const aiBusy = ["queued", "running"].includes(plan?.intake.job?.status ?? "");
   const payHref = (target: IntakeSnapshot) => `/plan/pay?${new URLSearchParams({ planId: target.planId, planType: target.planType }).toString()}`;
   const startPrepare = () => {
-    setPreparing(true);
+    /* 계획서가 있는 사업에서 [계획서에 반영하기]를 눌러 실패해도 지난 실패로 숨기지 않는다(점검 r42: 503 이 나도 아무 안내 없이 단추만 돌아왔다) */
+    setPreparing(true); setChatSent(true);
     const current = planRef.current;
     if (current && payAccess?.planId === current.planId && payAccess.authenticated && !payAccess.paid) {
       leavingForPay.current = true;
@@ -1576,13 +1577,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     : questionComposer && !studioRoute && !plan.coreComplete ? null
     : pickable ? <PickChapterMenu chapters={editChapterList} onPick={request => { studioNav?.showTab?.("plan"); enterEditTarget(request); focusComposer(); }} />
     : composerSummary ? <button type="button" className={styles.composerAction} aria-controls="intake-summary-panel" aria-expanded={view === "summary"} onClick={openSummary}><ListChecks size={14} aria-hidden="true" />지금까지 답 보기</button> : null;
-  /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로 */
+  /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로. 이미 보낸 예시는 다시 권하지 않는다(r42) */
   const priceAnswer = plan?.intake.answers.price;
   const suggestionChips: SuggestionChip[] = !pro || !studioComposer || editWorking ? []
     : homepageSuggest ? [{ label: "홈페이지를 대화로 고치기", pick: () => enterEditTarget({ target: "homepage", label: "홈페이지" }) }]
     : visibleComposerText(studioText) ? []
     : editTarget?.target === "homepage" ? HOMEPAGE_SUGGESTIONS
-    : (studioRoute === "chat" && planSide || studioRoute === "section") && !!plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy ? editExamples(priceAnswer?.status === "answered" ? priceAnswer.value : null).map(text => ({ label: text, fill: text }))
+    : (studioRoute === "chat" && planSide || studioRoute === "section") && !!plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy ? editExamples(priceAnswer?.status === "answered" ? priceAnswer.value : null).filter(text => !plan.coach.messages.some(message => message.role === "user" && message.text.endsWith(text))).map(text => ({ label: text, fill: text }))
     : [];
   const pickSuggestion = (chip: SuggestionChip) => {
     if (chip.pick) { chip.pick(); return; }

@@ -1,0 +1,13 @@
+/*
+ * 홈페이지 블록 편집기(Puck) 글꼴 Inter — Puck 기본 CSS(puck.css)는 맨 위에서 https://rsms.me/inter/inter.css 를 @import 해,
+ * 모든 화면이 그 바깥 CSS 를 받을 때까지 그려지지 않았다(점검 r42-B: 휴대폰 첫 표시 지연, 그 주소가 느리거나 막히면 앱까지 빈 화면).
+ * 그래서 @import 가 없는 no-external.css 를 쓰고, 같은 글꼴 선언만 여기 둔다. @font-face 는 그 글꼴을 쓰는 글자가 화면에 나올 때만
+ * 받으므로 편집기 밖 화면에서는 요청이 없고, 편집기 모양은 예전과 같다(같은 주소·같은 파일).
+ */
+@font-face { font-family: InterVariable; font-style: normal; font-weight: 100 900; font-display: swap; src: url("https://rsms.me/inter/font-files/InterVariable.woff2?v=4.1") format("woff2"); }
+@font-face { font-family: InterVariable; font-style: italic; font-weight: 100 900; font-display: swap; src: url("https://rsms.me/inter/font-files/InterVariable-Italic.woff2?v=4.1") format("woff2"); }
+/* 가변 글꼴을 못 쓰는 옛 브라우저용(puck.css 의 --puck-font-family: Inter) */
+@font-face { font-family: Inter; font-style: normal; font-weight: 400; font-display: swap; src: url("https://rsms.me/inter/font-files/Inter-Regular.woff2?v=4.1") format("woff2"); }
+@font-face { font-family: Inter; font-style: normal; font-weight: 500; font-display: swap; src: url("https://rsms.me/inter/font-files/Inter-Medium.woff2?v=4.1") format("woff2"); }
+@font-face { font-family: Inter; font-style: normal; font-weight: 600; font-display: swap; src: url("https://rsms.me/inter/font-files/Inter-SemiBold.woff2?v=4.1") format("woff2"); }
+@font-face { font-family: Inter; font-style: normal; font-weight: 700; font-display: swap; src: url("https://rsms.me/inter/font-files/Inter-Bold.woff2?v=4.1") format("woff2"); }

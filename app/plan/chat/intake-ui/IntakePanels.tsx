@@ -591,6 +591,20 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
   const industryAnswerId = snapshot.intake.answers.industry?.messageId;
   const replacedIndustry = new Set(industryAnswerId && snapshot.coach.messages.some(message => message.id === industryAnswerId)
     ? snapshot.coach.messages.filter(message => message.role === "user" && message.id !== industryAnswerId && message.text.startsWith(industryLabel) && !snapshot.intake.notes.some(note => note.id.startsWith(`${message.id}:`))).map(message => message.id) : []);
+  /*
+   * 다른 답도 연필로 고치면 새 답이 대화 끝에 쌓인다 — 같은 질문의 예전 답 말풍선은 업종처럼 숨기고 새 답 아래에 '답을 바꿨어요'를 남긴다
+   * (점검 r42: 예전 답 '근처 직장인'과 새 답이 같은 질문으로 두 번 보여 어느 쪽이 지금 답인지 헷갈렸다).
+   */
+  const replacedAnswers = new Map<string, string>();
+  for (const question of snapshot.questions) {
+    const currentId = snapshot.intake.answers[question.id]?.messageId;
+    const currentIndex = currentId ? snapshot.coach.messages.findIndex(message => message.id === currentId) : -1;
+    if (question.id === "industry" || currentIndex < 0) continue;
+    for (const message of snapshot.coach.messages.slice(0, currentIndex)) {
+      if (message.role === "user" && message.text.startsWith(`${question.label}: `) && !snapshot.intake.notes.some(note => note.id.startsWith(`${message.id}:`))) replacedAnswers.set(message.id, currentId!);
+    }
+  }
+  const changedAnswerIds = new Set(replacedAnswers.values());
   // 대화로 고치기의 [바꾸기]가 적용한 답 — 메시지 번호가 '편집 요청 번호:순번'이고 같은 요청의 '바꿨어요' 답이 있다
   const appliedEdit = (id: string) => /:\d+$/.test(id) && snapshot.coach.messages.some(other => other.role === "assistant" && other.id === `${id.replace(/:\d+$/, "")}:reply` && other.text.startsWith("바꿨어요"));
   const margin = pro ? marginLogItem(snapshot) : null;
@@ -608,7 +622,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
       if (snapshot.intake.job?.kind === "design" && message.id === `${snapshot.intake.job.id}:reply` && snapshot.coach.design?.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
       // 사업 방향 요약 글(businessDesignReply)은 대화에 쌓지 않는다 — 앞 답을 고칠 때마다 한 벌씩 늘었다. 최신 방향은 아래 카드 한 곳에만 보인다.
       if (message.role === "assistant" && isDesignReplyText(message.text)) return null;
-      if (replacedIndustry.has(message.id)) return null;
+      if (replacedIndustry.has(message.id) || replacedAnswers.has(message.id)) return null;
       const answerEntry = Object.entries(snapshot.intake.answers).find(([, answer]) => answer.messageId === message.id);
       const notes = snapshot.intake.notes.filter(note => note.id.startsWith(`${message.id}:`) && /^\d+$/.test(note.id.slice(message.id.length + 1)));
       // Older message labels are display-only; edits always use the current stable question ID.
@@ -634,7 +648,8 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
         </article>
         {pro && message.role === "assistant" && <MessageMeta text={text} at={message.at} />}
         {receipt && message.id === lastUserId && !notes.length ? <p className={styles.messageStatus} data-receipt>{receipt}</p>
-          : message.id === industryAnswerId && replacedIndustry.size > 0 && <p className={styles.messageStatus}>업종을 바꿨어요</p>}
+          : message.id === industryAnswerId && replacedIndustry.size > 0 ? <p className={styles.messageStatus}>업종을 바꿨어요</p>
+          : changedAnswerIds.has(message.id) && <p className={styles.messageStatus}>답을 바꿨어요</p>}
         {/* 질문으로 남긴 글은 아래 'AI 답변 받기'가 따로 안내한다 — 질문 말풍선에 '입력은 저장됨'을 붙이지 않는다 */}
         {margin?.anchor === message.id && <WorkLog items={[margin]} unit="" />}
         {notes.length > 0 && !notes.every(note => note.intent === "question") && <p className={styles.messageStatus}>{notes.some(note => note.status === "failed") ? "입력은 저장됨 · 자동 정리는 미완료" : notes.some(note => note.status === "queued" || note.status === "processing") ? "입력은 저장됨 · 자동 정리 중" : notes.some(note => note.status === "review") ? "입력은 저장됨 · 정리한 내용 확인 필요" : "입력은 저장됨"}</p>}

@@ -100,6 +100,7 @@ async function main() {
   assert.equal(editExamples(4500)[0], "가격을 5,000원으로 바꿔줘");
   assert.equal(editExamples(65000)[0], "가격을 72,000원으로 바꿔줘");
   assert.ok(!editExamples(null).some(text => text.includes("가격")), "no made-up price when the plan has none");
+  assert.equal(editExamples("25000원")[0], "가격을 28,000원으로 바꿔줘", "대화 답은 '25000원' 글로 저장된다(r42)");
   console.log("document render: ranges, legacy tildes, Word/PDF output, Korean line breaks, table cells, phone card labels, summary steps and edit examples passed");
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

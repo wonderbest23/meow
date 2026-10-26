@@ -226,6 +226,20 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
     const top = anchor.bottom + 8 + height > innerHeight - 12 ? Math.max(12, anchor.top - height - 8) : anchor.bottom + 8;
     setPosition({ top, left: Math.max(12, Math.min(anchor.left, innerWidth - width - 12)) });
   }, [anchor]);
+  /*
+   * 창을 열면 초점을 창 안으로(금액은 입력칸이 스스로 받는다), 닫거나 바꾸면 연 자리(노란 칸 · 칩)로 돌려준다
+   * (점검 r42: 고르는 창은 초점이 문서 맨 앞에 남아 키보드로 닿지 않았고, 닫으면 초점이 사라졌다). 연 자리는 첫 그리기 전에 잡는다.
+   */
+  const [opener] = useState(() => {
+    if (typeof document === "undefined") return null;
+    const active = document.activeElement;
+    // 사파리는 단추를 눌러도 초점을 주지 않는다 — 그때는 이 사실의 칩으로 돌려준다
+    return active instanceof HTMLElement && active !== document.body ? active : document.querySelector<HTMLElement>(`[data-fact-chip="${CSS.escape(questionId)}"]`);
+  });
+  useEffect(() => {
+    if (!box.current?.contains(document.activeElement)) box.current?.focus({ preventScroll: true });
+    return () => { if (opener?.isConnected) opener.focus({ preventScroll: true }); };
+  }, [opener]);
   useEffect(() => {
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     addEventListener("keydown", close);
@@ -245,7 +259,7 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
     const result = await edit.post({ action: "answer", questionId: fact.questionId, value: submission.value, ...(submission.unknown ? { unknown: true } : {}), ...(submission.ksic ? { ksic: submission.ksic } : {}) });
     if (result) onSaved();
   };
-  return <div ref={box} className={styles.factPopover} style={{ top: position.top, left: position.left }} role="dialog" aria-label={`${fact.label} 바꾸기`} data-fact-popover>
+  return <div ref={box} className={styles.factPopover} style={{ top: position.top, left: position.left }} role="dialog" aria-label={`${fact.label} 바꾸기`} tabIndex={-1} data-fact-popover>
     <header><div><b>{fact.label} 바꾸기</b><small>지금: {factShown(fact)}</small></div><button type="button" aria-label="닫기" onClick={onClose}><X size={16} /></button></header>
     {amount ? <form className={styles.factAmount} onSubmit={event => { event.preventDefault(); void saveAmount(); }}>
       {/* 휴대폰은 숫자 자판이 뜬다 — 예시도 숫자로 둔다('6만'은 숫자 자판으로 칠 수 없다). 키보드로 '6만'을 적어도 읽는다 */}

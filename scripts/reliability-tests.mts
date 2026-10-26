@@ -50,6 +50,8 @@ suites.push("owner-decisions-r39");
 suites.push("owner-decisions-r40");
 suites.push("ui-audit-r41a");
 suites.push("owner-decisions-r41");
+suites.push("ui-audit-r42a");
+suites.push("speed-seo-r42b");
 const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/KEY|TOKEN|SECRET|PASSWORD|SUPABASE|DATABASE_URL/.test(key)));
 Object.assign(env, { NODE_ENV: "test", PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "" });
 let failures = 0;
@@ -57,7 +59,9 @@ for (const suite of suites) {
   const url = new URL(`./${suite}.test.${["business-intake-ui", "brainwave-business-render"].includes(suite) ? "tsx" : "ts"}`, import.meta.url).href;
   const directEntry = ["artifact-updates", "artifact-update-reservations", "artifact-v3-operating", "proposal-source-staleness"].includes(suite) ? `process.argv.push(${JSON.stringify(new URL(url).pathname)});` : "";
   const result = spawnSync(process.execPath, ["--require", new URL("./ledger-test-runtime.cjs", import.meta.url).pathname, "--import", "tsx", "--input-type=module", "-e", `globalThis.fetch = async () => { throw new Error('External network disabled in reliability tests'); }; ${suite === "business-hub" ? "process.argv.push('--state-only');" : ""} ${directEntry} await import(${JSON.stringify(url)});`], { cwd: new URL("..", import.meta.url), env, encoding: "utf8", timeout: 60000 });
-  console.log(`\n[${suite}] ${result.status === 0 ? "PASS" : "FAIL"}\n${result.stdout}${result.stderr}`);
+  // 60초를 넘겨 끊긴 시험은 출력 없이 FAIL 로만 보여 가끔 실패하는 시험처럼 보였다(r42) — 시간 초과를 따로 적는다
+  const timedOut = result.signal === "SIGTERM" || (result.error as NodeJS.ErrnoException | undefined)?.code === "ETIMEDOUT";
+  console.log(`\n[${suite}] ${result.status === 0 ? "PASS" : timedOut ? "FAIL (60초 시간 초과)" : "FAIL"}\n${result.stdout}${result.stderr}`);
   if (result.status !== 0) failures++;
 }
 console.log(`${suites.length - failures}/${suites.length} reliability suites passed`);
