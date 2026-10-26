@@ -14,7 +14,7 @@
 .auth { width: 100%; margin: 0; }
 /* 새 대화 화면 안에 펼친 로그인 — 팝업 카드 없이 대화 영역 가운데에 */
 .inline { min-height: 0; max-width: 400px; margin: 0 auto; padding: clamp(24px, 8vh, 72px) 0 40px; background: transparent; }
-.auth h1 { font-size: 24px; }
+.auth h1 { font-size: 1.5rem; }
 .close {
   position: absolute;
   top: 12px;

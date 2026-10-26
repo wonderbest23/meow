@@ -13,17 +13,17 @@
 .tree .caret[data-open] { transform:rotate(90deg); }
 
 .list { display:flex; flex-direction:column; gap:2px; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:2px 0 6px 10px; }
-.empty { margin:4px 8px 8px; color:#6b7684; font-size:12px; line-height:1.5; text-wrap:balance; }
+.empty { margin:4px 8px 8px; color:#6b7684; font-size:.75rem; line-height:1.5; text-wrap:balance; }
 
 .plan { display:flex; flex-direction:column; }
-.tree .planRow { display:flex; align-items:center; gap:6px; width:100%; min-height:36px; padding:0 8px; border:0; border-radius:8px; background:transparent; color:#4e5968; font:inherit; font-size:13px; font-weight:600; text-align:left; cursor:pointer; }
+.tree .planRow { display:flex; align-items:center; gap:6px; width:100%; min-height:36px; padding:0 8px; border:0; border-radius:8px; background:transparent; color:#4e5968; font:inherit; font-size:.8125rem; font-weight:600; text-align:left; cursor:pointer; }
 .tree .planRow:hover { background:#f2f4f6; color:#191f28; }
 .tree .planRow[data-current] { color:#191f28; }
 .planRow > span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .planRow .caret { color:#8b95a1; }
 
 .steps { display:flex; flex-direction:column; gap:1px; margin:2px 0 6px 14px; padding:0 0 0 8px; border-left:1px solid #e5e8eb; list-style:none; }
-.step { display:flex; align-items:center; gap:8px; min-height:34px; padding:0 8px; border-radius:8px; color:#4e5968; font-size:13px; font-weight:500; text-decoration:none; }
+.step { display:flex; align-items:center; gap:8px; min-height:34px; padding:0 8px; border-radius:8px; color:#4e5968; font-size:.8125rem; font-weight:500; text-decoration:none; }
 a.step:hover { background:#f2f4f6; color:#191f28; }
 .step[aria-current="page"] { background:#e8f0fd; color:#1b4f9c; font-weight:700; }
 .step[aria-disabled="true"] { color:#b0b8c1; cursor:default; }
@@ -33,21 +33,21 @@ button.step[aria-disabled="true"] { cursor:pointer; }
 button.step[aria-disabled="true"]:hover { background:#f7f8fa; }
 .lockDialog { width:min(380px, calc(100% - 40px)); padding:24px 22px 18px; border:0; border-radius:16px; box-shadow:0 20px 50px rgb(16 24 36 / .18); color:#191f28; }
 .lockDialog::backdrop { background:rgb(16 24 36 / .35); }
-.lockDialog p { margin:0 0 20px; font-size:15px; font-weight:600; line-height:1.6; word-break:keep-all; }
+.lockDialog p { margin:0 0 20px; font-size:.9375rem; font-weight:600; line-height:1.6; word-break:keep-all; }
 .lockDialog div { display:flex; justify-content:flex-end; gap:8px; }
-.lockDialog button, .lockDialog a { min-height:40px; padding:0 16px; border-radius:10px; font:inherit; font-size:14px; font-weight:600; display:inline-flex; align-items:center; text-decoration:none; cursor:pointer; }
+.lockDialog button, .lockDialog a { min-height:40px; padding:0 16px; border-radius:10px; font:inherit; font-size:.875rem; font-weight:600; display:inline-flex; align-items:center; text-decoration:none; cursor:pointer; }
 .lockDialog button { border:1px solid #d1d6db; background:#fff; color:#4e5968; }
 .lockDialog a { border:0; background:#246bd1; color:#fff; }
-.step i { display:grid; place-items:center; flex:none; width:18px; height:18px; border-radius:50%; border:1.5px solid #d1d6db; font-style:normal; font-size:10px; font-weight:700; color:#6b7684; background:#fff; }
+.step i { display:grid; place-items:center; flex:none; width:18px; height:18px; border-radius:50%; border:1.5px solid #d1d6db; font-style:normal; font-size:.625rem; font-weight:700; color:#6b7684; background:#fff; }
 .step i[data-state="done"] { border-color:#246bd1; background:#246bd1; color:#fff; }
 .step i[data-state="active"] { border-color:#246bd1; color:#246bd1; }
 .step[aria-current="page"] i { border-color:#246bd1; background:#246bd1; color:#fff; }
 
 .parts { display:flex; flex-direction:column; gap:1px; margin:2px 0 4px 18px; padding:0; list-style:none; }
-.tree .parts button { display:flex; align-items:baseline; gap:8px; width:100%; min-height:30px; padding:6px 8px; border:0; border-radius:6px; background:transparent; color:#4e5968; font:inherit; font-size:12.5px; line-height:1.45; text-align:left; cursor:pointer; word-break:keep-all; }
+.tree .parts button { display:flex; align-items:baseline; gap:8px; width:100%; min-height:30px; padding:6px 8px; border:0; border-radius:6px; background:transparent; color:#4e5968; font:inherit; font-size:.78125rem; line-height:1.45; text-align:left; cursor:pointer; word-break:keep-all; }
 .tree .parts button:hover { background:#f2f4f6; color:#191f28; }
 .tree .parts button[aria-current="true"] { color:#1b4f9c; font-weight:700; background:#f2f6fd; }
-.parts b { flex:none; font-size:11px; font-weight:600; color:#6b7684; font-variant-numeric:tabular-nums; }
+.parts b { flex:none; font-size:.6875rem; font-weight:600; color:#6b7684; font-variant-numeric:tabular-nums; }
 
 /* 폰의 아이콘 띠(PlanShell) — 목록은 서랍을 열었을 때만 */
 @media (max-width:640px) {
@@ -58,13 +58,13 @@ button.step[aria-disabled="true"]:hover { background:#f7f8fa; }
 }
 
 /* 폰 서랍(data-rail-open) — 사업 이름·단계·목차도 손가락으로 누르기 쉽게 크게(대표 요청 2026-10-14) */
-:global([data-rail-open]) .tree .planRow { min-height: 46px; padding: 0 10px; font-size: 15px; }
-:global([data-rail-open]) .step { min-height: 44px; gap: 10px; font-size: 15px; }
-:global([data-rail-open]) .step i { width: 22px; height: 22px; font-size: 12px; }
-:global([data-rail-open]) .tree .parts button { min-height: 40px; font-size: 14.5px; }
-:global([data-rail-open]) .parts b { font-size: 12px; }
+:global([data-rail-open]) .tree .planRow { min-height: 46px; padding: 0 10px; font-size: .9375rem; }
+:global([data-rail-open]) .step { min-height: 44px; gap: 10px; font-size: .9375rem; }
+:global([data-rail-open]) .step i { width: 22px; height: 22px; font-size: .75rem; }
+:global([data-rail-open]) .tree .parts button { min-height: 40px; font-size: .90625rem; }
+:global([data-rail-open]) .parts b { font-size: .75rem; }
 :global([data-rail-open]) .toggle { width: 48px; height: 48px; }
-:global([data-rail-open]) .empty { font-size: 14px; }
+:global([data-rail-open]) .empty { font-size: .875rem; }
 
 /* 휴대폰 서랍 — 사업 목차가 안쪽 작은 스크롤 칸(320 에서 72px)에 갇혀 '홈페이지·유지보수'가 안 보였다. 서랍에서는 다 펼치고 서랍 전체가 스크롤한다 */
 :global([data-rail-open]) .tree { flex: none; }

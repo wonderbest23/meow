@@ -3,7 +3,7 @@
 .sheet:not([open]) { display: none; }
 .sheet::backdrop { background: #191f2866; }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 56px; padding: env(safe-area-inset-top) 4px 0 16px; border-bottom: 1px solid #e5e8eb; flex: none; }
-.head strong { font-size: 16px; font-weight: 700; }
+.head strong { font-size: 1rem; font-weight: 700; }
 .close { display: grid; place-items: center; width: 48px; height: 48px; border: 0; background: transparent; color: #191f28; cursor: pointer; }
 /* 전역 `button:not(.plan-ui *) svg { display:none }` 이 닫기 아이콘을 지웠다(점검 2026-10-21) */
 .head button.close svg { display: block !important; width: 22px; height: 22px; }

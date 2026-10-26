@@ -14,7 +14,7 @@
  * 고르지 않은 탭 글자는 #4e5968(바탕 #f2f5f8 에서 6.4:1) — --app-muted 는 4.5:1 이 안 됐다.
  */
 .narrowTabs { grid-row:1; grid-column:1; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; margin:6px 16px 8px; padding:3px; background:var(--app-raised); border-radius:14px; }
-.narrowTabs button { min-height:44px; padding:0 6px; border:0; border-radius:11px; background:transparent; color:#4e5968; font-size:15px; font-weight:600; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:background .15s,color .15s; }
+.narrowTabs button { min-height:44px; padding:0 6px; border:0; border-radius:11px; background:transparent; color:#4e5968; font-size:.9375rem; font-weight:600; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:background .15s,color .15s; }
 .narrowTabs button[aria-selected=true] { background:var(--app-surface); color:var(--app-text); font-weight:700; box-shadow:0 1px 3px #191f2814; }
 
 /* 칸 둘(대화 · 오른쪽)은 좁은 화면에서 같은 자리에 겹쳐 두고 보이는 것만 보인다 */
@@ -39,7 +39,7 @@
 /* '준비' 안의 작은 전환 — 시작하기 / 유지보수 */
 .prepSwitch { display:flex; gap:6px; flex-shrink:0; padding:10px 16px 0; }
 /* 누르는 자리는 44px — 보이는 크기는 36px 그대로, 위아래로 4px 씩 넓힌다(r37 휴대폰 점검) */
-.prepSwitch button { position:relative; min-height:36px; padding:0 14px; border:1px solid var(--app-line); border-radius:999px; background:var(--app-surface); color:var(--app-muted); font-size:14px; font-weight:600; }
+.prepSwitch button { position:relative; min-height:36px; padding:0 14px; border:1px solid var(--app-line); border-radius:999px; background:var(--app-surface); color:var(--app-muted); font-size:.875rem; font-weight:600; }
 .prepSwitch button::after { content:""; position:absolute; inset:-4px 0; }
 .prepSwitch button[aria-pressed=true] { border-color:var(--app-text); background:var(--app-text); color:var(--app-surface); }
 
@@ -63,17 +63,17 @@
 
 /* 아직 갈 수 없는 단계 — 왼쪽 메뉴의 잠김 안내와 같은 말 */
 .locked { margin:auto; max-width:420px; padding:32px 24px; display:flex; flex-direction:column; align-items:center; gap:18px; text-align:center; }
-.locked p { margin:0; font-size:16px; line-height:1.7; color:var(--app-body, var(--app-text)); word-break:keep-all; }
-.locked button { min-height:48px; padding:0 22px; border:0; border-radius:12px; background:var(--app-primary); color:#fff; font-size:15px; font-weight:700; }
+.locked p { margin:0; font-size:1rem; line-height:1.7; color:var(--app-body, var(--app-text)); word-break:keep-all; }
+.locked button { min-height:48px; padding:0 22px; border:0; border-radius:12px; background:var(--app-primary); color:#fff; font-size:.9375rem; font-weight:700; }
 
 /* 작업실 칸 안의 단추 줄 — 예전 머리줄 actions(저장·공개하기, 요약 등) 자리 */
 .paneToolbar { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; flex-shrink:0; padding:10px 20px 0; }
 
 /* 예전 화면 머리줄의 '작업실에서 보기' */
-.entryLink { margin-left:auto; flex-shrink:0; display:inline-flex; align-items:center; min-height:36px; padding:0 12px; border:1px solid var(--app-line); border-radius:999px; color:var(--app-text); font-size:13px; font-weight:600; text-decoration:none; white-space:nowrap; }
+.entryLink { margin-left:auto; flex-shrink:0; display:inline-flex; align-items:center; min-height:36px; padding:0 12px; border:1px solid var(--app-line); border-radius:999px; color:var(--app-text); font-size:.8125rem; font-weight:600; text-decoration:none; white-space:nowrap; }
 .entryLink:hover { background:var(--app-raised); }
 .entryLink ~ div { margin-left:0; }
-@media (max-width:420px) { .entryLink { min-height:32px; padding:0 10px; font-size:12px; } }
+@media (max-width:420px) { .entryLink { min-height:32px; padding:0 10px; font-size:.75rem; } }
 /*
  * 좁은 화면 — 머리줄에 저장·공개 같은 단추가 함께 있으면(560px 이하) 링크를 접는다. 단추와 링크가 자리를 다 차지해
  * 제목 폭이 0이 됐다(예전 홈페이지 390~430px). 접으면 바로 뒤 단추 묶음이 다시 오른쪽으로 붙는다.
@@ -88,32 +88,32 @@
 .headerSlot { display:flex; align-items:center; gap:8px; min-width:0; flex-shrink:0; }
 
 /*
- * PC 한 줄 머리줄(56px) — 왼쪽 칸은 대화 칸 폭, 오른쪽은 탭 · 가운데 알약 · 진행 · 칸 단추.
+ * PC 한 줄 머리줄(56px — 글자 크기 설정을 키우면 높이가 늘어난다) — 왼쪽 칸은 대화 칸 폭, 오른쪽은 탭 · 가운데 알약 · 진행 · 칸 단추.
  * 시안의 옅은 글자(#8b95a1)는 회색 바탕에서 3:1 이 안 돼 글자는 #5f6b7c(4.9:1) 이상으로 쓴다.
  * 단추 높이는 세 가지로 맞춘다(r39 점검 — 32·36·40px 이 섞여 작고 들쭉날쭉해 보였다):
  * 아이콘·사업명 36px, 탭 묶음 · 칸 단추 40px(탭 하나는 34px), 가운데 알약 38px(칸 모듈 쪽).
  */
-.topBar { height:56px; flex-shrink:0; display:grid; grid-template-columns:var(--studio-chat-w, 420px) minmax(0,1fr); background:var(--studio-shell, #f5f6f8); color:#191f28; position:relative; z-index:3; letter-spacing:-0.01em; }
+.topBar { min-height:56px; flex-shrink:0; display:grid; grid-template-columns:var(--studio-chat-w, 420px) minmax(0,1fr); background:var(--studio-shell, #f5f6f8); color:#191f28; position:relative; z-index:3; letter-spacing:-0.01em; }
 .topBar :is(button,a):focus-visible { outline:3px solid #8bb9ff; outline-offset:2px; }
 .tbLeft { display:flex; align-items:center; gap:8px; min-width:0; padding:0 10px; }
-.tbRight { display:flex; align-items:center; gap:12px; min-width:0; padding:0 10px 0 0; }
+.tbRight { display:flex; align-items:center; flex-wrap:wrap; gap:12px; min-width:0; padding:0 10px 0 0; } /* 글자를 키워 한 줄에 안 들어가면 단추가 화면 밖으로 밀리지 않고 다음 줄로 */
 .iconButton { width:36px; height:36px; flex-shrink:0; display:inline-grid; place-items:center; border:0; border-radius:9px; background:transparent; color:#4e5968; text-decoration:none; }
 .iconButton:hover { background:#e9ecf0; color:#191f28; }
 .iconButton svg { display:block; }
 .mark { width:24px; height:24px; flex-shrink:0; border-radius:6px; display:block; }
 .biz { flex:1; min-width:0; line-height:1.2; }
 .topBar .bizTitle { margin:0; min-width:0; font:inherit; }
-.bizName { max-width:calc(100% + 8px); min-height:36px; margin:0 -4px; display:inline-flex; align-items:center; gap:3px; padding:6px 4px; border:0; border-radius:8px; background:transparent; color:#191f28; font-size:14.5px; font-weight:700; line-height:1.25; }
+.bizName { max-width:calc(100% + 8px); min-height:36px; margin:0 -4px; display:inline-flex; align-items:center; gap:3px; padding:6px 4px; border:0; border-radius:8px; background:transparent; color:#191f28; font-size:.90625rem; font-weight:700; line-height:1.25; }
 .bizName span { min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .bizName svg { flex-shrink:0; color:#8b95a1; }
 .bizName:hover span { text-decoration:underline; text-underline-offset:3px; text-decoration-color:#c9d0da; }
-.bizStatus { margin:-3px 0 0; display:flex; align-items:center; gap:6px; min-width:0; font-size:11.5px; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bizStatus { margin:-3px 0 0; display:flex; align-items:center; gap:6px; min-width:0; font-size:.71875rem; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .bizStatus i { width:6px; height:6px; flex-shrink:0; border-radius:50%; background:#3182f6; }
 .bizStatus i[data-live] { box-shadow:0 0 0 3px rgba(49,130,246,.18); }
 
 /* 탭 — 회색 받침 위 흰 알약(고른 탭). 끝난 단계는 ✓ */
 .seg { display:inline-flex; align-items:center; gap:2px; flex-shrink:0; padding:3px; border-radius:10px; background:#e9ecf0; }
-.seg button { position:relative; height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:5px; border:0; border-radius:7px; background:transparent; color:#4e5968; font-size:13.5px; font-weight:500; white-space:nowrap; transition:background .15s,color .15s; }
+.seg button { position:relative; min-height:34px; padding:0 12px; display:inline-flex; align-items:center; gap:5px; border:0; border-radius:7px; background:transparent; color:#4e5968; font-size:.84375rem; font-weight:500; white-space:nowrap; transition:background .15s,color .15s; }
 .seg button:hover { color:#191f28; }
 .seg button[aria-selected=true] { background:#fff; color:#191f28; font-weight:650; box-shadow:0 1px 2px rgba(16,24,40,.08), 0 0 0 .5px rgba(16,24,40,.05); }
 .seg .dot { top:3px; right:3px; box-shadow:0 0 0 2px #e9ecf0; }
@@ -129,23 +129,23 @@
 
 .tbActs { display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:auto; }
 /* 진행 막대 — 네 칸(끝남 파랑 · 지금 단계 반쯤 · 남음 회색)과 끝난 수 */
-.progress { display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 8px; flex-shrink:0; font-size:12px; font-weight:600; color:#4e5968; white-space:nowrap; cursor:default; }
+.progress { display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 8px; flex-shrink:0; font-size:.75rem; font-weight:600; color:#4e5968; white-space:nowrap; cursor:default; }
 .progressBars { display:inline-flex; gap:3px; }
 .progressBars b { width:14px; height:5px; border-radius:3px; background:#d5dbe2; }
 .progressBars b[data-state=done] { background:#3182f6; }
 .progressBars b[data-state=current] { background:linear-gradient(90deg,#3182f6 0 40%,#d5dbe2 40%); }
-.saved { display:inline-flex; align-items:center; gap:4px; padding:0 4px; font-size:12px; color:#5f6b7c; white-space:nowrap; }
+.saved { display:inline-flex; align-items:center; gap:4px; padding:0 4px; font-size:.75rem; color:#5f6b7c; white-space:nowrap; }
 
 /* 대화만 할 때 — 탭 대신 단계 안내(1 대화 — 2 계획서 — 3 홈페이지 — 4 개업 준비)와 잠김 안내 */
-.stepper { display:flex; align-items:center; gap:8px; margin:0; padding:0; list-style:none; flex-shrink:0; font-size:12.5px; color:#5f6b7c; white-space:nowrap; }
+.stepper { display:flex; align-items:center; gap:8px; margin:0; padding:0; list-style:none; flex-shrink:0; font-size:.78125rem; color:#5f6b7c; white-space:nowrap; }
 .stepper li { display:inline-flex; align-items:center; gap:6px; height:28px; padding:0 10px 0 8px; border-radius:999px; }
 .stepper li + li { margin-left:24px; position:relative; }
 .stepper li + li::before { content:""; position:absolute; left:-20px; top:50%; width:16px; height:1px; background:#cfd5dc; }
-.stepper i { width:18px; height:18px; display:grid; place-items:center; border-radius:50%; background:#e3e7ec; color:#5f6b7c; font-style:normal; font-size:11px; font-weight:700; }
+.stepper i { width:18px; height:18px; display:grid; place-items:center; border-radius:50%; background:#e3e7ec; color:#5f6b7c; font-style:normal; font-size:.6875rem; font-weight:700; }
 .stepper li[data-state=current] { background:#fff; color:#191f28; font-weight:650; box-shadow:0 0 0 1px #e3e7ec; }
 .stepper li[data-state=current] i { background:#1b64da; color:#fff; }
 .stepper li[data-state=done] i { background:#e8f3ff; color:#1b64da; }
-.lockNote { margin:0 0 0 6px; display:inline-flex; align-items:center; gap:5px; min-width:0; font-size:12px; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lockNote { margin:0 0 0 6px; display:inline-flex; align-items:center; gap:5px; min-width:0; font-size:.75rem; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .lockNote svg { flex-shrink:0; }
 /*
  * 좁은 PC — 가운데 알약 자리를 남기도록 차례로 줄인다.
@@ -163,7 +163,7 @@
 @media (max-width:1180px) {
   .lockNote { display:none; }
   .tbRight { gap:6px; }
-  .seg button { padding:0 6px; gap:3px; font-size:12.5px; }
+  .seg button { padding:0 6px; gap:3px; font-size:.78125rem; }
   .centerWrap { min-width:160px; }
   .tbLeft { gap:6px; }
   .tbActs { gap:6px; }
@@ -177,7 +177,7 @@
 .page [data-app-surface] > header > div > h1 + span { color:#4e5968; }
 
 /* 로그인이 풀렸을 때 머리줄의 '다시 로그인하기'(작성 진행을 묻다 401) */
-.relogin { flex-shrink:0; min-height:36px; padding:0 14px; border:0; border-radius:10px; background:var(--app-primary); color:#fff; font-size:14px; font-weight:700; white-space:nowrap; }
+.relogin { flex-shrink:0; min-height:36px; padding:0 14px; border:0; border-radius:10px; background:var(--app-primary); color:#fff; font-size:.875rem; font-weight:700; white-space:nowrap; }
 
 /* 낭독기에만 읽히는 말(완료 · 지금 단계 · 새 소식) */
 .srOnly { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
@@ -187,7 +187,12 @@
 .narrowTabs button { display:inline-flex; align-items:center; justify-content:center; gap:3px; }
 .tabCheck { flex-shrink:0; color:#1b64da; }
 /* 360px 폰 — '✓ 개업·운영'이 칸보다 3px 넓어 끝 글자가 잘렸다(r39 점검). 탭 사이 · 안쪽 여백과 글자를 조금 줄인다 */
-@media (max-width:374px) { .narrowTabs { gap:2px; } .narrowTabs button { padding:0 4px; gap:2px; font-size:14.5px; } }
+@media (max-width:374px) { .narrowTabs { gap:2px; } .narrowTabs button { padding:0 4px; gap:2px; font-size:.90625rem; } }
+/*
+ * 글자 크기 설정을 키우면(기본 16px → 24·32px) 탭 넷이 한 줄에 안 들어가 글자가 잘렸다 — 두 줄(2×2)로.
+ * em 미디어 조건은 브라우저 기본 글자 크기 기준이라 기본 글자(16px)에서는 328px 이하에서만 켜진다(그때도 넷이 안 들어간다).
+ */
+@media (max-width:20.5em) { .narrowTabs { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 .dot { position:absolute; top:7px; right:7px; width:8px; height:8px; border-radius:50%; background:#f04452; box-shadow:0 0 0 2px var(--app-raised); }
 
 /* 앱(키보드가 뜨면 화면이 줄어듦) — 낮은 화면에서 입력 중이면 탭 줄을 접어 입력창 자리를 남긴다 */
@@ -201,42 +206,42 @@
  * 카드 위 얇은 줄은 칸이 스크롤해도 위에 붙어 있다. 본문은 가운데 760px.
  */
 .liveSummary { width:100%; display:flex; flex-direction:column; color:#191f28; letter-spacing:-0.01em; }
-.sumStrip { position:sticky; top:0; z-index:1; height:42px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid #eef0f3; background:#fff; font-size:12.5px; color:#4e5968; }
+.sumStrip { position:sticky; top:0; z-index:1; height:42px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid #eef0f3; background:#fff; font-size:.78125rem; color:#4e5968; }
 .sumStrip > svg { flex-shrink:0; color:#8b95a1; }
-.sumStrip h3 { margin:0; font-size:13px; font-weight:650; color:#191f28; white-space:nowrap; }
-.sumStripNote { margin-left:auto; font-size:12px; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sumStrip h3 { margin:0; font-size:.8125rem; font-weight:650; color:#191f28; white-space:nowrap; }
+.sumStripNote { margin-left:auto; font-size:.75rem; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .sumBody { width:100%; max-width:760px; margin:0 auto; padding:30px 28px 48px; }
 .sumHead { border-radius:10px; scroll-margin:56px 0 24px; }
-.sumTitle { margin:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:22px; font-weight:750; line-height:1.4; letter-spacing:-0.02em; word-break:keep-all; overflow-wrap:anywhere; }
-.sumLead { margin:6px 0 0; font-size:14px; line-height:1.6; color:#4e5968; }
+.sumTitle { margin:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:1.375rem; font-weight:750; line-height:1.4; letter-spacing:-0.02em; word-break:keep-all; overflow-wrap:anywhere; }
+.sumLead { margin:6px 0 0; font-size:.875rem; line-height:1.6; color:#4e5968; }
 .sumGroup { margin-top:22px; }
-.sumGroup h4 { margin:0 0 6px; font-size:12px; font-weight:700; letter-spacing:.02em; color:#5f6b7c; }
+.sumGroup h4 { margin:0 0 6px; font-size:.75rem; font-weight:700; letter-spacing:.02em; color:#5f6b7c; }
 .liveSummary dl { margin:0; border-top:1px solid #eef0f3; }
 .sumStats + dl { margin-top:8px; border-top:0; }
 .liveSummary dl > div { display:grid; grid-template-columns:132px minmax(0,1fr) auto; gap:16px; align-items:baseline; padding:10px 6px; border-bottom:1px solid #eef0f3; scroll-margin:56px 0 24px; }
-.liveSummary dt { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0; font-size:13px; color:#5f6b7c; }
-.liveSummary dt small { padding:1px 6px; border-radius:5px; background:#f1f3f6; font-size:11px; font-weight:600; color:#4e5968; }
-.liveSummary dd { margin:0; font-size:14px; line-height:1.55; color:#191f28; white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
+.liveSummary dt { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0; font-size:.8125rem; color:#5f6b7c; }
+.liveSummary dt small { padding:1px 6px; border-radius:5px; background:#f1f3f6; font-size:.6875rem; font-weight:600; color:#4e5968; }
+.liveSummary dd { margin:0; font-size:.875rem; line-height:1.55; color:#191f28; white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
 /* 방금 대화에서 정한 줄 — 옅은 파랑 바탕 · '방금 정함'(다음 답까지), 처음 반영될 때 잠깐 테두리로 밝힌다 */
 .liveSummary dl > div[data-fresh] { border-radius:8px; border-bottom-color:transparent; background:linear-gradient(90deg,#eef5ff,#f7fbff); animation:studioFresh 1.8s ease-out; }
 .liveSummary dl > div[data-fresh] dd { font-weight:650; }
 .sumHead[data-fresh] { animation:studioFresh 1.8s ease-out; }
 @keyframes studioFresh { from { box-shadow:0 0 0 3px rgba(49,130,246,.28); } to { box-shadow:0 0 0 3px rgba(49,130,246,0); } }
-.sumTag { padding:2px 6px; border-radius:5px; background:#e8f3ff; color:#1b64da; font-size:11px; font-weight:650; letter-spacing:0; white-space:nowrap; }
-.sumTitle .sumTag { font-size:11.5px; }
+.sumTag { padding:2px 6px; border-radius:5px; background:#e8f3ff; color:#1b64da; font-size:.6875rem; font-weight:650; letter-spacing:0; white-space:nowrap; }
+.sumTitle .sumTag { font-size:.71875rem; }
 .sumStats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
 .sumStats > div { min-width:0; padding:10px 12px; border:1px solid #eef0f3; border-radius:10px; background:#fbfcfd; scroll-margin:56px 0 24px; }
 .sumStats > div[data-fresh] { border-color:#b7d3fb; background:#f4f9ff; animation:studioFresh 1.8s ease-out; }
-.sumStatLabel { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:12px; color:#5f6b7c; }
-.sumStats strong { display:block; margin-top:2px; font-size:18px; font-weight:750; letter-spacing:-0.02em; overflow-wrap:anywhere; }
-.sumStats strong small { margin-left:4px; font-size:11.5px; font-weight:500; color:#5f6b7c; }
+.sumStatLabel { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:.75rem; color:#5f6b7c; }
+.sumStats strong { display:block; margin-top:2px; font-size:1.125rem; font-weight:750; letter-spacing:-0.02em; overflow-wrap:anywhere; }
+.sumStats strong small { margin-left:4px; font-size:.71875rem; font-weight:500; color:#5f6b7c; }
 .sumTodo { margin:0; padding:0; list-style:none; display:grid; grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); gap:8px; }
-.sumTodo li { padding:9px 10px; border:1px dashed #d5dbe2; border-radius:10px; font-size:12.5px; line-height:1.35; color:#5f6b7c; word-break:keep-all; text-wrap:balance; }
+.sumTodo li { padding:9px 10px; border:1px dashed #d5dbe2; border-radius:10px; font-size:.78125rem; line-height:1.35; color:#5f6b7c; word-break:keep-all; text-wrap:balance; }
 .sumTodo li[data-now] { border:1px solid #b7d3fb; background:#f4f9ff; color:#1b64da; font-weight:650; }
-.sumTodo li small { display:block; margin-top:2px; font-size:11px; font-weight:500; }
-.sumFoot { margin:18px 0 0; display:flex; align-items:center; gap:6px; font-size:12.5px; line-height:1.6; color:#5f6b7c; word-break:keep-all; }
+.sumTodo li small { display:block; margin-top:2px; font-size:.6875rem; font-weight:500; }
+.sumFoot { margin:18px 0 0; display:flex; align-items:center; gap:6px; font-size:.78125rem; line-height:1.6; color:#5f6b7c; word-break:keep-all; }
 .sumFoot svg { flex-shrink:0; color:#8b95a1; }
-.liveSummaryEmpty { margin:0; padding:24px 18px; border:1px dashed var(--app-line); border-radius:12px; font-size:15px; line-height:1.7; color:var(--app-muted); text-align:center; word-break:keep-all; }
+.liveSummaryEmpty { margin:0; padding:24px 18px; border:1px dashed var(--app-line); border-radius:12px; font-size:.9375rem; line-height:1.7; color:var(--app-muted); text-align:center; word-break:keep-all; }
 @media (prefers-reduced-motion:reduce) { .liveSummary dl > div[data-fresh], .sumHead[data-fresh], .sumStats > div[data-fresh] { animation:none; } }
 /* 칸 본문의 작은 것은 가운데에 두지만(.paneBody > :not([data-embedded])) 요약은 위에서부터 읽는다 */
 .paneBody > .liveSummary { margin-block:0; }
@@ -249,7 +254,7 @@
 /* 아직 답이 없을 때 — 안내를 카드 한가운데에 작게(대표 요청 2026-10-24: 위에 붙어 있어 어색했다) */
 .sumBody[data-empty] { flex:1; display:flex; flex-direction:column; justify-content:center; }
 .sumBody[data-empty] .liveSummaryEmpty { border:0; padding:0; display:flex; flex-direction:column; align-items:center; gap:10px; color:#8b95a1; }
-.sumBody[data-empty] .liveSummaryEmpty p { margin:0; font-size:15px; color:#5f6b7c; }
+.sumBody[data-empty] .liveSummaryEmpty p { margin:0; font-size:.9375rem; color:#5f6b7c; }
 .sumBody[data-empty] > .sumGroup { display:none; }
 .liveSummary:has(.sumBody[data-empty]) { min-height:100%; }
 

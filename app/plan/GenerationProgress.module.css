@@ -2,19 +2,19 @@
 .dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 24px; border: 0; border-radius: 20px; background: #fff; color: #191f28; box-shadow: 0 24px 64px rgba(16, 24, 40, .24); overflow: auto; }
 .dialog::backdrop { background: rgba(9, 16, 28, .45); }
 .dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.dialog h2 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; }
+.dialog h2 { margin: 0; font-size: 1.25rem; line-height: 1.4; font-weight: 700; }
 .close { display: grid; place-items: center; width: 36px; height: 36px; margin: -6px -8px 0 0; border: 0; border-radius: 10px; background: transparent; color: #6b7684; cursor: pointer; }
 .close:hover { background: #f2f4f6; }
-.lead { margin: 8px 0 18px; color: #6b7684; font-size: 14px; line-height: 1.6; }
+.lead { margin: 8px 0 18px; color: #6b7684; font-size: .875rem; line-height: 1.6; }
 .meter { display: grid; gap: 6px; margin-bottom: 16px; }
-.meter span { font-size: 13px; font-weight: 600; color: #246bd1; }
+.meter span { font-size: .8125rem; font-weight: 600; color: #246bd1; }
 .meter progress { width: 100%; height: 8px; border: 0; border-radius: 8px; overflow: hidden; appearance: none; background: #e5e8eb; }
 .meter progress::-webkit-progress-bar { background: #e5e8eb; border-radius: 8px; }
 .meter progress::-webkit-progress-value { background: #246bd1; border-radius: 8px; transition: width .4s ease; }
 .meter progress::-moz-progress-bar { background: #246bd1; }
 .list { display: grid; gap: 2px; margin: 0 0 20px; padding: 0; list-style: none; }
-.list li { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 4px; color: #6b7684; font-size: 14px; }
-.list li small { margin-left: auto; font-size: 12px; color: #b0b8c1; }
+.list li { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 4px; color: #6b7684; font-size: .875rem; }
+.list li small { margin-left: auto; font-size: .75rem; color: #b0b8c1; }
 .list li[data-state="done"] { color: #191f28; }
 .list li[data-state="done"] small { color: #246bd1; }
 .list li[data-state="current"] { color: #191f28; font-weight: 600; }
@@ -25,7 +25,7 @@ li[data-state="current"] .mark { border-color: #246bd1; }
 li[data-state="current"] .mark i { width: 10px; height: 10px; border: 2px solid #246bd1; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .dialog > footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.secondary, .primary { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.secondary, .primary { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; font-size: .9375rem; font-weight: 600; text-decoration: none; cursor: pointer; }
 .secondary { border: 1px solid #d1d6db; background: #fff; color: #191f28; }
 .primary { border: 0; background: #246bd1; color: #fff; }
 .primary[aria-disabled="true"] { opacity: .45; cursor: default; }
@@ -38,14 +38,14 @@ li[data-state="current"] .mark i { width: 10px; height: 10px; border: 2px solid 
 /* 작업실 대화 칸 안의 진행 카드 — 대화 말풍선 흐름 안에 놓이는 흰 카드(팝업 대신) */
 .card { display: grid; gap: 10px; width: min(100%, 520px); margin: 4px 0 14px; padding: 16px 18px; border: 1px solid #e3e6ea; border-radius: 18px; background: #fff; color: #191f28; }
 .card > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.card > header strong { font-size: 15px; font-weight: 700; }
-.card > header span { flex-shrink: 0; color: #8b95a1; font-size: 13px; }
+.card > header strong { font-size: .9375rem; font-weight: 700; }
+.card > header span { flex-shrink: 0; color: #8b95a1; font-size: .8125rem; }
 .card progress { width: 100%; height: 6px; border: 0; border-radius: 6px; overflow: hidden; appearance: none; background: #e5e8eb; }
 .card progress::-webkit-progress-bar { background: #e5e8eb; border-radius: 6px; }
 .card progress::-webkit-progress-value { background: #246bd1; border-radius: 6px; transition: width .4s ease; }
 .card progress::-moz-progress-bar { background: #246bd1; }
 /* 대화 칸 마무리 묶음(.complete p — 아래 여백 22px)에 들어가도 줄 사이가 벌어지지 않게 한 단계 강하게(r37 휴대폰 점검: 줄 사이 ~130px) */
-.card.card p { margin: 0; font-size: 13.5px; line-height: 1.6; word-break: keep-all; text-wrap: pretty; }
+.card.card p { margin: 0; font-size: .84375rem; line-height: 1.6; word-break: keep-all; text-wrap: pretty; }
 .cardDone { display: flex; align-items: flex-start; gap: 6px; color: #4e5968; }
 .cardDone svg { margin-top: 3px; color: #246bd1; }
 .cardCurrent { display: flex; align-items: center; gap: 8px; color: #191f28; font-weight: 700; }
@@ -55,10 +55,10 @@ li[data-state="current"] .mark i { width: 10px; height: 10px; border: 2px solid 
 /* 작업실 PC 대화 칸의 한 줄 상태(compact) */
 .card.cardLine { gap: 0; padding: 12px 16px; border-radius: 14px; }
 .cardCount { margin-left: auto; padding-left: 12px; color: #8b95a1; font-weight: 500; white-space: nowrap; }
-.cardNote { color: #6b7684; font-size: 12.5px !important; }
+.cardNote { color: #6b7684; font-size: .78125rem !important; }
 .card[data-state="stalled"] > header strong { color: #ad343d; }
 .cardActions { display: flex; flex-wrap: wrap; gap: 6px; }
-.cardPrimary, .cardSecondary { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.cardPrimary, .cardSecondary { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 20px; font-size: .84375rem; font-weight: 600; cursor: pointer; }
 .cardPrimary { border: 0; background: #111418; color: #fff; }
 .cardPrimary:disabled { opacity: .45; cursor: default; }
 .cardSecondary { border: 1px solid #d5dae0; background: #fff; color: #2b3036; }
