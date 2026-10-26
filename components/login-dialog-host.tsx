@@ -7,8 +7,13 @@ import type { AuthMode } from "./account-auth-form";
 import { safeNextPath } from "../lib/http/safe-next";
 import { preloadAfterFirstInteraction, preloadOnce } from "../lib/client/preload-on-intent";
 import { OPEN_LOGIN_EVENT, setLoginHostMounted } from "./login-dialog-core";
-import accountStyles from "../app/account/Account.module.css";
+/*
+ * CSS 순서는 폼을 나눠 받기 전과 같게: 로그인 폼 → 팝업 → 계정 화면(Account) 순서로 이 자리에서 바로 싣는다(JS 는 없다).
+ * 폼 CSS 가 폼과 함께 나중에 오면 계정 화면 규칙보다 뒤에 놓여 팝업 높이·여백이 달라졌다(390·1440 비교로 확인).
+ */
+import "./account-auth-form.module.css";
 import styles from "./login-dialog.module.css";
+import accountStyles from "../app/account/Account.module.css";
 
 /*
  * 로그인 팝업 틀 — 모든 화면(app/layout.tsx)에 붙는다. 열기는 openLogin()(login-dialog-core).
