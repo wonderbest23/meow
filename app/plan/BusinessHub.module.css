@@ -154,3 +154,8 @@
 }
 /* 설명 없이 제목 바로 아래 단추면 제목→단추 24px(제목 아래 8 + 16) */
 .empty :is(h1, h2) + .primary { margin-top: 16px; }
+/* 다른 화면으로 가는 글 단추 — 글 뒤에 › (점검 r41-B) */
+.textButtonNav { display:inline-flex; align-items:center; gap:2px; }
+/* 할 일 화면: 제목→안내 8px, 안내 마지막 줄이 '남아요.'처럼 짧게 남지 않게 */
+.content h2 + .actionLead { margin-top:-8px; text-wrap:balance; }
+.content h3 + .primary { margin-top:24px; }

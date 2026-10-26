@@ -96,3 +96,5 @@
 .launch .finish h2, .launch h2[tabindex]:has(+ p) { margin-bottom:0; }
 .launch .finish h2 + p, .launch h2[tabindex] + p { margin-top:8px; }
 @media (min-width:1024px) { .studioNarrowOnly { display:none !important; } }
+/* 점검 r41-B: 휴대폰·태블릿에서 홍보 키트 '복사'·주차 줄도 누르는 자리 44px — 글 줄 높이는 그대로(위아래 -4px) */
+@media (max-width: 1023px) { .kit .kitBlock button { min-height: 44px; min-width: 44px; margin: -4px 0; } .kit .kitWeek > summary { padding: 12px 0; } }

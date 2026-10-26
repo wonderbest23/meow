@@ -17490,7 +17490,7 @@ html:has([data-app-surface]) { background: #fff; }
 /* 결제 주문·환불 요청 — 보기 칸·찾기, 읽을 수 있는 글자(8~10px 였다), 되돌릴 수 없는 단추는 빨갛게 */
 .admin-payment-tabs { width: min(1180px, calc(100% - 40px)); margin: 20px auto 0; display: flex; gap: 6px; }
 .admin-payment-tabs button { min-height: 40px; padding: 0 16px; border: 1px solid var(--app-line, #cccae3); border-radius: 999px; background: var(--app-surface, #fff); color: var(--app-body, #585667); font-size: 14px; font-weight: 700; cursor: pointer; }
-.admin-payment-tabs button[aria-selected="true"] { border-color: #3272db; background: #eef6ff; color: #3272db; }
+.admin-payment-tabs button[aria-selected="true"] { border-color: #3272db; background: #eef6ff; color: #1b64da; }
 .admin-payment-tabs + .admin-payment-summary { margin-top: 12px; }
 .admin-payment-summary:has(.admin-payment-search) { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; }
 .admin-payment-search { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -17558,3 +17558,31 @@ html:has([data-app-surface]) { background: #fff; }
 .sc-field-bar:hover, .sc-field-bar:focus-within { opacity: 1; z-index: 3; }
 .sc-field-bar:hover > button, .sc-field-bar:focus-within > button { display: inline-flex; align-items: center; }
 .sc-field-bar > button.sc-field-name { padding: 0 8px; color: #e3b3bd; font-weight: 800; }
+
+/* 점검 r41-B: 관리자 화면 이동 링크는 → 대신 › (lucide ChevronRight) */
+.admin-link-chevron { width: 14px !important; height: 14px !important; margin-left: 2px; vertical-align: -2px; flex: none; }
+/* 문의가 하나도 없으면 빈 안내를 남은 자리 세로 가운데에(PC) — 예전엔 목록 맨 위에 붙어 있었다 */
+.admin-support-workspace[data-empty] .admin-conversation-list > div { display: flex; flex-direction: column; justify-content: center; }
+/* 휴대폰 문의 카드 키가 커져도 '진행 중' 표가 세로로 늘어나지 않게 */
+.admin-conversation-list > div > button { align-content: start; }
+
+/*
+ * 점검 r41-B: 계좌이체 안내(/payment/transfer) — 읽을 수 있는 글자(8~11px 였다, 결제 고지까지 9px),
+ * 아래 링크 누르는 자리(13px 였다 → 휴대폰 44px·PC 32px), '내 사업 자료 확인하기'의 › 되살리기(옛 단추 아이콘 숨김 규칙에 걸렸다)
+ */
+.manual-payment-page > header > span { font-size: 12px; }
+.manual-payment-page > header > a { display: inline-flex; align-items: center; min-height: 44px; }
+.manual-payment-state small { font-size: 12px; }
+.manual-payment-state p { font-size: 14px; text-wrap: balance; }
+.manual-bank-account small, .manual-bank-account em { font-size: 13px; }
+.manual-bank-account button { font-size: 14px; }
+.manual-payment-card dt { font-size: 13px; }
+.manual-payment-card dd { font-size: 14px; }
+.manual-deposit-report, .manual-project-start { font-size: 15px; }
+.manual-receipt-status strong { font-size: 14px; }
+.manual-receipt-status small { font-size: 13px; }
+.manual-payment-card > footer p { font-size: 12px; }
+.manual-payment-card > footer nav { margin-top: 4px; gap: 0 16px; }
+.manual-payment-card > footer a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; font-size: 13px; }
+@media (min-width: 1024px) { .manual-payment-card > footer a { min-height: 32px; } }
+.manual-project-start svg { display: inline-block !important; width: 18px; height: 18px; }
