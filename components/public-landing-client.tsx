@@ -3,7 +3,8 @@
 import { FormEvent, useEffect, useRef, useState, type CSSProperties } from "react";
 import { isLandingKit, landingKitCredit } from "../lib/landing/kits";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
-import type { BrainwavePageData } from "./brainwave-page";
+import { BrainwaveLayoutHintContext, type BrainwavePageData } from "./brainwave-page";
+import type { BrainwaveLayoutHint } from "../lib/landing/layout-hint";
 import { CalendarCheck, Check, ChevronDown, ChevronRight, MessageCircle, PencilLine, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
 import { draftPhone, quickActions, withContactLinks } from "../lib/landing/contact-method";
 import { landingCollectedItems, privacyPolicyWithContact, type LandingDraft } from "../lib/landing/domain";
@@ -27,11 +28,14 @@ export function PublicLandingClient({
   slug,
   config,
   brainwavePage = null,
+  layoutHint = null,
 }: {
   slug: string;
   config: LandingDraft;
   /** 킷 페이지 트리 — 서버가 미리 읽어 넘기면 첫 HTML 에 글이 다 들어간다 */
   brainwavePage?: BrainwavePageData | null;
+  /** 서버가 요청 머리말로 짐작한 배치(휴대폰이면 처음부터 휴대폰 배치) — lib/landing/layout-hint.ts */
+  layoutHint?: BrainwaveLayoutHint | null;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
   const viewed = useRef(false);
@@ -166,7 +170,7 @@ export function PublicLandingClient({
         <button onClick={moveToForm}>{config.ctaLabel}</button>
       </nav>}
 
-      {config.pageData ? <LandingBlocksRenderer data={withContactLinks(config) ?? config.pageData} preloaded={brainwavePage} /> : <><section className={`public-landing-hero ${config.heroImageUrl ? "with-image" : "without-image"}`} style={heroStyle} aria-label={config.heroImageAlt}>
+      {config.pageData ? <BrainwaveLayoutHintContext.Provider value={layoutHint}><LandingBlocksRenderer data={withContactLinks(config) ?? config.pageData} preloaded={brainwavePage} /></BrainwaveLayoutHintContext.Provider> : <><section className={`public-landing-hero ${config.heroImageUrl ? "with-image" : "without-image"}`} style={heroStyle} aria-label={config.heroImageAlt}>
         <div className="public-landing-hero-copy">
           <span>{config.heroLabel}</span>
           <h1>{config.headline}</h1>

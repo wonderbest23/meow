@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode, type Ref } from "react";
 import localFont from "next/font/local";
 /*
  * 손님이 보는 홈페이지 한글 글꼴 — Pretendard(OFL). 글자 범위별로 92조각이라 쓰인 글자 조각만 받는다.
@@ -16,6 +16,8 @@ import { BrainwaveBusinessMobile } from "./brainwave-business-mobile";
 import { businessNeedsFlow } from "../lib/landing/brainwave/layout-safety";
 import { sectionNameKo } from "../lib/landing/brainwave/section-names";
 import { responsivePhotoProps } from "../lib/landing/responsive-image";
+import type { BrainwaveLayoutHint } from "../lib/landing/layout-hint";
+import dualStyles from "./brainwave-stage.module.css";
 
 /*
  * 킷 글꼴 Gilroy 는 유료라 못 싣는다. 폭·굵기가 가장 가까운 무료 글꼴 Urbanist 를
@@ -482,6 +484,20 @@ function MobileView({ layout, width, overrides, onPick, parentBox }: { layout: M
   );
 }
 
+/*
+ * 서버가 요청 머리말로 짐작한 배치(lib/landing/layout-hint.ts) — 공개 홈페이지만 넣는다.
+ * 폭을 재기 전(첫 HTML·하이드레이션)에만 쓰고, 폭을 재면 늘 잰 폭을 따른다.
+ * 편집기 미리보기는 넣지 않아 지금처럼 폭을 재서 그린다.
+ */
+export const BrainwaveLayoutHintContext = createContext<BrainwaveLayoutHint | null>(null);
+/* 휴대폰으로 짐작했는데 폭을 아직 모를 때 자동 재배치(MobileView)가 쓰는 폭 — 가장 흔한 휴대폰 폭 */
+const GUESSED_PHONE_WIDTH = 390;
+/*
+ * 휴대폰이 확실하면 가로로 돌려도(844~932px) 휴대폰 배치를 지킨다 — 640 에서 PC 배치로 바꾸면
+ * 서버가 그린 휴대폰 배치가 화면이 붙은 뒤 통째로 바뀌어 밀렸다(CLS 0.09~0.53, 가로 휴대폰 실측).
+ */
+const PHONE_LAYOUT_MAX = 960;
+
 /**
  * 1600 캔버스를 담는 무대. 폭을 재서 비율만큼 줄이고, 높이도 그만큼만 차지한다.
  * 폭이 640 이하면(또는 mode="mobile") 자동 재배치로 그린다.
@@ -505,6 +521,7 @@ export function BrainwaveStage({
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [width, setWidth] = useState(0);
+  const hint = useContext(BrainwaveLayoutHintContext);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -514,8 +531,18 @@ export function BrainwaveStage({
     ro.observe(el);
     return () => ro.disconnect();
   }, [page.w]);
-  const mobile = mode === "mobile" || (mode === "auto" && width > 0 && width <= 640);
-  const target = Math.max(200, width - 32);
+  /* 폭을 재기 전에는 서버의 짐작을 따른다 — 서버와 첫 그리기가 같아야 하이드레이션이 맞는다 */
+  const guess = mode === "auto" && width === 0 ? hint : null;
+  const mobile = mode === "mobile" || (mode === "auto" && (width > 0 ? width <= (hint === "mobile" ? PHONE_LAYOUT_MAX : 640) : guess === "mobile"));
+  const drawWidth = width || (guess === "mobile" ? GUESSED_PHONE_WIDTH : 0);
+  const target = Math.max(200, drawWidth - 32);
+  /*
+   * 손으로 짠 모바일판(사업 디자인 포함)은 폭과 상관없이 CSS 로 흐른다 — 폭을 모를 때(either)는
+   * PC·휴대폰 배치를 함께 싣고 CSS 가 무대 폭에 맞는 쪽만 보인다(brainwave-stage.module.css).
+   * 이 무대가 살아 있는 동안 감싸는 틀은 바뀌지 않는다(ref 가 같은 요소를 계속 잰다).
+   */
+  const handcrafted = mobile || hint === "either" ? renderBrainwaveMobile(page, overrides, onPick) : null;
+  const dual = mode === "auto" && hint === "either" && handcrafted !== null;
   /*
    * 등장 애니메이션 — 공개 화면·미리보기(onPick 없음)에서만. 섹션이 화면에 들어올 때
    * 살짝 떠오른다. 숨김 클래스는 JS 가 붙인다 — JS 가 없으면 그냥 다 보인다.
@@ -550,57 +577,67 @@ export function BrainwaveStage({
   const layout = useMemo(() => (mobile ? layoutPage(page.root, page.w, page.h, target) : null), [mobile, page, target]);
   /* 데스크톱: 숨긴 섹션만큼 끌어올리고, 저장된 섹션 순서대로 재배치한 좌표로 그린다 */
   const collapsed = useMemo(() => sectionLayout(page, overrides?.hidden, overrides?.order), [page, overrides?.hidden, overrides?.order]);
-  if (!mobile && overrides && businessNeedsFlow(page, overrides)) {
-    const sections = orderedSections(sectionBands(page), overrides.hidden, overrides.order).map(section => section.id);
-    return <div ref={ref} className={`bw-stage bw-business-flow ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>
-      <BrainwaveBusinessMobile pageId={page.id} overrides={overrides} hidden={expandHidden(page.root, overrides.hidden)} sectionOrder={sections} onPick={onPick} desktop />
-      {onPick ? collapsed.strips.filter(strip => restorableSections(page.id).includes(strip.id)).map(strip => <button key={strip.id} type="button" onClick={event => { event.stopPropagation(); onPick("restore", strip.id, event.currentTarget); }}>숨긴 구역 되살리기</button>) : null}
-    </div>;
-  }
+  const desktopView = (stageRef?: Ref<HTMLDivElement>) => {
+    if (overrides && businessNeedsFlow(page, overrides)) {
+      const sections = orderedSections(sectionBands(page), overrides.hidden, overrides.order).map(section => section.id);
+      return <div ref={stageRef} className={`bw-stage bw-business-flow ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>
+        <BrainwaveBusinessMobile pageId={page.id} overrides={overrides} hidden={expandHidden(page.root, overrides.hidden)} sectionOrder={sections} onPick={onPick} desktop />
+        {onPick ? collapsed.strips.filter(strip => restorableSections(page.id).includes(strip.id)).map(strip => <button key={strip.id} type="button" onClick={event => { event.stopPropagation(); onPick("restore", strip.id, event.currentTarget); }}>숨긴 구역 되살리기</button>) : null}
+      </div>;
+    }
+    /*
+     * 비율은 CSS 가 먼저 계산한다(tan(atan2(100cqw, 1600px)) — 길이 나눗셈 대신).
+     * 서버에서 그린 HTML 도 첫 화면부터 맞는 크기로 서고, 자바스크립트는 그 값을
+     * 같은 숫자로 덮어쓸 뿐이다(옛 브라우저 대비).
+     */
+    return (
+      <div ref={stageRef} className={`bw-stage ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ "--bw-w": page.w, "--bw-h": collapsed.h, "--bw-js-scale": scale, maxWidth } as CSSProperties}>
+        <div className="bw-fit">
+          <div className="bw-canvas" style={{ width: page.w, height: collapsed.h }}>
+            <BrainwaveNodeView node={collapsed.root} overrides={overrides} onPick={onPick} />
+            {/* 숨긴 섹션의 빈 자리 — 편집기에서만 '되살리기' 줄이 그 위치에 뜬다 */}
+            {onPick ? collapsed.strips.filter(strip => overrides?.contentMode !== "business" || restorableSections(page.id).includes(strip.id)).map((strip) => (
+              <button
+                key={strip.id}
+                type="button"
+                className="bw-restore-strip"
+                style={{ top: strip.y }}
+                onClick={(e) => { e.stopPropagation(); onPick("restore", strip.id, e.currentTarget); }}
+              >+ 숨긴 구역 되살리기{strip.name ? ` — ${sectionNameKo(strip.name)}` : ""}</button>
+            )) : null}
+          </div>
+        </div>
+      </div>
+    );
+  };
   /*
    * 손으로 짠 모바일판이 있는 페이지는 그걸 먼저 쓴다.
    * 킷에는 모바일 아트보드가 없어(프레임 87개 전수 확인 — 전부 데스크톱 폭)
    * 자동 재배치는 어디까지나 폴백이다. 글·사진은 같은 노드 id 로 읽으므로
    * 편집기에서 고친 내용이 PC·모바일에 똑같이 반영된다.
    */
-  if (mobile) {
-    const handcrafted = renderBrainwaveMobile(page, overrides, onPick);
+  const mobileView = (stageRef?: Ref<HTMLDivElement>) => {
     if (handcrafted) {
-      return <div ref={ref} className={`bw-stage bw-mobile ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>{width > 0 ? handcrafted : null}</div>;
+      return <div ref={stageRef} className={`bw-stage bw-mobile ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>{width > 0 || guess ? handcrafted : null}</div>;
     }
-  }
-  if (mobile && layout) {
+    if (!layout) return null;
     return (
-      <div ref={ref} className={`bw-stage bw-mobile ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>
+      <div ref={stageRef} className={`bw-stage bw-mobile ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>
         {/* 양옆 16px 여백 — 잎이 화면 끝에 붙으면 글이 가장자리에 닿는다 */}
-        {width > 0 ? <MobileView layout={layout} width={target} overrides={overrides} onPick={onPick} /> : null}
+        {drawWidth > 0 ? <MobileView layout={layout} width={target} overrides={overrides} onPick={onPick} /> : null}
+      </div>
+    );
+  };
+  if (dual) {
+    const measured = width > 0;
+    return (
+      <div ref={ref} className={`${dualStyles.dual} ${measured ? dualStyles.measured : ""}`} style={{ maxWidth }}>
+        <div className={dualStyles.desktop}>{measured && mobile ? null : desktopView()}</div>
+        <div className={dualStyles.mobile}>{measured && !mobile ? null : mobileView()}</div>
       </div>
     );
   }
-  /*
-   * 비율은 CSS 가 먼저 계산한다(tan(atan2(100cqw, 1600px)) — 길이 나눗셈 대신).
-   * 서버에서 그린 HTML 도 첫 화면부터 맞는 크기로 서고, 자바스크립트는 그 값을
-   * 같은 숫자로 덮어쓸 뿐이다(옛 브라우저 대비).
-   */
-  return (
-    <div ref={ref} className={`bw-stage ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ "--bw-w": page.w, "--bw-h": collapsed.h, "--bw-js-scale": scale, maxWidth } as CSSProperties}>
-      <div className="bw-fit">
-        <div className="bw-canvas" style={{ width: page.w, height: collapsed.h }}>
-          <BrainwaveNodeView node={collapsed.root} overrides={overrides} onPick={onPick} />
-          {/* 숨긴 섹션의 빈 자리 — 편집기에서만 '되살리기' 줄이 그 위치에 뜬다 */}
-          {onPick ? collapsed.strips.filter(strip => overrides?.contentMode !== "business" || restorableSections(page.id).includes(strip.id)).map((strip) => (
-            <button
-              key={strip.id}
-              type="button"
-              className="bw-restore-strip"
-              style={{ top: strip.y }}
-              onClick={(e) => { e.stopPropagation(); onPick("restore", strip.id, e.currentTarget); }}
-            >+ 숨긴 구역 되살리기{strip.name ? ` — ${sectionNameKo(strip.name)}` : ""}</button>
-          )) : null}
-        </div>
-      </div>
-    </div>
-  );
+  return (mobile ? mobileView(ref) : null) ?? desktopView(ref);
 }
 
 /* 페이지 JSON 은 큰 편(60~120KB)이라 고른 것만 불러온다 */

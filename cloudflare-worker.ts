@@ -5,6 +5,7 @@ import { PLAN_SECTION_INTERNAL_PATH, PLAN_SECTION_API_PATH } from "./lib/plan-bu
 import { customerSiteRequest, stagingUnavailable } from "./lib/staging/safety";
 import { signBody } from "./lib/plan-builder/section-signature";
 import { betaApiBoundary } from "./lib/staging/beta-boundary";
+import { withLandingVary } from "./lib/landing/layout-hint";
 
 export { DraftPackageWorkflow } from "./lib/draft-package/workflow";
 export { DirectPlanWorkflow } from "./lib/direct-plan/workflow";
@@ -23,7 +24,9 @@ export default {
       target.pathname = PLAN_SECTION_API_PATH;
       return handler.fetch(new Request(target, request), env, context);
     }
-    return handler.fetch(customerSiteRequest(request, env.PLATFORM_APP_ORIGIN), env, context);
+    const forwarded = customerSiteRequest(request, env.PLATFORM_APP_ORIGIN);
+    // 공개 홈페이지는 기기마다 처음 배치가 다른 HTML — 캐시가 섞이지 않게 Vary 를 덧붙인다(lib/landing/layout-hint.ts)
+    return withLandingVary(new URL(forwarded.url).pathname, await handler.fetch(forwarded, env, context));
   },
   /*
    * 예약 실행(wrangler.jsonc triggers.crons): 홈페이지 문의 알림 중 재시도 시각이 된 것을 다시 보낸다.
