@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { X } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import type { IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import type { IntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { EDITABLE_FACT_IDS, factNeedles, findFactRanges, parseWon, type EditableFact } from "../../../lib/plan-builder/fact-highlight";
@@ -163,7 +163,8 @@ export function useFactEdit(planId: string | null, active: boolean) {
   const [snapshot, setSnapshot] = useState<IntakeSnapshot | null>(null);
   const [owner, setOwner] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<{ message: string; href?: string; label?: string } | null>(null);
+  /* retry — 계획서에 반영하기가 잠시 실패했을 때만: 칸 안에 [다시 시도]를 둔다(대표 결정 r42: 반영 실패 안내·다시 시도는 어느 자리에서든) */
+  const [error, setError] = useState<{ message: string; href?: string; label?: string; retry?: boolean } | null>(null);
   /* quiet — 대화 수정 미리보기를 위해 뒤에서 다시 읽을 때는 실패해도 안내를 띄우지 않는다(다음 차례에 다시 읽는다) */
   const load = useCallback(async (quiet = false) => {
     if (!planId) return;
@@ -184,10 +185,10 @@ export function useFactEdit(planId: string | null, active: boolean) {
       if (response.status === 409) { await load(); setError({ message: "다른 곳에서 먼저 바뀐 내용이 있어요. 최신 내용으로 다시 불러왔어요." }); return null; }
       if (response.status === 402) { setError({ message: data?.message || "다시 생성 횟수가 모자라요.", href: `/plan/pay?planId=${encodeURIComponent(planId)}&planType=${encodeURIComponent(snapshot.planType)}&product=regen`, label: "횟수 추가하기" }); return null; }
       if (response.status === 401 || data?.login) { setError({ message: "로그인하면 계획서에 반영할 수 있어요.", href: `/account?next=${encodeURIComponent(`/plan/document?planId=${planId}&edit=facts`)}`, label: "로그인" }); return null; }
-      if (!response.ok || !data?.plan) { setError({ message: data?.message || "저장하지 못했어요. 잠시 후 다시 시도해 주세요." }); return null; }
+      if (!response.ok || !data?.plan) { setError({ message: data?.message || "저장하지 못했어요. 잠시 후 다시 시도해 주세요.", ...(command.action === "prepare" ? { retry: true } : {}) }); return null; }
       setSnapshot(data.plan);
       return data;
-    } catch { setError({ message: "인터넷 연결이 잠시 끊겼어요. 다시 시도해 주세요." }); return null; }
+    } catch { setError({ message: "인터넷 연결이 잠시 끊겼어요. 다시 시도해 주세요.", ...(command.action === "prepare" ? { retry: true } : {}) }); return null; }
     finally { setBusy(false); }
   }, [snapshot, owner, planId, load]);
   const facts = useMemo(() => editableFacts(snapshot), [snapshot]);
@@ -204,12 +205,12 @@ function draftSubmission(question: IntakeQuestion, draft: AnswerDraft): { value:
 }
 
 /** The card above the document: every editable fact as a chip. "계획서에 반영하기" lives once, in the edit bar above (대표 결정 r39). */
-export function FactCard({ edit, onPick }: { edit: ReturnType<typeof useFactEdit>; onPick: (questionId: string, anchor: DOMRect) => void }) {
+export function FactCard({ edit, onPick, onRetry }: { edit: ReturnType<typeof useFactEdit>; onPick: (questionId: string, anchor: DOMRect) => void; onRetry?: () => void }) {
   return <section className={styles.factCard} aria-label="고칠 수 있는 내용" data-fact-card>
     <strong>고칠 수 있는 곳만 표시했어요</strong>
     {!edit.snapshot && !edit.error && <p role="status">사업 정보를 불러오고 있어요…</p>}
     {edit.facts.length > 0 && <div className={styles.factChips}>{edit.facts.map(fact => <button key={fact.questionId} type="button" data-fact-chip={fact.questionId} disabled={edit.busy} onClick={event => onPick(fact.questionId, event.currentTarget.getBoundingClientRect())}><small>{fact.label}</small>{factShown(fact)}</button>)}</div>}
-    {edit.error && <p className={styles.factError} role="alert">{edit.error.message} {edit.error.href && <Link href={edit.error.href}>{edit.error.label}</Link>}</p>}
+    {edit.error && <p className={styles.factError} role="alert">{edit.error.message} {edit.error.href && <Link href={edit.error.href}>{edit.error.label}</Link>}{edit.error.retry && onRetry && <button type="button" className={styles.factRetry} disabled={edit.busy} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />다시 시도</button>}</p>}
   </section>;
 }
 

@@ -849,8 +849,8 @@ export function RewriteConfirm({ snapshot, disabled, label = "계획서에 반�
 export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false, preparing = false, payNote, reflect = "button" }: {
   snapshot: IntakeSnapshot; prepared: boolean; disabled: boolean; aiBusy: boolean; onDesign: () => void; onPrepare: () => void; secondary?: ReactNode; announce?: boolean;
   /**
-   * 계획서가 이미 있을 때 '계획서에 반영하기'의 모양 — 작업실 PC 는 계획서 칸(띠 · 노란 카드)에 같은 단추가 있어 대화 칸은 작은 글 링크(link),
-   * 오른쪽에 계획서 칸이 보이지 않으면 두지 않는다(none). 휴대폰 · 예전 화면은 큰 단추(button) 그대로(r37 점검: 세 번 보였다)
+   * 계획서가 이미 있을 때 '계획서에 반영하기'의 모양 — 작업실 PC 에서 오른쪽에 계획서 칸이 보이면 그 칸 위 파란 단추 하나만이라 두지 않고(none),
+   * 계획서 칸이 안 보이면 대화 칸에 작은 글 링크(link). 휴대폰 · 예전 화면은 큰 단추(button) 그대로(r37 점검: 세 번 보였다 · 대표 결정 r42: chatReflectStyle)
    */
   reflect?: "button" | "link" | "none";
   /** '사업계획서 만들기' 아래 한 줄 — 결제 전이면 가격(웹), 이미 결제했으면 바로 작성. 없으면 기본 안내 */

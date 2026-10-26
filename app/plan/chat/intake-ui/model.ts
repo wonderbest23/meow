@@ -447,6 +447,16 @@ export function previewIntakeAnswer(snapshot: IntakeSnapshot, command: IntakeCom
 
 export type IntakeNextStep = "design" | "prepare" | "open" | null;
 /**
+ * 계획서가 있는 사업에서 대화 칸 '계획서에 반영하기'의 모양(대표 결정 r42).
+ * PC 작업실에서 오른쪽에 계획서 칸이 보이면 그 칸 위 파란 단추 하나만 — 대화 칸 링크는 숨긴다(none).
+ * 계획서 칸이 안 보이면(PC 다른 탭 · 계획서 칸이 잠김) 대화 칸 옅은 링크(link), 휴대폰·태블릿·예전 화면은 큰 단추(button).
+ * 반영 실패 안내 · [다시 시도]는 이 단추와 따로 대화 칸 알림에 있어 어느 모양이든 보인다.
+ */
+export function chatReflectStyle(pro: boolean, studioSide: string | null | undefined): "button" | "link" | "none" {
+  return !pro ? "button" : studioSide === "plan" ? "none" : "link";
+}
+
+/**
  * 지금 해야 할 다음 단계 하나. 기본 질문 완료 → 사업안 만들기(방향 요약, 30~40초) → 사업안이 현재 입력 기준이면 계획서 만들기(전체 문서, 몇 분) → 계획서 열기.
  * 두 제작 버튼을 동시에 보여 주지 않는다. 답변을 고쳐 사업안이 옛 기준이 되면 다시 사업안 만들기로 돌아온다.
  */
