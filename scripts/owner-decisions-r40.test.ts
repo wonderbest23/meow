@@ -11,6 +11,8 @@ import { LANDING_THEMES } from "../lib/landing/themes";
  * 5) 처음 열 때 이 기기에 없는 사업이면 서버에 지운 사업인지 바로 묻는다
  * 6) 동네 가게 기본 제목은 '오시는 길과 영업시간'(예전 문구도 자동 문구로 알아본다)
  * 7) 첫 화면 768~1023px 은 고객센터 단추를 본문 바깥 여백으로
+ * r40-2) PC 칸 위 줄은 결제 전(계획서도 결제 전 · 예시 사업 포함)에 단추가 하나도 없다 — 머리줄 [공개하기] 하나
+ * r40-2) 첫 화면 1024~1439px 도 고객센터 단추를 본문 바깥 여백으로(1440 이상은 원래 안 겹침)
  */
 const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 const luminance = (hex: string) => {
@@ -25,7 +27,10 @@ const homepage = read("app/plan/homepage/HomepageScreen.tsx");
 const strip = homepage.slice(homepage.indexOf("const strip = studioPro"), homepage.indexOf("</div> : null;", homepage.indexOf("const strip = studioPro")));
 assert.ok(strip.length > 0);
 assert.doesNotMatch(strip, /`결제하고 공개하기 · \$\{price/, "PC 칸 위 줄에 '결제하고 공개하기' 단추가 다시 생겼다");
+assert.doesNotMatch(strip, /함께 결제하기|내 사업으로 만들기|openPayPrompt/, "PC 칸 위 줄에 결제 안내 단추('함께 결제하기'·'내 사업으로 만들기')가 다시 생겼다(r40-2)");
+assert.match(strip, /\{editable && <>/, "PC 칸 위 줄 단추는 결제 뒤(고칠 수 있을 때)만");
 assert.match(homepage, /<span>공개하기<\/span><\/button>/, "PC 머리줄 [공개하기]는 남아 있어야 한다");
+assert.match(homepage, /confirmLabel: "내 사업으로 만들기"/, "예시 사업은 머리줄 [공개하기] 확인창에서 '내 사업으로 만들기'");
 
 const css = read("app/plan/document/DocumentWorkspace.module.css");
 assert.match(css, /@media \(min-width:761px\) and \(max-width:900px\) \{ \.page:has\(\.chapterChatEdit\) \.chapterChatAction \{ display:none; \} \}/);
@@ -43,5 +48,7 @@ assert.match(content, /"오시는 길과 영업시간", "오시는 길·영업�
 const home = read("components/home-landing.module.css");
 assert.match(home, /@media \(min-width: 768px\) and \(max-width: 1023px\) \{\n  \.content \{ padding: 0 84px; \}/);
 assert.match(home, /support-chat-widget:not\(\.open\)\) \{ right: 12px;/);
+assert.match(home, /@media \(min-width: 1024px\) and \(max-width: 1439px\) \{\n  \.content \{ padding: 0 clamp\(20px, calc\(84px - \(100% - 1220px\) \/ 2\), 84px\); \}\n  :global\(body\):has\(\.page\) :global\(\.support-chat-widget:not\(\.open\)\) \{ right: 12px; bottom: 24px; \}/, "1024~1439px 도 단추를 바깥 여백으로(r40-2)");
+assert.match(home, /@media \(min-width: 1024px\) and \(max-width: 1439px\) \{\n  \.page :global\(\.home-footer\) \{ padding-inline: 84px; \}/);
 
 console.log("owner decisions r40: ok");

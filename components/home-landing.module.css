@@ -122,6 +122,15 @@
   .content { padding: 0 84px; }
   :global(body):has(.page) :global(.support-chat-widget:not(.open)) { right: 12px; bottom: 24px; }
 }
+/*
+ * PC 폭(1024~1439px)도 같은 방식 — 단추가 '계획서로 만드는 홈페이지' 등 카드 오른쪽 끝을 덮었다(대표 결정 r40-2).
+ * 본문 오른쪽 끝이 화면 끝에서 84px 이상 떨어지게 여백만 채운다: 본문(최대 1220px) 바깥 빈자리가 이미 넓으면 그만큼 덜 넓힌다.
+ * (1388px 이상은 원래 여백 20px 그대로). 1440px 이상은 원래부터 안 겹쳐 그대로.
+ */
+@media (min-width: 1024px) and (max-width: 1439px) {
+  .content { padding: 0 clamp(20px, calc(84px - (100% - 1220px) / 2), 84px); }
+  :global(body):has(.page) :global(.support-chat-widget:not(.open)) { right: 12px; bottom: 24px; }
+}
 @media (max-width: 640px) {
   .content { padding: 0 16px; }
   .headerShell :global(.site-header) { height: 60px; min-height: 60px; padding: 0 16px; }
@@ -176,6 +185,10 @@
 }
 .page :global(.home-footer-credits) { line-height: 2; }
 @media (min-width: 768px) and (max-width: 1023px) {
+  .page :global(.home-footer) { padding-inline: 84px; }
+}
+/* 바닥글 안 내용은 최대 1220px 가운데 — 여백 84px 은 1388px 이상에서 내용 폭을 줄이지 않는다 */
+@media (min-width: 1024px) and (max-width: 1439px) {
   .page :global(.home-footer) { padding-inline: 84px; }
 }
 @media (max-width: 640px) {

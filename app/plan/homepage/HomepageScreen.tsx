@@ -802,13 +802,14 @@ export function HomepageScreen() {
     <span className={styles.stripGap} />
     {/* 휴대폰/컴퓨터 — 보통은 머리줄 가운데 알약에. 알약을 못 그리거나 머리줄 가운데가 비좁은 PC(1120px 이하)면 여기에 */}
     <span className={styles.stripDevice} data-always={hasCenter ? undefined : ""}>{deviceSwitch}</span>
-    {editable
-      ? <>
-        {!inApp && <button type="button" className={`${styles.stripBtn} ${styles.stripSoft}`} onClick={openDomain}><Link2 size={14} aria-hidden />{site?.customDomain ? site.customDomain : "내 주소 연결"}</button>}
-        <button type="button" className={styles.stripBtn} disabled={busy} onClick={() => setBuilderOpen(true)}><Pencil size={14} aria-hidden />직접 고치기</button>
-      </>
-      /* 홈페이지만 결제할 때는 머리줄 [공개하기] 하나 — 같은 결제 안내를 여는 '결제하고 공개하기 · 금액'을 여기 또 두지 않는다(대표 결정 r40) */
-      : (sample || !planPaid) && <button type="button" className={`${styles.stripBtn} ${styles.stripSoft}`} onClick={() => void openPayPrompt()}>{sample ? "내 사업으로 만들기" : `함께 결제하기 · ${price.toLocaleString("ko-KR")}원`}</button>}
+    {/*
+      결제 전(홈페이지만 · 계획서도 결제 전 · 예시 사업)에는 칸 위 줄에 단추를 두지 않는다 — 같은 결제 안내를 여는 머리줄 [공개하기] 하나(대표 결정 r40·r40-2).
+      예시 사업은 왼쪽 대화 칸의 '대화로 내 사업 시작하기'로 내 사업을 시작한다. 주소·상태는 그대로
+    */}
+    {editable && <>
+      {!inApp && <button type="button" className={`${styles.stripBtn} ${styles.stripSoft}`} onClick={openDomain}><Link2 size={14} aria-hidden />{site?.customDomain ? site.customDomain : "내 주소 연결"}</button>}
+      <button type="button" className={styles.stripBtn} disabled={busy} onClick={() => setBuilderOpen(true)}><Pencil size={14} aria-hidden />직접 고치기</button>
+    </>}
     {livePublished && publicPath && <a className={styles.stripIcon} href={publicPath} target="_blank" rel="noreferrer" aria-label="공개한 홈페이지 새 창으로 열기" title="새 창으로 보기"><ExternalLink size={15} aria-hidden /></a>}
   </div> : null;
 

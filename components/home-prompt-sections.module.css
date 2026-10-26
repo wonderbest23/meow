@@ -185,6 +185,12 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
   .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
 }
 
+/* 세 칸이 좁은 너비에서는 표시를 카드 윗선에 얹어, 셋째 카드 이름이 두 줄로 꺾이지 않게 한다(r40-2) */
+@media (min-width: 901px) and (max-width: 1179px) {
+  .launchTag { top: -12px; right: 16px; }
+  .panel:has(.launchTag) .priceName { padding-right: 0; }
+}
+
 @media (max-width: 900px) {
   .features { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .grid3 { grid-template-columns: minmax(0, 1fr); }
