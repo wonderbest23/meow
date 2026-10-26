@@ -10,7 +10,7 @@ import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
 import { isStudioTab, stepForStudioTab, studioHref, studioTabForStep, STUDIO_PATH, STUDIO_REDIRECT } from "../../lib/plan-builder/studio";
 import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
-import { businessDisplayName } from "../../lib/plan-builder/business-name";
+import { planDisplayName } from "../../lib/plan-builder/business-name";
 import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
@@ -297,9 +297,9 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
         const isCurrent = plan.id === currentId;
         const open = openId === undefined ? isCurrent : openId === plan.id;
         return <div key={plan.id} className={styles.plan}>
-          <button type="button" className={styles.planRow} data-current={isCurrent || undefined} aria-expanded={open} title={businessDisplayName(plan.title)} onClick={() => setOpenId(open ? null : plan.id)}>
+          <button type="button" className={styles.planRow} data-current={isCurrent || undefined} aria-expanded={open} title={planDisplayName(plan)} onClick={() => setOpenId(open ? null : plan.id)}>
             <ChevronRight className={styles.caret} data-open={open || undefined} aria-hidden="true" />
-            <span>{businessDisplayName(plan.title)}</span>
+            <span>{planDisplayName(plan)}</span>
           </button>
           {open && <PlanBranch plan={plan} here={isCurrent ? step : null} documentToc={documentToc} pathname={pathname} />}
         </div>;

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { BUSINESS_TEMPLATE_PROFILES } from "./brainwave/business-content";
-import { isPlaceholderPhoto, type LandingDraft } from "./domain";
+import { isFallbackSubheadline, isPlaceholderPhoto, type LandingDraft } from "./domain";
 import { PHOTO_SLOTS } from "./photo-library";
 
 /*
@@ -66,10 +66,12 @@ export function landingShareMetadata(config: LandingDraft, origin: string): Meta
   /*
    * 첫 화면 제목이 비었거나 가게 이름과 같으면 제목이 '가게 이름 | 한 줄 소개'라, 설명까지 한 줄 소개면 같은 문장이 두 번 보였다.
    * 그때는 설명을 첫 화면 부제목으로 — 부제목도 없거나 같으면 지금처럼 한 줄 소개(대표 결정 r41).
+   * 부제목이 계획서 내용이 모자라 채운 자동 문장('고객을 위한 서비스입니다.' 등)이면 바꾸지 않는다 — 사장님·AI가 쓴 문장일 때만(대표 결정 r41-2).
    */
   const subheadline = config.subheadline.trim();
   const repeated = !!tagline && lead === tagline;
-  const description = clip(repeated && subheadline && subheadline !== tagline ? subheadline : tagline || config.subheadline, 150);
+  const written = !!subheadline && subheadline !== tagline && !isFallbackSubheadline(subheadline);
+  const description = clip(repeated && written ? subheadline : tagline || config.subheadline, 150);
   const image = shareImage(config);
   const sized = image?.startsWith("https://images.unsplash.com/") ? { width: 1200, height: 630 } : {};
   const images = image ? [{ url: image, ...sized, alt: name }] : undefined;
