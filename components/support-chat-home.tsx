@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, CircleUserRound, Home, MessageCircle, Send, Settings } from "lucide-react";
 import { clearLocalState, hydrateFromServer, lastHydrationFailed, isSamplePlan, type Plan } from "../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../lib/plan-builder/business-hub";
+import { businessDisplayName } from "../lib/plan-builder/business-name";
 import { openLogin } from "./login-dialog";
 import styles from "./support-chat-home.module.css";
 import { loadAuthSession } from "../lib/client/auth-session";
@@ -90,7 +91,7 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
           const total = state.keys.length;
           const done = state.documents.length;
           return <li key={plan.id}><Link href={businessEntryHref(plan)} onClick={onClose}>
-            <span className={styles.planText}><b>{plan.title}</b><small>{state.status}{total > 0 && done > 0 && done < total ? ` · 문서 ${done}/${total}` : ""}</small></span>
+            <span className={styles.planText}><b>{businessDisplayName(plan.title)}</b><small>{state.status}{total > 0 && done > 0 && done < total ? ` · 문서 ${done}/${total}` : ""}</small></span>
             {total > 0 && <span className={styles.bar} aria-hidden="true"><i style={{ width: `${Math.round(done / total * 100)}%` }} /></span>}
             <ChevronRight aria-hidden="true" />
           </Link></li>;

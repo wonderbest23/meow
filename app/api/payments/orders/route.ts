@@ -3,6 +3,7 @@ import { requireAuthenticatedIdentity } from "../../../../lib/api-auth";
 import { getPaymentOrder } from "../../../../lib/payments/repository";
 import { MANUAL_TRANSFER_BANK } from "../../../../lib/payments/manual-transfer";
 import { publicErrorMessage } from "../../../../lib/api-errors";
+import { reorderTarget } from "../../../../lib/payments/reorder";
 
 export async function POST(request: Request) {
   /*
@@ -38,6 +39,8 @@ export async function GET(request: Request) {
         depositReportedAt: order.depositReportedAt,
         cashReceiptType: order.cashReceiptType,
         cashReceiptStatus: order.cashReceiptStatus,
+        /* 입금 기한이 지난 주문의 '새로 주문하기' — 같은 사업·같은 상품 결제 화면으로(대표 결정 r41). 모르면 null */
+        reorder: reorderTarget(order.opportunity),
       },
       bankAccount: order.method === "TRANSFER" ? MANUAL_TRANSFER_BANK : null,
     }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });

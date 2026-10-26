@@ -24,6 +24,7 @@ import { journeyPrepLabel, JOURNEY_LABELS, JOURNEY_SHORT_LABELS } from "../../..
 import { businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
 import { launchStatus, launchSteps, readLaunch } from "../../../lib/plan-builder/business-launch";
 import { readCoach } from "../../../lib/plan-builder/coach";
+import { businessDisplayName, draftBusinessTitle, isUnnamedBusiness } from "../../../lib/plan-builder/business-name";
 import { isStudioTab, newChatHref, studioChatComplete, studioChips, studioLockedStep, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTarget, STUDIO_REDIRECT, STUDIO_TAB_LABELS, type StudioChip, type StudioTab, type StudioTarget } from "../../../lib/plan-builder/studio";
 import type { IntakeSnapshot } from "../../../lib/plan-builder/intake-types";
 import { trackFunnel } from "../../../lib/funnel/client";
@@ -668,7 +669,10 @@ export default function Studio() {
    * PC 는 오른쪽 칸, 휴대폰은 지금 탭. 새 대화 · 못 찾음 · 로그인이 풀림은 칸 이름 없이.
    */
   /* 이름을 정하기 전 제목은 첫 답 문장 그대로라(머리줄에 '…가게를 하…'로 잘림) 업종 이름이나 '새 사업'을 잠깐 보여 준다(r37 휴대폰 점검) */
-  const shownTitle = provisionalTitle(title || plan?.title || "", intakeSnapshot?.coach ?? (plan ? readCoach(plan.answers) : null), intakeSnapshot?.ksic?.name);
+  const shownCoach = intakeSnapshot?.coach ?? (plan ? readCoach(plan.answers) : null);
+  const draftTitle = provisionalTitle(title || plan?.title || "", shownCoach, intakeSnapshot?.ksic?.name);
+  /* 대표 결정 r41: '이미 사업 중이에요'로 시작한 대화의 임시 이름은 '내 사업 개선', 이름이 빈 사업은 '이름 없는 사업'(표시만) */
+  const shownTitle = plan && isUnnamedBusiness(draftTitle) ? businessDisplayName(draftTitle) : draftBusinessTitle(draftTitle, shownCoach?.stage === "operating");
   const pageName = sampleTitle(planId, shownTitle);
   const pageTab = STUDIO_TAB_LABELS[wide ? rightTab : tab];
   useEffect(() => {

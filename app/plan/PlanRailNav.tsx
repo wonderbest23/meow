@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { chaptersForType } from "../../lib/plan-builder/blueprint";
 import { hydrateFromServer, isSamplePlan, loadState, setActivePlan, type Plan } from "../../lib/plan-builder/plan-store";
+import { businessDisplayName } from "../../lib/plan-builder/business-name";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import styles from "./PlanRailNav.module.css";
 
@@ -164,12 +165,12 @@ export default function PlanRailNav() {
               className={`${styles.planRow} ${isActive ? styles.planOn : ""}`}
               onClick={() => setOpenId(open ? "" : plan.id)}
               aria-expanded={open}
-              title={plan.title}
+              title={businessDisplayName(plan.title)}
             >
               <span className={`${styles.caret} ${open ? styles.caretOpen : ""}`} aria-hidden="true">
                 ▸
               </span>
-              <span className={styles.planName}>{plan.title}</span>
+              <span className={styles.planName}>{businessDisplayName(plan.title)}</span>
               {sample ? (
                 <span className={styles.sampleTag}>예시</span>
               ) : (

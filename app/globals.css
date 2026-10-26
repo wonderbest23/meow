@@ -17586,3 +17586,10 @@ html:has([data-app-surface]) { background: #fff; }
 .manual-payment-card > footer a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; font-size: 13px; }
 @media (min-width: 1024px) { .manual-payment-card > footer a { min-height: 32px; } }
 .manual-project-start svg { display: inline-block !important; width: 18px; height: 18px; }
+
+/*
+ * 대표 결정 r41: 입금 기한이 지난 계좌이체 주문의 주 단추 '새로 주문하기 ›' — 제목→본문 8px, 본문→단추 24px
+ */
+.manual-payment-card.status-expired .manual-payment-state h1 { margin-bottom: 8px; }
+.manual-reorder { width: 100%; min-height: 52px; margin-top: 24px; padding: 0 16px; border-radius: 14px; background: var(--action-blue); color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 850; text-decoration: none; }
+.manual-reorder svg { display: inline-block; width: 18px; height: 18px; flex: 0 0 auto; }

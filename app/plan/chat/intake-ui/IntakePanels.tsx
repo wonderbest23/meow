@@ -2,6 +2,7 @@
 import { ResourceFitDetails, resourceFitLine } from "./ResourcePanel";
 import { INTAKE_JOB_TIMING } from "../../../../lib/plan-builder/intake-timing";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
+import { businessDisplayName } from "../../../../lib/plan-builder/business-name";
 
 import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
@@ -957,7 +958,7 @@ export function DesignResult({ snapshot, disabled, onName }: { snapshot: IntakeS
       {onName ? <form className={styles.identityCustom} onSubmit={event => { event.preventDefault(); if (shopName && shopName !== current) { onName(shopName); setCustom(null); } }}>
           <input aria-label="지금 가게 이름" maxLength={40} value={custom ?? current} onChange={event => setCustom(event.target.value)} placeholder="간판에 적힌 이름 (예: 망원 아침빵집)" />
           <button type="submit" className={styles.secondaryButton} disabled={disabled || !shopName || shopName === current}>이 이름으로</button>
-        </form> : <h2 className={styles.resultName}>{current}</h2>}
+        </form> : <h2 className={styles.resultName}>{businessDisplayName(current)}</h2>}
       <small className={styles.identityNote}>계획서와 홈페이지에 이 이름이 들어가요.</small>
       {onName && <div className={styles.resultNames} role="group" aria-label="추천 이름">
         {showNames ? identity.names.filter(item => item.name !== current).map(item => <button key={item.name} type="button" className={styles.chip} disabled={disabled} onClick={() => { setCustom(null); onName(item.name); }}>{item.name}</button>)
@@ -976,7 +977,7 @@ export function DesignResult({ snapshot, disabled, onName }: { snapshot: IntakeS
   return <section className={styles.result} aria-label="결과">
     <div className={styles.resultBlock}>
       <p className={styles.resultLabel}>사업 이름</p>
-      <h2 className={styles.resultName}>{current}</h2>
+      <h2 className={styles.resultName}>{businessDisplayName(current)}</h2>
       {onName && (custom === null
         ? <div className={styles.resultNames} role="group" aria-label="추천 이름">
             {original && <button type="button" className={styles.chip} disabled={disabled} onClick={() => onName(original)}>{original} <small className={styles.chipNote}>처음 이름</small></button>}

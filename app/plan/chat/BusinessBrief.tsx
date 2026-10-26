@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { MessageSquareText, PencilLine } from "lucide-react";
 import { currentBusinessDesign, currentNextAction, type CoachField, type CoachState } from "../../../lib/plan-builder/coach";
+import { businessDisplayName } from "../../../lib/plan-builder/business-name";
 import BriefEditor, { type BriefPatch } from "./BriefEditor";
 import { briefTextParts, COACH_FIELD_LABELS, coachFieldDisplay } from "../../../lib/plan-builder/coach-presentation";
 import styles from "./page.module.css";
@@ -30,7 +31,7 @@ export default function BusinessBrief({ coach, changed, onEdit, onSave, onDirty,
   if (editing) return <BriefEditor coach={coach} section={section} onDirty={onDirty} onClose={() => setEditing(false)} onSave={async patch => { await onSave(patch); setSaved(true); }} />;
   return <>
     <div className={styles.briefScroll}>
-      <div className={styles.briefHeading}><span className={styles.eyebrow}>{coach.stage === "operating" ? "내 사업 개선안" : "내 사업안"}</span><h1 tabIndex={-1}>{coach.business.name}</h1><p>AI가 제안한 초안이에요. 대화로 바꿀 수 있어요.</p></div>
+      <div className={styles.briefHeading}><span className={styles.eyebrow}>{coach.stage === "operating" ? "내 사업 개선안" : "내 사업안"}</span><h1 tabIndex={-1}>{businessDisplayName(coach.business.name)}</h1><p>AI가 제안한 초안이에요. 대화로 바꿀 수 있어요.</p></div>
       <p className={styles.sectionCaption}>사업안 확인 순서 <span>{sections.findIndex(item => item.id === section) + 1} / {sections.length}</span></p>
       <nav className={styles.sectionNav} aria-label="사업안 항목">{sections.map((item, index) => <button key={item.id} aria-label={item.label} aria-pressed={section === item.id} onClick={() => setSection(item.id)}><span className={styles.sectionNumber} aria-hidden="true">{index + 1}</span>{item.label}</button>)}</nav>
       {saved && <p role="status" className={styles.note}>저장했어요. 기존 자료에 적용하려면 아래에서 계획서에 반영해 주세요.</p>}

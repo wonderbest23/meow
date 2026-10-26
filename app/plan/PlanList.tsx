@@ -7,6 +7,7 @@ import { ChevronRight, MoreHorizontal } from "lucide-react";
 import { currentBusinessDesign } from "../../lib/plan-builder/coach";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, businessEntryHref } from "../../lib/plan-builder/business-hub";
+import { businessDisplayName, isUnnamedBusiness } from "../../lib/plan-builder/business-name";
 import { STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
@@ -92,8 +93,8 @@ export default function PlanList() {
             {plans.map(p => { const status=businessHubState(p); const introduction = (status.coach && currentBusinessDesign(status.coach)?.startingPlan.scope) || status.coach?.business.description || ""; return <article key={p.id} className={mine.row}>
               {editing===p.id ? <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><input aria-label="사업 이름" aria-describedby={`rename-hint-${p.id}`} value={name} maxLength={100} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><button className={styles.primary}>저장</button><button type="button" onClick={()=>cancelRename(p.id)}>취소</button>
                 {/* 열면 기존 이름을 골라 둔다(바로 새로 쓰게). 100자에 닿으면 더 써지지 않는 이유를 알린다. 홈페이지 이름은 따로 바뀐다 */}
-                <p id={`rename-hint-${p.id}`} className={mine.renameHint} aria-live="polite">{name.length >= 100 ? "이름은 100자까지 쓸 수 있어요. " : ""}홈페이지 이름은 홈페이지 화면에서 따로 바꿔요.</p></form> : <Link className={mine.open} href={openHref(p)} data-plan-open={p.id} aria-label={`${p.title} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "내 사업 화면 열기"}`}>
-                <strong className={mine.title}>{p.title}</strong>
+                <p id={`rename-hint-${p.id}`} className={mine.renameHint} aria-live="polite">{name.length >= 100 ? "이름은 100자까지 쓸 수 있어요. " : ""}홈페이지 이름은 홈페이지 화면에서 따로 바꿔요.</p></form> : <Link className={mine.open} href={openHref(p)} data-plan-open={p.id} aria-label={`${businessDisplayName(p.title)} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "내 사업 화면 열기"}`}>
+                <strong className={mine.title}>{businessDisplayName(p.title)}</strong>
                 {/* 소개가 사업 이름과 같으면(첫 답을 그대로 이름으로 쓴 사업) 같은 줄을 두 번 보이지 않는다 */}
                 {introduction && introduction.trim() !== p.title.trim() && <span className={mine.desc}>{introduction}</span>}
                 <span className={mine.meta}><span className={mine.stage}>{status.status}</span><HomepageStage planId={p.id} /><time dateTime={p.updatedAt}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")} 수정</time></span>
@@ -103,7 +104,7 @@ export default function PlanList() {
                 const menu = event.currentTarget as HTMLDetailsElement;
                 if (event.key !== "Escape" || !menu.open) return;
                 event.preventDefault(); menu.open = false; menu.querySelector("summary")?.focus();
-              }}><summary aria-label={`${p.title || "이름 없는 사업"} 관리`} data-plan-menu={p.id}><MoreHorizontal size={20} /></summary><div><button onClick={() => {setEditing(p.id);setName(p.title);setNotice("");}}>이름 변경</button><button onClick={() => remove(p.id,p.title)}>삭제</button></div></details>}
+              }}><summary aria-label={`${businessDisplayName(p.title)} 관리`} data-plan-menu={p.id}><MoreHorizontal size={20} /></summary><div><button onClick={() => {setEditing(p.id);setName(isUnnamedBusiness(p.title) ? "" : p.title);setNotice("");}}>이름 변경</button><button onClick={() => remove(p.id,businessDisplayName(p.title))}>삭제</button></div></details>}
             </article>; })}
           </div>
         </>}
