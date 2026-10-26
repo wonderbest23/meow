@@ -230,7 +230,7 @@
 .error p + p { margin-top: 6px; }
 .success { color: var(--intake-green); font-size: 12px; }
 .notices { max-height: 30dvh; overflow-y: auto; flex-shrink: 0; border-bottom: 1px solid var(--intake-line); }
-.notice { padding: 12px 28px; background: #fff5f3; color: #943c37; font-size: 13px; line-height: 1.65; }
+.notice { padding: 12px 28px; background: #fff5f3; color: #943c37; font-size: 13px; line-height: 1.65; text-wrap: balance; }
 .noticeActions { display: flex; flex-wrap: wrap; gap: 8px 18px; }
 .notice button, .notice a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 6px 0; border: 0; background: transparent; color: inherit; font-size: 13px; font-weight: 600; text-underline-offset: 3px; }
 .loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 200px; padding: 24px; color: #626b77; font-size: 14px; }

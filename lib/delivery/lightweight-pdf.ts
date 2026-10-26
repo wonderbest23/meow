@@ -567,7 +567,8 @@ class PdfLayout {
     const aligns = Array.from({ length: columns }, (_, column) => token.align[column] === "right" ? "right" as const : token.align[column] === "center" ? "center" as const : "left" as const);
     const measured = rows.map((values, rowIndex) => {
       const lineCounts = values.map((value, column) => this.wrap(value, widths[column] - TABLE_PAD * 2, size(rowIndex)).length);
-      return { values, height: Math.max(28, Math.max(...lineCounts) * 12 + 12) };
+      const lines = Math.max(...lineCounts);
+      return { values, lines, height: Math.max(28, lines * 12 + 12) };
     });
     return { widths, aligns, rows: measured, total: sum(measured.map(row => row.height)) };
   }
@@ -579,13 +580,17 @@ class PdfLayout {
   private table(token: Tokens.Table) {
     const { widths, aligns, rows, total } = this.measureTable(token);
     this.ensure(total + 15 <= KEEP_TABLE_WHOLE ? total + 15 : rows.slice(0, 2).reduce((sum, row) => sum + row.height, 0) + 3);
-    const drawRow = ({ values, height }: { values: string[]; height: number }, header: boolean) => {
+    const drawRow = ({ values, lines, height }: { values: string[]; lines: number; height: number }, header: boolean) => {
       const top = this.page.cursor;
+      /* 글 덩어리를 칸 세로 가운데에 — 예전엔 늘 위 5pt 에 붙어 한 줄 칸은 위 7pt·아래 14pt 로 쏠려 보였다(점검 r41-B).
+         한 줄의 보이는 높이는 글자 크기의 약 0.9배, 첫 줄 글자 윗부분은 줄 위에서 약 0.24배 아래에 있다 */
+      const size = header ? TABLE_HEAD_SIZE : TABLE_BODY_SIZE;
+      const inset = Math.max(4, (height - ((lines - 1) * 12 + size * 0.9)) / 2 - size * 0.24);
       let x = LEFT;
       values.forEach((value, columnIndex) => {
         const width = widths[columnIndex];
         this.rect(x, top, width, height, header ? "EFF7F3" : "FFFFFF", "D9E4DF");
-        this.drawText(value, x + TABLE_PAD, top + 5, { size: header ? TABLE_HEAD_SIZE : TABLE_BODY_SIZE, color: "263D34", width: width - TABLE_PAD * 2, lineHeight: 12, bold: header, align: aligns[columnIndex] });
+        this.drawText(value, x + TABLE_PAD, top + inset, { size, color: "263D34", width: width - TABLE_PAD * 2, lineHeight: 12, bold: header, align: aligns[columnIndex] });
         x += width;
       });
       this.page.cursor += height;

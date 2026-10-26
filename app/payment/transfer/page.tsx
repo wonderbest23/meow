@@ -77,7 +77,7 @@ function TransferStatus() {
   };
 
   if (loading) return <main className="manual-payment-page"><PlanLoading fullPage note="주문을 확인하고 있어요" /></main>;
-  if (!order || !bank) return <main className="manual-payment-page error"><ShieldCheck /><h1>주문을 확인할 수 없어요</h1><p>{message || "로그인 상태와 주문번호를 확인해 주세요."}</p><Link href="/account">로그인하기</Link><Link href="/"><Home /> 홈으로</Link></main>;
+  if (!order || !bank) return <main className="manual-payment-page error"><ShieldCheck /><h1>주문을 확인할 수 없어요</h1><p>{message || "로그인 상태와 주문번호를 확인해 주세요."}</p><Link href={`/account?next=${encodeURIComponent(`/payment/transfer?orderId=${orderId}`)}`}>로그인하기<ChevronRight /></Link><Link href="/"><Home /> 홈으로</Link></main>;
   const copy = statusCopy[order.status] ?? statusCopy.awaiting_deposit;
   const expired = Date.parse(order.expiresAt) <= Date.now() && order.status === "awaiting_deposit";
 

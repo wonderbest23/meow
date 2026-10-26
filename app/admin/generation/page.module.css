@@ -17,7 +17,7 @@
 .table td:nth-child(5) { min-width: 150px; }
 .table small { display: block; max-width: 220px; font-size: 12px; color: var(--app-muted); overflow-wrap: anywhere; margin-top: 4px; }
 .table [data-state=failed], .table .failure { color: var(--app-danger); }
-.table [data-state=complete], .table [data-state=ready] { color: #268563; }
+.table [data-state=complete], .table [data-state=ready] { color: #1f7a55; }
 .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 18px; margin-top: 16px; font-size: 13px; }
 .error { padding: 14px; background: var(--app-danger-bg); color: var(--app-danger); line-height: 1.7; font-size: 14px; }
 .empty { padding: 28px 0; font-size: 14px; color: var(--app-muted); }

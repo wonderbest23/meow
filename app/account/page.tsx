@@ -8,6 +8,7 @@ import { prepareAccountSignIn } from "../../lib/plan-builder/plan-store";
 import PlanLoading, { Spinner } from "../plan/PlanLoading";
 import styles from "./Account.module.css";
 import { safeNextPath } from "../../lib/http/safe-next";
+import { apiMessage, userErrorMessage } from "../../lib/client/user-error";
 
 /*
  * 로그인 화면. 폼은 로그인 팝업과 같은 것(components/account-auth-form)을 쓰고,
@@ -17,9 +18,12 @@ import { safeNextPath } from "../../lib/http/safe-next";
 type AccountProject = { id: string; title: string; status: string; paymentStatus: string; activeStage: number; updatedAt: string };
 type SessionState = { authenticated: boolean; email: string | null; projects: AccountProject[] };
 
+const FAILED = "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.";
+
+/* HTML 오류 페이지(502 등)·끊긴 연결도 한국어 안내로 — "Unexpected token '<'"·"Failed to fetch" 가 그대로 보이지 않게 */
 async function payload<T>(response: Response): Promise<T> {
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message ?? "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok || data === null) throw new Error(apiMessage(data, FAILED));
   return data as T;
 }
 
@@ -91,10 +95,10 @@ export default function AccountPage() {
       void fetch("/api/auth/session/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken }) })
         .then((response) => payload(response) as Promise<{ email?: string | null; provider?: string | null }>)
         .then((account) => setLinkSignIn({ accessToken, refreshToken, email: account.email ?? null, provider: account.provider ?? null }))
-        .catch((error) => { setMessageError(true); setMessage(error.message); });
+        .catch((error) => { setMessageError(true); setMessage(userErrorMessage(error, FAILED)); });
       return;
     }
-    void loadSession().catch((error) => { setMessageError(true); setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
+    void loadSession().catch(() => { setMessageError(true); setMessage("로그인 상태를 확인하지 못했어요. 연결을 확인하고 다시 시도해 주세요."); setSession({ authenticated: false, email: null, projects: [] }); });
   }, []);
 
   // 이미 로그인돼 있으면 붙잡아두지 않는다 — 돌아갈 곳이 있으면 거기로, 없으면 내 계정으로
@@ -109,7 +113,7 @@ export default function AccountPage() {
     void prepareAccountSignIn().then(() => fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken: linkSignIn.accessToken, refreshToken: linkSignIn.refreshToken }) }))
       .then((response) => payload(response))
       .then(() => { setLinkSignIn(null); window.location.assign(nextPath ?? "/plan"); })
-      .catch((error) => { setMessageError(true); setMessage(error.message); setLinkSignIn(null); })
+      .catch((error) => { setMessageError(true); setMessage(userErrorMessage(error, FAILED)); setLinkSignIn(null); })
       .finally(() => setBusy(false));
   };
   const cancelLinkSignIn = () => {

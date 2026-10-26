@@ -86,6 +86,7 @@ node scripts/ui-audit/d-user.mjs 390 --out tmp/ui-audit/r1       # 로그인 화
 node scripts/ui-audit/d-studio.mjs 390 --out tmp/ui-audit/r1     # 작업실(대화·생성 중·계획서·홈페이지·개업·유지보수)
 node scripts/ui-audit/d-hp.mjs 390 all <planId> --out tmp/ui-audit/r1   # 홈페이지(홈페이지가 있는 사업 번호가 필요, HP_UID=그 계정)
 node scripts/ui-audit/studio-tabs.mjs --out tmp/ui-audit/r1      # 작업실 탭을 PC·휴대폰 너비별로
+node scripts/ui-audit/d-states.mjs 390 --out tmp/ui-audit/r1     # 상태별 화면: 느린 3G·API 오류(500·끊김)·긴 값·키보드·화면 읽기 이름·글자 200%
 
 # 고른 그림을 시트로 모아 보기: <OUT>/picks.json 에 [{ "file": "flags/001-....png", "screen": "...", "width": 390, "problem": "..." }]
 node scripts/ui-audit/sheet.mjs "r1 점검" --out tmp/ui-audit/r1

@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Headphones, LayoutDashboard, RefreshCw, RotateCcw, Users, Zap } from "lucide-react";
+import { Banknote, ChevronRight, Headphones, LayoutDashboard, RefreshCw, RotateCcw, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { llmFailureAlert } from "../../lib/llm/alert";
 import { useCallback, useEffect, useState } from "react";
@@ -127,7 +127,7 @@ export default function AdminDashboardPage() {
       {schema && ((!schema.ready && (schema.missing > 0 || schema.unknown > 0)) || schema.config > 0) && (
         <div className="admin-dash-alert" role="alert">
           <strong>{schema.missing > 0 ? `운영 DB에 빠진 마이그레이션이 ${schema.missing}개 있어요` : schema.unknown > 0 ? `DB 마이그레이션 ${schema.unknown}개를 확인하지 못했어요` : `오픈 전에 넣어야 할 운영 설정이 ${schema.config}개 있어요`}</strong>
-          <span>빠진 기능은 오류 없이 조용히 멈춰 있어요. <Link href="/admin/schema">DB 준비 상태에서 확인하기 →</Link></span>
+          <span>빠진 기능은 오류 없이 조용히 멈춰 있어요. <Link href="/admin/schema">DB 준비 상태에서 확인하기<ChevronRight className="admin-link-chevron" aria-hidden="true" /></Link></span>
         </div>
       )}
       {llmAlert && (
@@ -155,7 +155,7 @@ export default function AdminDashboardPage() {
           <span className="admin-dash-icon refund"><RotateCcw /></span>
           <small>환불</small>
           <strong>{stats?.payments.refundPending != null ? `대기 ${num(stats.payments.refundPending)}건` : "환불 요청 표 준비 중"}</strong>
-          <em><Link href="/admin/refunds">환불 요청 열기 →</Link>{stats?.payments.refundCount != null ? ` · 완료 ${num(stats.payments.refundCount)}건` : ""}</em>
+          <em><Link href="/admin/refunds">환불 요청 열기<ChevronRight className="admin-link-chevron" aria-hidden="true" /></Link>{stats?.payments.refundCount != null ? ` · 완료 ${num(stats.payments.refundCount)}건` : ""}</em>
         </article>
         <article>
           <span className="admin-dash-icon inquiry"><Headphones /></span>
@@ -191,7 +191,7 @@ export default function AdminDashboardPage() {
         <section className="admin-dash-panel">
           <header>
             <strong>최근 1:1 문의</strong>
-            <Link href="/admin/support">전체 보기 →</Link>
+            <Link href="/admin/support">전체 보기<ChevronRight className="admin-link-chevron" aria-hidden="true" /></Link>
           </header>
           {stats && !stats.inquiries ? (
             <p className="admin-dash-empty" role="alert">문의 목록을 불러오지 못했어요. 문의함에서 직접 확인해 주세요.</p>
@@ -216,7 +216,7 @@ export default function AdminDashboardPage() {
         <section className="admin-dash-panel">
           <header>
             <strong>최근 결제 주문</strong>
-            <Link href="/admin/payments">전체 보기 →</Link>
+            <Link href="/admin/payments">전체 보기<ChevronRight className="admin-link-chevron" aria-hidden="true" /></Link>
           </header>
           {stats && stats.payments.recentOrders === null ? (
             <p className="admin-dash-empty" role="alert">최근 주문을 불러오지 못했어요.</p>

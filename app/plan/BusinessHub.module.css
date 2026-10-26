@@ -128,6 +128,10 @@
 @media (min-width: 1024px) { .embeddedRoot[data-embedded] .content { box-sizing: content-box; max-width: 760px; padding: 24px 28px 96px; } }
 /* 빈 화면(사업을 찾지 못했어요 등) — 제목·설명·단추 사이가 44px 가까이 벌어져 보였다(대표 요청 2026-10-24). 제목 아래 8px, 단추 위 24px */
 .empty h1, .empty h2 { margin:0 0 8px; text-wrap:balance; }
+.empty p { text-wrap:balance; }
+/* 빈 화면 제목을 h2 로 낮춰도(머리줄에 h1 이 있는 화면) h1 과 같은 크기로 */
+.content .empty h2.emptyTitle { font-size:28px; color:var(--app-text); }
+@media(max-width:900px) { .content .empty h2.emptyTitle { font-size:25px; } }
 .empty p { margin:0; }
 /* 이동하는 파란 단추 끝의 › (대표 규칙 2026-10-24) — 글과 꺾쇠 사이 */
 .primary > :global(.lucide-chevron-right), .secondary > :global(.lucide-chevron-right) { flex: none; margin-left: 6px; }
@@ -154,3 +158,8 @@
 }
 /* 설명 없이 제목 바로 아래 단추면 제목→단추 24px(제목 아래 8 + 16) */
 .empty :is(h1, h2) + .primary { margin-top: 16px; }
+/* 다른 화면으로 가는 글 단추 — 글 뒤에 › (점검 r41-B) */
+.textButtonNav { display:inline-flex; align-items:center; gap:2px; }
+/* 할 일 화면: 제목→안내 8px, 안내 마지막 줄이 '남아요.'처럼 짧게 남지 않게 */
+.content h2 + .actionLead { margin-top:-8px; text-wrap:balance; }
+.content h3 + .primary { margin-top:24px; }
