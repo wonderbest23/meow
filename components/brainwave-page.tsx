@@ -24,8 +24,12 @@ import { responsivePhotoProps } from "../lib/landing/responsive-image";
  * 빌드 때 내려받아 같이 배포하므로 보는 쪽에서 외부 요청이 없다.
  */
 // 글꼴은 저장소에 둔다(Google Fonts 라틴 가변 글꼴, SIL OFL) — 빌드 중 Google 에서 받다가 끊기면 배포가 통째로 실패했다
-const latin = localFont({ src: "./fonts/urbanist-latin.woff2", weight: "400 800", variable: "--bw-latin", display: "swap" });
-const rubik = localFont({ src: "./fonts/rubik-latin.woff2", weight: "400 700", variable: "--bw-rubik", display: "swap" });
+/*
+ * preload: false — 이 파일을 불러오는 화면 묶음이 넓어(첫 화면·로그인·내 사업·약관 등) 쓰지도 않는 두 글꼴(약 63KB)을 화면마다 미리 받았다(점검 r42-B).
+ * 글꼴을 쓰는 화면(공개 홈페이지·편집기)은 원래도 미리 받기 없이 CSS 가 필요할 때 받는다 — 모양은 같다.
+ */
+const latin = localFont({ src: "./fonts/urbanist-latin.woff2", weight: "400 800", variable: "--bw-latin", display: "swap", preload: false });
+const rubik = localFont({ src: "./fonts/rubik-latin.woff2", weight: "400 700", variable: "--bw-rubik", display: "swap", preload: false });
 
 /*
  * Brainwave.io 킷 페이지를 노드 그대로 그린다.

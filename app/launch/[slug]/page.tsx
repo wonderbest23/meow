@@ -15,7 +15,7 @@ export async function generateMetadata(
   if (!published) return { title: "이 홈페이지는 지금 볼 수 없어요", description: "주소가 바뀌었거나 잠시 닫아 둔 홈페이지예요.", robots: { index: false }, openGraph: null };
   const requestHeaders = await headers();
   const origin = shareOrigin(requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host"), requestHeaders.get("x-forwarded-proto"));
-  return landingShareMetadata(published.config, origin);
+  return landingShareMetadata(published.config, origin, `/launch/${encodeURIComponent(slug)}`);
 }
 
 export default async function PublicLandingPage(
