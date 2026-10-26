@@ -149,7 +149,9 @@ async function main() {
     });
     await check("messenger widget is back with home/chat/settings tabs, and page inquiry links still go to the customer center", () => {
       // 2026-10-03: 대표 요청으로 상담 창을 메신저형(홈·대화·설정)으로 다시 붙였다. 화면 안의 '문의' 링크는 계속 고객센터로 간다
-      assert.match(readFileSync("app/layout.tsx", "utf8"), /<SupportChatWidget \/>/);
+      assert.match(readFileSync("app/layout.tsx", "utf8"), /<SupportChatLauncher \/>/);
+      // 상담 단추는 바로 그리고 상담 창(support-chat-widget)은 누를 때 받는다(심사 뒤 S2)
+      assert.match(readFileSync("components/support-chat-launcher.tsx", "utf8"), /import\("\.\/support-chat-widget"\)/);
       assert.match(readFileSync("components/support-chat-widget.tsx", "utf8"), /<SupportTabs /);
       // 문서 화면의 '문의' 링크는 2026-10-03에 뺐다(고객센터는 왼쪽 메뉴·상담 창에서)
       for (const path of ["components/landing-quick-editor.tsx", "app/plan/workspace/LaunchWorkspace.tsx"]) {
