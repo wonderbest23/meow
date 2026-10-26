@@ -341,7 +341,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.match(studio, /const progress = wide && !missing && chips\.length \?/);
   assert.match(studio, /const chips = useMemo\(\(\) => \(steps \|\| pending \? studioChips\(steps, operating\) : \[\]\)/);
   // 작업실에서는 상담 버튼을 띄우지 않는다(대화 입력칸 · 마무리 단추와 겹쳤다)
-  assert.match(read("../components/support-chat-widget.tsx"), /pathname === "\/plan\/studio"/);
+  assert.match(read("../components/support-chat-visibility.ts"), /pathname === "\/plan\/studio"/);
   // 결제 결과의 작성 시작 — 작업실로 보낼 수 있을 때만 작업실, 아니면 예전 대화의 start=1(작업실이 예전 대화로 되돌릴 때도 start=1 을 싣는다)
   assert.match(read("../app/plan/pay/result/PlanPayResult.tsx"), /startsDocument \? \(STUDIO_REDIRECT \? studioHref\(planId!, "chat", \{ start: "1" \}\) : `\/plan\/chat\?/);
   assert.match(studio, /`\$\{businessChatHref\(planId\)\}\$\{start \? `&start=\$\{encodeURIComponent\(start\)\}` : ""\}`/);

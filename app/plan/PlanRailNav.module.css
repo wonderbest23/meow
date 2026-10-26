@@ -34,7 +34,7 @@
   gap: 7px;
   text-align: left;
   cursor: pointer;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 800;
   letter-spacing: 0;
 }
@@ -47,7 +47,7 @@
 .caret {
   flex: none;
   width: 12px;
-  font-size: 9px;
+  font-size: .5625rem;
   color: var(--app-muted);
   transition: transform 0.14s ease;
 }
@@ -66,7 +66,7 @@
 
 .planCount {
   flex: none;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
@@ -78,7 +78,7 @@
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--app-raised);
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 800;
   color: var(--app-body);
 }
@@ -107,7 +107,7 @@
   border-radius: 999px;
   background: transparent;
   color: var(--app-text);
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
@@ -131,7 +131,7 @@
   gap: 8px;
   text-align: left;
   cursor: pointer;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
 }
 
@@ -143,7 +143,7 @@
   background: var(--app-raised);
   display: grid;
   place-items: center;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -158,7 +158,7 @@
 
 .chapterCount {
   flex: none;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
@@ -183,13 +183,13 @@
   gap: 7px;
   text-align: left;
   cursor: pointer;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 600;
 }
 
 .sectionNo {
   flex: none;
-  font-size: 13px;
+  font-size: .8125rem;
   font-variant-numeric: tabular-nums;
   color: #b4b4c8;
 }

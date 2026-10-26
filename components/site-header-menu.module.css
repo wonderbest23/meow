@@ -67,7 +67,7 @@
   display: flex;
   align-items: center;
   color: #191f28;
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 600;
   text-decoration: none;
 }
@@ -83,7 +83,7 @@
   display: flex;
   align-items: center;
   color: #4e5968;
-  font-size: 15px;
+  font-size: .9375rem;
   text-decoration: none;
 }
 .legal a:hover { color: #191f28; }

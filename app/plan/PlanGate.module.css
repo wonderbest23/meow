@@ -23,7 +23,7 @@
 
 .title {
   margin: 0 0 10px;
-  font-size: 19px;
+  font-size: 1.1875rem;
   font-weight: 800;
   letter-spacing: 0;
   color: var(--wz-ink, var(--app-text));
@@ -31,7 +31,7 @@
 
 .desc {
   margin: 0 0 20px;
-  font-size: 13.5px;
+  font-size: .84375rem;
   line-height: 1.75;
   color: var(--wz-muted, var(--app-body));
 }
@@ -40,7 +40,7 @@
   display: inline-flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 800;
   letter-spacing: 0;
   color: var(--wz-ink, var(--app-text));
@@ -51,7 +51,7 @@
   font-variant-numeric: tabular-nums;
 }
 .price span {
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 600;
   color: var(--wz-muted, var(--app-body));
   letter-spacing: 0;
@@ -65,7 +65,7 @@
   background: var(--wz-brand, var(--app-primary));
   color: #fff;
   font-weight: 700;
-  font-size: 14.5px;
+  font-size: .90625rem;
   padding: 14px 26px;
   border-radius: 10px;
   text-decoration: none;
@@ -82,7 +82,7 @@
   background: var(--app-surface);
   color: var(--wz-muted, var(--app-body));
   font-weight: 600;
-  font-size: 14px;
+  font-size: .875rem;
   padding: 13px 22px;
   border: 1px solid var(--wz-border, var(--app-line));
   border-radius: 10px;
@@ -96,7 +96,7 @@
 
 .note {
   margin: 18px 0 0;
-  font-size: 13px;
+  font-size: .8125rem;
   line-height: 1.65;
   color: var(--wz-faint, var(--app-muted));
 }

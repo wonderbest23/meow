@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { faqAnswer, supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
 import { nativePlatform } from "../lib/native-app";
+import { supportChatHidden, supportChatPhoneHide } from "./support-chat-visibility";
 import tap from "./support-chat-tap.module.css";
 import { focusableIn, useDialogFocus } from "./use-dialog-focus";
 import { koreanText, userErrorMessage } from "../lib/client/user-error";
@@ -76,28 +77,21 @@ function topicChoiceLabel(label: string) {
   return `${label}${hasFinalConsonant ? "이" : "가"} 궁금해요`;
 }
 
-export function SupportChatWidget() {
+export function SupportChatWidget({ initialOpen = false, initialChat, initialBadge = true }: { initialOpen?: boolean; initialChat?: SupportChat; initialBadge?: boolean }) {
   const pathname = usePathname();
-  /*
-   * 사장님이 공개한 홈페이지(/launch/…, 내 도메인)에는 오늘창업 상담 버튼을 띄우지 않는다.
-   * 그 손님들에게 우리 '고객센터' 단추가 보이고, 폰에서는 홈페이지의 전화·카톡 버튼을 가렸다.
-   * 내 도메인은 주소로 알 수 없어서 공개 홈페이지 본문(.public-landing)이 있는지로 본다.
-   */
+  /* 공개 홈페이지(내 도메인 포함)인지 — 띄우지 않는 화면은 support-chat-visibility.ts 에 모았다 */
   const [onPublicSite, setOnPublicSite] = useState(false);
   useEffect(() => { setOnPublicSite(Boolean(document.querySelector(".public-landing"))); }, [pathname]);
   /* 앱 안이면 결제·환불 답을 앱 기준(스토어 결제)으로 — 앱 안에서 카드·웹 결제를 안내하지 않는다(App Store 3.1.1) */
   const [inApp, setInApp] = useState(false);
   useEffect(() => { setInApp(nativePlatform() !== null); }, []);
-  /*
-   * 결제 화면은 동의 목록의 › 를 덮었고 아래 결제 줄과 겹쳤다 · 고객센터 화면에서는 같은 기능이 두 번이다(메뉴의 '고객센터'로 갈 수 있다)
-   * · 사업 작업실은 대화 입력칸 · 마무리 단추와 겹쳤다(390px, 점검 2026-10-23) — 대화 화면(/plan/chat)과 같이 띄우지 않는다
-   */
-  const hiddenHere = pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/studio" || pathname === "/plan/proposal" || pathname === "/plan/pay" || pathname === "/account" || pathname === "/account/support" || pathname.startsWith("/launch") || pathname.startsWith("/customer-site") || onPublicSite;
-  const [open, setOpen] = useState(false);
+  const hiddenHere = supportChatHidden(pathname, onPublicSite);
+  /* 바로 그린 단추(support-chat-launcher)를 누른 뒤 이 창을 받았으면 열린 채로 시작한다 · 단추가 받아 둔 안 읽은 수·설정을 이어받아 숫자가 깜빡이지 않게 */
+  const [open, setOpen] = useState(initialOpen);
   const [mode, setMode] = useState<"consult" | "support">("support");
   /* 메신저형 탭 — 버튼으로 열면 홈부터, 다른 화면이 질문을 들고 열면 바로 대화 */
   const [tab, setTab] = useState<SupportTab>("home");
-  const [badge, setBadge] = useState(true);
+  const [badge, setBadge] = useState(initialBadge);
   useEffect(() => { try { setBadge(window.localStorage.getItem(SUPPORT_BADGE_KEY) !== "0"); } catch { /* 저장소를 못 쓰면 켬 */ } }, []);
   const changeBadge = (value: boolean) => { setBadge(value); try { window.localStorage.setItem(SUPPORT_BADGE_KEY, value ? "1" : "0"); } catch { /* 이 창에서만 적용 */ } };
   const [consultTurns, setConsultTurns] = useState<ConsultTurn[]>([]);
@@ -126,7 +120,7 @@ export function SupportChatWidget() {
    */
   const [consultEscalate, setConsultEscalate] = useState<string | null>(null);
   const [consultIsGuest, setConsultIsGuest] = useState(false);
-  const [chat, setChat] = useState<SupportChat>({ conversation: null, messages: [] });
+  const [chat, setChat] = useState<SupportChat>(initialChat ?? { conversation: null, messages: [] });
   const [message, setMessage] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<(typeof supportFaqCategories)[number]["id"] | null>(null);
   const [quickMessages, setQuickMessages] = useState<QuickMessage[]>([]);
@@ -693,7 +687,7 @@ export function SupportChatWidget() {
   const hiddenMessageCount = chat.messages.length;
 
   return (
-    <div ref={widgetRef} className={`support-chat-widget ${open ? "open" : ""}`} data-phone-hide={pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/inquiries") ? "" : undefined}>
+    <div ref={widgetRef} className={`support-chat-widget ${open ? "open" : ""}`} data-phone-hide={supportChatPhoneHide(pathname)}>
       {open && (
         <section ref={panelRef} className={`support-chat-panel mode-${mode} tab-${tab}`} role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
           {/* 홈·설정 화면에도 닫기 — 대화 화면은 머리줄에 이미 있다 */}
