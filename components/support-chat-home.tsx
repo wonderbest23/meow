@@ -20,7 +20,7 @@ import { askConfirm } from "./confirm-dialog";
  * 운영 시간은 정해 둔 것이 없어 적지 않는다(지어내지 않는다).
  */
 export type SupportTab = "home" | "chat" | "settings";
-export const SUPPORT_BADGE_KEY = "oneul:support-badge";
+export { SUPPORT_BADGE_KEY } from "./support-chat-visibility";
 
 type Session = { authenticated: boolean; email: string | null };
 

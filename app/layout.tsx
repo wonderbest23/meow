@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import "@puckeditor/core/no-external.css";
 import "./puck-inter-font.css";
 import "./release-20260916.css";
-import { LoginDialogHost } from "../components/login-dialog";
-import { SupportChatWidget } from "../components/support-chat-widget";
+/* 상담 단추·로그인 팝업 틀은 바로 그리고, 상담 창·로그인 폼 코드는 필요할 때 받는다(점검 r42-B 결정 1) */
+import { LoginDialogHost } from "../components/login-dialog-host";
+import { SupportChatLauncher } from "../components/support-chat-launcher";
 import { sharedOpenGraph } from "./site-metadata";
 
 const HOME_TITLE = "오늘창업 | 대화로 만드는 사업계획서와 홈페이지";
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body>{children}<SupportChatWidget /><LoginDialogHost /></body>
+      <body>{children}<SupportChatLauncher /><LoginDialogHost /></body>
     </html>
   );
 }
