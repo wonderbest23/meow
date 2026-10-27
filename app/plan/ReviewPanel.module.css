@@ -10,24 +10,24 @@
 }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 .headText { display: grid; gap: 3px; min-width: 0; }
-.headText strong { font-size: 15px; font-weight: 800; color: var(--app-text); }
-.headText span { font-size: 12.5px; color: var(--app-muted); line-height: 1.5; }
+.headText strong { font-size: .9375rem; font-weight: 800; color: var(--app-text); }
+.headText span { font-size: .78125rem; color: var(--app-muted); line-height: 1.5; }
 .btn {
-  border: 0; background: var(--blue, var(--app-primary)); color: #fff; font: inherit; font-weight: 800; font-size: 13px;
+  border: 0; background: var(--blue, var(--app-primary)); color: #fff; font: inherit; font-weight: 800; font-size: .8125rem;
   min-height: 38px; padding: 9px 18px; border-radius: 8px; cursor: pointer; white-space: nowrap;
   display: inline-flex; align-items: center; gap: 6px;
 }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
-.ghost { border: 1px solid var(--app-line); background: var(--app-surface); color: var(--app-body); font: inherit; font-weight: 700; font-size: 12.5px; min-height: 32px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+.ghost { border: 1px solid var(--app-line); background: var(--app-surface); color: var(--app-body); font: inherit; font-weight: 700; font-size: .78125rem; min-height: 32px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
 
 /* 완성도 */
 .scoreRow { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; background: var(--app-raised); flex-wrap: wrap; }
 .scoreMain { display: flex; align-items: baseline; gap: 6px; }
-.score { font-size: 30px; font-weight: 800; color: var(--blue, var(--app-accent)); line-height: 1; font-variant-numeric: tabular-nums; }
-.scoreOf { font-size: 13px; color: var(--app-muted); font-weight: 700; }
-.scoreLabel { font-size: 12px; font-weight: 800; color: var(--app-muted); letter-spacing: 0; margin-left: 4px; }
+.score { font-size: 1.875rem; font-weight: 800; color: var(--blue, var(--app-accent)); line-height: 1; font-variant-numeric: tabular-nums; }
+.scoreOf { font-size: .8125rem; color: var(--app-muted); font-weight: 700; }
+.scoreLabel { font-size: .75rem; font-weight: 800; color: var(--app-muted); letter-spacing: 0; margin-left: 4px; }
 .counts { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
-.count { font-size: 12px; font-weight: 800; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+.count { font-size: .75rem; font-weight: 800; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
 .cCritical { background: var(--app-danger-bg); color: var(--app-danger); }
 .cWarning { background: var(--app-warning-bg); color: var(--app-warning); }
 .cImprovement { background: var(--app-raised); color: var(--app-body); }
@@ -49,13 +49,13 @@
   border-left: 3px solid var(--app-line);
   background: var(--app-raised);
 }
-.dimLabel { font-size: 12.5px; color: var(--app-text); font-weight: 700; }
+.dimLabel { font-size: .78125rem; color: var(--app-text); font-weight: 700; }
 /* span 을 쓰므로 display 를 명시한다 — 인라인이면 높이·너비가 먹지 않아 막대가 비어 보인다 */
 .dimBar { display: block; height: 8px; border-radius: 999px; background: var(--app-raised); overflow: hidden; }
 .dimFill { display: block; height: 100%; min-width: 3px; border-radius: 999px; background: var(--blue, var(--app-primary)); transition: width .4s ease; }
-.dimScore { font-size: 13px; font-weight: 800; color: var(--app-text); text-align: right; font-variant-numeric: tabular-nums; }
-.dimScore i { font-style: normal; font-size: 11px; font-weight: 700; color: #a0a3b5; margin-left: 1px; }
-.dimGrade { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+.dimScore { font-size: .8125rem; font-weight: 800; color: var(--app-text); text-align: right; font-variant-numeric: tabular-nums; }
+.dimScore i { font-style: normal; font-size: .6875rem; font-weight: 700; color: #a0a3b5; margin-left: 1px; }
+.dimGrade { font-size: .6875rem; font-weight: 800; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
 
 .dimGood { border-left-color: var(--app-primary); background: var(--app-raised); }
 .dimGood .dimFill { background: var(--app-primary); }
@@ -72,7 +72,7 @@
 .dimBad .dimScore { color: var(--app-danger); }
 .dimBad .dimGrade { background: var(--app-danger-bg); color: var(--app-danger); }
 
-.dimReason { grid-column: 1 / -1; font-size: 12px; color: var(--app-muted); margin: 2px 0 0 0; line-height: 1.5; }
+.dimReason { grid-column: 1 / -1; font-size: .75rem; color: var(--app-muted); margin: 2px 0 0 0; line-height: 1.5; }
 
 @media (max-width: 640px) {
   .dim { grid-template-columns: 1fr auto auto; }
@@ -82,18 +82,18 @@
 
 /* 잘 된 점 */
 .strengths { display: grid; gap: 5px; }
-.strength { font-size: 13px; color: var(--app-success); line-height: 1.55; }
+.strength { font-size: .8125rem; color: var(--app-success); line-height: 1.55; }
 
 /* 문제 카드 안의 딱지 — 스텝 카드가 함께 쓴다 */
-.tag { font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: var(--app-raised); color: var(--app-muted); white-space: nowrap; }
+.tag { font-size: .6875rem; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: var(--app-raised); color: var(--app-muted); white-space: nowrap; }
 .tagDet { background: var(--app-raised); color: var(--app-accent); }
-.evidence { font-size: 12px; color: var(--app-muted); line-height: 1.55; }
+.evidence { font-size: .75rem; color: var(--app-muted); line-height: 1.55; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
 
 /* 상태 */
-.note { font-size: 12.5px; color: var(--app-muted); line-height: 1.6; }
-.fail { border: 1px solid var(--app-line); background: var(--app-raised); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--app-text); line-height: 1.6; }
-.disclaimer { font-size: 11.5px; color: #a0a0b8; line-height: 1.55; border-top: 1px solid var(--app-line); padding-top: 10px; }
+.note { font-size: .78125rem; color: var(--app-muted); line-height: 1.6; }
+.fail { border: 1px solid var(--app-line); background: var(--app-raised); border-radius: 8px; padding: 10px 14px; font-size: .8125rem; color: var(--app-text); line-height: 1.6; }
+.disclaimer { font-size: .71875rem; color: #a0a0b8; line-height: 1.55; border-top: 1px solid var(--app-line); padding-top: 10px; }
 
 @media (max-width: 640px) {
   .dim { grid-template-columns: 92px 1fr 26px; }
@@ -108,31 +108,31 @@
 
 /* 보완 질문 — 문제 카드 안에서 바로 답한다. 위저드로 보내지 않는다 */
 .followUp { margin-top: 10px; border-top: 1px dashed var(--app-line); padding-top: 12px; display: grid; gap: 10px; }
-.followHead { font-size: 13.5px; font-weight: 800; color: var(--app-text); margin: 0; }
+.followHead { font-size: .84375rem; font-weight: 800; color: var(--app-text); margin: 0; }
 .followQ { display: grid; gap: 6px; }
-.followLabel { font-size: 12px; font-weight: 800; color: var(--app-muted); }
-.followText { font-size: 13.5px; font-weight: 700; color: var(--app-text); margin: 0; line-height: 1.5; word-break: keep-all; }
-.followHelp { font-size: 12.5px; color: var(--app-muted); margin: 0; line-height: 1.55; word-break: keep-all; }
+.followLabel { font-size: .75rem; font-weight: 800; color: var(--app-muted); }
+.followText { font-size: .84375rem; font-weight: 700; color: var(--app-text); margin: 0; line-height: 1.5; word-break: keep-all; }
+.followHelp { font-size: .78125rem; color: var(--app-muted); margin: 0; line-height: 1.55; word-break: keep-all; }
 .followInput {
   width: 100%; border: 1.5px solid var(--app-line); background: var(--app-raised); border-radius: 8px;
-  padding: 9px 12px; font: inherit; font-size: 13.5px; color: var(--app-text); resize: vertical;
+  padding: 9px 12px; font: inherit; font-size: .84375rem; color: var(--app-text); resize: vertical;
 }
 .followInput:focus { outline: 2px solid color-mix(in srgb, var(--blue, #3272db) 35%, transparent); border-color: var(--blue, var(--app-primary)); }
 .opts { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
-  border: 1px solid var(--app-line); background: var(--app-surface); color: var(--app-body); font: inherit; font-size: 12.5px; font-weight: 700;
+  border: 1px solid var(--app-line); background: var(--app-surface); color: var(--app-body); font: inherit; font-size: .78125rem; font-weight: 700;
   padding: 6px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap;
 }
 .chipOn { background: var(--blue, var(--app-primary)); border-color: var(--blue, var(--app-primary)); color: #fff; }
 .unknownBtn {
-  justify-self: start; border: 0; background: transparent; color: var(--app-muted); font: inherit; font-size: 12px; font-weight: 700;
+  justify-self: start; border: 0; background: transparent; color: var(--app-muted); font: inherit; font-size: .75rem; font-weight: 700;
   padding: 2px 0; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px;
 }
 .unknownOn { color: var(--app-text); }
 .followActions { display: flex; gap: 6px; flex-wrap: wrap; }
-.followSaved { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: var(--app-success); margin: 0; }
-.followErr { font-size: 12.5px; color: var(--app-danger); margin: 0; line-height: 1.55; }
-.followNote { font-size: 11.5px; color: #a0a0b8; margin: 0; }
+.followSaved { display: flex; align-items: center; gap: 6px; font-size: .84375rem; font-weight: 700; color: var(--app-success); margin: 0; }
+.followErr { font-size: .78125rem; color: var(--app-danger); margin: 0; line-height: 1.55; }
+.followNote { font-size: .71875rem; color: #a0a0b8; margin: 0; }
 
 /* 주된 행동 — 그 자리에서 고치는 길 */
 .primaryGhost {
@@ -141,7 +141,7 @@
   color: var(--app-accent);
   font: inherit;
   font-weight: 800;
-  font-size: 12.5px;
+  font-size: .78125rem;
   min-height: 32px;
   padding: 6px 12px;
   border-radius: 8px;
@@ -154,7 +154,7 @@
   background: none;
   color: var(--app-muted);
   font: inherit;
-  font-size: 12px;
+  font-size: .75rem;
   font-weight: 700;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -166,22 +166,22 @@
 /* 그 자리에서 본문 고치기 */
 .inline { margin-top: 8px; border: 1px solid var(--app-line); border-radius: 8px; background: var(--app-raised); padding: 12px; display: grid; gap: 8px; }
 .inlineHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.inlineHead strong { font-size: 13px; font-weight: 800; color: var(--app-text); }
+.inlineHead strong { font-size: .8125rem; font-weight: 800; color: var(--app-text); }
 .inlineArea {
   width: 100%;
   border: 1px solid var(--app-line);
   border-radius: 8px;
   padding: 10px 12px;
   font: inherit;
-  font-size: 13px;
+  font-size: .8125rem;
   line-height: 1.7;
   color: var(--app-text);
   background: var(--app-surface);
   resize: vertical;
 }
 .inlineArea:focus { outline: 2px solid #3272db; outline-offset: -1px; }
-.inlineNote { font-size: 12px; color: var(--app-muted); line-height: 1.55; margin: 0; }
-.inlineErr { font-size: 12.5px; color: var(--app-danger); margin: 0; }
+.inlineNote { font-size: .75rem; color: var(--app-muted); line-height: 1.55; margin: 0; }
+.inlineErr { font-size: .78125rem; color: var(--app-danger); margin: 0; }
 
 
 /* ── 스텝(한 번에 문제 하나) ───────────────────────────────
@@ -189,8 +189,8 @@
    아무것도 고치지 않게 된다 — 지금은 하나만 크게 보여 주고 넘긴다. */
 .stepper { display: grid; gap: 10px; }
 .stepBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.stepCount { font-size: 12.5px; font-weight: 700; color: var(--app-body); }
-.stepCount b { color: var(--blue, var(--app-accent)); font-size: 14px; }
+.stepCount { font-size: .78125rem; font-weight: 700; color: var(--app-body); }
+.stepCount b { color: var(--blue, var(--app-accent)); font-size: .875rem; }
 .dots { display: inline-flex; gap: 4px; flex-wrap: wrap; }
 /* 점은 누를 수 있다 — 뒤로 가는 유일한 길이라 손가락 크기(24px)로 */
 .dot { width: 24px; height: 24px; border: 0; background: none; padding: 0; cursor: pointer; display: grid; place-items: center; }
@@ -214,23 +214,23 @@
 .slideR { animation: reviewSlideR .28s cubic-bezier(.22,.9,.3,1) backwards; }
 
 .cardTop { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.chip { font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.chip { font-size: .71875rem; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
 .chip.critical { background: var(--app-danger-bg); color: var(--app-danger); }
 .chip.warning { background: var(--app-warning-bg); color: var(--app-warning); }
 .chip.improvement { background: var(--app-raised); color: var(--app-body); }
-.doneTag { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 800; color: var(--app-success); background: var(--app-success-bg); padding: 4px 9px; border-radius: 999px; }
+.doneTag { display: inline-flex; align-items: center; gap: 3px; font-size: .71875rem; font-weight: 800; color: var(--app-success); background: var(--app-success-bg); padding: 4px 9px; border-radius: 999px; }
 .doneTag svg { display: inline-block; }
 
-.cardTitle { margin: 2px 0 0; font-size: 16px; font-weight: 800; color: var(--app-text); line-height: 1.45; word-break: keep-all; }
-.cardBody { font-size: 13.5px; color: var(--app-body); line-height: 1.7; margin: 0; word-break: keep-all; }
+.cardTitle { margin: 2px 0 0; font-size: 1rem; font-weight: 800; color: var(--app-text); line-height: 1.45; word-break: keep-all; }
+.cardBody { font-size: .84375rem; color: var(--app-body); line-height: 1.7; margin: 0; word-break: keep-all; }
 
 .fix { background: var(--app-raised); border-radius: 10px; padding: 11px 13px; display: grid; gap: 4px; }
-.fixLabel { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: var(--blue, var(--app-accent)); }
+.fixLabel { display: inline-flex; align-items: center; gap: 5px; font-size: .75rem; font-weight: 800; color: var(--blue, var(--app-accent)); }
 .fixLabel svg { display: inline-block; }
-.fix p { margin: 0; font-size: 13.5px; color: var(--app-text); line-height: 1.7; word-break: keep-all; }
+.fix p { margin: 0; font-size: .84375rem; color: var(--app-text); line-height: 1.7; word-break: keep-all; }
 
 .more { margin-top: 2px; }
-.more summary { font-size: 12.5px; font-weight: 700; color: var(--app-muted); cursor: pointer; list-style: none; padding: 4px 0; }
+.more summary { font-size: .78125rem; font-weight: 700; color: var(--app-muted); cursor: pointer; list-style: none; padding: 4px 0; }
 .more summary::-webkit-details-marker { display: none; }
 .more summary::before { content: "▸ "; }
 .more[open] summary::before { content: "▾ "; }
@@ -238,15 +238,15 @@
 
 /* 이전 / 나중에 하기 / 다음 */
 .nav { display: flex; justify-content: flex-end; }
-.skip { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: var(--app-muted); font: inherit; font-size: 12.5px; font-weight: 700; padding: 6px 2px; cursor: pointer; }
+.skip { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: var(--app-muted); font: inherit; font-size: .78125rem; font-weight: 700; padding: 6px 2px; cursor: pointer; }
 .skip:hover { color: var(--app-body); }
 .skip svg { display: inline-block; }
 /* 카드의 큰 버튼 — 한 화면에 하나뿐이니 눈에 띄게 */
-.wide { width: 100%; justify-content: center; min-height: 44px; font-size: 14px; }
+.wide { width: 100%; justify-content: center; min-height: 44px; font-size: .875rem; }
 .navBtn {
   display: inline-flex; align-items: center; gap: 5px;
   border: 1px solid var(--app-line); background: var(--app-surface); color: var(--app-text);
-  font: inherit; font-weight: 700; font-size: 13px;
+  font: inherit; font-weight: 700; font-size: .8125rem;
   min-height: 36px; padding: 7px 14px; border-radius: 8px; cursor: pointer;
 }
 .navBtn:disabled { opacity: .4; cursor: default; }
@@ -254,7 +254,7 @@
 .navBtn svg { display: inline-block; }
 
 /* 검토하는 동안 */
-.loading { display: grid; gap: 8px; padding: 14px 16px; border-radius: 10px; background: var(--app-raised); font-size: 12.5px; color: var(--app-body); font-weight: 700; }
+.loading { display: grid; gap: 8px; padding: 14px 16px; border-radius: 10px; background: var(--app-raised); font-size: .78125rem; color: var(--app-body); font-weight: 700; }
 .loadingBar { position: relative; display: block; height: 5px; border-radius: 999px; background: var(--app-raised); overflow: hidden; }
 .loadingBar i { position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: inherit; background: var(--blue, var(--app-primary)); animation: reviewLoad 1.2s ease-in-out infinite; }
 @keyframes reviewLoad { from { transform: translateX(-110%); } to { transform: translateX(320%); } }
@@ -263,7 +263,7 @@
 .detailToggle {
   display: inline-flex; align-items: center; gap: 6px;
   border: 0; background: none; color: var(--app-body);
-  font: inherit; font-weight: 700; font-size: 12.5px;
+  font: inherit; font-weight: 700; font-size: .78125rem;
   padding: 6px 0; cursor: pointer; justify-self: start;
 }
 .detailToggle svg { transition: transform .2s ease; display: inline-block; }
@@ -282,16 +282,16 @@
    검토 직후엔 점수와 개수만 한 장으로 보고 시작한다. 끝나면 다시 검토를 권한다. */
 .intro { display: grid; justify-items: center; text-align: center; gap: 10px; padding: 22px 16px 18px; border-radius: 12px; background: var(--app-raised); }
 .introScore { display: flex; align-items: baseline; gap: 6px; }
-.introScore .score { font-size: 44px; }
-.introText { margin: 0; font-size: 15px; color: var(--app-text); line-height: 1.6; word-break: keep-all; }
+.introScore .score { font-size: 2.75rem; }
+.introText { margin: 0; font-size: .9375rem; color: var(--app-text); line-height: 1.6; word-break: keep-all; }
 .introText b { color: var(--blue, var(--app-accent)); }
 .doneMark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--app-success-bg); color: var(--app-success); }
 .doneMark svg { display: inline-block; }
 .intro .actions { justify-content: center; }
 
 /* 스텝 줄 — 번호 · 점 · 점수 */
-.stepScore { font-size: 12.5px; font-weight: 800; color: var(--app-muted); font-variant-numeric: tabular-nums; }
-.cardCat { font-size: 12px; font-weight: 700; color: var(--app-muted); }
+.stepScore { font-size: .78125rem; font-weight: 800; color: var(--app-muted); font-variant-numeric: tabular-nums; }
+.cardCat { font-size: .75rem; font-weight: 700; color: var(--app-muted); }
 
 /* 머리글 안의 작은 링크(본문이 바뀌었을 때) */
 .inlineLink { border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: var(--blue, var(--app-accent)); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
