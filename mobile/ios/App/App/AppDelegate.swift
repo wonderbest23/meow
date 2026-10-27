@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -83,6 +84,37 @@ class MainViewController: CAPBridgeViewController {
         }
         // 연결이 끊겨 끝나지 않아도 로고가 화면을 영영 덮지 않게
         DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in self?.hideLoadingCover() }
+        applyTextZoom()
+        NotificationCenter.default.addObserver(self, selector: #selector(contentSizeChanged), name: UIContentSizeCategory.didChangeNotification, object: nil)
+    }
+
+    /// 아이폰 설정의 '더 큰 텍스트'를 따른다 — 웹뷰는 이 설정을 스스로 따르지 않는다(WebKit 버그 187013).
+    /// 기본 크기(본문 17pt)일 때 100%, 키우면 그 비율만큼 글자만 키운다(85~160% — 더 크면 화면이 무너진다).
+    /// 페이지 CSS 의 text-size-adjust: 100% 보다 html 에 직접 넣은 값이 앞선다.
+    private var appliedTextZoom = 100
+
+    private static func textZoomPercent() -> Int {
+        let ratio = UIFont.preferredFont(forTextStyle: .body).pointSize / 17
+        return Int((min(max(ratio, 0.85), 1.6) * 100).rounded())
+    }
+
+    private func applyTextZoom() {
+        guard let webView = webView else { return }
+        let percent = Self.textZoomPercent()
+        // 기본 크기이고 바꾼 적도 없으면 아무것도 넣지 않는다 — 대부분의 사람에게는 지금과 똑같다
+        if percent == 100 && appliedTextZoom == 100 { return }
+        appliedTextZoom = percent
+        let js = "document.documentElement && document.documentElement.style.setProperty('-webkit-text-size-adjust', '\(percent)%');"
+        // 새로 여는 페이지마다(사용자 스크립트는 하나씩 지울 수 없어 뒤에 덧붙인다 — 나중 것이 이긴다)
+        let controller = webView.configuration.userContentController
+        controller.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        controller.addUserScript(WKUserScript(source: js, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        // 지금 열린 페이지에도 바로
+        webView.evaluateJavaScript(js, completionHandler: nil)
+    }
+
+    @objc private func contentSizeChanged() {
+        applyTextZoom()
     }
 
     /// 밝기(상대 휘도)가 절반보다 어두우면 어두운 바탕
