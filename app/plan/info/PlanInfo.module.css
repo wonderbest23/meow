@@ -14,7 +14,7 @@
 
 .eyebrow {
   display: inline-block;
-  font-size: 12px;
+  font-size: .75rem;
   font-weight: 700;
   letter-spacing: 0;
   color: var(--app-accent);
@@ -23,7 +23,7 @@
 
 .title {
   margin: 0 0 8px;
-  font-size: 30px;
+  font-size: 1.875rem;
   font-weight: 800;
   letter-spacing: 0;
   color: var(--app-text);
@@ -32,7 +32,7 @@
 
 .summary {
   margin: 0;
-  font-size: 15px;
+  font-size: .9375rem;
   line-height: 1.65;
   color: var(--app-muted);
 }
@@ -40,7 +40,7 @@
 .effective {
   display: block;
   margin-top: 10px;
-  font-size: 12.5px;
+  font-size: .78125rem;
   color: #667085; /* 흰 바탕 4.5:1 이상(예전 #98a2b3 은 2.6:1, 감사 2026-10-23) */
 }
 
@@ -67,7 +67,7 @@
   border-block: 5.5px solid transparent;
   background-clip: padding-box;
   border-radius: 8px / 13.5px;
-  font-size: 13.5px;
+  font-size: .84375rem;
   font-weight: 600;
   color: #5f6b7a; /* 회색 탭 바탕(--app-raised) 위 4.5:1 이상 — --app-muted 는 3.9:1 이었다 */
   text-decoration: none;
@@ -95,14 +95,14 @@
 
 .notice strong {
   display: block;
-  font-size: 14px;
+  font-size: .875rem;
   color: var(--app-warning);
   margin-bottom: 4px;
 }
 
 .notice p {
   margin: 0;
-  font-size: 13.5px;
+  font-size: .84375rem;
   line-height: 1.6;
   color: var(--app-warning);
 }
@@ -121,7 +121,7 @@
 
 .section h2 {
   margin: 0 0 10px;
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: 0;
   color: var(--app-text);
@@ -129,7 +129,7 @@
 
 .section p {
   margin: 0 0 10px;
-  font-size: 14.5px;
+  font-size: .90625rem;
   line-height: 1.75;
   color: var(--app-body);
 }
@@ -140,7 +140,7 @@
 }
 
 .section li {
-  font-size: 14.5px;
+  font-size: .90625rem;
   line-height: 1.75;
   color: var(--app-body);
 }
@@ -153,7 +153,7 @@
 
 .sources strong {
   display: block;
-  font-size: 13px;
+  font-size: .8125rem;
   color: var(--app-muted);
   margin-bottom: 10px;
 }
@@ -175,7 +175,7 @@
   background-clip: padding-box;
   box-shadow: inset 0 0 0 1px var(--app-line);
   border-radius: 8px / 14px;
-  font-size: 12.5px;
+  font-size: .78125rem;
   color: var(--app-body);
   text-decoration: none;
 }
@@ -190,7 +190,7 @@
     padding: 28px 18px 56px;
   }
   .title {
-    font-size: 24px;
+    font-size: 1.5rem;
   }
 }
 

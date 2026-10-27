@@ -30,8 +30,8 @@
   gap: 18px;
 }
 .sideHead { display: grid; gap: 2px; }
-.sideHead strong { font-size: 14px; font-weight: 700; color: var(--app-text); }
-.sideHead span { font-size: 12px; color: var(--app-muted); }
+.sideHead strong { font-size: .875rem; font-weight: 700; color: var(--app-text); }
+.sideHead span { font-size: .75rem; color: var(--app-muted); }
 
 /*
  * 현황 타일 — 한 줄로 납작하게.
@@ -51,8 +51,8 @@
   min-width: 0;
 }
 .tileText { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
-.tileText small { font-size: 12px; color: var(--app-muted); white-space: nowrap; }
-.tileText strong { font-size: 16px; font-weight: 700; color: var(--app-text); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tileText small { font-size: .75rem; color: var(--app-muted); white-space: nowrap; }
+.tileText strong { font-size: 1rem; font-weight: 700; color: var(--app-text); line-height: 1.1; font-variant-numeric: tabular-nums; }
 .tileIcon { display: grid; place-items: center; color: var(--blue, var(--app-accent)); flex: none; }
 .tileIcon svg { width: 16px; height: 16px; }
 .tile_todo .tileIcon { color: #e0a100; }
@@ -87,14 +87,14 @@
   justify-content: space-between;
   gap: 16px;
 }
-.listTitle { margin: 0; font-size: 18px; font-weight: 700; color: var(--app-text); }
+.listTitle { margin: 0; font-size: 1.125rem; font-weight: 700; color: var(--app-text); }
 .newBtn {
   min-height: 38px;
   padding: 0 14px;
   border-radius: 8px;
   background: var(--blue, var(--app-primary));
   color: #fff;
-  font-size: 13px;
+  font-size: .8125rem;
   font-weight: 700;
   text-decoration: none;
   display: inline-flex;
@@ -122,7 +122,7 @@
   border-radius: 8px !important;
   background: var(--app-raised);
   color: var(--app-body);
-  font-size: 12px;
+  font-size: .75rem;
   font-weight: 700 !important;
   display: inline-flex;
   align-items: center;
@@ -131,7 +131,7 @@
 }
 .seg svg { display: inline-block !important; width: 13px !important; height: 13px !important; }
 .segOn { background: var(--blue, var(--app-primary)); color: #fff; }
-.sort { display: inline-flex; align-items: center; gap: 6px; color: var(--app-muted); font-size: 12px; }
+.sort { display: inline-flex; align-items: center; gap: 6px; color: var(--app-muted); font-size: .75rem; }
 
 .list {
   margin-top: -14px;
@@ -181,18 +181,18 @@
 }
 .rowIcon svg { width: 15px; height: 15px; }
 .rowMain { min-width: 0; display: grid; gap: 1px; }
-.rowMain b { font-size: 14px; font-weight: 700; color: var(--app-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rowMain small { font-size: 12px; color: var(--app-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.titleInput { width: 100%; padding: 4px 8px; border: 1px solid var(--blue, var(--app-primary)); border-radius: 6px; font: inherit; font-size: 14px; font-weight: 700; }
+.rowMain b { font-size: .875rem; font-weight: 700; color: var(--app-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rowMain small { font-size: .75rem; color: var(--app-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.titleInput { width: 100%; padding: 4px 8px; border: 1px solid var(--blue, var(--app-primary)); border-radius: 6px; font: inherit; font-size: .875rem; font-weight: 700; }
 
-.rowMeta { display: flex; gap: 14px; color: var(--app-muted); font-size: 12px; }
+.rowMeta { display: flex; gap: 14px; color: var(--app-muted); font-size: .75rem; }
 .rowMeta span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 
 .chip {
   min-width: 64px;
   padding: 5px 10px;
   border-radius: 6px;
-  font-size: 11.5px;
+  font-size: .71875rem;
   font-weight: 700;
   text-align: center;
   white-space: nowrap;
@@ -219,8 +219,8 @@
 .row:hover .iconBtn, .row:focus-within .iconBtn { opacity: 1; }
 .iconBtn:hover { background: var(--app-raised); color: var(--app-text); }
 
-.groupLabel { margin: 12px 2px 2px; color: var(--app-muted); font-size: 12px; font-weight: 700; }
-.emptyRow { margin: 0; padding: 18px 0; text-align: center; color: var(--app-muted); font-size: 13px; }
+.groupLabel { margin: 12px 2px 2px; color: var(--app-muted); font-size: .75rem; font-weight: 700; }
+.emptyRow { margin: 0; padding: 18px 0; text-align: center; color: var(--app-muted); font-size: .8125rem; }
 
 @media (max-width: 1000px) {
   /*
@@ -239,7 +239,7 @@
   .tile { padding: 7px 8px; gap: 0; }
   .tileIcon { display: none; }
   .tileText { flex-direction: column; align-items: flex-start; gap: 0; }
-  .tileText small { font-size: 11px; }
+  .tileText small { font-size: .6875rem; }
   /* 손가락 대상 — 30px 칩은 폰에서 빗나간다 */
   .seg { min-height: 38px !important; padding: 0 14px !important; }
   .row { grid-template-columns: 18px 30px minmax(0, 1fr) auto; gap: 10px; padding: 8px 10px; }
