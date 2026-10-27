@@ -4,7 +4,7 @@ import { coachAmount, checkCoachFeasibility } from "./coach-feasibility";
 import { intakeScenarioInputs, readIntake } from "./intake-core";
 import { buildPlanBusinessContext, type ContextField } from "./context/build";
 import { calculateFinancials, collectFinancialInputs, describeFinancialFields } from "./financials";
-import { cashflowFromFields, cashflowScenariosEnabled } from "./cashflow-scenarios";
+import { cashflowFromFields, cashflowScenariosEnabled, implausibleMoneyFromFields } from "./cashflow-scenarios";
 import { comparePeriods, metricValue, periodDays, periodLabel, previousPeriod, readOperatingState } from "./operating-records";
 import type { ServerPlan } from "./plan-server-store";
 
@@ -77,11 +77,15 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const legacyCosts = coach ? [] : describeFinancialFields(plan.answers);
   const legacyComplete = coach || legacyCosts.filter(item => item.id === "fixedBase" || item.id === "staffMonthly").every(item => item.value != null);
   const completeCosts = !!legacyComplete && inputs.unitPrice != null && inputs.unitVariableCost != null && inputs.monthlyFixedCost != null;
-  const financials = completeCosts ? calculateFinancials(inputs) : null;
+  // 준비 예산·월 비용·생활비가 실제 금액으로 보기 어려우면 문서 돈 장처럼 계산하지 않는다(cashflow-scenarios.ts 판정)
+  const implausible = coach ? implausibleMoneyFromFields(coach.fields) : [];
+  const financials = completeCosts && !implausible.length ? calculateFinancials(inputs) : null;
   const firstMonth = financials?.monthly[0];
   const careful = flow?.scenarios[0], goalCase = flow?.scenarios.find(item => item.key === "goal");
   const signed = (value: number) => `${value > 0 ? "+" : ""}${won(Math.round(value))}`;
-  const flowLines = flow && careful ? [
+  const flowLines = implausible.length ? [
+    line("계산 상태", `${implausible.map(item => `${item.label} ${won(item.value)}`).join(" / ")}: 10만 원보다 적어 실제 금액으로 보기 어려워 손익을 계산하지 않음. 실제 금액으로 다시 입력하면 계산`, "missing", ["financials.inputs"], 150),
+  ] : flow && careful ? [
     line("첫 달 가정", `조심스러운 경우 ${careful.volumes[0].toLocaleString("ko-KR")}${flow.unit} 판매 / 매출 ${won(careful.volumes[0] * flow.unitPrice)} / 한 달 ${signed(careful.net[0])}${flow.living ? "(생활비 포함)" : ""}${goalCase && flow.goal ? ` · 목표 경우 ${flow.goal.months}개월차 ${goalCase.volumes[Math.min(flow.goal.months, goalCase.volumes.length) - 1].toLocaleString("ko-KR")}${flow.unit}` : ""}`, "calculation", ["cashflow.careful.1"], 115),
     line("산출 조건", `판매가 ${won(flow.unitPrice)} / 건당 변동비 ${won(flow.unitPrice - flow.contribution)} / 월 고정비 ${won(flow.monthlyFixedCost)}`, "calculation", ["financials.inputs"], 110),
   ] : null;

@@ -9,9 +9,65 @@
  * - 목표 경우: 대표가 입력한 목표(예: '6개월 안에 월 매출 1,200만원')까지 첫 달 조심스러운 경우에서 매달 같은 폭으로 늘어난다고 가정
  * 모든 경우는 처리량 최대치를 넘지 않는다. 숫자는 여기서만 계산하고 AI는 인용·해석만 한다.
  */
+import { chapterRef } from "./blueprint";
 import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coach-feasibility";
 
 export const cashflowScenariosEnabled = () => process.env.PLAN_CASHFLOW_SCENARIOS !== "0";
+
+/*
+ * 실제 금액으로 보기 어려운 돈 입력 — 이 판정이 맞으면 표·그래프를 만들지 않는다(계획서 품질 Q2, 2026-10-27).
+ * 망원동 1인 도시락: 준비 예산·월 비용·생활비가 모두 3,000원으로 들어가, 본문은 '단위가 틀렸다'고 바르게 짚으면서도
+ * 그 숫자로 만든 손익표·12개월 누적표(0원 12행)·가격 비교표·그래프가 두 쪽을 채웠다('한 달 1개').
+ * 기준: 준비 예산·대표 생활비는 10만 원 미만이면 의심(0원은 '없음'·'고정비에 들어 있음'이라는 답이라 제외).
+ * 월 고정비는 아주 작은 온라인 사업도 있어 1만 원 미만일 때만 혼자서 의심하고, 1만~10만 원은 다른 돈 입력도 의심일 때만 함께 센다.
+ * 숫자를 고치지는 않는다 — 다시 입력할지는 대표가 정한다.
+ */
+export const IMPLAUSIBLE_MONEY_FLOOR = 100_000;
+const IMPLAUSIBLE_FIXED_COST_ALONE = 10_000;
+export type ImplausibleMoney = { key: "budget" | "cost" | "livingCost"; label: string; value: number };
+const MONEY_LABELS: Record<ImplausibleMoney["key"], string> = { budget: "준비 예산", cost: "월 고정비", livingCost: "대표 생활비" };
+
+export function implausibleMoneyInputs(values: { budget?: string; cost?: string; livingCost?: string }): ImplausibleMoney[] {
+  const read = (key: ImplausibleMoney["key"]) => (key === "budget" ? coachAmountLower(values.budget) : coachAmount(values[key]));
+  const small = (key: ImplausibleMoney["key"]) => { const value = read(key); return value != null && value > 0 && value < IMPLAUSIBLE_MONEY_FLOOR ? value : null; };
+  const budget = small("budget"), cost = small("cost"), living = small("livingCost");
+  const costCounts = cost != null && (cost < IMPLAUSIBLE_FIXED_COST_ALONE || budget != null || living != null);
+  return ([["budget", budget], ["cost", costCounts ? cost : null], ["livingCost", living]] as const)
+    .flatMap(([key, value]) => (value != null ? [{ key, label: MONEY_LABELS[key], value }] : []));
+}
+
+/** 대화에서 모은 값(budget·cost·livingCost)으로 판정한다 */
+export function implausibleMoneyFromFields(fields: Array<{ key: string; value: string }>): ImplausibleMoney[] {
+  const get = (key: string) => fields.find(field => field.key === key)?.value;
+  return implausibleMoneyInputs({ budget: get("budget"), cost: get("cost"), livingCost: get("livingCost") });
+}
+
+const implausibleList = (items: ImplausibleMoney[]) => items.map(item => `${item.label} ${Math.round(item.value).toLocaleString("ko-KR")}원`).join(" · ");
+
+/** 돈 장에 표·그래프 대신 붙는 빈 틀 한 블록(시스템이 본문 끝에 붙인다) */
+export function implausibleMoneyMarkdown(items: ImplausibleMoney[]): string {
+  return [
+    "### 본전과 버티는 기간은 금액을 다시 넣은 뒤 채워집니다",
+    "",
+    `- 지금 들어간 금액: ${implausibleList(items)}`,
+    "- 10만 원보다 적어 실제 금액으로 보기 어렵습니다. 그래서 이 금액으로 손익표·12개월 통장 흐름·가격 비교표·그래프를 만들지 않았습니다.",
+    "- 본전 판매량: (금액을 다시 넣으면 계산)",
+    "- 버티는 달수: (금액을 다시 넣으면 계산)",
+    "",
+    "준비 예산·월 비용·생활비를 실제 금액으로 다시 입력하면 여기에 본전·버티는 달수가 채워집니다.",
+  ].join("\n");
+}
+
+/** 다른 장과 AI 문서 원천에 넘기는 참고 문장 — 이 금액으로 계산한 숫자를 쓰지 않게 한다 */
+export function implausibleMoneyReference(items: ImplausibleMoney[], unit?: { unitPrice: number; unitVariableCost: number }): string {
+  const contribution = unit ? unit.unitPrice - unit.unitVariableCost : 0;
+  return [
+    `계산 보류(입력 확인 필요): ${implausibleList(items)}은 10만 원보다 적어 실제 금액으로 보기 어렵습니다. 본전·판매량 목표·통장 흐름·버티는 기간·가격 비교는 계산하지 않았습니다.`,
+    "- 이 금액으로 계산한 숫자(본전 판매량, 한 달 판매량, 남는 돈, 버티는 달수)를 본문과 표에 쓰지 않습니다.",
+    `- 금액을 다시 확인해 달라는 안내는 ${chapterRef("financials/expenses")} 한 곳에서 한 번만 씁니다. 다른 장은 이 안내를 되풀이하지 않고 숫자 없이 씁니다.`,
+    unit && unit.unitPrice > 0 && contribution > 0 ? `- 판매가 ${Math.round(unit.unitPrice).toLocaleString("ko-KR")}원 / 한 건당 비용 ${Math.round(unit.unitVariableCost).toLocaleString("ko-KR")}원 / 한 건에 남는 돈 ${Math.round(contribution).toLocaleString("ko-KR")}원(이 줄은 위 금액과 관계없이 계산됨)` : "",
+  ].filter(Boolean).join("\n");
+}
 
 export type CashflowInputs = {
   unitPrice: number; unitVariableCost: number; monthlyFixedCost: number;
@@ -215,7 +271,7 @@ function goalLine(result: CashflowScenarios): string {
   const goal = result.scenarios.find(s => s.key === "goal");
   if (!goal || !result.goal) return "";
   const months = goal.volumes.slice(0, result.goal.months).map((volume, i) => `${i + 1}개월차 ${count(volume, result.unit)}`);
-  return `- 목표 경우 월별 판매선(매달 볼 숫자의 목표, 실행 장에서 씀): ${months.join(", ")}`;
+  return `- 목표 경우 월별 판매선(매달 볼 숫자의 목표, ${chapterRef("summary/roadmap")}에서 씀): ${months.join(", ")}`;
 }
 
 /** 같은 기간끼리 비교하도록 하루(월 26일)·일주일(월 4.3주)·한 달을 함께 쓴다 */
@@ -235,7 +291,7 @@ function decisionLines(result: CashflowScenarios): string[] {
     return result.daily ? `하루 약 ${Math.ceil(monthly / 26).toLocaleString("ko-KR")}명` : monthly / 4.3 >= 1 ? `일주일 약 ${Math.ceil(monthly / 4.3).toLocaleString("ko-KR")}명` : `한 달 ${monthly.toLocaleString("ko-KR")}명`;
   };
   return [
-    `판단 기준(실행 장에서 씀): ${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로, 그보다 적고 본전의 절반(${periods(result.daily, decision.floor, unit)})보다 많으면 규모(공간·장비·상품 수)를 줄여서, 본전의 절반 이하면 시작안을 바꿉니다. 판단은 계약처럼 큰돈을 쓰기 전(출시 전)에 한 번, ${result.words.afterOpen}에 다시 합니다.`,
+    `판단 기준(${chapterRef("summary/roadmap")}에서 씀): ${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로, 그보다 적고 본전의 절반(${periods(result.daily, decision.floor, unit)})보다 많으면 규모(공간·장비·상품 수)를 줄여서, 본전의 절반 이하면 시작안을 바꿉니다. 판단은 계약처럼 큰돈을 쓰기 전(출시 전)에 한 번, ${result.words.afterOpen}에 다시 합니다.`,
     `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 아직 팔 수 없으면 판매량 기준을 그대로 쓰지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 대신 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 의견을 준 사람 중 날짜·수량까지 남긴 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)로 판단합니다.`,
     `${decision.goLabel}을 채우려면 닿아야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 그만큼의 사람에게 닿을 길(지나가는 사람, 단지 세대, 커뮤니티 회원 등)이 있어야 진행합니다.`,
     `${result.words.afterOpen}: 실제 판매 수를 위 기준과 매달 비교하고, 남은 준비 예산이 중단선 아래로 내려가면 계속할지 다시 정합니다. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
@@ -314,7 +370,7 @@ export function cashflowReference(result: CashflowScenarios, options: { basis?: 
     result.survival.length ? `- 초기 지출별 버티는 기간(조심스러운 경우${result.prepLiving > 0 ? ", 준비 기간 생활비를 먼저 뺌" : ""}): ${result.survival.map(row => `${won(row.spend)}이면 ${monthsText(row.months)}`).join(", ")}` : "",
     result.outside?.survival.length ? `- 생활비를 사업 예산 밖에서 낼 때(별도 가정) 초기 지출별 버티는 기간: ${result.outside.survival.map(row => `${won(row.spend)}이면 ${monthsText(row.months)}`).join(", ")}` : "",
     goalLine(result),
-    result.priceAlternatives.length ? `- 가격을 바꾸면(${won(Math.abs(result.priceAlternatives[0].price - result.unitPrice))}씩, 한 건당 비용은 같다고 가정, 가격 장에서 씀): ${result.priceAlternatives.map(alt => `${won(alt.price)} → 본전 ${periods(result.daily, alt.breakEven, result.unit)}${alt.livingLine ? `, 생활비선 ${periods(result.daily, alt.livingLine, result.unit)}` : ""}`).join(" / ")}` : "",
+    result.priceAlternatives.length ? `- 가격을 바꾸면(${won(Math.abs(result.priceAlternatives[0].price - result.unitPrice))}씩, 한 건당 비용은 같다고 가정, ${chapterRef("strategy/price")}에서 씀): ${result.priceAlternatives.map(alt => `${won(alt.price)} → 본전 ${periods(result.daily, alt.breakEven, result.unit)}${alt.livingLine ? `, 생활비선 ${periods(result.daily, alt.livingLine, result.unit)}` : ""}`).join(" / ")}` : "",
     result.living != null ? "- 초기 지출(입력이 없으면)과 부가세·소득세는 이 계산에 빠져 있습니다." : "- 초기 지출(입력이 없으면), 대표 생활비(고정비에 없다면), 부가세·소득세는 이 계산에 빠져 있습니다.",
   ].filter(Boolean).join("\n");
 }

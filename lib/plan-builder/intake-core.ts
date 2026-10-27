@@ -1,6 +1,6 @@
 import { freeReflectsLeft } from "./free-reflect";
 import { chaptersForType, sectionKey } from "./blueprint";
-import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled } from "./cashflow-scenarios";
+import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
@@ -519,6 +519,9 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   if ("missing" in inputs) return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...intakeDetailChecks(coach, intake, null)].join("\n");
   const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, online } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
+  // 돈 입력이 실제 금액으로 보기 어려우면 그 금액으로 만든 숫자(본전·통장 흐름·업종 점검의 예산 비율)를 넘기지 않는다 — 돈 장의 빈 틀과 같은 판정
+  const implausible = implausibleMoneyFromFields(coach.fields);
+  if (implausible.length) return implausibleMoneyReference(implausible, { unitPrice, unitVariableCost });
   // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
   const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, online }) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });

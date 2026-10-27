@@ -2,6 +2,7 @@ import { z } from "zod";
 import { calculateFinancials, financialsToReference } from "./financials";
 import type { IdeaOrigin, SavedBusinessDesign } from "./coach-design";
 import { checkCoachFeasibility, coachAmount } from "./coach-feasibility";
+import { implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 
 export const COACH_KEY = "__business_coach";
 export const COACH_VERSION = "2026-09-07.2";
@@ -96,6 +97,8 @@ export function coachFinancialReference(state: CoachState): string {
   const rawVolume = fields.get("volume") ?? "";
   const startingVolume = /^[\d,]+$/.test(rawVolume) ? Number(rawVolume.replace(/,/g, "")) : undefined;
   if (unitPrice == null || unitVariableCost == null || monthlyFixedCost == null) return "가격·건당 변동비·월 고정비가 모두 정해진 뒤 계산합니다. 미입력 비용은 0원이 아닙니다.";
+  const implausible = implausibleMoneyFromFields(state.fields);
+  if (implausible.length) return implausibleMoneyReference(implausible, { unitPrice, unitVariableCost });
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume, monthlyGrowthPct: 0 });
   return `계획 시나리오 계산(실적 아님). 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.\n${financialsToReference(result)}`;
 }
