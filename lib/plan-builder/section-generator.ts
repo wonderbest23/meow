@@ -519,6 +519,18 @@ export function sectionReviewSource(input: SectionGenInput): string {
   return [biz ? `[사업 정보]\n${biz}` : "", buildUserPrompt(input)].filter(Boolean).join("\n");
 }
 
+/*
+ * 장 검토·편집의 원천 자료를 '장마다 같은 앞부분'(사업 정보·대화 요약·설계·업종 자료·운영 자료)과 나머지로 나눈다.
+ * 앞부분 끝에 프롬프트 캐시 경계를 둬 같은 계획서의 다음 장부터는 읽기 요금만 낸다(실제 AI 점검 2026-10-27: 검토·편집 cache_read 0, 비용 44%).
+ * 장마다 달라지는 첫 자료(이 장 답변·재무·충돌·맥락·시장 근거·앞 장 요약, 또는 장 과제)가 시작하는 곳에서 자른다.
+ * 자르는 위치는 비용만 바꾼다 — 이어 붙이면 예전 원천 자료와 글자까지 같다.
+ */
+const SECTION_SPECIFIC_MARKERS = ["\n<section_answers>", "\n<financials", "\n<conflicts>", "\n<context>", "\n<market_evidence>", "\n<prior_sections>", "\n</business_data>", "\n챕터: "];
+export function splitSectionSource(text: string): { shared: string; rest: string } {
+  const cut = Math.min(...SECTION_SPECIFIC_MARKERS.map(marker => text.indexOf(marker)).filter(at => at > 0));
+  return Number.isFinite(cut) ? { shared: text.slice(0, cut), rest: text.slice(cut) } : { shared: "", rest: text };
+}
+
 /** 섹션 검토에서 지적이 남았거나 검토가 실패한 경우를 운영 로그로 남긴다(본문 내용은 남기지 않는다) */
 function logSectionReview(event: CoachReviewEvent) {
   if (event === "reviewing" || event === "repairing") return;
@@ -549,7 +561,7 @@ export async function generateSection(
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
     return { markdown: "", source: "failed" };
   }
-  const checked = input.coachContext ? await reviewCoachSection(config, sectionReviewSource(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
+  const checked = input.coachContext ? await reviewCoachSection(config, splitSectionSource(sectionReviewSource(input)), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
   if (!checked) return { markdown: "", source: "failed" };
   const passed = await passQualityCheck(config, checked, input);
   if (!passed) return { markdown: "", source: "failed" };
@@ -569,7 +581,7 @@ async function passQualityCheck(config: LLMConfig, draft: string, input: Section
   if (validateSectionDraft(draft, input)) return draft;
   const issues = qualityRepairIssues(draft, qualitySource(input), input.priorSections);
   if (!issues.length) return null;
-  const patched = await patchSectionIssues(config, buildUserPrompt(input), draft, issues);
+  const patched = await patchSectionIssues(config, splitSectionSource(buildUserPrompt(input)), draft, issues);
   if (!patched || !validateSectionDraft(patched, input)) return null;
   console.info("[section-quality] repaired", JSON.stringify({ section: `${input.chapter.id}/${input.section.id}`, fixed: issues.length }));
   return patched;
@@ -613,7 +625,7 @@ export async function streamSection(
     onDelta,
   );
   if (!text || text.trim().length < 40) return { markdown: "", source: "failed" };
-  const checked = input.coachContext ? await reviewCoachSection(config, sectionReviewSource(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
+  const checked = input.coachContext ? await reviewCoachSection(config, splitSectionSource(sectionReviewSource(input)), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
   const passed = checked ? await passQualityCheck(config, checked, input) : null;
   if (!passed) return { markdown: "", source: "failed" };
   /*

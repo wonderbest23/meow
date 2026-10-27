@@ -48,6 +48,24 @@ export type CoachReviewOptions = {
   keepUnresolved?: boolean;
 };
 
+/*
+ * 검토·편집이 대조하는 원천 자료. 장마다 똑같은 앞부분(사업 정보·대화 요약·설계·업종 자료)을 shared로 따로 주면
+ * 그 끝에 프롬프트 캐시 경계를 둔다 — 한 계획서에서 장마다 검토·편집을 부르는데 예전엔 캐시를 안 써
+ * 검토·편집이 전체 AI 비용의 44%였다(실제 AI 점검 2026-10-27, cache_read 0).
+ * 모델이 받는 글은 shared + rest를 이은 문자열 그대로다(나누는 위치만 다르다).
+ */
+export type ReviewSource = string | { shared: string; rest: string };
+
+/** user 글({source, ...} JSON)과, 장마다 같은 앞부분이 있으면 그 앞부분(캐시 경계) */
+function reviewUser(source: ReviewSource, body: Record<string, unknown>): { user: string; cache?: true; cacheUserPrefix?: string } {
+  const text = typeof source === "string" ? source : source.shared + source.rest;
+  const user = JSON.stringify({ source: text, ...body });
+  if (typeof source === "string" || !source.shared) return { user };
+  // JSON 이스케이프는 글자마다 따로라 '{"source":"<shared>'가 그대로 user의 앞부분이다 — 아니면 캐시 없이 보낸다
+  const prefix = `{"source":${JSON.stringify(source.shared).slice(0, -1)}`;
+  return user.startsWith(prefix) ? { user, cache: true, cacheUserPrefix: prefix } : { user };
+}
+
 function failureEvent(failure: string | undefined, fallback: CoachReviewEvent): CoachReviewEvent {
   if (failure === "quota_exhausted") return "provider_quota_exhausted";
   if (failure === "timeout") return "provider_timeout";
@@ -57,31 +75,32 @@ function failureEvent(failure: string | undefined, fallback: CoachReviewEvent): 
   return fallback;
 }
 
-export async function reviewCoachSection(config: LLMConfig, source: string, draft: string, format: "markdown" | "json" = "markdown", onEvent?: (event: CoachReviewEvent) => void | Promise<void>, onRepair?: (draft: string) => Promise<void>, options: CoachReviewOptions = {}): Promise<string | null> {
+export async function reviewCoachSection(config: LLMConfig, source: ReviewSource, draft: string, format: "markdown" | "json" = "markdown", onEvent?: (event: CoachReviewEvent) => void | Promise<void>, onRepair?: (draft: string) => Promise<void>, options: CoachReviewOptions = {}): Promise<string | null> {
   let text = draft;
+  const sourceText = typeof source === "string" ? source : source.shared + source.rest;
   for (let attempt = 0; attempt < 2; attempt++) {
     await onEvent?.("reviewing");
     let failure: string | undefined;
-    const raw = await completeJson(config, { system: REVIEW, user: JSON.stringify({ source, draft: text }), kind: options.compact ? "deck-review" : "business-plan-review", effort: options.compact ? "low" : "medium", maxOutputTokens: options.compact ? 4000 : 8000, timeoutMs: options.compact ? 90000 : 180000, allowFallback: options.allowFallback, jsonSchema: reviewOutputSchema, anthropicJsonSchema: true, onFailure: event => { failure = event.code; } });
+    const raw = await completeJson(config, { system: REVIEW, ...reviewUser(source, { draft: text }), kind: options.compact ? "deck-review" : "business-plan-review", effort: options.compact ? "low" : "medium", maxOutputTokens: options.compact ? 4000 : 8000, timeoutMs: options.compact ? 90000 : 180000, allowFallback: options.allowFallback, jsonSchema: reviewOutputSchema, anthropicJsonSchema: true, onFailure: event => { failure = event.code; } });
     const result = reviewSchema.safeParse(raw);
     if (!result.success) { await onEvent?.(failureEvent(!raw ? failure : undefined, "review_response_invalid")); return null; }
     const urls = text.match(/https?:\/\/[^\s<>"\])]+/g) ?? [];
     for (const url of urls) {
-      if (!source.includes(url) && !result.data.issues.some(issue => issue.quote.includes(url))) result.data.issues.push({ quote: url, reason: "원천 자료에 없는 URL입니다. 존재하거나 확인된 출처로 제시하지 마세요." });
+      if (!sourceText.includes(url) && !result.data.issues.some(issue => issue.quote.includes(url))) result.data.issues.push({ quote: url, reason: "원천 자료에 없는 URL입니다. 존재하거나 확인된 출처로 제시하지 마세요." });
     }
     if (!result.data.issues.length) return text;
     if (attempt) { await onEvent?.("review_unresolved"); return options.keepUnresolved ? text : null; }
     if (result.data.issues.some(i => !text.includes(i.quote))) { await onEvent?.("review_quote_mismatch"); return options.keepUnresolved ? text : null; }
     await onEvent?.("repairing");
     if (options.keepUnresolved && format === "markdown") {
-      const raw = await completeJson(config, { system: PATCH, user: JSON.stringify({ source, draft: text, issues: result.data.issues }), kind: "business-plan-patch", effort: "medium", maxOutputTokens: 4000, timeoutMs: 90000, allowFallback: options.allowFallback, jsonSchema: patchOutputSchema, anthropicJsonSchema: true });
+      const raw = await completeJson(config, { system: PATCH, ...reviewUser(source, { draft: text, issues: result.data.issues }), kind: "business-plan-patch", effort: "medium", maxOutputTokens: 4000, timeoutMs: 90000, allowFallback: options.allowFallback, jsonSchema: patchOutputSchema, anthropicJsonSchema: true });
       const patch = patchSchema.safeParse(raw);
       const patched = patch.success ? applySectionEdits(text, patch.data.edits) : null;
       if (patched) { await onEvent?.("repair_patched"); await onRepair?.(patched); return patched; }
       await onEvent?.("repair_patch_fallback");
     }
     failure = undefined;
-    const fixed = await completeText(config, { system: `한국 사업계획서 편집자입니다. 제공된 원천 정보와 검토 의견으로 본문을 수정합니다. 새로운 사실·숫자·출처를 만들지 마세요. ${format === "json" ? "원래 JSON 구조와 필드명을 유지하고 수정한 유효한 JSON만" : "수정된 마크다운 본문만"} 반환하세요.`, user: JSON.stringify({ source, draft: text, issues: result.data.issues }), kind: options.compact ? "deck-repair" : "business-plan-repair", effort: options.compact ? "medium" : "high", maxOutputTokens: 8000, timeoutMs: options.compact ? 120000 : 180000, allowFallback: options.allowFallback, onFailure: event => { failure = event.code; } });
+    const fixed = await completeText(config, { system: `한국 사업계획서 편집자입니다. 제공된 원천 정보와 검토 의견으로 본문을 수정합니다. 새로운 사실·숫자·출처를 만들지 마세요. ${format === "json" ? "원래 JSON 구조와 필드명을 유지하고 수정한 유효한 JSON만" : "수정된 마크다운 본문만"} 반환하세요.`, user: JSON.stringify({ source: sourceText, draft: text, issues: result.data.issues }), kind: options.compact ? "deck-repair" : "business-plan-repair", effort: options.compact ? "medium" : "high", maxOutputTokens: 8000, timeoutMs: options.compact ? 120000 : 180000, allowFallback: options.allowFallback, onFailure: event => { failure = event.code; } });
     if (!fixed) { await onEvent?.(failureEvent(failure, "repair_empty")); return null; }
     text = fixed;
     await onRepair?.(text);
@@ -98,9 +117,9 @@ export async function reviewCoachSection(config: LLMConfig, source: string, draf
  * 품질 검사에 걸린 곳만 고친다 — 섹션을 버리고 처음부터 다시 쓰는 대신 한 번의 짧은 보완 호출로.
  * 고친 본문은 호출한 쪽이 품질 검사를 다시 통과해야 쓴다.
  */
-export async function patchSectionIssues(config: LLMConfig, source: string, draft: string, issues: Array<{ quote: string; reason: string }>): Promise<string | null> {
+export async function patchSectionIssues(config: LLMConfig, source: ReviewSource, draft: string, issues: Array<{ quote: string; reason: string }>): Promise<string | null> {
   if (!issues.length) return null;
-  const raw = await completeJson(config, { system: PATCH, user: JSON.stringify({ source, draft, issues }), kind: "business-plan-quality-patch", effort: "medium", maxOutputTokens: 4000, timeoutMs: 90000, jsonSchema: patchOutputSchema, anthropicJsonSchema: true });
+  const raw = await completeJson(config, { system: PATCH, ...reviewUser(source, { draft, issues }), kind: "business-plan-quality-patch", effort: "medium", maxOutputTokens: 4000, timeoutMs: 90000, jsonSchema: patchOutputSchema, anthropicJsonSchema: true });
   const patch = patchSchema.safeParse(raw);
   return patch.success ? applySectionEdits(draft, patch.data.edits) : null;
 }

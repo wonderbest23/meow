@@ -3,7 +3,7 @@ import { intakeCommandSchema } from "../../../../lib/plan-builder/intake-command
 import { COACH_FIELD_LABELS } from "../../../../lib/plan-builder/coach-presentation";
 import { applyIntakeAnswer, finishIntakeMutation, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot } from "../../../../lib/plan-builder/intake-core";
 import type { ServerPlan } from "../../../../lib/plan-builder/plan-server-store";
-import type { IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
+import { amountCheckPrompt, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { SECTOR_PROFILES, type ProposalSector } from "../../../../lib/plan-builder/proposal-blueprint";
 import { coachAmount } from "../../../../lib/plan-builder/coach-feasibility";
 import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS, amountRanges, periodMonths, rangeMidpoint, scaledAmountRanges, wonAnswer, type AmountRange } from "../../../../lib/plan-builder/intake-options";
@@ -766,6 +766,15 @@ export function zeroPriceAnswer(question: Pick<IntakeQuestion, "fieldKey" | "uni
   if (!question || question.fieldKey !== "price" || question.unit !== "원" || value === null) return false;
   if (typeof value === "number") return value === 0;
   return typeof value === "string" && coachAmount(stripAnswerPeriod(value.trim(), question.period)) === 0;
+}
+
+/*
+ * 보내기 전에 한 번 더 물을 금액 확인 문장 — 판매 가격 0원, 그리고 현실 범위 밖 금액(생활비 3,000원 등, amountCheckPrompt).
+ * [맞아요]면 confirmed로 그대로 저장한다. 서버도 같은 규칙으로 확인 없는 답을 멈춘다(intake-core assertAmountConfirmed).
+ */
+export const ZERO_PRICE_PROMPT = "판매 가격이 0원이 맞나요? 무료로 주는 상품이면 그대로 둘게요.";
+export function answerCheckPrompt(question: Pick<IntakeQuestion, "fieldKey" | "unit" | "period" | "kind"> | null | undefined, value: IntakeValue): string | null {
+  return zeroPriceAnswer(question, value) ? ZERO_PRICE_PROMPT : amountCheckPrompt(question, value);
 }
 
 /** Number text for a stepper/keypad: JS number, "10시간", "12,000원" or "120만원" → digits; prose stays undefined. */

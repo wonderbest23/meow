@@ -41,6 +41,8 @@ function markdown() {
   const a = TOPICS[n % TOPICS.length], b = TOPICS[(n * 7 + 3) % TOPICS.length], c = TOPICS[(n * 11 + 5) % TOPICS.length];
   return `## ${a} 중심으로 정리한 합성 문단 ${n}\n\n이 장은 ${a}을(를) 기준으로 ${b}와(과) ${c}의 관계를 짧게 정리합니다(합성 ${n}). 실제 사업 정보가 아니므로 확인 필요로 남깁니다.\n\n| 항목 | 내용 |\n| --- | --- |\n| ${a} | 합성 값 ${n}-A (확인 필요) |\n| ${b} | 합성 값 ${n}-B (확인 필요) |\n\n- ${c}은(는) 첫 달에 작게 시험합니다(합성 ${n}).\n- 결과를 기록해 ${b} 기준을 조정합니다.\n`;
 }
+// user 내용이 캐시 경계로 나뉜 블록 배열이면 이어 붙인다(장 검토·편집, 2026-10-27)
+const userText = content => (Array.isArray(content) ? content.map(block => block?.text ?? "").join("") : content);
 globalThis.fetch = async (input, init) => {
   const url = typeof input === "string" ? input : input?.url ?? String(input);
   if (!url.startsWith("https://api.anthropic.com/")) return real(input, init);
@@ -49,7 +51,7 @@ globalThis.fetch = async (input, init) => {
   const system = Array.isArray(body.system) ? body.system.map(b => b.text).join("\n") : String(body.system ?? "");
   if (!schema) { const m = system.match(/출력 스키마: (\{[\s\S]*\})\s*$/); if (m) { try { schema = JSON.parse(m[1]); } catch {} } }
   const wantsJson = !!schema || /유효한 JSON 객체 하나만/.test(system);
-  const text = schema ? JSON.stringify(gen(schema)) : wantsJson ? "{}" : markdown(body.messages?.[0]?.content);
+  const text = schema ? JSON.stringify(gen(schema)) : wantsJson ? "{}" : markdown(userText(body.messages?.[0]?.content));
   console.log(`[fake-anthropic] ${schema ? "json" : wantsJson ? "json-noschema" : "text"} ${text.length}b`);
   // Optional pause so waiting screens (typing bubble, "정리 중") stay visible long enough to check.
   const delay = Number(process.env.SYNTHETIC_AI_DELAY_MS) || 0;
