@@ -26,6 +26,8 @@ export async function makePlan(uid, stage = "full", desc = "아파트 단지 앞
   for (let i = 0; i < 40; i++) {
     const q = plan.nextQuestion; if (!q) break;
     if (leave && plan.coreTotal - plan.coreAnswered <= leave) break;
+    // 업종 확인(사업 설명이 고른 업종과 다를 때 다음 질문 전에 한 번 묻는다, sector_check) — 손님처럼 [바꾸기]를 고른다
+    if (plan.sectorSuggestion && q.id !== "industry" && q.id !== "business") { res = await req("POST", "/api/plan/chat", { action: "answer", planId, revision: plan.coach.revision, requestId: randomUUID(), questionId: "industry", value: plan.sectorSuggestion.sector }); plan = res.plan ?? plan; continue; }
     let value = vals[q.id]; const extra = {};
     if (q.id === "industry" && plan.ksicCandidates?.length) { extra.ksic = plan.ksicCandidates[0].code; value = plan.ksicCandidates[0].sector; }
     if (value === undefined) value = q.kind === "number" ? (q.unit === "원" ? 3000 : 10) : q.kind === "single" ? q.options?.[0]?.value : q.kind === "multi" ? [q.options?.[0]?.value].filter(Boolean) : (q.options?.[0]?.value ?? "직접 확인 예정");

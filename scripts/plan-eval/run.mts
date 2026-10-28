@@ -161,6 +161,12 @@ async function runCase(c: Case) {
     const question = snapshot.nextQuestion;
     const base = { action: "answer", planId, revision: snapshot.coach.revision, questionId: question.id };
     let command: Record<string, unknown>;
+    // 업종 확인(사업 설명이 고른 업종과 다를 때, sector_check) — 업종을 정해 둔 사업은 [그대로], 아니면 [바꾸기]
+    if (snapshot.sectorSuggestion && question.id !== "industry" && question.id !== "business") {
+      result = await save(c.sector ? { action: "sector-keep", planId, revision: snapshot.coach.revision } : { ...base, questionId: "industry", value: snapshot.sectorSuggestion.sector });
+      log.push(`업종 확인: ${c.sector ? "그대로" : `${snapshot.sectorSuggestion.label}(으)로 바꿈`}`);
+      snapshot = result.snapshot; continue;
+    }
     if (question.id === "industry") {
       const sector = c.sector ?? snapshot.ksicCandidates?.[0]?.sector ?? "general";
       const ksic = snapshot.ksicCandidates?.find(item => item.sector === sector)?.code;

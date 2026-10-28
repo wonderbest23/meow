@@ -103,9 +103,9 @@ assert.match(roadmap, /'판단 기준' 줄이 없으면.*일주일에 할 수 �
 assert.match(system, /출시 전에 아직 돈을 받고 팔 수 없으면 '출시 전 판단' 줄의 방법/);
 // 업종 가이드(위생교육·건강진단·건축물 용도 등)는 빠짐없이 12주 표 주차로(2026-10-11: 공식 원문 대조 후 계획서에 넣음)
 assert.match(roadmap, /업종 가이드\(intake.industryGuide\)가 있으면 그 steps를 하나도 빼지 않고 순서대로/);
-assert.match(system, /industryGuide는 오늘창업이 공식 기관 안내로 정리한 업종별 준비물·신고 순서/);
+assert.match(system, /industryGuide는 공식 기관 안내를 정리한 업종별 준비물·신고 순서/);
 // 사업 유형(docs/사업-유형-지도-2026-10-11.md): 12주는 유형의 순서를 뼈대로, 가정 표는 유형의 가정으로
-assert.match(system, /businessType은 오늘창업이 규칙으로 정한 사업 유형/);
+assert.match(system, /businessType은 규칙으로 정한 사업 유형/);
 assert.match(roadmap, /사업 유형\(intake.businessType\)이 있으면 그 roadmap 순서를 12주의 뼈대로 삼고/);
 assert.match(roadmap, /사업 유형\(intake.businessType\)이 있으면 그 assumptions를 이 표의 가정으로 삼습니다/);
 // 업종 자료에 유형이 있으면 장 역할에 그 유형의 초점이 붙고, 모든 장의 시스템 지시문은 여전히 같다

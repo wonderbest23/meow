@@ -34,6 +34,8 @@ async function run(biz: Biz, index: number) {
   let plan = res.json.plan; const planId = plan.planId;
   for (let i = 0; i < 40; i++) {
     const q = plan.nextQuestion; if (!q) break;
+    // 업종 확인(sector_check) — [바꾸기]
+    if (plan.sectorSuggestion && q.id !== "industry" && q.id !== "business") { res = await req("POST", "/api/plan/chat", { action: "answer", planId, revision: plan.coach.revision, requestId: randomUUID(), questionId: "industry", value: plan.sectorSuggestion.sector }); if (!res.json?.plan) return { biz: biz.id, ok: false, step: "sector-check", log }; plan = res.json.plan; continue; }
     let value: unknown; const extra: Record<string, unknown> = {};
     if (q.id === "business") value = biz.desc;
     else if (q.id === "customer") value = biz.customer;

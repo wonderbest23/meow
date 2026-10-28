@@ -536,6 +536,13 @@ async function main() {
       const seen = new Set<string>();
       while (snapshot.nextQuestion) {
         const question = snapshot.nextQuestion;
+        // 고른 업종(첫 보기)과 사업 설명이 어긋나면 업종 확인 전에는 다음 답을 받지 않는다(sector_check) — '그대로 둘게요'로 넘어간다
+        if (snapshot.sectorSuggestion && question.id !== "industry" && question.id !== "business") {
+          await assert.rejects(send(session, { action: "answer", questionId: question.id, ...answerFor(question, snapshot) }), assertIntakeError("sector_check", 422));
+          snapshot = (await send(session, { action: "sector-keep" })).snapshot;
+          assert.equal(snapshot.sectorSuggestion, null);
+          continue;
+        }
         assert.ok(!seen.has(question.id), `question ${question.id} must advance`);
         seen.add(question.id);
         assert.ok(seen.size <= 20, "basic flow must terminate");

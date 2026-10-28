@@ -11,7 +11,7 @@ import { patchSectionIssues, reviewCoachSection, type CoachReviewEvent } from ".
 import { DOCUMENT_SECTOR_FOCUS, documentEditorialPrompt, documentSector } from "./document-editorial";
 import { checkDocumentQuality, qualityRepairIssues } from "./document-quality";
 import { boundedIntakeContext, intakeContextEvidence, INTAKE_CONTEXT_RULES, type IntakeContextInput } from "./intake-context";
-import { compactCoachContext, intakeDataOnly, SECTION_PROMPT_V3_EXAMPLES, sectionPromptV3Rules } from "./section-prompt-v3";
+import { compactCoachContext, intakeDataOnly, onePlaceNotes, SECTION_PROMPT_V3_EXAMPLES, sectionPromptV3Rules } from "./section-prompt-v3";
 import { ESSENTIAL_GROUP_NAMES, essentialGroup, essentialsForChapter } from "./industry-essentials";
 
 /*
@@ -348,9 +348,12 @@ function buildUserPromptV3(input: SectionGenInput): string {
   const group = essentialGroup({ intakeContext: input.intakeContext, documentSector: documentSector(input), description: [input.business?.name, input.business?.description, ...coachFieldValues(input.coachContext, ["business", "offer"])].filter(Boolean).join(" ") });
   const presentKeys = new Set(chaptersForType(input.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`)));
   const essentials = essentialsForChapter(key, group, presentKeys);
+  const notes = onePlaceNotes({ chapters: [...presentKeys].map(item => ({ key: item })), financialOwner: financialTableOwner(input.planType) ?? undefined, executionChapter: hasRoadmap(input.planType) });
+  const ownedNotes = notes.filter(note => note.owner === key), otherNotes = notes.filter(note => note.owner !== key);
   const data = [
-    tag("coach", input.coachContext && compactCoachContext(input.coachContext)),
-    tag("intake", intake && intakeDataOnly(intake, input.coachContext)),
+    tag("coach", input.coachContext && compactCoachContext(input.coachContext).replace(/오늘창업\s*홈페이지/g, "사업 홈페이지")),
+    // 업종 가이드·설계의 '오늘창업 홈페이지'(서비스 기능 이름)는 계획서 본문에 들어가지 않게 '사업 홈페이지'로 넘긴다(계획서 품질 Q4)
+    tag("intake", intake && intakeDataOnly(intake, input.coachContext).replace(/오늘창업\s*홈페이지/g, "사업 홈페이지")),
     tag("operating", input.operatingContext),
     tag("section_answers", answered.length ? formatAnswers(input.answers) : ""),
     tag("financials", md, ' role="이 장이 싣는 계산 결과"'),
@@ -364,6 +367,9 @@ function buildUserPromptV3(input: SectionGenInput): string {
   const task = [
     `작성할 장: ${input.chapter.title} > ${input.section.title} (${key})${executive ? " — 문서의 마지막 장" : ""}`,
     `이 장이 맡는 것: ${input.section.summary}`,
+    // 문서 한 곳에만 쓸 말 — 이 장이 맡는 것과 맡지 않는 것을 장마다 적는다(<one_place>, 계획서 품질 Q4)
+    ownedNotes.length ? `이 장에서만 쓰는 말: ${ownedNotes.map(note => note.label).join(", ")}. 다른 장은 이 말을 다시 쓰지 않으므로 여기서 빠짐없이 씁니다.` : "",
+    otherNotes.length ? `이 장에서 쓰지 않는 말: ${otherNotes.map(note => `${note.label}(${chapterRef(note.owner)})`).join(", ")}.` : "",
     md ? "<financials>의 표와 그래프는 시스템이 본문 끝에 그대로 붙입니다. 본문에는 이 숫자가 무엇을 뜻하는지, 어떤 가정 위에 있는지, 무엇을 조심해야 하는지 해석을 씁니다. 표를 옮겨 적으면 같은 표가 두 번 나오기 때문입니다." : "",
     ref ? `<financials>의 숫자는 ${chapterRef(financialTableOwner(input.planType) ?? "financials/expenses")}에 표로 실립니다. 이 장에서는 필요한 값만 문장 속에서 인용합니다.` : "",
     input.coachContext ? "공통 사업 정보로 실제 사업안 본문을 씁니다. 이미 정리된 AI 제안은 빈칸으로 되돌리지 않고 살려 씁니다." : "위 자료만 근거로 이 장의 본문을 씁니다.",
