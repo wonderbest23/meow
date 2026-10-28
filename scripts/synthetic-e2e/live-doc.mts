@@ -11,6 +11,8 @@ const req = async (method: string, path: string, body?: unknown) => (await fetch
 let { plan } = await req("POST", "/api/plan/chat", { action: "start", mode: "startup", revision: 0, requestId: randomUUID() });
 for (let i = 0; i < 40 && plan.nextQuestion; i++) {
   const q = plan.nextQuestion;
+  // 업종 확인(sector_check) — [바꾸기]
+  if (plan.sectorSuggestion && q.id !== "industry" && q.id !== "business") { plan = (await req("POST", "/api/plan/chat", { action: "answer", planId: plan.planId, revision: plan.coach.revision, requestId: randomUUID(), questionId: "industry", value: plan.sectorSuggestion.sector })).plan; continue; }
   const value = q.id === "business" ? "동네 세탁 수거 배달 서비스" : q.kind === "number" ? (q.id === "price" ? 20000 : 10) : q.kind === "single" ? q.options?.[0]?.value : q.kind === "multi" ? [q.options?.[0]?.value] : q.options?.[0]?.value ?? "직장인";
   plan = (await req("POST", "/api/plan/chat", { action: "answer", planId: plan.planId, revision: plan.coach.revision, requestId: randomUUID(), questionId: q.id, value })).plan;
 }

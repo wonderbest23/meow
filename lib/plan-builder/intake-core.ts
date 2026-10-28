@@ -1,6 +1,6 @@
 import { freeReflectsLeft } from "./free-reflect";
 import { chaptersForType, sectionKey } from "./blueprint";
-import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
+import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
@@ -25,6 +25,7 @@ import { generatedIdeaStructure } from "./intake-ideas";
 import { INTAKE_JOB_TIMING } from "./intake-timing";
 export { INTAKE_JOB_TIMING } from "./intake-timing";
 import { intakeResourceSource } from "./intake-resource-context";
+import { withRo } from "../josa";
 
 export class IntakeError extends Error {
   constructor(public code: string, message: string, public status = 400) { super(message); }
@@ -516,7 +517,11 @@ export function intakeFinancialWarning(coach: CoachState, intake: IntakeState): 
 
 export function intakeFinancialReference(coach: CoachState, intake: IntakeState): string {
   const inputs = intakeScenarioInputs(coach, intake);
-  if ("missing" in inputs) return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...intakeDetailChecks(coach, intake, null)].join("\n");
+  if ("missing" in inputs) {
+    // 월 고정비만 모르면 세 가지 고정비 가정으로 본전 판매량을 보여 준다(가정 표시, cashflow-scenarios.ts)
+    const assumed = intake.mode !== "operating" ? fixedCostAssumptionsFromFields(coach.fields) : null;
+    return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...(assumed ? [fixedCostAssumptionReference(assumed)] : []), ...intakeDetailChecks(coach, intake, null)].join("\n");
+  }
   const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, online } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   // 돈 입력이 실제 금액으로 보기 어려우면 그 금액으로 만든 숫자(본전·통장 흐름·업종 점검의 예산 비율)를 넘기지 않는다 — 돈 장의 빈 틀과 같은 판정
@@ -525,7 +530,7 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
   const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, online }) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
-  const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준`, unitLines: financialsToReference(calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, monthlyGrowthPct: 0 })) })] : [
+  const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준` })] : [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
     financialsToReference(result),
   ];
@@ -603,16 +608,39 @@ export function intakeStructureFallback(coach: CoachState, intake: IntakeState):
 /**
  * 고른 업종과 사업 설명이 어긋나는지(규칙, AI 0회). 설명이 다른 업종 말(스마트스토어·쇼핑몰, 카페, 학원 …)을 분명히 담고 있고,
  * 사용자가 표준산업분류를 직접 고르지 않았고, 이 설명으로 아직 확인하지 않았을 때만 제안한다. 계획서를 만든 뒤에는 묻지 않는다.
+ * 낱말 규칙이 업종을 못 찾으면 사업 설명으로 찾은 분류 후보(구어 표현 일치)가 가리키는 업종을 쓴다(후보끼리 업종이 갈리면 묻지 않는다).
  */
 export function intakeSectorSuggestion(plan: Pick<ServerPlan, "sections">, coach: CoachState, intake: IntakeState): IntakeSnapshot["sectorSuggestion"] {
   const business = coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim() ?? "";
   const industry = intake.answers.industry;
   if (!business || industry?.status !== "answered" || intake.ksic || intake.sector === "general" || Object.keys(plan.sections).length) return null;
   if (intake.sectorCheck?.business === business) return null;
-  const suggested = descriptionSector(business);
+  let suggested = descriptionSector(business);
+  if (suggested === "general") {
+    // 구어 표현으로 찾은 분류 후보가 모두 한 업종일 때만(필라테스 → 체육시설·사진 촬영처럼 갈리면 묻지 않는다)
+    const sectors = new Set(searchKsic(business, { limit: 4, minLevel: 5 }).filter(match => match.via === "synonym").map(match => sectorForKsic(match.entry.code) ?? "general"));
+    if (sectors.size === 1) suggested = [...sectors][0];
+  }
   if (suggested === "general" || suggested === intake.sector) return null;
   const label = (sector: ProposalSector) => intakeSectorOptions.find(option => option.value === sector)?.label ?? sector;
   return { sector: suggested, label: label(suggested), current: label(intake.sector) };
+}
+
+/** 업종 확인 질문 — 화면의 확인 카드와 서버가 멈춰 세울 때(sector_check) 같은 문장을 쓴다 */
+export function sectorCheckPrompt(suggestion: NonNullable<IntakeSnapshot["sectorSuggestion"]>): string {
+  return `업종을 ${withRo(suggestion.label)} 바꿀까요?`;
+}
+
+/*
+ * 업종 확인이 남아 있으면 다음 질문의 답을 받지 않는다(2026-10-28 재측정: '기업 서비스'를 고른 뒤 '수제 도시락 가게'를 적었는데
+ * 확인 없이 다음 질문으로 넘어가 손님 불편 선택지가 기업 서비스용으로 나오고 계획서까지 갔다). 화면은 다음 질문 전에 [바꾸기]/[그대로 둘게요]를
+ * 먼저 보여 주므로 보통은 여기까지 오지 않는다 — 예전 화면·직접 호출도 같은 규칙으로 멈춘다. 업종·사업 설명 고치기와 이미 답한 질문 고치기는 막지 않는다.
+ */
+export function assertSectorChecked(plan: Pick<ServerPlan, "sections">, coach: CoachState, intake: IntakeState, command: IntakeCommand) {
+  const id = command.questionId;
+  if (!id || id === "industry" || id === "business" || intake.answers[id]) return;
+  const suggestion = intakeSectorSuggestion(plan, coach, intake);
+  if (suggestion) throw new IntakeError("sector_check", sectorCheckPrompt(suggestion), 422);
 }
 
 export function displayIntakeValue(value: IntakeValue): string {

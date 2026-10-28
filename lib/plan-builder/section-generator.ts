@@ -11,7 +11,7 @@ import { patchSectionIssues, reviewCoachSection, type CoachReviewEvent } from ".
 import { DOCUMENT_SECTOR_FOCUS, documentEditorialPrompt, documentSector } from "./document-editorial";
 import { checkDocumentQuality, qualityRepairIssues } from "./document-quality";
 import { boundedIntakeContext, intakeContextEvidence, INTAKE_CONTEXT_RULES, type IntakeContextInput } from "./intake-context";
-import { compactCoachContext, intakeDataOnly, SECTION_PROMPT_V3_EXAMPLES, sectionPromptV3Rules } from "./section-prompt-v3";
+import { compactCoachContext, intakeDataOnly, onePlaceNotes, SECTION_PROMPT_V3_EXAMPLES, sectionPromptV3Rules } from "./section-prompt-v3";
 import { ESSENTIAL_GROUP_NAMES, essentialGroup, essentialsForChapter } from "./industry-essentials";
 
 /*
@@ -348,9 +348,12 @@ function buildUserPromptV3(input: SectionGenInput): string {
   const group = essentialGroup({ intakeContext: input.intakeContext, documentSector: documentSector(input), description: [input.business?.name, input.business?.description, ...coachFieldValues(input.coachContext, ["business", "offer"])].filter(Boolean).join(" ") });
   const presentKeys = new Set(chaptersForType(input.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`)));
   const essentials = essentialsForChapter(key, group, presentKeys);
+  const notes = onePlaceNotes({ chapters: [...presentKeys].map(item => ({ key: item })), financialOwner: financialTableOwner(input.planType) ?? undefined, executionChapter: hasRoadmap(input.planType) });
+  const ownedNotes = notes.filter(note => note.owner === key), otherNotes = notes.filter(note => note.owner !== key);
   const data = [
-    tag("coach", input.coachContext && compactCoachContext(input.coachContext)),
-    tag("intake", intake && intakeDataOnly(intake, input.coachContext)),
+    tag("coach", input.coachContext && compactCoachContext(input.coachContext).replace(/오늘창업\s*홈페이지/g, "사업 홈페이지")),
+    // 업종 가이드·설계의 '오늘창업 홈페이지'(서비스 기능 이름)는 계획서 본문에 들어가지 않게 '사업 홈페이지'로 넘긴다(계획서 품질 Q4)
+    tag("intake", intake && intakeDataOnly(intake, input.coachContext).replace(/오늘창업\s*홈페이지/g, "사업 홈페이지")),
     tag("operating", input.operatingContext),
     tag("section_answers", answered.length ? formatAnswers(input.answers) : ""),
     tag("financials", md, ' role="이 장이 싣는 계산 결과"'),
@@ -364,6 +367,9 @@ function buildUserPromptV3(input: SectionGenInput): string {
   const task = [
     `작성할 장: ${input.chapter.title} > ${input.section.title} (${key})${executive ? " — 문서의 마지막 장" : ""}`,
     `이 장이 맡는 것: ${input.section.summary}`,
+    // 문서 한 곳에만 쓸 말 — 이 장이 맡는 것과 맡지 않는 것을 장마다 적는다(<one_place>, 계획서 품질 Q4)
+    ownedNotes.length ? `이 장에서만 쓰는 말: ${ownedNotes.map(note => note.label).join(", ")}. 다른 장은 이 말을 다시 쓰지 않으므로 여기서 빠짐없이 씁니다.` : "",
+    otherNotes.length ? `이 장에서 쓰지 않는 말: ${otherNotes.map(note => `${note.label}(${chapterRef(note.owner)})`).join(", ")}.` : "",
     md ? "<financials>의 표와 그래프는 시스템이 본문 끝에 그대로 붙입니다. 본문에는 이 숫자가 무엇을 뜻하는지, 어떤 가정 위에 있는지, 무엇을 조심해야 하는지 해석을 씁니다. 표를 옮겨 적으면 같은 표가 두 번 나오기 때문입니다." : "",
     ref ? `<financials>의 숫자는 ${chapterRef(financialTableOwner(input.planType) ?? "financials/expenses")}에 표로 실립니다. 이 장에서는 필요한 값만 문장 속에서 인용합니다.` : "",
     input.coachContext ? "공통 사업 정보로 실제 사업안 본문을 씁니다. 이미 정리된 AI 제안은 빈칸으로 되돌리지 않고 살려 씁니다." : "위 자료만 근거로 이 장의 본문을 씁니다.",
@@ -377,7 +383,7 @@ function buildUserPromptV3(input: SectionGenInput): string {
     ].join("\n") : "",
     roadmap && !operating ? [
       "이 장은 대표가 앞으로 12주 동안 실제로 할 일을 정하는 장입니다. 계획은 틀리기 마련이라, 큰돈을 쓰기 전에 가장 틀리기 쉬운 가정을 싸게 확인하고 매달 숫자를 보며 고치게 하려는 것입니다. 다음 세 부분을 이 순서로 씁니다.",
-      "1) '## 먼저 확인할 가정' — 틀리기 쉬운 가정 3개를 표(가정 | 싸게 확인하는 방법 | 이 결과면 바꾼다)로 씁니다. 사업 유형(intake.businessType)이 있으면 그 assumptions를 이 표의 가정으로 삼습니다. 수요 가정은 계산 자료의 '출시 전 판단' 방법으로 확인합니다. 돈을 받고 팔아 볼 수 있으면 실제 판매 수를 '판단 기준' 줄의 판매량과 같은 기간끼리 비교하고, 아직 팔 수 없으면 판매량 대신 작은 표본에서 잰 비율과 '닿아야 하는 사람 수', 경쟁 자료로 판단합니다. 비율 기준은 계산 자료에 있는 비율(10%·20%·30%) 가운데 하나를 고르고 '(제안)'으로 표시합니다. 돈을 받지 않는 관심 조사의 성공 기준은 coach.design.nextAction.doneWhen(사용자가 고친 행동이 있으면 그 doneWhen)을 글자 그대로 씁니다. 앞 장들이 그 기준을 따르므로 여기서 다른 숫자로 바꾸면 문서 안에 기준이 둘이 되기 때문입니다. 새로 모은 예약 의사 수만으로 판매량 기준을 채우라고 하면 닿을 수 없는 숫자가 되거나, 반대로 너무 느슨한 기준이 되기 때문입니다. 계산 자료에 '판단 기준' 줄이 없으면(가격·비용을 모를 때) 대표가 일주일에 할 수 있는 건수 가운데 얼마를 채웠는지로 기준을 세우고 '(제안)'으로 표시합니다. 다른 가정의 기준도 자료에 있는 숫자로 세우고, 못 미치면 무엇을 어떻게 바꿀지 씁니다. 수요 판단은 계약 전 주에 둡니다. 매장이 있어야 신고할 수 있는 업종이면, 계약 전에 이미 신고된 공간(공유주방·팝업 매장 등)을 빌려 돈을 받고 팔아 보는 안도 함께 검토합니다. 의사 수보다 실제 판매가 수요를 더 정확히 보여 주기 때문입니다.",
+      "1) '## 먼저 확인할 가정' — 틀리기 쉬운 가정 3개를 표(가정 | 싸게 확인하는 방법 | 이 결과면 바꾼다)로 씁니다. 사업 유형(intake.businessType)이 있으면 그 assumptions를 이 표의 가정으로 삼습니다. 수요 가정은 계산 자료의 '출시 전 판단' 방법으로 확인합니다. 돈을 받고 팔아 볼 수 있으면 실제 판매 수를 '판단 기준' 줄의 판매량과 같은 기간끼리 비교하고, 아직 팔 수 없으면 판매량 대신 작은 표본에서 잰 비율과 '닿아야 하는 사람 수', 경쟁 자료로 판단합니다. 비율 기준은 계산 자료에 있는 비율(10%·20%·30%) 가운데 하나를 고르고 '(제안)'으로 표시합니다. 돈을 받지 않는 관심 조사의 성공 기준은 coach.design.nextAction.doneWhen(사용자가 고친 행동이 있으면 그 doneWhen)을 글자 그대로 씁니다. 앞 장들이 그 기준을 따르므로 여기서 다른 숫자로 바꾸면 문서 안에 기준이 둘이 되기 때문입니다. doneWhen은 조사를 끝냈다고 보는 기준이고, 계약·개업을 할지는 계산 자료의 '계약·개업 전 판단' 줄로 정합니다. 그래서 수요 가정 줄의 '이 결과면 바꾼다' 칸은 비워 두지 않고, 할인한 주문 의사를 처리량(하루에 만들 수 있는 양)이 아니라 본전 판매량과 같은 기간끼리 비교한 통과 기준과 할인 원칙을 그 줄의 '(제안)' 숫자 그대로 씁니다. 기준 칸이 비면 대표가 조사를 마친 뒤 계약할지 정할 수 없기 때문입니다. 새로 모은 예약 의사 수만으로 판매량 기준을 채우라고 하면 닿을 수 없는 숫자가 되거나, 반대로 너무 느슨한 기준이 되기 때문입니다. 계산 자료에 '판단 기준' 줄이 없으면(가격·비용을 모를 때) 대표가 일주일에 할 수 있는 건수 가운데 얼마를 채웠는지로 기준을 세우고 '(제안)'으로 표시합니다. 다른 가정의 기준도 자료에 있는 숫자로 세우고, 못 미치면 무엇을 어떻게 바꿀지 씁니다. 수요 판단은 계약 전 주에 둡니다. 매장이 있어야 신고할 수 있는 업종이면, 계약 전에 이미 신고된 공간(공유주방·팝업 매장 등)을 빌려 돈을 받고 팔아 보는 안도 함께 검토합니다. 의사 수보다 실제 판매가 수요를 더 정확히 보여 주기 때문입니다.",
       "2) '## 12주 할 일' — 표(주차 | 할 일 | 걸리는 시간 | 끝났다고 볼 기준)로 1주부터 12주까지 한 줄씩 씁니다. 사업 유형(intake.businessType)이 있으면 그 roadmap 순서를 12주의 뼈대로 삼고, 이 사업에 맞는 구체적인 일로 채웁니다. 같은 유형이면 같은 순서여야 계획이 매번 흔들리지 않기 때문입니다. 1주차는 앞 장들(<prior_sections>)이 '가장 먼저 할 일'로 쓴 일로 시작합니다. 앞 장들이 (확인 필요)로 남긴 일과 계약 전에 확인할 일(공간에서 영업할 수 있는지, 계약 조건 등)을 모두 해당 주차에 넣습니다. 확인할 일이 이 표 한 곳에 있어야 대표가 빠뜨리지 않기 때문입니다. 매주 걸리는 시간의 합은 대표의 주당 가능 시간(hoursPerWeek) 안에 들어가게 합니다. 가정 확인이 계약·인테리어처럼 큰돈 쓰는 일보다 먼저 오고, 영업 신고·사업자등록처럼 순서가 정해진 일은 그 순서대로 넣습니다. 업종 가이드(intake.industryGuide)가 있으면 그 steps를 하나도 빼지 않고 순서대로 해당 주차에 넣고(예: 계약 전 건축물 용도 확인, 신고 전 위생교육·건강진단), 표 아래에 '업종 가이드 기준의 일반적인 순서라 관할 기관에 확인한다'고 한 번 밝힙니다. 처음 하는 대표가 가장 많이 놓치는 일이고, 하나라도 빠지면 신고가 늦어져 문 여는 날이 밀리기 때문입니다. 공사·설비처럼 큰돈을 사업자등록 전에 쓰게 되면, 세금계산서에 대표자 주민등록번호를 적어 받아 두고 그 과세기간이 끝난 직후의 기한 안에 등록해야 부가세를 공제받는다는 점을 그 주차에 함께 적습니다. 인허가가 없는 업종이면 사업자등록을 첫 유료 판매 전으로 앞당깁니다. 인허가·신고가 필요한 업종이면 돈을 받고 파는 시범 판매나 예약 결제는 신고·등록을 마친 주 뒤에 둡니다. 그 전에는 돈을 받지 않고 관심과 예약 의사만 모읍니다. 신고 전에 팔면 법을 어길 수 있기 때문이며, 이 이유는 이 장에서 한 번 설명합니다. 큰돈이 드는 계약은 견적 합계가 계산 자료의 초기 지출 한도 안일 때만 하는 것으로 쓰고, 견적의 매달 나가는 돈(임대료·관리비 등)이 계산에 쓴 월 고정비를 넘으면 숫자를 다시 계산하는 일을 다음 주에 넣습니다. 한도와 고정비가 모든 계산의 전제라, 넘은 채 계약하면 앞 장의 숫자가 모두 틀리기 때문입니다. 처리량이 계산의 중심이면, 문을 열기 전에 실제 장소와 설비로 계획한 하루(또는 일주일) 양을 만들어 보는 주를 넣습니다. 집에서 만든 양과 실제 설비에서 만든 양은 다를 수 있기 때문입니다.",
       "3) '## 매달 볼 숫자' — 매달 볼 숫자 3개를 표(숫자 | 목표 | 어디서 세는지)로 쓰고, 목표는 자료의 숫자(목표 경우 월별 판매선 등)에서 가져옵니다. 표 아래에 계획서를 다시 보는 때(매달 마지막 주, 12주가 끝날 때 등)와 계속할지 다시 정하는 선(자료의 중단선)을 씁니다.",
     ].join("\n") : "",
@@ -558,17 +564,31 @@ export async function generateSection(
   if (!config) {
     return { markdown: fallbackSection(input), source: "fallback" };
   }
-  const text = await completeText(config, {
-    kind: "generate",
-    system: sectionSystemPrompt(input),
-    user: buildUserPrompt(input),
-    maxOutputTokens: SECTION_MAX_TOKENS,
-    effort: input.coachContext ? "high" : "medium",
-    timeoutMs: SECTION_TIMEOUT_MS,
-    // 한 플랜당 25번 부른다 — 앞부분을 캐시에 올려 두면 24번은 읽기 요금만 낸다
-    cache: true,
-    signal,
-  });
+  const write = async (effort: "high" | "medium") => {
+    let outputLimit = false;
+    const text = await completeText(config, {
+      kind: "generate",
+      system: sectionSystemPrompt(input),
+      user: buildUserPrompt(input),
+      maxOutputTokens: SECTION_MAX_TOKENS,
+      effort,
+      timeoutMs: SECTION_TIMEOUT_MS,
+      // 한 플랜당 25번 부른다 — 앞부분을 캐시에 올려 두면 24번은 읽기 요금만 낸다
+      cache: true,
+      signal,
+      onFailure: failure => { if (failure.code === "output_limit") outputLimit = true; },
+    });
+    return { text, outputLimit };
+  };
+  let { text, outputLimit } = await write(input.coachContext ? "high" : "medium");
+  /*
+   * 추론이 한도를 다 써서 본문이 잘리면, 추론을 줄여 한 번만 다시 쓴다.
+   * 실제 AI 재측정(2026-10-28)에서 '12주 할 일' 장이 16,192토큰을 다 쓰고 잘려 장 하나가 통째로 빠졌다(2차 15,826토큰으로 아슬아슬 통과).
+   */
+  if (!text && outputLimit && input.coachContext && !signal?.aborted) {
+    console.warn("[section] output_limit, retry with medium effort", JSON.stringify({ section: `${input.chapter.id}/${input.section.id}` }));
+    ({ text } = await write("medium"));
+  }
   if (!text || text.trim().length < 40) {
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
     return { markdown: "", source: "failed" };

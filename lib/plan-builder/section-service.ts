@@ -36,7 +36,7 @@ import { betaApiBoundary } from "../staging/beta-boundary";
 import { verifyBody } from "./section-signature";
 import { PLAN_SECTION_INTERNAL_PATH, PLAN_SECTION_API_PATH, type PlanSectionJob, type PlanOutlineJob } from "./section-protocol";
 import { intakeScenarioInputs, planFinancialReference, readIntake } from "./intake-core";
-import { cashflowFromFields, cashflowMarkdown, cashflowScenariosEnabled, implausibleMoneyFromFields, implausibleMoneyMarkdown } from "./cashflow-scenarios";
+import { cashflowFromFields, cashflowMarkdown, cashflowScenariosEnabled, fixedCostAssumptionMarkdown, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyMarkdown } from "./cashflow-scenarios";
 export type { PlanSectionJob, PlanOutlineJob } from "./section-protocol";
 export { callPlanSectionService, callPlanOutlineService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService } from "./section-transport";
 
@@ -49,13 +49,18 @@ export function intakeFinancialTable(plan: Pick<ServerPlan, "planType" | "answer
   if (key !== financialTableOwner(plan.planType)) return undefined;
   const intake = readIntake(plan.answers);
   const scenario = intake ? intakeScenarioInputs(coach, intake) : null;
-  if (!scenario || "missing" in scenario) return undefined;
-  // 준비 예산·월 비용·생활비가 실제 금액으로 보기 어려우면 표·그래프 대신 빈 틀 한 블록만(판정은 cashflow-scenarios.ts)
+  if (!scenario) return undefined;
+  if ("missing" in scenario) {
+    // 월 고정비만 모르면 세 가지 고정비 가정으로 본전 판매량 표(가정 표시) — 신규 사업만
+    const assumed = cashflowScenariosEnabled() && intake?.mode !== "operating" ? fixedCostAssumptionsFromFields(coach.fields) : null;
+    return assumed ? fixedCostAssumptionMarkdown(assumed) : undefined;
+  }
+  // 준비 예산·월 비용이 실제 금액으로 보기 어려우면 표·그래프 대신 빈 틀 한 블록만(판정은 cashflow-scenarios.ts)
   const implausible = implausibleMoneyFromFields(coach.fields);
   if (implausible.length) return implausibleMoneyMarkdown(implausible);
   // 돈 장 시험판(cashflow-scenarios.ts): 판매량 하나 대신 세 경우의 12개월 통장 흐름 — 신규 사업만
   const flow = cashflowScenariosEnabled() && intake?.mode !== "operating" ? cashflowFromFields(coach.fields, scenario) : null;
-  // 건당 남는 돈·본전 판매량은 세 경우 표 위 한 줄에 있다(따로 표를 두면 같은 숫자가 두 번 나온다)
+  // 한 건에 실제 남는 돈(부가세를 뺀 뒤)·본전 판매량은 세 경우 표 위에 있다(예전 손익표를 따로 두면 다른 본전이 두 번 나온다)
   if (flow) return cashflowMarkdown(flow);
   // 새로 시작하는 사업에서 처리량(최대치)만 있으면 판매량을 모르는 것과 같다 — 최대치를 매달 판다고 12개월 표를 만들지 않는다
   const capacityOnly = cashflowScenariosEnabled() && intake?.mode !== "operating" && scenario.volumeSource === "capacity";

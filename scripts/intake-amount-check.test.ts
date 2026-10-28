@@ -24,19 +24,21 @@ async function main() {
   const questions = coreQuestions("startup");
   const q = (id: string) => questions.find(item => item.id === id)!;
 
-  // 1) 규칙: 예산·생활비·월 비용 10만 원 미만, 가격·건당 비용 100원 미만이면 묻는다. 0원·미정·범위 안은 묻지 않는다
-  assert.equal(amountCheckPrompt(q("livingCost"), "3000"), "한 달 생활비 3,000원이 맞나요? 만 원 단위를 빠뜨리셨으면 다시 넣어 주세요.");
+  // 1) 규칙: 예산·월 비용 10만 원 미만, 가격·건당 비용 100원 미만이면 묻는다. 0원·미정·범위 안은 묻지 않는다
+  // 대표 생활비는 더 묻지 않으므로(계획서 품질 Q3, 2026-10-28) 확인 대상도 아니다
+  assert.equal(q("livingCost"), undefined, "생활비 질문은 창업 흐름에 없다");
+  assert.equal(amountCheckPrompt({ fieldKey: "livingCost", kind: "number", unit: "원", period: "월" }, "3000"), null);
   assert.equal(amountCheckPrompt(q("budget"), "3,000원"), "준비 예산 3,000원이 맞나요? 만 원 단위를 빠뜨리셨으면 다시 넣어 주세요.");
   assert.equal(amountCheckPrompt(q("structure.cost"), "월 3천원"), "매달 나가는 돈 3,000원이 맞나요? 만 원 단위를 빠뜨리셨으면 다시 넣어 주세요.");
   assert.match(amountCheckPrompt(q("price"), 50) ?? "", /^판매 가격 50원이 맞나요\? 천 원·만 원 단위/);
   assert.match(amountCheckPrompt(q("structure.unitCost"), "80원") ?? "", /^한 건당 비용 80원이 맞나요\?/);
   assert.match(amountCheckPrompt(q("budget"), "1~3만원") ?? "", /^준비 예산 1~3만원이 맞나요\?/, "범위는 적은 쪽으로 본다");
-  for (const [id, value] of [["budget", "300만원"], ["budget", "0"], ["livingCost", 0], ["livingCost", "150만원"], ["structure.cost", "100000"], ["price", "3000"], ["price", "0"], ["structure.unitCost", 0], ["structure.unitCost", "500"], ["hoursPerWeek", "3"], ["customer", "3000"], ["budget", null]] as const) {
+  for (const [id, value] of [["budget", "300만원"], ["budget", "0"], ["structure.cost", "100000"], ["price", "3000"], ["price", "0"], ["structure.unitCost", 0], ["structure.unitCost", "500"], ["hoursPerWeek", "3"], ["customer", "3000"], ["budget", null]] as const) {
     assert.equal(amountCheckPrompt(q(id), value), null, `${id}=${String(value)} 은 묻지 않는다`);
   }
   // 화면은 판매 가격 0원 확인과 같은 자리에서 묻는다
   assert.equal(answerCheckPrompt(q("price"), "0"), ZERO_PRICE_PROMPT);
-  assert.equal(answerCheckPrompt(q("livingCost"), "3000"), amountCheckPrompt(q("livingCost"), "3000"));
+  assert.equal(answerCheckPrompt(q("budget"), "3000"), amountCheckPrompt(q("budget"), "3000"));
 
   // 2) 서버: 확인 없는 답은 저장하지 않고 같은 문장으로 멈춘다. confirmed면 그대로 저장한다
   const ownerHash = `amount-check-${randomUUID()}`;
@@ -49,25 +51,24 @@ async function main() {
   const send = async (command: Command) => saveIntakeCommand(ownerHash, { ...command, planId, revision: (await load()).coach.revision, requestId: randomUUID() }, { aiAvailable: false, aiAllowed: false });
   await send({ action: "answer", questionId: "business", value: "동네 반찬 가게" });
 
-  await assert.rejects(send({ action: "answer", questionId: "livingCost", value: "3000" }), (error: unknown) => {
+  await assert.rejects(send({ action: "answer", questionId: "budget", value: 3000 }), (error: unknown) => {
     assert.ok(error instanceof IntakeError);
     assert.equal(error.code, "amount_check");
     assert.equal(error.status, 422);
-    assert.equal(error.message, "한 달 생활비 3,000원이 맞나요? 만 원 단위를 빠뜨리셨으면 다시 넣어 주세요.");
+    assert.equal(error.message, "준비 예산 3,000원이 맞나요? 만 원 단위를 빠뜨리셨으면 다시 넣어 주세요.");
     return true;
   });
-  assert.equal((await load()).intake.answers.livingCost, undefined, "확인 전에는 저장하지 않는다");
-  await assert.rejects(send({ action: "answer", questionId: "budget", value: 3000 }), /준비 예산 3,000원이 맞나요/);
+  assert.equal((await load()).intake.answers.budget, undefined, "확인 전에는 저장하지 않는다");
   await assert.rejects(send({ action: "answer", questionId: "structure.cost", value: "3,000원" }), /매달 나가는 돈 3,000원이 맞나요/);
 
-  await send({ action: "answer", questionId: "livingCost", value: "3000", confirmed: true });
-  assert.equal((await load()).intake.answers.livingCost?.value, 3000, "[맞아요]면 그대로 저장한다");
+  await send({ action: "answer", questionId: "budget", value: 3000, confirmed: true });
+  assert.equal((await load()).intake.answers.budget?.value, 3000, "[맞아요]면 그대로 저장한다");
   // 다시 적은 현실 범위 금액·0원·미정은 묻지 않고 저장한다
   await send({ action: "answer", questionId: "budget", value: "300만원" });
   assert.equal((await load()).intake.answers.budget?.value, 3_000_000);
   await send({ action: "answer", questionId: "structure.cost", value: "0" });
-  await send({ action: "answer", questionId: "livingCost", value: null, unknown: true });
-  assert.equal((await load()).intake.answers.livingCost?.status, "unknown");
+  await send({ action: "answer", questionId: "budget", value: null, unknown: true });
+  assert.equal((await load()).intake.answers.budget?.status, "unknown");
   console.log(JSON.stringify({ passed: 22 }));
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

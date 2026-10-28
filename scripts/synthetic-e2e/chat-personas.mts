@@ -195,6 +195,8 @@ async function runPersona(p: Persona, index: number) {
   let asked = 0;
   for (let i = 0; i < 40 && plan.nextQuestion; i++) {
     const q = plan.nextQuestion; const extra: Record<string, unknown> = {};
+    // 업종 확인(sector_check) — [바꾸기]
+    if (plan.sectorSuggestion && q.id !== "industry" && q.id !== "business") { await cmd({ action: "answer", questionId: "industry", value: plan.sectorSuggestion.sector }); continue; }
     let value: unknown = p.answers?.[q.id];
     if (value === undefined) {
       if (q.id === "business") value = p.desc;

@@ -111,6 +111,23 @@ async function main() {
     await completeText(config, { system: "규칙", user: "질문 전체", cacheUserPrefix: "다른 글", cache: true, maxOutputTokens: 100 });
     assert.equal(calls[0].body.messages[0].content, "질문 전체");
 
+    // 추론이 한도를 다 써서 잘린 장은 추론을 줄여 한 번만 다시 쓴다(실제 AI 재측정 2026-10-28 '12주 할 일' 장)
+    const writes: Array<{ max_tokens?: number }> = [];
+    globalThis.fetch = (async (_url: unknown, init?: { body?: string }) => {
+      const body = JSON.parse(String(init?.body)) as Body & { max_tokens?: number };
+      const required = body.output_config?.format?.schema?.required ?? [];
+      const usage = { input_tokens: 10, output_tokens: 5, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
+      if (required.includes("issues")) return Response.json({ stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify({ issues: [] }) }], usage });
+      writes.push(body);
+      return writes.length === 1
+        ? Response.json({ stop_reason: "max_tokens", content: [{ type: "text", text: "## 잘린" }], usage })
+        : Response.json({ stop_reason: "end_turn", content: [{ type: "text", text: draft(3).replace("확정합니다", "목표로 둡니다(제안)") }], usage });
+    }) as unknown as typeof fetch;
+    const retried = await generateSection(config, inputFor(3));
+    assert.equal(writes.length, 2, "잘리면 한 번 더 쓴다");
+    assert.ok((writes[1].max_tokens ?? 0) < (writes[0].max_tokens ?? 0), "다시 쓸 때는 추론 몫을 줄인다");
+    assert.equal(retried.source, "ai");
+
     // OpenAI는 user 문자열 그대로
     let openaiBody: { input?: Array<{ role: string; content: string }> } = {};
     globalThis.fetch = (async (_url: unknown, init?: { body?: string }) => {
@@ -119,7 +136,7 @@ async function main() {
     }) as unknown as typeof fetch;
     await completeText({ provider: "openai", model: "fixture-only", apiKey: "fixture-only" }, { system: "규칙", user: "공통 질문", cacheUserPrefix: "공통 ", cache: true, maxOutputTokens: 100 });
     assert.equal(openaiBody.input?.[1].content, "공통 질문");
-    console.log(JSON.stringify({ passed: 16 }));
+    console.log(JSON.stringify({ passed: 19 }));
   } finally { globalThis.fetch = original; }
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -87,9 +87,11 @@ async function main() {
   // 2026-10-22 입력 감사: 기간을 붙여 쓴 답('주 20시간', '월 30만', '30만원/월')과 겹친 단위('2만5천원')도 답으로 받는다
   for (const text of ["주 20시간", "주20", "20시간/주", "일주일에 20시간"]) assert.equal(routeComposerInput(original, weeklyHours, text).kind, "answer", text);
   const price = original.questions.find(q => q.id === "price")!;
-  const living = original.questions.find(q => q.id === "livingCost")!;
-  assert.equal(living.period, "월");
-  for (const text of ["월 30만", "30만원/월", "매달 30만원", "30만원"]) assert.deepEqual(routeComposerInput(original, living, text), { kind: "answer", questionId: "livingCost", value: text }, text);
+  // 대표 생활비 질문은 뺐다(계획서 품질 Q3) — 월 단위 금액 답은 월 고정비 질문으로 확인한다
+  assert.equal(original.questions.find(q => q.id === "livingCost"), undefined);
+  const monthly = original.questions.find(q => q.id === "structure.cost")!;
+  assert.equal(monthly.period, "월");
+  for (const text of ["월 30만", "30만원/월", "매달 30만원", "30만원"]) assert.deepEqual(routeComposerInput(original, monthly, text), { kind: "answer", questionId: "structure.cost", value: text }, text);
   for (const text of ["2만5천원", "2만 5천원", "3만5천", "4.500"]) assert.equal(routeComposerInput(original, price, text).kind, "answer", text);
   // 읽을 수 없는 숫자는 예시와 함께 다시 적어 달라고 한다(예전엔 서버 400 또는 '어떻게 남길까요')
   assert.deepEqual(routeComposerInput(original, price, "20~30만원"), { kind: "invalid", hint: "범위 대신 숫자 하나만 적어 주세요 (예: 25000, 2만5천원)" });
@@ -101,8 +103,8 @@ async function main() {
   assert.equal(answered("price", "2만5천원"), 25000);
   assert.equal(answered("price", "1억5천만원"), 150_000_000);
   assert.equal(answered("price", "4.500"), 4500, "점 뒤 세 자리는 천 단위 구분");
-  assert.equal(answered("livingCost", "월 30만"), 300000);
-  assert.equal(answered("livingCost", "30만원/월"), 300000);
+  assert.equal(answered("structure.cost", "월 30만"), 300000);
+  assert.equal(answered("structure.cost", "30만원/월"), 300000);
   const hoursSaved = (value: string) => previewIntakeAnswer(original, command({ questionId: "hoursPerWeek", value }))!.intake.answers.hoursPerWeek?.value;
   assert.equal(hoursSaved("주 20시간"), "20시간");
   assert.equal(hoursSaved("주20"), "20시간");
@@ -607,9 +609,7 @@ async function main() {
   for (const id of ["customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost"]) guided = previewIntakeAnswer(guided, { ...command({ questionId: id, value: id === "price" || id.startsWith("structure.") ? "0원" : "확인한 답변" }), revision: guided.coach.revision })!;
   assert.equal(nextRefinementQuestion(guided)?.id, "budget");
   guided = previewIntakeAnswer(guided, { ...command({ questionId: "budget", value: "0원" }), revision: guided.coach.revision })!;
-  assert.equal(nextRefinementQuestion(guided)?.id, "livingCost", "explicit zero is resolved, not missing");
-  guided = previewIntakeAnswer(guided, { ...command({ questionId: "livingCost", value: "0원" }), revision: guided.coach.revision })!;
-  assert.equal(nextRefinementQuestion(guided)?.id, "hoursPerWeek", "living cost 0원(고정비에 넣음) is an answer, not missing");
+  assert.equal(nextRefinementQuestion(guided)?.id, "hoursPerWeek", "explicit zero is resolved, not missing (no living-cost question since 계획서 품질 Q3)");
   assert.equal(nextRefinementQuestion(beforeGuided)?.id, "customer", "suggesting a next question does not mutate answers");
   assert.equal(nextRefinementQuestion(beforeGuided, ["customer"])?.id, "problem", "a deferred optional question does not immediately repeat");
   const refiningDraft = { ...emptyDraft(), ownerScope: scope, editingId: "customer", refiningId: "customer", refinementSeen: [], answers: { customer: { ...emptyAnswer(), unknown: true } } };

@@ -64,14 +64,16 @@ async function main() {
     const lines = buildExecutiveSummary(plan).blocks.flatMap(block => block.lines);
     const first = lines.find(line => line.label === "첫 달 가정");
     assert.ok(first, lines.map(line => `${line.label}: ${line.value}`).join("\n"));
-    assert.match(first!.value, /^조심스러운 경우 9개 판매 \/ 매출 225,000원 \/ 한 달 -1,647,000원\(생활비 포함\)/, first!.value);
+    // 저장된 생활비(1,500,000원)는 계산하지 않고(계획서 품질 Q3), 한 개에 실제 남는 돈 = 25,000 − 부가세 2,273 − 8,000 = 14,727원
+    assert.match(first!.value, /^조심스러운 경우 11개 판매 \/ 매출 275,000원 \/ 한 달 -138,003원/, first!.value);
+    assert.doesNotMatch(first!.value, /생활비/);
     assert.match(first!.value, /목표 경우 6개월차 120개/);
     assert.ok(!JSON.stringify(lines).includes("520"), "capacity never appears as first-month sales");
     assert.ok(!JSON.stringify(lines).includes("8,540,000"), "no capacity-based profit");
-    assert.ok(lines.some(line => line.label === "손익분기" && line.value.startsWith("월 18건")));
+    assert.ok(lines.some(line => line.label === "손익분기" && line.value.startsWith("월 21개")), lines.map(line => `${line.label}: ${line.value}`).join("\n"));
     // 같은 숫자를 문서 돈 장(세 경우 표)도 쓴다
     const table = intakeFinancialTable(plan, coach, financialTableOwner(plan.planType)!)!;
-    assert.match(table, /\| 조심스러운 경우 \| 9개 \| 225,000원 \| [\d,]+원 \| -1,647,000원 \|/);
+    assert.match(table, /\| 조심스러운 경우 \| 11개 \| 275,000원 \| [\d,]+원 \| -138,003원 \|/);
     // 돈 장 계산을 끄면(예전 손익표) 요약은 판매량을 정하지 않는다
     process.env.PLAN_CASHFLOW_SCENARIOS = "0";
     try {
@@ -119,7 +121,7 @@ async function main() {
     assert.equal((await send({ action: "answer", questionId: "business", value: "동네 아파트 상가 브런치 카페" })).sectorSuggestion?.sector, "food_beverage");
     // 채팅 화면이 확인 문구와 두 버튼을 그린다
     const ui = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
-    assert.ok(ui.includes("에 더 가까워 보여요. 업종을 바꿀까요?") && ui.includes(">바꾸기</button>") && ui.includes(">그대로 둘게요</button>") && ui.includes('action: "sector-keep"'));
+    assert.ok(ui.includes("에 더 가까워 보여요. {sectorCheckPrompt(sectorSuggestion)}") && ui.includes(">바꾸기</button>") && ui.includes(">그대로 둘게요</button>") && ui.includes('action: "sector-keep"'));
     // 표지: 사업 설명으로 찾은 업종 가이드 이름(넓은 업종 이름 대신)
     const route = readFileSync(new URL("../app/api/plan/document/route.ts", import.meta.url), "utf8");
     assert.ok(route.includes("documentIndustryLabel(plan)"));
@@ -192,27 +194,27 @@ async function main() {
     assert.equal(draft.pageData?.theme, "warm", "a handmade gift shop starts warm, not navy+green");
   }
 
-  // ── 6. 버티는 기간: 준비 기간 생활비가 예산을 다 쓰면 '생활비를 예산 밖에서 낼 때'를 함께 ──
+  // ── 6. 버티는 기간 = (준비 예산 − 초기 지출) ÷ 월 고정비 — 대표 생활비는 넣지 않는다(계획서 품질 Q3, 2026-10-28) ──
   {
-    const flow = buildCashflowScenarios({ unitPrice: 25000, unitVariableCost: 8000, monthlyFixedCost: 300000, capacity: "대표 혼자, 하루 20개", goal: "6개월 안에 월 매출 300만원", budget: "5,000,000원", livingCost: "1,500,000원", online: true })!;
-    assert.equal(flow.survival.every(row => row.months < 1), true, "the original view is all '1개월도 못 버팀'");
-    assert.deepEqual(flow.outside, { shortfall: 147000, stopReserve: 441000, survival: [{ spend: 1000000, months: 27 }, { spend: 2000000, months: 20 }, { spend: 3000000, months: 13 }, { spend: 4000000, months: 6 }] });
+    const flow = buildCashflowScenarios({ unitPrice: 25000, unitVariableCost: 8000, monthlyFixedCost: 300000, capacity: "대표 혼자, 하루 20개", goal: "6개월 안에 월 매출 300만원", budget: "5,000,000원", online: true })!;
+    assert.deepEqual(flow.survival, [{ spend: 1000000, months: 13 }, { spend: 2000000, months: 10 }, { spend: 3000000, months: 6 }, { spend: 4000000, months: 3 }]);
+    assert.equal(flow.stopReserve, 900000, "월 고정비 3개월분");
     const md = cashflowMarkdown(flow);
-    assert.match(md, /\| 초기 지출 \| 남는 준비 예산\(준비 기간 생활비 뺀 뒤\) \| 버티는 기간 \| 생활비를 예산 밖에서 낼 때\(별도 가정\) \|/);
-    assert.match(md, /\| 1,000,000원 \| -500,000원 \| 1개월도 못 버팀 \| 12개월 이상 \|/);
-    assert.match(md, /\| 4,000,000원 \| -3,500,000원 \| 1개월도 못 버팀 \| 약 6개월 \|/);
-    assert.ok(md.includes("준비 예산으로는 대표 생활비를 감당하지 못합니다."));
-    assert.ok(md.includes("중단선은 441,000원(3개월 적자분)"));
+    assert.match(md, /\| 초기 지출 \| 남는 준비 예산 \| 버티는 기간 \|/);
+    assert.match(md, /\| 1,000,000원 \| 4,000,000원 \| 12개월 이상 \|/);
+    assert.match(md, /\| 4,000,000원 \| 1,000,000원 \| 약 3개월 \|/);
+    assert.ok(!/생활비까지|준비 기간 생활비|예산 밖에서 낼 때/.test(md), md);
+    assert.ok(md.includes("중단선") || md.includes("900,000원(월 고정비 3개월분)"));
     assert.equal(cashflowMarkdown(flow), md, "deterministic");
-    // 11. 온라인 말: 스토어 공개 전/후, 월 26일 작업
+    // 11. 온라인 말: 스토어 공개 전/후, 월 26일 작업, 포장·택배와 스토어 수수료는 '확인 필요' 칸
     assert.ok(!/문 열기 전|문을 연 뒤|문 연 뒤|26일 영업/.test(md), md);
-    assert.ok(md.includes("스토어 공개 전 준비 기간") && md.includes("월 26일 작업"));
+    assert.ok(md.includes("스토어 공개 뒤") && md.includes("월 26일 작업"));
+    assert.match(md, /\| 포장·택배 \| 확인 필요 \|/);
+    assert.match(md, /\| 스토어 판매·결제 수수료 \| 확인 필요 \|/);
     const ref = cashflowReference(flow);
-    assert.ok(ref.includes("스토어를 공개한 뒤: 실제 판매 수") && ref.includes("생활비를 사업 예산 밖에서 낼 때(별도 가정) 초기 지출별 버티는 기간: 1,000,000원이면 12개월 이상"));
-    // 예산이 생활비를 감당하면 두 번째 보기는 없다(예전 표 그대로)
-    const roomy = buildCashflowScenarios({ unitPrice: 25000, unitVariableCost: 8000, monthlyFixedCost: 300000, budget: "50,000,000원", livingCost: "1,500,000원" })!;
-    assert.equal(roomy.outside, null);
-    assert.ok(cashflowMarkdown(roomy).includes("문 열기 전") || !cashflowMarkdown(roomy).includes("스토어 공개"), "store wording for non-online businesses");
+    assert.ok(ref.includes("스토어를 공개한 뒤: 실제 판매 수") && ref.includes("매출이 없어도 버티는 기간((준비 예산 − 초기 지출) ÷ 월 고정비): 초기 지출 1,000,000원이면 12개월 이상"), ref);
+    const roomy = buildCashflowScenarios({ unitPrice: 25000, unitVariableCost: 8000, monthlyFixedCost: 300000, budget: "50,000,000원" })!;
+    assert.ok(cashflowMarkdown(roomy).includes("문 연 뒤") || !cashflowMarkdown(roomy).includes("스토어 공개"), "store wording for non-online businesses");
     const { coach, intake } = candlePlan();
     assert.equal(intakeSellsOnline(coach, intake), true);
     assert.ok(!intakeFinancialReference(coach, intake).includes("월 26일 영업"));
@@ -282,7 +284,7 @@ async function main() {
   for (const text of ["수제 소이 캔들 선물샵", "핸드메이드 도자기", "향초 공방", "기업 서비스 수제 소이 캔들 선물샵"]) assert.equal(themeForSector(text), "warm", text);
   assert.equal(themeForSector("수제 강아지 간식"), "vivid", "only gift-goods words, not every '수제'");
 
-  console.log("online-store-plan: first month from cashflow (not capacity), sector re-ask, kit phrase fixes, store-only homepage, outside-budget survival, step order, online sales guide, platform payment, mobile tables, warm theme passed; no paid calls");
+  console.log("online-store-plan: first month from cashflow (not capacity), sector re-ask, kit phrase fixes, store-only homepage, survival = budget ÷ fixed cost, step order, online sales guide, platform payment, mobile tables, warm theme passed; no paid calls");
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

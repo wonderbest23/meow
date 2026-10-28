@@ -20,9 +20,9 @@ const flag = (name: string) => argv.includes(`--${name}`);
 const option = (name: string) => { const index = argv.indexOf(`--${name}`); return index >= 0 ? argv[index + 1] : undefined; };
 const spend = flag("spend");
 /*
- * 기본은 지금 운영 방식(v3 지시문 + 돈 장 + 실행 장 + 생활비 질문, 2026-10-10 채택).
+ * 기본은 지금 운영 방식(v3 지시문 + 돈 장 + 실행 장, 2026-10-10 채택. 생활비 질문은 2026-10-28 계획서 품질 Q3로 뺐다).
  * --legacy: 예전 지시문(PLAN_SECTION_PROMPT=v1)과 예전 손익표(PLAN_CASHFLOW_SCENARIOS=0)로 — 바꾸기 전과 비교하는 용도.
- * 실행 장과 생활비 질문은 장 목록·질문 목록에 들어가 있어 legacy 에서도 남는다.
+ * 실행 장은 장 목록에 들어가 있어 legacy 에서도 남는다. 시험 사업의 livingCost 답은 묻는 질문이 없어 쓰이지 않는다.
  */
 const legacy = flag("legacy");
 const variant = legacy ? "legacy" : "current";
@@ -161,6 +161,12 @@ async function runCase(c: Case) {
     const question = snapshot.nextQuestion;
     const base = { action: "answer", planId, revision: snapshot.coach.revision, questionId: question.id };
     let command: Record<string, unknown>;
+    // 업종 확인(사업 설명이 고른 업종과 다를 때, sector_check) — 업종을 정해 둔 사업은 [그대로], 아니면 [바꾸기]
+    if (snapshot.sectorSuggestion && question.id !== "industry" && question.id !== "business") {
+      result = await save(c.sector ? { action: "sector-keep", planId, revision: snapshot.coach.revision } : { ...base, questionId: "industry", value: snapshot.sectorSuggestion.sector });
+      log.push(`업종 확인: ${c.sector ? "그대로" : `${snapshot.sectorSuggestion.label}(으)로 바꿈`}`);
+      snapshot = result.snapshot; continue;
+    }
     if (question.id === "industry") {
       const sector = c.sector ?? snapshot.ksicCandidates?.[0]?.sector ?? "general";
       const ksic = snapshot.ksicCandidates?.find(item => item.sector === sector)?.code;

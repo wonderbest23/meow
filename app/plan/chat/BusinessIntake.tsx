@@ -19,6 +19,7 @@ import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
 import { useAnswerSuggestions } from "./intake-ui/AnswerSuggestions";
 import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, readIntakePayload, routeComposerInput, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber } from "./intake-ui/model";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
+import { sectorCheckPrompt } from "../../../lib/plan-builder/intake-core";
 import styles from "./intake.module.css";
 import chatUi from "../../../components/coach-chat-ui.module.css";
 import ChatLoading from "./loading";
@@ -657,6 +658,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
           setAmountCheck({ questionId: pending.command.questionId, value: pending.command.value ?? null, revision: planRef.current.coach.revision, prompt: data.message });
           setStatus(hasLocalInput(draftRef.current) ? "draft" : "saved"); follow.current = true; return;
         }
+        // 서버가 업종 확인으로 멈춰 세웠으면(다른 탭 등에서 화면이 먼저 묻지 못한 답) 서버 상태를 다시 깔아 업종 확인 카드를 보여 준다
+        if (data?.code === "sector_check" && identity.plan && identity.plan.planId === planRef.current?.planId) {
+          queuedAnswers.current = []; previewRef.current = null; setPreview(null);
+          installPlan(identity.plan);
+          setStatus(hasLocalInput(draftRef.current) ? "draft" : "saved"); follow.current = true; return;
+        }
         if (data?.login && data.plan && data.plan.planId === planRef.current?.planId) installPlan(data.plan);
         const aiUnavailable = ["help", "design", "extract", "extract-pending"].includes(pending.command.action) && !!data?.code && ["ai_unavailable", "ai_limit", "business_required"].includes(data.code);
         setStatus(aiUnavailable ? hasLocalInput(draftRef.current) ? "draft" : "saved" : "failed"); setError(data?.message || "요청을 처리하지 못했어요. 입력은 그대로 남아 있어요."); return;
@@ -812,9 +819,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   /*
    * 고른 업종과 사업 설명이 어긋나면(서버 규칙, AI 0회) 다음 질문 전에 한 번만 묻는다.
    * 2026-10-22: 캔들 스마트스토어를 '기업 서비스'로 골라 '프로젝트 1건 가격'을 묻고 표지에도 '기업 서비스'가 찍혔다.
+   * 2026-10-28: 코치 채팅이 아닌 화면에서도 묻는다. 서버도 확인 전에는 다음 질문의 답을 받지 않는다(sector_check).
    */
-  const sectorSuggestion = coach && plan?.sectorSuggestion && !plan.hasDocuments && !draft.editingId && !liveIntent && question && question.id !== "industry" && question.id !== "business" ? plan.sectorSuggestion : null;
-  const sectorConfirmation = sectorSuggestion && <section className={styles.intentPrompt} aria-label="업종 확인"><ChatSpeaker /><p>말씀하신 사업은 &apos;{sectorSuggestion.label}&apos;에 더 가까워 보여요. 업종을 바꿀까요?</p><p className={styles.intentQuestion}>지금 고른 업종: {sectorSuggestion.current}</p><div className={styles.intentActions}>
+  const sectorSuggestion = plan?.sectorSuggestion && !plan.hasDocuments && !draft.editingId && !liveIntent && question && question.id !== "industry" && question.id !== "business" ? plan.sectorSuggestion : null;
+  const sectorConfirmation = sectorSuggestion && <section className={styles.intentPrompt} aria-label="업종 확인"><ChatSpeaker /><p>말씀하신 사업은 &apos;{sectorSuggestion.label}&apos;에 더 가까워 보여요. {sectorCheckPrompt(sectorSuggestion)}</p><p className={styles.intentQuestion}>지금 고른 업종: {sectorSuggestion.current}</p><div className={styles.intentActions}>
     <button type="button" className={styles.secondaryButton} disabled={blocked} onClick={() => { follow.current = true; void send({ action: "answer", questionId: "industry", value: sectorSuggestion.sector }); }}>바꾸기</button>
     <button type="button" className={styles.secondaryButton} disabled={blocked} onClick={() => { follow.current = true; void send({ action: "sector-keep" }); }}>그대로 둘게요</button>
   </div></section>;
