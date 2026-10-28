@@ -2,7 +2,7 @@
 // 리얼리티 게이트 철학 유지: 근거 없는 경쟁사 실명·시장수치·인터뷰를 지어내지 않고 "추가 정의 필요"로 표기.
 
 import { completeText, streamText, type LLMConfig } from "../llm/complete";
-import { chaptersForType, financialTableOwner, hasRoadmap, type PlanChapterDef, type PlanSectionDef } from "./blueprint";
+import { chapterRef, chaptersForType, financialTableOwner, hasRoadmap, type PlanChapterDef, type PlanSectionDef } from "./blueprint";
 import { questionsForSection } from "./questions";
 import { planTypeGuidanceBlock } from "./plan-type-guidance";
 import type { SectionBusinessContext } from "./context/section";
@@ -12,6 +12,7 @@ import { DOCUMENT_SECTOR_FOCUS, documentEditorialPrompt, documentSector } from "
 import { checkDocumentQuality, qualityRepairIssues } from "./document-quality";
 import { boundedIntakeContext, intakeContextEvidence, INTAKE_CONTEXT_RULES, type IntakeContextInput } from "./intake-context";
 import { compactCoachContext, intakeDataOnly, SECTION_PROMPT_V3_EXAMPLES, sectionPromptV3Rules } from "./section-prompt-v3";
+import { ESSENTIAL_GROUP_NAMES, essentialGroup, essentialsForChapter } from "./industry-essentials";
 
 /*
  * 장 작성 지시문 v3(section-prompt-v3.ts) — 상담으로 만든 계획서(공통 사업 정보가 있는 것)의 기본(2026-10-10 블라인드 검토 3회로 결정).
@@ -303,6 +304,12 @@ function sectionSystemPromptV3(input: SectionGenInput, biz: string): string {
   ].filter(Boolean).join("\n");
 }
 
+/** 공통 사업 정보(JSON)의 사업 소개·상품 값 — 업종 묶음을 고를 때 사업 설명으로 쓴다 */
+function coachFieldValues(coachContext: string | undefined, keys: string[]): string[] {
+  if (!coachContext) return [];
+  try { return ((JSON.parse(coachContext) as { fields?: Array<{ key?: string; value?: string }> }).fields ?? []).filter(field => keys.includes(field.key ?? "") && field.value).map(field => field.value!); } catch { return []; }
+}
+
 /** 업종 자료(intake)에 든 사업 유형 id — 장별 초점을 시스템 지시문의 장 역할에 붙인다(한 계획서 안에서 모든 장이 같다) */
 function businessTypeIdOf(intakeContext: string | undefined): string | null {
   if (!intakeContext) return null;
@@ -337,23 +344,28 @@ function buildUserPromptV3(input: SectionGenInput): string {
   const md = input.financialsMarkdown, ref = !md ? input.financialsReference : undefined;
   const answered = Object.entries(input.answers).filter(([, v]) => v != null && v !== "");
   const intake = boundedIntakeContext(input.intakeContext);
+  // 업종별 필수 항목 — 이 장이 맡는 것만(industry-essentials.ts). 업종 묶음은 작성 자료의 업종·분류 코드·업종 가이드로 고른다
+  const group = essentialGroup({ intakeContext: input.intakeContext, documentSector: documentSector(input), description: [input.business?.name, input.business?.description, ...coachFieldValues(input.coachContext, ["business", "offer"])].filter(Boolean).join(" ") });
+  const presentKeys = new Set(chaptersForType(input.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`)));
+  const essentials = essentialsForChapter(key, group, presentKeys);
   const data = [
     tag("coach", input.coachContext && compactCoachContext(input.coachContext)),
     tag("intake", intake && intakeDataOnly(intake, input.coachContext)),
     tag("operating", input.operatingContext),
     tag("section_answers", answered.length ? formatAnswers(input.answers) : ""),
     tag("financials", md, ' role="이 장이 싣는 계산 결과"'),
-    tag("financials", ref, ' role="참고 — 재무 장에 표로 실림"'),
+    tag("financials", ref, ' role="참고 — 표는 돈 숫자를 맡은 장에 실림"'),
     tag("conflicts", (input.conflicts ?? []).map(c => `- ${c.title}: ${c.detail}`).join("\n")),
     tag("context", contextDataV3(input.context, Boolean(md || ref))),
     tag("market_evidence", evidenceDataV3(input.evidence)),
+    tag("industry_essentials", essentials.map(item => `- ${item}`).join("\n"), ` group="${ESSENTIAL_GROUP_NAMES[group]}"`),
     tag("prior_sections", input.priorSummary),
   ].filter(Boolean).join("\n");
   const task = [
     `작성할 장: ${input.chapter.title} > ${input.section.title} (${key})${executive ? " — 문서의 마지막 장" : ""}`,
     `이 장이 맡는 것: ${input.section.summary}`,
     md ? "<financials>의 표와 그래프는 시스템이 본문 끝에 그대로 붙입니다. 본문에는 이 숫자가 무엇을 뜻하는지, 어떤 가정 위에 있는지, 무엇을 조심해야 하는지 해석을 씁니다. 표를 옮겨 적으면 같은 표가 두 번 나오기 때문입니다." : "",
-    ref ? "<financials>의 숫자는 재무 장에 표로 실립니다. 이 장에서는 필요한 값만 문장 속에서 인용합니다." : "",
+    ref ? `<financials>의 숫자는 ${chapterRef(financialTableOwner(input.planType) ?? "financials/expenses")}에 표로 실립니다. 이 장에서는 필요한 값만 문장 속에서 인용합니다.` : "",
     input.coachContext ? "공통 사업 정보로 실제 사업안 본문을 씁니다. 이미 정리된 AI 제안은 빈칸으로 되돌리지 않고 살려 씁니다." : "위 자료만 근거로 이 장의 본문을 씁니다.",
     executive && !hasRoadmap(input.planType) ? "첫 소제목과 첫 문단에서 이 사업의 결론(누구에게 무엇을 얼마에 팔고, 숫자로 보면 어떤지)을 말합니다. 끝에 '## 실행 전 확인 목록' 표를 하나 만들고, 앞 장들이 (확인 필요)로 남긴 것과 시작 전에 확인할 일을 겹치지 않게 5~8개로 모읍니다. 항목마다 어디서 어떻게 확인하는지 한 줄을 붙입니다." : "",
     executive && hasRoadmap(input.planType) ? "첫 소제목과 첫 문단에서 이 계획의 결론과 가장 큰 위험을 말합니다. '## 지금 정할 것'에 가장 큰 위험 2~3개와 대표가 지금 정해야 할 결정을 쓰고, 마지막에 가장 먼저 할 행동 하나를 씁니다. 이 행동은 '12주 할 일과 매달 볼 숫자' 장의 1주차 할 일과 같은 일로 씁니다. 장마다 첫 행동이 다르면 대표가 무엇부터 할지 헷갈리기 때문입니다. 결정과 판단 뒤에 할 행동도 그 장의 기준·행동과 같게 쓰고, 그 시점에 할 수 없는 행동(계약 뒤에 공간을 줄이는 것 등)은 쓰지 않습니다. 확인할 일, 12주 할 일, 매달 볼 숫자는 '12주 할 일과 매달 볼 숫자' 장이 맡으므로 표로 다시 만들지 않고 그 장을 가리킵니다. 같은 표가 두 장에 나오면 대표가 같은 내용을 두 번 읽기 때문입니다." : "",
@@ -365,7 +377,7 @@ function buildUserPromptV3(input: SectionGenInput): string {
     ].join("\n") : "",
     roadmap && !operating ? [
       "이 장은 대표가 앞으로 12주 동안 실제로 할 일을 정하는 장입니다. 계획은 틀리기 마련이라, 큰돈을 쓰기 전에 가장 틀리기 쉬운 가정을 싸게 확인하고 매달 숫자를 보며 고치게 하려는 것입니다. 다음 세 부분을 이 순서로 씁니다.",
-      "1) '## 먼저 확인할 가정' — 틀리기 쉬운 가정 3개를 표(가정 | 싸게 확인하는 방법 | 이 결과면 바꾼다)로 씁니다. 사업 유형(intake.businessType)이 있으면 그 assumptions를 이 표의 가정으로 삼습니다. 수요 가정은 계산 자료의 '출시 전 판단' 방법으로 확인합니다. 돈을 받고 팔아 볼 수 있으면 실제 판매 수를 '판단 기준' 줄의 판매량과 같은 기간끼리 비교하고, 아직 팔 수 없으면 판매량 대신 작은 표본에서 잰 비율과 '닿아야 하는 사람 수', 경쟁 자료로 판단합니다. 비율 기준은 계산 자료에 있는 비율(10%·20%·30%) 가운데 하나를 고르고 '(제안)'으로 표시합니다. 새로 모은 예약 의사 수만으로 판매량 기준을 채우라고 하면 닿을 수 없는 숫자가 되거나, 반대로 너무 느슨한 기준이 되기 때문입니다. 계산 자료에 '판단 기준' 줄이 없으면(가격·비용을 모를 때) 대표가 일주일에 할 수 있는 건수 가운데 얼마를 채웠는지로 기준을 세우고 '(제안)'으로 표시합니다. 다른 가정의 기준도 자료에 있는 숫자로 세우고, 못 미치면 무엇을 어떻게 바꿀지 씁니다. 수요 판단은 계약 전 주에 둡니다. 매장이 있어야 신고할 수 있는 업종이면, 계약 전에 이미 신고된 공간(공유주방·팝업 매장 등)을 빌려 돈을 받고 팔아 보는 안도 함께 검토합니다. 의사 수보다 실제 판매가 수요를 더 정확히 보여 주기 때문입니다.",
+      "1) '## 먼저 확인할 가정' — 틀리기 쉬운 가정 3개를 표(가정 | 싸게 확인하는 방법 | 이 결과면 바꾼다)로 씁니다. 사업 유형(intake.businessType)이 있으면 그 assumptions를 이 표의 가정으로 삼습니다. 수요 가정은 계산 자료의 '출시 전 판단' 방법으로 확인합니다. 돈을 받고 팔아 볼 수 있으면 실제 판매 수를 '판단 기준' 줄의 판매량과 같은 기간끼리 비교하고, 아직 팔 수 없으면 판매량 대신 작은 표본에서 잰 비율과 '닿아야 하는 사람 수', 경쟁 자료로 판단합니다. 비율 기준은 계산 자료에 있는 비율(10%·20%·30%) 가운데 하나를 고르고 '(제안)'으로 표시합니다. 돈을 받지 않는 관심 조사의 성공 기준은 coach.design.nextAction.doneWhen(사용자가 고친 행동이 있으면 그 doneWhen)을 글자 그대로 씁니다. 앞 장들이 그 기준을 따르므로 여기서 다른 숫자로 바꾸면 문서 안에 기준이 둘이 되기 때문입니다. 새로 모은 예약 의사 수만으로 판매량 기준을 채우라고 하면 닿을 수 없는 숫자가 되거나, 반대로 너무 느슨한 기준이 되기 때문입니다. 계산 자료에 '판단 기준' 줄이 없으면(가격·비용을 모를 때) 대표가 일주일에 할 수 있는 건수 가운데 얼마를 채웠는지로 기준을 세우고 '(제안)'으로 표시합니다. 다른 가정의 기준도 자료에 있는 숫자로 세우고, 못 미치면 무엇을 어떻게 바꿀지 씁니다. 수요 판단은 계약 전 주에 둡니다. 매장이 있어야 신고할 수 있는 업종이면, 계약 전에 이미 신고된 공간(공유주방·팝업 매장 등)을 빌려 돈을 받고 팔아 보는 안도 함께 검토합니다. 의사 수보다 실제 판매가 수요를 더 정확히 보여 주기 때문입니다.",
       "2) '## 12주 할 일' — 표(주차 | 할 일 | 걸리는 시간 | 끝났다고 볼 기준)로 1주부터 12주까지 한 줄씩 씁니다. 사업 유형(intake.businessType)이 있으면 그 roadmap 순서를 12주의 뼈대로 삼고, 이 사업에 맞는 구체적인 일로 채웁니다. 같은 유형이면 같은 순서여야 계획이 매번 흔들리지 않기 때문입니다. 1주차는 앞 장들(<prior_sections>)이 '가장 먼저 할 일'로 쓴 일로 시작합니다. 앞 장들이 (확인 필요)로 남긴 일과 계약 전에 확인할 일(공간에서 영업할 수 있는지, 계약 조건 등)을 모두 해당 주차에 넣습니다. 확인할 일이 이 표 한 곳에 있어야 대표가 빠뜨리지 않기 때문입니다. 매주 걸리는 시간의 합은 대표의 주당 가능 시간(hoursPerWeek) 안에 들어가게 합니다. 가정 확인이 계약·인테리어처럼 큰돈 쓰는 일보다 먼저 오고, 영업 신고·사업자등록처럼 순서가 정해진 일은 그 순서대로 넣습니다. 업종 가이드(intake.industryGuide)가 있으면 그 steps를 하나도 빼지 않고 순서대로 해당 주차에 넣고(예: 계약 전 건축물 용도 확인, 신고 전 위생교육·건강진단), 표 아래에 '업종 가이드 기준의 일반적인 순서라 관할 기관에 확인한다'고 한 번 밝힙니다. 처음 하는 대표가 가장 많이 놓치는 일이고, 하나라도 빠지면 신고가 늦어져 문 여는 날이 밀리기 때문입니다. 공사·설비처럼 큰돈을 사업자등록 전에 쓰게 되면, 세금계산서에 대표자 주민등록번호를 적어 받아 두고 그 과세기간이 끝난 직후의 기한 안에 등록해야 부가세를 공제받는다는 점을 그 주차에 함께 적습니다. 인허가가 없는 업종이면 사업자등록을 첫 유료 판매 전으로 앞당깁니다. 인허가·신고가 필요한 업종이면 돈을 받고 파는 시범 판매나 예약 결제는 신고·등록을 마친 주 뒤에 둡니다. 그 전에는 돈을 받지 않고 관심과 예약 의사만 모읍니다. 신고 전에 팔면 법을 어길 수 있기 때문이며, 이 이유는 이 장에서 한 번 설명합니다. 큰돈이 드는 계약은 견적 합계가 계산 자료의 초기 지출 한도 안일 때만 하는 것으로 쓰고, 견적의 매달 나가는 돈(임대료·관리비 등)이 계산에 쓴 월 고정비를 넘으면 숫자를 다시 계산하는 일을 다음 주에 넣습니다. 한도와 고정비가 모든 계산의 전제라, 넘은 채 계약하면 앞 장의 숫자가 모두 틀리기 때문입니다. 처리량이 계산의 중심이면, 문을 열기 전에 실제 장소와 설비로 계획한 하루(또는 일주일) 양을 만들어 보는 주를 넣습니다. 집에서 만든 양과 실제 설비에서 만든 양은 다를 수 있기 때문입니다.",
       "3) '## 매달 볼 숫자' — 매달 볼 숫자 3개를 표(숫자 | 목표 | 어디서 세는지)로 쓰고, 목표는 자료의 숫자(목표 경우 월별 판매선 등)에서 가져옵니다. 표 아래에 계획서를 다시 보는 때(매달 마지막 주, 12주가 끝날 때 등)와 계속할지 다시 정하는 선(자료의 중단선)을 씁니다.",
     ].join("\n") : "",

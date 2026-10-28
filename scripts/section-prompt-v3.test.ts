@@ -39,20 +39,23 @@ assert.match(system, /판단 기준은 계산 자료의 '판단 기준' 줄에 �
 assert.match(system, /할 일과 그 순서는 '12주 할 일과 매달 볼 숫자' 장 한 곳에 모읍니다/, "with a roadmap, other chapters point to it");
 // 장별 역할과 실제 장 이름(없는 장을 가리키지 않게)
 assert.match(system, /<chapter_roles>/);
-assert.match(system, /- 고객과 시장 > 상품·서비스: 팔 것의 구성 후보 2~3개/);
-assert.match(system, /- 사업 전략 > 가격 전략: .*대안 가격 비교표/);
-assert.match(system, /- 사업 전략 > 유통 전략: .*영업시간과 쉬는 날, 결제 수단/);
+// 장 이름은 문서에 보이는 제목을 따옴표로 감싼 정해진 이름 하나('비용' 장) — 2026-10-27 검토: '비용 장'·'유통 전략 장'처럼 불러 찾기 어려웠다
+assert.match(system, /- '상품·서비스' 장\(고객과 시장 > 상품·서비스\): 팔 것의 구성 후보 2~3개/);
+assert.match(system, /- '가격 전략' 장\(사업 전략 > 가격 전략\): .*대안 가격 비교표/);
+assert.match(system, /- '유통 전략' 장\(사업 전략 > 유통 전략\): .*영업시간과 쉬는 날, 결제 수단/);
+assert.match(system, /'돈 장', '실행 장', '재무 장', '비용 장'처럼 따옴표를 빼거나 줄이거나 바꾼 이름은 쓰지 않고/);
+assert.doesNotMatch(system.replace(/'돈 장', '실행 장', '재무 장', '비용 장'/, ""), /[^'](?:실행|재무|유통 전략|가격|비용) 장/, "the prompt itself only uses canonical chapter names");
 assert.equal((system.match(/^- [^\n]+ > [^\n]+: /gm) ?? []).length, 10, "one role line per chapter of a 10-chapter plan");
 assert.match(system, /확인할 일은 '12주 할 일과 매달 볼 숫자' 장의 12주 표 한 곳에 모읍니다/);
 // 2026-10-11 블라인드 검토(v4 50 : v3 41)에서 남은 것: 장마다 시범 판매 방법·첫 행동이 다름, 남은 상품 처리를 서로 미룸, 토요일로 평일 수요를 봄, 같은 주의 반복
 assert.match(system, /돈을 받고 파는 시범 판매나 예약 결제는 신고·등록을 마친 뒤의 일로 씁니다/);
 assert.match(system, /대표 손님이 실제로 살 요일·시간대 조건에서 확인합니다/);
-assert.match(system, /- 사업 전략 > 유통 전략: .*남은 상품을 어떻게 처리할지\(이 장에서 정한다\)/);
-assert.match(system, /남은 상품 처리는 유통 전략 장이 정한다/);
-assert.match(system, /처리량의 단위를 맡은 장에서만 밝히고/);
+assert.match(system, /- '유통 전략' 장\(사업 전략 > 유통 전략\): .*남은 상품을 어떻게 처리할지\(이 장에서 정한다\)/);
+assert.match(system, /남은 상품 처리는 '유통 전략' 장이 정한다/);
+assert.match(system, /처리량의 단위는 .*'상품·서비스' 장에서만 밝히고|'상품·서비스' 장에서만 밝히고/);
 assert.match(system, /한 장에 두 번을 넘기지 않습니다/);
 // v4.2(2026-10-11 블라인드 2차: 신고 주의 8개 장, '12주 장에 있습니다' 9개 장 반복) — 주의와 안내는 한 곳에서만
-assert.match(system, /신고 전에 팔면 안 되는 이유는 신고 순서를 정하는 장 한 곳에서만 설명합니다/);
+assert.match(system, /신고 전에 팔면 안 되는 이유는 '12주 할 일과 매달 볼 숫자' 장 한 곳에서만 설명합니다/);
 assert.match(system, /할 일이 그 장에 모여 있다는 안내는 문서 첫 장에서 한 번만 하고/);
 assert.doesNotMatch(system, /다른 장은 그 장을 가리킵니다/);
 assert.match(system, /초기 지출 한도가 빠듯하면 지출을 줄일 방법/);

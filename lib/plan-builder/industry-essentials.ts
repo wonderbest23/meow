@@ -1,0 +1,130 @@
+/*
+ * 업종별 필수 항목 — 계획서가 그 업종에서 빠뜨리면 안 되는 지출·원가·운영 위험·신고 항목(계획서 품질 Q2, 2026-10-27).
+ * 망원동 1인 도시락 검토(3.4/5): 초기 지출에 보증금·권리금·간판·인테리어·카드 단말기가 없고, 원산지 표시·조리 후 보관 기준·
+ * 폐기율·업종 후보(즉석판매제조·가공업과 휴게·일반음식점) 비교·예약 노쇼 대책이 빠졌다. 음식만의 문제가 아니라
+ * 업종마다 '꼭 들어가야 하는 것'이 있어서, 업종 묶음별로 같은 네 가지(초기 지출·한 건당 비용·운영 위험·신고)를 정해 둔다.
+ *
+ * 업종 묶음은 계획서 작성 자료(intake-context)에 이미 있는 값으로 고른다: 표준산업분류(ksic)·업종 가이드 이름 → 사업 설명의 음식 낱말 → 업종(sector) → 문서 업종(document-editorial).
+ * 사업 설명을 업종 칸보다 먼저 보는 것은 음식뿐이다 — 2026-10-27 도시락 계획서는 업종 질문에 첫 보기('기업 서비스')가 골라져 있었고,
+ * '수제 도시락'은 업종 가이드 낱말('도시락 가게·전문점·배달')에도 걸리지 않아 음식 항목이 하나도 들어가지 않았다.
+ * 여기에는 할 일의 '항목'만 둔다. 기한·수수료·면적·온도 같은 숫자는 넣지 않는다(업종 가이드와 같은 원칙 — 바뀌거나 지역마다 다르다).
+ * 항목마다 맡을 장을 정해, 그 장의 작성 자료에만 넣는다 — 같은 항목이 장마다 반복되지 않게.
+ */
+import type { ProposalSector } from "./proposal-blueprint";
+import type { DocumentSector } from "./document-editorial";
+
+export type EssentialGroup = "food" | "retail" | "manufacturing" | "education" | "local" | "space" | "project" | "logistics" | "general";
+type EssentialKind = "setup" | "unitCost" | "operation" | "filing";
+
+export const ESSENTIAL_GROUP_NAMES: Record<EssentialGroup, string> = {
+  food: "음식·식품", retail: "상품 판매", manufacturing: "제조", education: "교육", local: "동네 서비스", space: "공간 대여·숙박", project: "용역·소프트웨어·콘텐츠", logistics: "운송·물류", general: "일반",
+};
+
+/** 항목 종류마다 맡을 장 — 계획서에 있는 첫 장이 맡는다(없으면 실행 요약) */
+const KIND_OWNERS: Record<EssentialKind, string[]> = {
+  setup: ["financials/expenses", "funding/requirements", "financials/assets", "financials/financing"],
+  unitCost: ["strategy/price", "market/products", "financials/expenses"],
+  operation: ["strategy/distribution", "strategy/product", "market/products"],
+  filing: ["summary/roadmap"],
+};
+
+const SHOP_SETUP = "매장·작업장을 빌리면 보증금·권리금·인테리어·간판";
+const ESSENTIALS: Record<EssentialGroup, Record<EssentialKind, string[]>> = {
+  food: {
+    setup: [`초기 지출을 항목별로 나눠 적습니다: ${SHOP_SETUP}, 주방 환기·배수 공사, 조리·냉장 설비, 카드 단말기(포스). 견적이 없는 항목은 '(확인 필요)'를 붙이고, 빌린 공간에 이미 있는 설비는 '이미 있음'으로 적습니다.`],
+    unitCost: ["한 건당 비용에 재료비·포장 용기·라벨과 함께 폐기율(만들었다가 팔지 못해 버리는 비율)을 넣습니다. 폐기율을 모르면 '(확인 필요)'로 두고, 첫 달에 날마다 만든 양과 버린 양을 적어 확인한다고 씁니다. 계산 자료의 한 건당 비용에 폐기가 빠져 있으면 그 사실을 한 번 밝힙니다."],
+    operation: [
+      "조리한 뒤 보관 온도와 보관 시간, 그날 판매를 마감하는 시각(그 시간이 지나면 팔지 않는 기준)과 남은 음식 처리를 정합니다. 온도·시간 숫자가 자료에 없으면 만들지 않고 식약처 기준을 확인한다고 씁니다.",
+      "예약·사전 주문을 받으면 노쇼(예약하고 찾아가지 않음) 대책을 씁니다: 선결제나 예약금, 취소 마감 시각, 찾아가지 않은 음식 처리.",
+    ],
+    filing: [
+      "신고 업종 후보를 표로 비교합니다: 즉석판매제조·가공업(만들어 포장한 음식을 손님에게 직접 판매, 손님에게 하는 직접 배달·택배 포함), 휴게음식점(매장에서 먹고 가게 하되 술은 팔지 않음), 일반음식점(술 판매 가능), 다른 가게·쇼핑몰에 넘겨 파는 식품제조·가공업. 판매 방식(포장·매장 식사·배달·택배·납품)에 따라 신고와 시설 기준이 달라지므로, 최종 업종은 관할 시·군·구청 위생 부서에서 정한다고 씁니다.",
+      "원산지 표시 의무를 씁니다: 음식점(휴게·일반)은 메뉴판·게시판에 정해진 품목(쌀·김치·고기 등)의 원산지를 적고, 포장해 파는 음식은 표시 라벨에 원산지를 적는 기준이 있는지 확인합니다. 대상 품목과 표시 방법은 관할 기관에 확인한다고 씁니다.",
+    ],
+  },
+  retail: {
+    setup: [`초기 지출을 항목별로 나눠 적습니다: 첫 재고(최소 발주 수량), 상세 페이지 사진, 포장재, ${SHOP_SETUP}·카드 단말기(포스). 견적이 없는 항목은 '(확인 필요)'를 붙입니다.`],
+    unitCost: ["한 건당 비용에 판매·결제 수수료, 택배비, 반품으로 돌아오는 몫을 넣습니다. 모르는 값은 '(확인 필요)'로 둡니다."],
+    operation: ["팔리지 않는 재고(유행이 지나거나 파손된 상품)를 언제 어떻게 처리할지(할인 시점·묶음 판매)와 반품·교환 처리 방법을 씁니다."],
+    filing: ["온라인으로 팔면 통신판매업 신고, 상품마다 표시·인증(KC 등)이 필요한지 확인하는 일을 씁니다."],
+  },
+  manufacturing: {
+    setup: ["초기 지출을 항목별로 나눠 적습니다: 설비·금형, 시제품, 첫 원자재, 작업장을 빌리면 보증금·인테리어(전기·환기 공사). 견적이 없는 항목은 '(확인 필요)'를 붙입니다."],
+    unitCost: ["한 건당 비용에 원자재·포장과 함께 불량률(만들었다가 팔 수 없는 비율)을 넣습니다. 모르면 '(확인 필요)'로 두고 시제품 생산에서 잰다고 씁니다."],
+    operation: ["최소 생산량, 납기가 늦어질 때와 원자재 가격이 오를 때의 대응을 씁니다."],
+    filing: ["제품 인증·표시 의무와 공장·제조업 등록이 필요한지 확인하는 일을 씁니다."],
+  },
+  education: {
+    setup: [`초기 지출을 항목별로 나눠 적습니다: 교재·교구·장비, ${SHOP_SETUP}·카드 단말기. 견적이 없는 항목은 '(확인 필요)'를 붙입니다.`],
+    unitCost: ["한 명(한 회)당 비용에 교재·재료비, 장소 대여비, 플랫폼·결제 수수료를 넣습니다."],
+    operation: ["결석·보강, 중도 해지와 환불 처리 기준을 씁니다."],
+    filing: ["학원·교습소·개인과외 신고 가운데 무엇에 해당하는지와 환불 기준을 관할 교육지원청에 확인하는 일을 씁니다."],
+  },
+  local: {
+    setup: [`초기 지출을 항목별로 나눠 적습니다: 장비·공구·첫 소모품, 출장이면 차량, ${SHOP_SETUP}·카드 단말기. 견적이 없는 항목은 '(확인 필요)'를 붙입니다.`],
+    unitCost: ["한 건당 비용에 소모품과 이동 시간·이동 비용을 넣습니다."],
+    operation: ["예약 노쇼 대책(예약금·취소 마감 시각)과 작업 중 손님 물건이 파손됐을 때의 보상(배상책임보험 등)을 씁니다."],
+    filing: ["이 서비스에 영업 신고가 필요한지(미용처럼 공중위생 업종은 신고 대상) 관할 시·군·구청에 확인하는 일을 씁니다."],
+  },
+  space: {
+    setup: ["초기 지출을 항목별로 나눠 적습니다: 보증금·권리금·인테리어·소방 설비·간판, 예약 시스템, 카드 단말기. 견적이 없는 항목은 '(확인 필요)'를 붙입니다."],
+    unitCost: ["1회 이용당 비용에 청소·소모품·전기와 예약 플랫폼 수수료를 넣습니다."],
+    operation: ["예약 노쇼·취소 수수료 기준과 이용 규칙(소음·인원·파손)을 씁니다."],
+    filing: ["건축물 용도와 업종 신고·등록 필요 여부, 소방 기준을 계약 전에 확인하는 일을 씁니다."],
+  },
+  project: {
+    setup: ["초기 지출을 항목별로 나눠 적습니다: 장비, 소프트웨어 구독, 포트폴리오·견본 제작. 견적이 없는 항목은 '(확인 필요)'를 붙입니다."],
+    unitCost: ["한 건당 비용에 외주·서버·결제 수수료와 수정에 드는 시간을 넣습니다."],
+    operation: ["계약서의 범위·검수 기준·수정 횟수와, 대금을 나중에 받으면 그동안 버틸 돈을 씁니다."],
+    filing: ["계약서, 결과물의 사용 권리(저작권), 손님 개인정보 처리 방법을 확인하는 일을 씁니다."],
+  },
+  logistics: {
+    setup: ["초기 지출을 항목별로 나눠 적습니다: 차량(구입·임차), 보험, 장비. 견적이 없는 항목은 '(확인 필요)'를 붙입니다."],
+    unitCost: ["한 건당 비용에 유류비·통행료·보험료와 차량 유지비를 넣습니다."],
+    operation: ["물건 파손·분실 때의 보상과 배송이 늦어질 때의 대응을 씁니다."],
+    filing: ["화물 운송 허가 등 이 운송에 필요한 허가가 있는지 확인하는 일을 씁니다."],
+  },
+  general: {
+    setup: ["초기 지출을 항목별로 나눠 적습니다(공간을 빌리면 보증금·권리금·인테리어·간판, 장비, 카드 단말기 등). 견적이 없는 항목은 '(확인 필요)'를 붙입니다."],
+    unitCost: ["버리거나 돌려주는 몫(폐기·반품·불량)이 있으면 한 건당 비용에 넣습니다."],
+    operation: ["가장 큰 운영 위험 하나(예약 취소·불량·사고 등)와 대책을 씁니다."],
+    filing: ["이 업종에 신고·허가가 필요한지 관할 기관에 확인하는 일을 씁니다."],
+  },
+};
+
+const SECTOR_GROUPS: Record<ProposalSector, EssentialGroup> = {
+  food_beverage: "food", retail_commerce: "retail", manufacturing: "manufacturing", education: "education", local_service: "local",
+  space_hospitality: "space", logistics: "logistics", b2b_service: "project", software: "project", content_media: "project", general: "general",
+};
+const DOCUMENT_GROUPS: Record<DocumentSector, EssentialGroup> = {
+  cafe_food: "food", commerce: "retail", manufacturing: "manufacturing", education: "education", local_service: "local",
+  space: "space", logistics: "logistics", b2b_service: "project", software: "project", content: "project", general: "general",
+};
+/* 표준산업분류 앞자리 — 음식점(56)·식품 제조(10)·식품 소매(472)는 업종 칸이 비어 있어도 음식 묶음 */
+const FOOD_KSIC = /^(56|10|472)/;
+const FOOD_GUIDE = /음식|도시락|반찬|카페|빵|제과|식품|분식|푸드|급식|케이터링/;
+/* 사업 설명의 음식 낱말 — 음식을 직접 만들어 파는 사업만. 음식점을 돕는 사업(컨설팅·앱·교육 등)은 업종 칸을 따른다 */
+const FOOD_WORDS = /도시락|반찬|김밥|분식|떡볶이|베이커리|빵집|제과|디저트|케이크|카페|커피|식당|음식점|밀키트|푸드트럭|케이터링|수제\s*(?:잼|청|간식|버거)/;
+const NOT_FOOD_MAKER = /컨설팅|대행|교육|강의|강좌|클래스|학원|플랫폼|앱|소프트웨어|중개|마케팅|디자인|촬영|인테리어/;
+
+/** 계획서 작성 자료(intake-context JSON)와 문서 업종으로 업종 묶음을 고른다 */
+export function essentialGroup(input: { intakeContext?: string; documentSector: DocumentSector; description?: string }): EssentialGroup {
+  let sector: string | null = null, ksic = "", guide = "";
+  try {
+    const data = JSON.parse(input.intakeContext ?? "") as { sector?: string | null; ksic?: { code?: string } | null; industryGuide?: { name?: string } };
+    sector = data.sector ?? null; ksic = data.ksic?.code ?? ""; guide = data.industryGuide?.name ?? "";
+  } catch { /* 작성 자료가 없으면 문서 업종으로 */ }
+  if (FOOD_KSIC.test(ksic) || FOOD_GUIDE.test(guide)) return "food";
+  const description = input.description ?? "";
+  if (!ksic && FOOD_WORDS.test(description) && !NOT_FOOD_MAKER.test(description)) return "food";
+  if (sector && sector in SECTOR_GROUPS && sector !== "general") return SECTOR_GROUPS[sector as ProposalSector];
+  return DOCUMENT_GROUPS[input.documentSector];
+}
+
+/** 이 장이 맡는 필수 항목 — 항목 종류마다 계획서에 있는 첫 장이 맡고, 맡을 장이 없으면 실행 요약이 맡는다 */
+export function essentialsForChapter(key: string, group: EssentialGroup, presentKeys: ReadonlySet<string>): string[] {
+  return (Object.keys(KIND_OWNERS) as EssentialKind[]).flatMap(kind => {
+    const owner = KIND_OWNERS[kind].find(candidate => presentKeys.has(candidate)) ?? "summary/executive";
+    return owner === key ? ESSENTIALS[group][kind] : [];
+  });
+}

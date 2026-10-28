@@ -72,7 +72,7 @@ assert.equal(businessTypeContext(businessTypeFor({ chosen: { sides: "two" } })!)
 assert.equal(businessTypeFocus("platform", "strategy/promotion"), "공급자 모집을 먼저");
 assert.equal(businessTypeFocus("unknown", "strategy/promotion"), "");
 const chapters = [{ key: "strategy/promotion", title: "사업 전략 > 홍보 전략", summary: "" }];
-assert.match(sectionPromptV3Rules({ operating: false, sectorFocus: "x", chapters, businessTypeId: "platform" }), /홍보 전략: .*이 사업 유형에서는 공급자 모집을 먼저도 이 장이 다룬다/);
+assert.match(sectionPromptV3Rules({ operating: false, sectorFocus: "x", chapters, businessTypeId: "platform" }), /홍보 전략\): .*이 사업 유형에서는 공급자 모집을 먼저도 이 장이 다룬다/);
 assert.doesNotMatch(sectionPromptV3Rules({ operating: false, sectorFocus: "x", chapters }), /이 사업 유형에서는/);
 
 console.log(`business-types: ${Object.keys(BUSINESS_TYPES).length} types, ${EVAL_CASES.length} eval cases mapped, platform/app shapes, structure precedence passed`);
