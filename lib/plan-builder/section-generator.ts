@@ -564,17 +564,31 @@ export async function generateSection(
   if (!config) {
     return { markdown: fallbackSection(input), source: "fallback" };
   }
-  const text = await completeText(config, {
-    kind: "generate",
-    system: sectionSystemPrompt(input),
-    user: buildUserPrompt(input),
-    maxOutputTokens: SECTION_MAX_TOKENS,
-    effort: input.coachContext ? "high" : "medium",
-    timeoutMs: SECTION_TIMEOUT_MS,
-    // 한 플랜당 25번 부른다 — 앞부분을 캐시에 올려 두면 24번은 읽기 요금만 낸다
-    cache: true,
-    signal,
-  });
+  const write = async (effort: "high" | "medium") => {
+    let outputLimit = false;
+    const text = await completeText(config, {
+      kind: "generate",
+      system: sectionSystemPrompt(input),
+      user: buildUserPrompt(input),
+      maxOutputTokens: SECTION_MAX_TOKENS,
+      effort,
+      timeoutMs: SECTION_TIMEOUT_MS,
+      // 한 플랜당 25번 부른다 — 앞부분을 캐시에 올려 두면 24번은 읽기 요금만 낸다
+      cache: true,
+      signal,
+      onFailure: failure => { if (failure.code === "output_limit") outputLimit = true; },
+    });
+    return { text, outputLimit };
+  };
+  let { text, outputLimit } = await write(input.coachContext ? "high" : "medium");
+  /*
+   * 추론이 한도를 다 써서 본문이 잘리면, 추론을 줄여 한 번만 다시 쓴다.
+   * 실제 AI 재측정(2026-10-28)에서 '12주 할 일' 장이 16,192토큰을 다 쓰고 잘려 장 하나가 통째로 빠졌다(2차 15,826토큰으로 아슬아슬 통과).
+   */
+  if (!text && outputLimit && input.coachContext && !signal?.aborted) {
+    console.warn("[section] output_limit, retry with medium effort", JSON.stringify({ section: `${input.chapter.id}/${input.section.id}` }));
+    ({ text } = await write("medium"));
+  }
   if (!text || text.trim().length < 40) {
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
     return { markdown: "", source: "failed" };
