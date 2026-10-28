@@ -1,6 +1,6 @@
 import { freeReflectsLeft } from "./free-reflect";
 import { chaptersForType, sectionKey } from "./blueprint";
-import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
+import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
@@ -516,7 +516,11 @@ export function intakeFinancialWarning(coach: CoachState, intake: IntakeState): 
 
 export function intakeFinancialReference(coach: CoachState, intake: IntakeState): string {
   const inputs = intakeScenarioInputs(coach, intake);
-  if ("missing" in inputs) return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...intakeDetailChecks(coach, intake, null)].join("\n");
+  if ("missing" in inputs) {
+    // 월 고정비만 모르면 세 가지 고정비 가정으로 본전 판매량을 보여 준다(가정 표시, cashflow-scenarios.ts)
+    const assumed = intake.mode !== "operating" ? fixedCostAssumptionsFromFields(coach.fields) : null;
+    return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...(assumed ? [fixedCostAssumptionReference(assumed)] : []), ...intakeDetailChecks(coach, intake, null)].join("\n");
+  }
   const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, online } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   // 돈 입력이 실제 금액으로 보기 어려우면 그 금액으로 만든 숫자(본전·통장 흐름·업종 점검의 예산 비율)를 넘기지 않는다 — 돈 장의 빈 틀과 같은 판정
@@ -525,7 +529,7 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
   const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, online }) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
-  const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준`, unitLines: financialsToReference(calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, monthlyGrowthPct: 0 })) })] : [
+  const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준` })] : [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
     financialsToReference(result),
   ];

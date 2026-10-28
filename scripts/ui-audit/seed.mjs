@@ -21,8 +21,8 @@ export async function makePlan(uid, stage = "full", desc = "아파트 단지 앞
   let plan = res.plan; if (!plan) throw new Error(`사업을 시작하지 못했습니다: ${JSON.stringify(res).slice(0, 300)}`);
   const planId = plan.planId;
   const leave = stage.startsWith("partial:") ? +stage.split(":")[1] : 0;
-  // 금액은 현실 범위로 넣는다 — 예산·생활비·월 비용 3,000원은 서버가 확인(amount_check)으로 멈춰 세운다(2026-10-27)
-  const vals = { business: desc, customer: "근처 직장인", offer: "수제 도시락", channel: "네이버 플레이스", price: 9000, budget: 3_000_000, livingCost: 1_500_000, "structure.cost": 500_000 };
+  // 금액은 현실 범위로 넣는다 — 예산·월 비용 3,000원은 서버가 확인(amount_check)으로 멈춰 세운다(2026-10-27). 생활비 질문은 2026-10-28에 뺐다
+  const vals = { business: desc, customer: "근처 직장인", offer: "수제 도시락", channel: "네이버 플레이스", price: 9000, budget: 3_000_000, "structure.cost": 500_000 };
   for (let i = 0; i < 40; i++) {
     const q = plan.nextQuestion; if (!q) break;
     if (leave && plan.coreTotal - plan.coreAnswered <= leave) break;

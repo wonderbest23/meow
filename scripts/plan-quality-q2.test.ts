@@ -27,13 +27,16 @@ async function main() {
     const { buildUserPrompt, sectionSystemPrompt, appendFinancials } = await import("../lib/plan-builder/section-generator");
     const { essentialGroup, essentialsForChapter } = await import("../lib/plan-builder/industry-essentials");
 
-    // (가) 판정: 예산·생활비 10만 원 미만, 월 고정비는 1만 원 미만이면 혼자서, 1만~10만 원은 다른 돈 입력도 의심일 때만
-    assert.deepEqual(implausibleMoneyInputs({ budget: "3,000원", cost: "3,000원", livingCost: "3,000원" }).map(item => item.key), ["budget", "cost", "livingCost"]);
-    assert.deepEqual(implausibleMoneyInputs({ budget: "5,000,000원", cost: "30,000원", livingCost: "1,500,000원" }), [], "a tiny online fixed cost alone is plausible");
+    // (가) 판정: 예산 10만 원 미만, 월 고정비는 1만 원 미만이면 혼자서, 1만~10만 원은 예산도 의심일 때만
+    // 대표 생활비는 계산에 쓰지 않으므로 판정에서도 뺐다(계획서 품질 Q3, 2026-10-28)
+    assert.deepEqual(implausibleMoneyInputs({ budget: "3,000원", cost: "3,000원" }).map(item => item.key), ["budget", "cost"]);
+    assert.deepEqual(implausibleMoneyInputs({ budget: "5,000,000원", cost: "30,000원" }), [], "a tiny online fixed cost alone is plausible");
     assert.deepEqual(implausibleMoneyInputs({ budget: "5,000,000원", cost: "3,000원" }).map(item => item.key), ["cost"]);
     assert.deepEqual(implausibleMoneyInputs({ budget: "50,000원", cost: "30,000원" }).map(item => item.key), ["budget", "cost"]);
-    assert.deepEqual(implausibleMoneyInputs({ livingCost: "0원", budget: "0원" }), [], "0원 means none / already in fixed cost, not a unit slip");
-    assert.deepEqual(implausibleMoneyInputs({ budget: "1천만~2천만 원", livingCost: "200만 원" }), []);
+    assert.deepEqual(implausibleMoneyInputs({ budget: "0원" }), [], "0원 means none, not a unit slip");
+    assert.deepEqual(implausibleMoneyInputs({ budget: "1천만~2천만 원" }), []);
+    const { implausibleMoneyFromFields } = await import("../lib/plan-builder/cashflow-scenarios");
+    assert.deepEqual(implausibleMoneyFromFields([{ key: "budget", value: "5,000,000원" }, { key: "cost", value: "1,000,000원" }, { key: "livingCost", value: "3,000원" }]), [], "a stored 3,000원 living cost no longer blocks the money chapter");
 
     let serial = 0;
     function startupPlan(values: Array<[string, IntakeValue]>, fields: Array<[CoachState["fields"][number]["key"], string]> = []) {
@@ -59,8 +62,9 @@ async function main() {
       [["price", "9,000원"], ["unitCost", "3,500원"], ["cost", "3,000원"], ["capacity", "대표자 혼자 / 하루 40개"], ["budget", "3,000원"], ["livingCost", "3,000원"]]);
     const owner = financialTableOwner(lunch.plan.planType)!;
     const table = intakeFinancialTable(lunch.plan, lunch.coach, owner)!;
-    assert.ok(table.includes("준비 예산·월 비용·생활비를 실제 금액으로 다시 입력하면 여기에 본전·버티는 달수가 채워집니다."), table);
-    assert.match(table, /준비 예산 3,000원 · 월 고정비 3,000원 · 대표 생활비 3,000원/);
+    assert.ok(table.includes("준비 예산·월 비용을 실제 금액으로 다시 입력하면 여기에 본전·버티는 달수가 채워집니다."), table);
+    assert.match(table, /준비 예산 3,000원 · 월 고정비 3,000원/);
+    assert.doesNotMatch(table, /생활비/);
     assert.doesNotMatch(table, /^\|/m, "no tables in the placeholder");
     assert.doesNotMatch(table, /plan-chart/, "no charts");
     assert.doesNotMatch(table, /1개월차|한 달 1개|손익분기점/, "no 12-month rows or break-even built from 3,000원");
@@ -71,7 +75,7 @@ async function main() {
     const reference = planFinancialReference(lunch.coach, lunch.plan.answers);
     assert.match(reference, /^계산 보류\(입력 확인 필요\)/);
     assert.match(reference, /금액을 다시 확인해 달라는 안내는 '비용' 장 한 곳에서 한 번만/);
-    assert.match(reference, /한 건에 남는 돈 5,500원/, "unit margin does not depend on the suspicious amounts");
+    assert.match(reference, /부가세 818원\(일반과세자 가정, 과세 유형 확인 필요\) \/ 한 건에 실제 남는 돈 4,682원/, "unit margin (after VAT) does not depend on the suspicious amounts");
     assert.doesNotMatch(reference, /손익분기|조심스러운 경우|버티는 기간\(/);
     const summary = buildExecutiveSummary(lunch.plan, lunch.coach.business);
     const finance = summary.blocks.find(block => block.id === "finance")!;

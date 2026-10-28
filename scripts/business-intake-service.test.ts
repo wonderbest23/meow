@@ -325,7 +325,7 @@ async function main() {
       await send(saasSession, { action: "answer", questionId: "structure.retentionMonths", value: "12개월" });
       await send(saasSession, { action: "answer", questionId: "structure.unitCost", value: "3000원" });
       const priced = await send(saasSession, { action: "answer", questionId: "structure.cost", value: "100만원" });
-      for (const text of ["월 구독 기준", "손익분기: 월 38건", "구독 유지 평균 12개월", "생애 매출 360,000원", "월 이탈률 약 8%", "매달 신규 약 5명", "월 50명 감당 기준"]) assert.ok(priced.snapshot.financialSummary.includes(text), `${text} in: ${priced.snapshot.financialSummary}`);
+      for (const text of ["월 구독 기준", "손익분기: 월 42명", "구독 유지 평균 12개월", "생애 매출 360,000원", "월 이탈률 약 8%", "매달 신규 약 5명", "월 50명 감당 기준"]) assert.ok(priced.snapshot.financialSummary.includes(text), `${text} in: ${priced.snapshot.financialSummary}`);
       assert.equal(priced.snapshot.intake.answers["structure.retentionMonths"]?.value, 12);
       assert.equal(priced.snapshot.summary.find(item => item.id === "unitCost")?.label, "구독자 1명당 월 비용");
       assert.equal(priced.snapshot.coreAnswered, saasNext.snapshot.coreAnswered + 4, "price, capacity and the two core cost answers count toward core progress; the revenue-model extra does not");
@@ -339,10 +339,10 @@ async function main() {
       assert.equal(brief.licenseChecklist.status, "인허가 없음");
       assert.equal(brief.capitalPlan.form, "무점포 가능");
       assert.ok(brief.capitalPlan.inputs.some(input => input.includes("= 3,000,000원")), brief.capitalPlan.inputs.join(" | "));
-      assert.ok(brief.financialScenario.includes("손익분기: 월 38건"));
+      assert.ok(brief.financialScenario.includes("손익분기: 월 42명"));
       const { confirmedIntakeContext, intakeContextEvidence } = await import("../lib/plan-builder/intake-context");
       const evidence = intakeContextEvidence(confirmedIntakeContext(saasLoaded.plan.answers));
-      for (const number of ["360,000원", "3,000,000원", "손익분기: 월 38건", "12개월"]) assert.ok(evidence.includes(number), `documents may cite ${number}: ${evidence}`);
+      for (const number of ["360,000원", "3,000,000원", "손익분기: 월 42명", "12개월"]) assert.ok(evidence.includes(number), `documents may cite ${number}: ${evidence}`);
       // 공간 제공(공유오피스)은 처리량 단위 칩이 좌석·룸부터
       const spaceOwner = `intake-ksic-space-${randomUUID()}`;
       const space = await saveIntakeCommand(spaceOwner, { action: "start", mode: "startup", questionId: "business", value: "공유오피스를 열려고 해요", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });

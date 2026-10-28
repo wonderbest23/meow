@@ -77,7 +77,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const legacyCosts = coach ? [] : describeFinancialFields(plan.answers);
   const legacyComplete = coach || legacyCosts.filter(item => item.id === "fixedBase" || item.id === "staffMonthly").every(item => item.value != null);
   const completeCosts = !!legacyComplete && inputs.unitPrice != null && inputs.unitVariableCost != null && inputs.monthlyFixedCost != null;
-  // 준비 예산·월 비용·생활비가 실제 금액으로 보기 어려우면 문서 돈 장처럼 계산하지 않는다(cashflow-scenarios.ts 판정)
+  // 준비 예산·월 비용이 실제 금액으로 보기 어려우면 문서 돈 장처럼 계산하지 않는다(cashflow-scenarios.ts 판정)
   const implausible = coach ? implausibleMoneyFromFields(coach.fields) : [];
   const financials = completeCosts && !implausible.length ? calculateFinancials(inputs) : null;
   const firstMonth = financials?.monthly[0];
@@ -86,8 +86,8 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const flowLines = implausible.length ? [
     line("계산 상태", `${implausible.map(item => `${item.label} ${won(item.value)}`).join(" / ")}: 10만 원보다 적어 실제 금액으로 보기 어려워 손익을 계산하지 않음. 실제 금액으로 다시 입력하면 계산`, "missing", ["financials.inputs"], 150),
   ] : flow && careful ? [
-    line("첫 달 가정", `조심스러운 경우 ${careful.volumes[0].toLocaleString("ko-KR")}${flow.unit} 판매 / 매출 ${won(careful.volumes[0] * flow.unitPrice)} / 한 달 ${signed(careful.net[0])}${flow.living ? "(생활비 포함)" : ""}${goalCase && flow.goal ? ` · 목표 경우 ${flow.goal.months}개월차 ${goalCase.volumes[Math.min(flow.goal.months, goalCase.volumes.length) - 1].toLocaleString("ko-KR")}${flow.unit}` : ""}`, "calculation", ["cashflow.careful.1"], 115),
-    line("산출 조건", `판매가 ${won(flow.unitPrice)} / 건당 변동비 ${won(flow.unitPrice - flow.contribution)} / 월 고정비 ${won(flow.monthlyFixedCost)}`, "calculation", ["financials.inputs"], 110),
+    line("첫 달 가정", `조심스러운 경우 ${careful.volumes[0].toLocaleString("ko-KR")}${flow.unit} 판매 / 매출 ${won(careful.volumes[0] * flow.unitPrice)} / 한 달 ${signed(careful.net[0])}${goalCase && flow.goal ? ` · 목표 경우 ${flow.goal.months}개월차 ${goalCase.volumes[Math.min(flow.goal.months, goalCase.volumes.length) - 1].toLocaleString("ko-KR")}${flow.unit}` : ""}`, "calculation", ["cashflow.careful.1"], 115),
+    line("산출 조건", `판매가 ${won(flow.unitPrice)} / 부가세 ${won(flow.vat)}(일반과세자 가정) / 건당 변동비 ${won(flow.unitPrice - flow.vat - flow.contribution)} / 한 건에 실제 남는 돈 ${won(flow.contribution)} / 월 고정비 ${won(flow.monthlyFixedCost)}`, "calculation", ["financials.inputs"], 130),
   ] : null;
   const financialLines = flowLines ?? (firstMonth ? [
     line(coach?.stage === "operating" || period ? "월 운영 가정" : "첫 달 가정", `${firstMonth.volume.toLocaleString("ko-KR")}건 판매 / 매출 ${won(firstMonth.revenue)} / 영업손익 ${won(firstMonth.operatingProfit)}`, "calculation", ["financials.monthly.1"], 110),
@@ -96,7 +96,9 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
     line("계산 상태", completeCosts ? capacityOnly ? "판매량 미정: 감당할 수 있는 최대치는 판매 예상이 아니라 첫 달 매출과 손익을 계산하지 않음" : "월 예상 판매량이 없어 월 매출과 손익을 계산하지 않음" : "가격·건당 변동비·인건비를 포함한 월 고정비가 모두 있어야 손익 계산 가능", "missing", ["financials.inputs"]),
     ...(coach ? [line("입력 비용", `${cost.label} ${cost.value} / ${unitCost.label} ${unitCost.value}`, cost.basis === "proposal" || unitCost.basis === "proposal" ? "proposal" : "user", ["coach.cost", "coach.unitCost"])] : []),
   ]);
-  if (financials?.breakEven) financialLines.push(line("손익분기", `월 ${financials.breakEven.units.toLocaleString("ko-KR")}건 / 매출 ${won(financials.breakEven.revenue)}`, "calculation", ["financials.breakEven"], 80));
+  // 새로 시작하는 사업은 문서 돈 장과 같은 본전(부가세를 뺀 '실제 남는 돈' 기준)을 쓴다
+  if (flow && !implausible.length) financialLines.push(line("손익분기", `월 ${flow.breakEven.toLocaleString("ko-KR")}${flow.unit} / 매출 ${won(flow.breakEven * flow.unitPrice)}(부가세를 뺀 뒤, 대표 몫 0원)`, "calculation", ["cashflow.breakEven"], 90));
+  else if (financials?.breakEven) financialLines.push(line("손익분기", `월 ${financials.breakEven.units.toLocaleString("ko-KR")}건 / 매출 ${won(financials.breakEven.revenue)}`, "calculation", ["financials.breakEven"], 80));
   const evidenceLines: SummaryLine[] = [];
   if (period) {
     evidenceLines.push(line("기록 기간", `${periodLabel(period)}${baseline ? ` / 이전 ${periodLabel(baseline)}` : " / 이전 기록 없음"}`, "user", [`operations.${period.id}`], 105));

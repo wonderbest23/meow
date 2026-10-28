@@ -57,10 +57,9 @@ const hours = fieldQuestion("hoursPerWeek", "일주일에 몇 시간 쓸 수 있
 const capacity = fieldQuestion("capacity", "처음에는 누가, 얼마나 감당하나요?", { hint: "누가 일하는지 고른 뒤 하루·주·월에 몇 건까지 할 수 있는지 정해요." });
 const goal = fieldQuestion("goal", "언제까지 무엇을 이루고 싶나요?", { hint: "목표는 현재 실적과 따로 기록돼요." });
 /*
- * 대표 생활비(품질기준 7번) — 소상공인은 사업이 대표 생활비까지 감당해야 하는 경우가 많다(Start Up Loans '개인 생활비 예산').
- * 돈 장(cashflow-scenarios.ts)이 나가는 돈에 넣어 '생활비까지 버는 판매량'과 '몇 개월차부터 생활비를 가져가는지'를 계산한다.
+ * 대표 생활비(livingCost) 질문은 뺐다(계획서 품질 Q3, 대표 결정 2026-10-28: 창업자 개인 생활비는 이 계획서의 역할이 아니다).
+ * 예전에 저장된 답은 지우지 않고 계산에서만 무시한다(cashflow-scenarios.ts). 대신 돈 장이 '본전을 넘겨 1개 더 팔 때마다 대표 몫'을 보여 준다.
  */
-const living = fieldQuestion("livingCost", "사업이 자리 잡기 전까지 대표님 한 달 생활비는 얼마가 필요하세요?", { kind: "number", unit: "원", period: "월", hint: "월 고정비에 이미 넣었다면 0원을 골라요. 다른 수입으로 일부를 메우면 그만큼 빼고 넣어요." });
 
 /** 탐색 모드 시작 조건 칩. 값은 사업 구조 축(자본·소상공인·인허가·전달·고객·수익)에 그대로 대응하고, 서버가 표준산업분류 지도에서 조건에 맞는 후보를 고른다. */
 import { START_CONDITIONS, candidateConditionFit, candidateTemplateFacts, selectedStartConditions, filterCandidateConditions } from "./intake-candidate-constraints";
@@ -86,7 +85,7 @@ const CORE_QUESTIONS: Record<IntakeMode, IntakeQuestion[]> = {
     customer, problem, offer, channel, price, structureUnitCost("per_unit"), structureCost, goal,
   ],
   // 가격·변동비·고정비가 모두 있어야 손익(손익분기·12개월)을 계산하므로 변동비·고정비도 기본 질문에서 묻는다(예전엔 선택형 추가 질문에만 있었다).
-  startup: [industry, business, customer, problem, offer, channel, price, structureUnitCost("per_unit"), structureCost, budget, living, hours, capacity, goal],
+  startup: [industry, business, customer, problem, offer, channel, price, structureUnitCost("per_unit"), structureCost, budget, hours, capacity, goal],
   operating: [
     industry,
     fieldQuestion("business", "현재 어떤 사업을 운영하나요? 한 문장으로 알려 주세요.", { hint: "아래 문장을 누른 뒤 ○○ 자리만 채워 주세요." }),
@@ -373,12 +372,12 @@ export function intakeCandidates(answers: Record<string, string | string[] | num
 /*
  * 금액 답의 현실성 확인 — 현실 범위 밖이면 같은 질문을 한 번 더 물어 확인한다. 막지는 않는다: [맞아요]면 그대로 저장한다.
  * 실제 AI 점검(2026-10-27)에서 준비 예산·월 비용·한 달 생활비를 각 3,000원으로 넣어도 아무 확인 없이 계획서까지 갔다.
- * 0원은 실제 답일 수 있어 여기서 묻지 않는다(예산 0원·변동비 없음·생활비를 고정비에 넣음). 판매 가격 0원은 화면이 따로 묻는다.
+ * 0원은 실제 답일 수 있어 여기서 묻지 않는다(예산 0원·변동비 없음). 판매 가격 0원은 화면이 따로 묻는다.
+ * 생활비는 더 묻지 않으므로 확인 대상에서도 뺐다(계획서 품질 Q3).
  * 화면(보내기 전)과 서버(answer, confirmed 없을 때)가 같은 규칙을 쓴다. 범위('1~3만원')는 적은 쪽으로 본다.
  */
 const AMOUNT_FLOORS: Partial<Record<CoachField["key"], { min: number; noun: string; unit: string }>> = {
   budget: { min: 100_000, noun: "준비 예산", unit: "만 원" },
-  livingCost: { min: 100_000, noun: "한 달 생활비", unit: "만 원" },
   cost: { min: 100_000, noun: "매달 나가는 돈", unit: "만 원" },
   price: { min: 100, noun: "판매 가격", unit: "천 원·만 원" },
   unitCost: { min: 100, noun: "한 건당 비용", unit: "천 원·만 원" },

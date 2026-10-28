@@ -57,16 +57,20 @@ export function gradeCustomer(all: string): ItemResult {
 }
 
 // 4. 남는 돈 구조 — 손익분기와 건당 남는 돈이 있고, 입력값으로 계산한 손익분기 수량이 본문과 맞는지
+// 계획서 품질 Q3(2026-10-28)부터 돈 장은 부가세(판매가의 1/11)를 뺀 '실제 남는 돈'으로 본전을 계산한다 — 두 수량 가운데 하나와 맞으면 일치로 본다
 export function gradeUnitEconomics(all: string, facts: EvalFacts): ItemResult {
   const hasBreakEven = /손익분기|본전/.test(all);
-  const hasUnit = /공헌이익|건당|한 건당|1건당/.test(all);
+  const hasUnit = /공헌이익|건당|한 건당|1건당|실제 남는 돈/.test(all);
   const { price, unitCost, fixedCost } = facts;
   if (price == null || unitCost == null || fixedCost == null || price <= unitCost) {
     return { item: 4, name: "남는 돈 구조", pass: null, detail: `입력값 부족(가격·변동비·고정비) · 손익분기 언급 ${hasBreakEven ? "있음" : "없음"}` };
   }
   const units = Math.ceil(fixedCost / (price - unitCost));
-  const matches = new RegExp(`${units.toLocaleString("ko-KR")}\\s*(?:건|개|명|잔|회|벌|시간|박|줄|곳)|${units}\\s*(?:건|개|명|잔|회|벌|시간|박|줄|곳)`).test(all);
-  return { item: 4, name: "남는 돈 구조", pass: hasBreakEven && hasUnit && matches, value: units, detail: `계산한 손익분기 월 ${units.toLocaleString("ko-KR")} · 본문 일치 ${matches ? "예" : "아니오"} · 건당 이익 ${hasUnit ? "있음" : "없음"}` };
+  const afterVat = price - Math.round(price / 11) - unitCost;
+  const vatUnits = afterVat > 0 ? Math.ceil(fixedCost / afterVat) : units;
+  const found = (n: number) => new RegExp(`${n.toLocaleString("ko-KR")}\\s*(?:건|개|명|잔|회|벌|시간|박|줄|곳)|${n}\\s*(?:건|개|명|잔|회|벌|시간|박|줄|곳)`).test(all);
+  const matches = found(vatUnits) || found(units);
+  return { item: 4, name: "남는 돈 구조", pass: hasBreakEven && hasUnit && matches, value: vatUnits, detail: `계산한 손익분기 월 ${vatUnits.toLocaleString("ko-KR")}(부가세 뺀 뒤)·${units.toLocaleString("ko-KR")}(빼기 전) · 본문 일치 ${matches ? "예" : "아니오"} · 건당 이익 ${hasUnit ? "있음" : "없음"}` };
 }
 
 // 5. 시작 자금 — 항목별 금액(보증금·권리금·인테리어·설비·재고·인허가·홍보·예비비) 중 몇 개가 나오는지
@@ -83,12 +87,12 @@ export function gradeCashflow(all: string): ItemResult {
   return { item: 6, name: "12개월 돈 흐름", pass: monthTable, detail: `돈 흐름 언급 ${mentions ? "있음" : "없음"} · 12개월 잔고 표 ${monthTable ? "있음" : "없음"}` };
 }
 
-// 7. 내 생활비와 내 월급
+// 7. 본전과 대표 몫 — 계획서 품질 Q3(대표 결정 2026-10-28): 대표 개인 생활비는 이 계획서가 맡지 않는다.
+// 대신 본전에서 대표가 가져가는 돈이 0원이라는 것과, 본전을 넘겨 1개 더 팔 때마다 대표 몫이 얼마인지가 있는지 본다.
 export function gradePersonalLiving(all: string): ItemResult {
-  const living = /생활비/.test(all);
-  // 생활비 질문(2026-10-10) 뒤로 계획서는 대표 몫을 '사업에서 생활비를 가져간다'로 쓴다
-  const salary = /내\s*월급|대표(?:자)?\s*(?:인건비|월급|급여)|가져갈\s*돈|사장님?\s*월급|생활비를?\s*가져(?:가|갈|올)/.test(all);
-  return { item: 7, name: "내 생활비와 내 월급", pass: living && salary, detail: `생활비 ${living ? "있음" : "없음"} · 대표 월급 ${salary ? "있음" : "없음"}` };
+  const zero = /본전[^.\n]{0,40}(?:0원|가져가는\s*돈은?\s*0|수입은?\s*0)|대표(?:님)?\s*(?:몫|수입)[^.\n]{0,20}0원/.test(all);
+  const share = /대표(?:님|자)?\s*몫|가져갈\s*돈|내\s*월급|대표(?:자)?\s*(?:월급|급여)/.test(all);
+  return { item: 7, name: "본전과 대표 몫", pass: zero && share, detail: `본전 = 대표 수입 0원 ${zero ? "있음" : "없음"} · 1개 더 팔 때 대표 몫 ${share ? "있음" : "없음"}` };
 }
 
 // 9. 주차별 할 일 — '1주' 같은 주차 줄이 있는 표, 매주 시간 합이 주당 가능 시간 안인지

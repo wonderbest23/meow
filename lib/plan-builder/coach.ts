@@ -77,9 +77,15 @@ export function applyCoachReply(previous: CoachState | null, reply: CoachReply, 
     ready: reply.ready && fields.has("business") && stage !== "exploring", suggestions: reply.suggestions, business };
 }
 
+/*
+ * 계획서가 쓰지 않는 저장값 — 대표 생활비(livingCost)는 계획서 품질 Q3(대표 결정 2026-10-28)로 묻지도 계산하지도 않는다.
+ * 예전에 저장된 답은 지우지 않고, 장을 쓰는 AI에게만 넘기지 않는다(넘기면 생활비 판매량을 다시 지어낼 수 있다).
+ */
+const IGNORED_PLAN_FIELDS = new Set<string>(["livingCost"]);
+
 /** financialScenario: 진단(intake) 계획이면 intake-core의 planFinancialReference 결과를 넘겨 질문 화면·문서와 같은 계산을 쓴다. */
 export function coachContext(state: CoachState, financialScenario?: string): string {
-  return JSON.stringify({ version: state.version, revision: coachDocumentRevision(state), stage: state.stage, depth: state.depth, ideaOrigin: state.ideaOrigin, fields: state.fields, design: currentBusinessDesign(state), userEditedAction: state.directAction?.sourceRevision === coachDocumentRevision(state) ? state.directAction : undefined, feasibility: checkCoachFeasibility(state.fields), financialScenario: financialScenario ?? coachFinancialReference(state) }, null, 2);
+  return JSON.stringify({ version: state.version, revision: coachDocumentRevision(state), stage: state.stage, depth: state.depth, ideaOrigin: state.ideaOrigin, fields: state.fields.filter(field => !IGNORED_PLAN_FIELDS.has(field.key)), design: currentBusinessDesign(state), userEditedAction: state.directAction?.sourceRevision === coachDocumentRevision(state) ? state.directAction : undefined, feasibility: checkCoachFeasibility(state.fields), financialScenario: financialScenario ?? coachFinancialReference(state) }, null, 2);
 }
 
 export function currentNextAction(state: CoachState) {

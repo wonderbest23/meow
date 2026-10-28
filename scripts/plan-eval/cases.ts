@@ -17,7 +17,7 @@ export type EvalCase = {
   tags: string[];
 };
 
-// livingCost: 대표 한 달 생활비(돈 장 시험판의 생활비 질문). 0은 "고정비에 이미 넣음", 없으면 "모름"
+// livingCost: 대표 한 달 생활비. 2026-10-28(계획서 품질 Q3)부터 묻지 않아 쓰이지 않는다 — 예전 채점과 비교하려고 답은 남겨 둔다
 export const EVAL_CASES: EvalCase[] = [
   { id: "bakery", label: "아파트 상가 아침 빵집", mode: "startup", sector: "food_beverage", tags: ["업종 인식", "값 모두"],
     answers: { business: "아파트 상가에서 아침 식빵과 소금빵을 굽는 작은 빵집", customer: "출근 전 30~40대 직장인, 단지 내 아이 키우는 가족", problem: "아침에 갓 구운 빵을 살 곳이 없음", offer: "식빵·소금빵 아침 세트", channel: "당근마켓 동네생활, 네이버 플레이스", price: 4500, "structure.unitCost": 1600, "structure.cost": 3800000, budget: 60000000, livingCost: 2000000, hoursPerWeek: 60, capacity: "대표자 혼자 / 하루 120개", goal: "6개월 안에 월 매출 1,200만원" } },

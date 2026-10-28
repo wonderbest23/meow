@@ -30,8 +30,11 @@ assert.equal(gradeCashflow(cash).pass, true);
 assert.equal(gradeCashflow("12개월 손익 추정").pass, false);
 assert.equal(markdownTables(cash)[0].length, 13, "header + 12 rows; the separator row is skipped");
 
-// 7. 생활비와 대표 월급
-assert.equal(gradePersonalLiving("사장님 생활비 월 200만원, 내 월급은 6개월 차부터").pass, true);
+// 7. 본전과 대표 몫(계획서 품질 Q3, 2026-10-28): 본전 = 대표 몫 0원, 1개 더 팔 때마다 대표 몫
+assert.equal(gradePersonalLiving("본전에서 대표님이 가져가는 돈은 0원입니다. 본전을 넘겨 1개 더 팔 때마다 약 2,491원이 대표님 몫으로 남습니다.").pass, true);
+assert.equal(gradePersonalLiving("사장님 생활비 월 200만원").pass, false, "living cost alone no longer passes");
+// 4. 부가세를 뺀 본전(3,800,000 ÷ (4,500 − 409 − 1,600) → 월 1,526개)도 일치로 본다
+assert.equal(gradeUnitEconomics("한 개에 실제 남는 돈 2,491원, 본전은 월 1,526개입니다", facts).pass, true);
 
 // 9. 주차별 표: 8주 이상, 매주 시간 합이 주당 가능 시간 안
 const weekly = (hours: number) => ["| 주차 | 할 일 | 걸리는 시간 | 완료 기준 |", "| --- | --- | --- | --- |", ...Array.from({ length: 12 }, (_, i) => `| ${i + 1}주 | 할 일 | ${hours}시간 | 기준 |`)].join("\n");
