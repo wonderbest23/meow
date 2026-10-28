@@ -57,6 +57,8 @@ export type IntakeCommand = {
   action: (typeof INTAKE_ACTIONS)[number];
   planId?: string; revision: number; requestId: string;
   mode?: IntakeMode; questionId?: string; value?: IntakeValue; unknown?: boolean;
+  /** action "answer": 현실 범위 밖 금액(생활비 3,000원 등)을 사용자가 [맞아요]로 확인했다(amountCheckPrompt) */
+  confirmed?: boolean;
   /** industry 답변에 함께 보내는 KSIC 세세분류 코드. value(11업종)는 서버가 코드에서 확인한다 */
   ksic?: string;
   /** action "structure": 사용자가 고친 구조 축(부분) */

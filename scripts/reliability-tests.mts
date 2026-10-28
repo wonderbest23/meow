@@ -26,7 +26,7 @@ suites.push("business-intake-questions", "business-intake-core", "business-intak
 suites.push("business-intake-prepare", "business-intake-ui");
 suites.push("ksic", "business-intake-coverage");
 suites.push("intake-live-comment", "intake-answer-suggestions", "financial-engine-unify", "safe-next");
-suites.push("platform-legal", "token-expiry", "intake-login", "launch-pricing", "plan-cost-cap", "fact-patch", "fact-highlight", "plan-eval", "cashflow-scenarios", "section-prompt-v3", "stream-usage", "operator-account", "design-normalize", "pending-sections", "review-keep-unresolved", "confirmed-name", "brainwave-business-render", "landing-ai-fill", "landing-contact-method", "landing-share-card", "landing-photo-library", "landing-themes", "llm-cost", "operating-homepage", "domain-purchase", "weekly-report", "customer-sms", "parallel-sections", "industry-playbooks", "business-types", "big-industry-paths", "marketing-kit", "plan-section-guard");
+suites.push("platform-legal", "token-expiry", "intake-login", "launch-pricing", "plan-cost-cap", "fact-patch", "fact-highlight", "plan-eval", "cashflow-scenarios", "section-prompt-v3", "stream-usage", "operator-account", "design-normalize", "pending-sections", "review-keep-unresolved", "confirmed-name", "brainwave-business-render", "landing-ai-fill", "landing-contact-method", "landing-share-card", "landing-photo-library", "landing-themes", "llm-cost", "operating-homepage", "domain-purchase", "weekly-report", "customer-sms", "parallel-sections", "industry-playbooks", "business-types", "big-industry-paths", "marketing-kit", "plan-section-guard", "review-cache", "intake-amount-check");
 suites.push("launch-notifications", "auth-email-confirmation");
 suites.push("apple-iap", "apple-notifications", "google-play-iap");
 suites.push("service-requests");
@@ -55,6 +55,7 @@ suites.push("speed-seo-r42b");
 suites.push("owner-decisions-r42");
 suites.push("landing-layout-seo-s3");
 suites.push("font-scale-s1");
+suites.push("plan-quality-q2");
 const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/KEY|TOKEN|SECRET|PASSWORD|SUPABASE|DATABASE_URL/.test(key)));
 Object.assign(env, { NODE_ENV: "test", PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "" });
 let failures = 0;

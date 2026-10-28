@@ -2,6 +2,8 @@ import type { CoachField } from "./coach";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { PROPOSAL_SECTORS, SECTOR_PROFILES, type ProposalSector } from "./proposal-blueprint";
 import { structureFieldLabels, type BusinessStructure } from "./business-structure";
+import { coachAmountLower } from "./coach-feasibility";
+import { stripAnswerPeriod } from "./answer-number";
 
 export type IntakeMode = "exploring" | "startup" | "operating";
 export type IntakeQuestion = {
@@ -366,4 +368,29 @@ export function intakeCandidates(answers: Record<string, string | string[] | num
     reasons: reasons.length ? reasons : ["관심·경험과 딱 맞는 게 없어 자주 찾는 예시로 보여 드려요."],
     cautions: [idea.caution, ...constraints],
   }, candidateTemplateFacts(idea.id), conditions));
+}
+
+/*
+ * 금액 답의 현실성 확인 — 현실 범위 밖이면 같은 질문을 한 번 더 물어 확인한다. 막지는 않는다: [맞아요]면 그대로 저장한다.
+ * 실제 AI 점검(2026-10-27)에서 준비 예산·월 비용·한 달 생활비를 각 3,000원으로 넣어도 아무 확인 없이 계획서까지 갔다.
+ * 0원은 실제 답일 수 있어 여기서 묻지 않는다(예산 0원·변동비 없음·생활비를 고정비에 넣음). 판매 가격 0원은 화면이 따로 묻는다.
+ * 화면(보내기 전)과 서버(answer, confirmed 없을 때)가 같은 규칙을 쓴다. 범위('1~3만원')는 적은 쪽으로 본다.
+ */
+const AMOUNT_FLOORS: Partial<Record<CoachField["key"], { min: number; noun: string; unit: string }>> = {
+  budget: { min: 100_000, noun: "준비 예산", unit: "만 원" },
+  livingCost: { min: 100_000, noun: "한 달 생활비", unit: "만 원" },
+  cost: { min: 100_000, noun: "매달 나가는 돈", unit: "만 원" },
+  price: { min: 100, noun: "판매 가격", unit: "천 원·만 원" },
+  unitCost: { min: 100, noun: "한 건당 비용", unit: "천 원·만 원" },
+};
+
+/** 다시 물을 확인 문장. 범위 안이거나 금액 질문이 아니거나 읽을 수 없는 답이면 null */
+export function amountCheckPrompt(question: Pick<IntakeQuestion, "fieldKey" | "unit" | "kind" | "period"> | null | undefined, value: string | number | string[] | null | undefined): string | null {
+  const floor = question?.fieldKey && question.kind === "number" && question.unit === "원" ? AMOUNT_FLOORS[question.fieldKey] : undefined;
+  if (!floor || value === null || value === undefined || Array.isArray(value)) return null;
+  const text = typeof value === "number" ? "" : stripAnswerPeriod(value.trim(), question!.period);
+  const amount = typeof value === "number" ? value : coachAmountLower(text);
+  if (amount === undefined || !Number.isFinite(amount) || amount <= 0 || amount >= floor.min) return null;
+  const shown = /[~～〜–]/.test(text) ? `${text}${/원$/.test(text) ? "" : "원"}` : `${amount.toLocaleString("ko-KR")}원`;
+  return `${floor.noun} ${shown}이 맞나요? ${floor.unit} 단위를 빠뜨리셨으면 다시 넣어 주세요.`;
 }

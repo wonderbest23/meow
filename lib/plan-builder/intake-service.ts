@@ -12,7 +12,7 @@ import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
+import { applyIntakeAnswer, assertAmountConfirmed, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
 import { EDITABLE_FACT_IDS } from "./fact-highlight";
@@ -126,6 +126,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         plan.answers.__coach_job = { ...plan.answers.__coach_job, token: crypto.randomUUID(), status: "failed", updatedAt: at };
       }
     } else if (command.action === "answer") {
+      assertAmountConfirmed(intake, coach, command);
       const beforeAnswers = structuredClone(intake.answers);
       applyIntakeAnswer(plan, coach, intake, command, at);
       // 계획서가 있으면 고친 금액을 본문에 바로 바꿔 넣는다(AI 없음). 계산된 다른 값은 다시 작성하기로 맞춘다.

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import Link from "next/link";
 import { RefreshCw, X } from "lucide-react";
 import type { IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
-import type { IntakeQuestion } from "../../../lib/plan-builder/intake-questions";
+import { amountCheckPrompt, type IntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { EDITABLE_FACT_IDS, factNeedles, findFactRanges, parseWon, type EditableFact } from "../../../lib/plan-builder/fact-highlight";
 import { isShortCell } from "../../../lib/plan-builder/table-cells";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
@@ -220,6 +220,7 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
   // Start empty: a fact edit replaces the answer, it does not add to it. The current value is shown in the header.
   const [draft, setDraft] = useState<AnswerDraft>(emptyAnswer);
   const [amountText, setAmountText] = useState("");
+  const [confirmFor, setConfirmFor] = useState<number | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: anchor.bottom + 8, left: anchor.left });
   useLayoutEffect(() => {
@@ -249,9 +250,13 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
   if (!fact || !edit.snapshot) return null;
   const amount = fact.question.kind === "number" && fact.question.unit === "원";
   const won = amount ? parseWon(amountText) : null;
+  // 현실 범위 밖 금액(생활비 3,000원 등)은 한 번 더 묻는다 — 같은 금액으로 다시 누르면 [맞아요]로 보고 저장한다(대화와 같은 규칙)
+  const check = won !== null ? amountCheckPrompt(fact.question, won) : null;
+  const checking = check !== null && confirmFor === won;
   const saveAmount = async () => {
     if (won === null) return;
-    const result = await edit.post({ action: "answer", questionId: fact.questionId, value: won });
+    if (check && !checking) { setConfirmFor(won); return; }
+    const result = await edit.post({ action: "answer", questionId: fact.questionId, value: won, ...(check ? { confirmed: true } : {}) });
     if (result) onSaved();
   };
   const save = async (value: AnswerDraft) => {
@@ -266,12 +271,12 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
       {/* 휴대폰은 숫자 자판이 뜬다 — 예시도 숫자로 둔다('6만'은 숫자 자판으로 칠 수 없다). 키보드로 '6만'을 적어도 읽는다 */}
       <label htmlFor="fact-amount">새 금액</label>
       <div><input id="fact-amount" autoFocus inputMode="numeric" autoComplete="off" maxLength={20} placeholder="예: 60000" value={amountText} disabled={edit.busy} onChange={event => setAmountText(event.target.value)} /><span>원</span></div>
-      <small aria-live="polite">{won !== null ? `${new Intl.NumberFormat("ko-KR").format(won)}원으로 바꿔요` : amountText.trim() ? "숫자로 적어 주세요 (예: 60000, 6만5천)" : "\u00a0"}</small>
+      <small aria-live="polite">{checking ? check : won !== null ? `${new Intl.NumberFormat("ko-KR").format(won)}원으로 바꿔요` : amountText.trim() ? "숫자로 적어 주세요 (예: 60000, 6만5천)" : "\u00a0"}</small>
     </form> : <div className={`${intake.page} ${intake.factScope}`} data-coach>
       <QuestionForm question={fact.question} snapshot={edit.snapshot} draft={draft} editing={false} disabled={edit.busy} inChat coach
         onChange={(answer, submit) => { setDraft(answer); if (submit) void save(answer); }}
         onAnswer={value => void save({ ...emptyAnswer(), text: String(value ?? "") })} onCancel={onClose} />
     </div>}
-    <footer><small>{amount ? "노란 금액은 바로 바뀌어요. 표와 계산된 숫자는 \"계획서에 반영하기\"로 맞춰요" : "바꾼 내용은 \"계획서에 반영하기\"를 누르면 계획서에 들어가요"}</small><button type="button" className={styles.primary} disabled={edit.busy || (amount ? won === null : !draftSubmission(fact.question, draft))} onClick={() => void (amount ? saveAmount() : save(draft))}>바꾸기</button></footer>
+    <footer><small>{amount ? "노란 금액은 바로 바뀌어요. 표와 계산된 숫자는 \"계획서에 반영하기\"로 맞춰요" : "바꾼 내용은 \"계획서에 반영하기\"를 누르면 계획서에 들어가요"}</small><button type="button" className={styles.primary} disabled={edit.busy || (amount ? won === null : !draftSubmission(fact.question, draft))} onClick={() => void (amount ? saveAmount() : save(draft))}>{checking ? "맞아요" : "바꾸기"}</button></footer>
   </div>;
 }

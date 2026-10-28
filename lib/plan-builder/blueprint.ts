@@ -131,6 +131,16 @@ export function sectionKey(chapterId: string, sectionId: string): string {
   return `${chapterId}/${sectionId}`;
 }
 
+/*
+ * 본문이 다른 장을 부를 때 쓰는 정해진 이름 — 문서에 실제로 보이는 장 제목(섹션 이름)을 작은따옴표로 감싼 것.
+ * 2026-10-27 검토: 본문이 '비용 장'·'유통 전략 장'·'실행 장'처럼 제목과 다른 이름으로 불러 찾기 어려웠다. 지시문과 계산 자료도 이 이름만 쓴다.
+ */
+export function chapterRef(key: string): string {
+  const [chapterId, sectionId] = key.split("/");
+  const title = PLAN_BLUEPRINT.find((ch) => ch.id === chapterId)?.sections.find((s) => s.id === sectionId)?.title;
+  return title ? `'${title}' 장` : key;
+}
+
 /** 전체 섹션 수 */
 export function totalSections(): number {
   return PLAN_BLUEPRINT.reduce((n, ch) => n + ch.sections.length, 0);

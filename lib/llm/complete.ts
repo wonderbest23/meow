@@ -59,6 +59,13 @@ export type LLMCompleteParams = {
    */
   cache?: boolean;
   /*
+   * user 앞부분 가운데 여러 호출이 글자까지 똑같이 쓰는 몫(cache와 함께, Anthropic만).
+   * 반드시 user의 앞부분 그대로여야 한다 — 그 끝에 캐시 경계를 하나 더 둔다. 모델이 받는 글은 바뀌지 않는다.
+   * 장 검토·편집처럼 시스템 지시는 짧고 공통 자료(대화 요약·설계)가 user에 실리는 호출용이다.
+   * 앞부분이 아니면(호출부 실수) 경계 없이 예전처럼 보낸다.
+   */
+  cacheUserPrefix?: string;
+  /*
    * 호출을 밖에서 끊는 신호 — 스트리밍 중 사용자가 화면을 떠났을 때 쓴다.
    * 이게 없으면 보는 사람이 사라진 뒤에도 모델이 끝까지 쓰고, 그 출력 토큰이
    * 그대로 실비가 된다.
@@ -256,6 +263,16 @@ function anthropicOutputParams(config: LLMConfig, params: LLMCompleteParams) {
   };
 }
 
+/** Anthropic user 내용 — 공통 앞부분이 있으면 두 블록으로 나누고 앞 블록 끝에 캐시 표시를 단다(합친 글은 user와 같다) */
+export function anthropicUserContent(params: Pick<LLMCompleteParams, "user" | "cache" | "cacheUserPrefix">) {
+  const prefix = params.cacheUserPrefix;
+  if (!params.cache || !prefix || prefix.length >= params.user.length || !params.user.startsWith(prefix)) return params.user;
+  return [
+    { type: "text", text: prefix, cache_control: { type: "ephemeral" } },
+    { type: "text", text: params.user.slice(prefix.length) },
+  ];
+}
+
 async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
   // Schema-compatible callers also enable constrained JSON output at the API level.
   const system = params.jsonObject
@@ -278,7 +295,7 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
         system: params.cache
           ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
           : system,
-        messages: [{ role: "user", content: params.user }],
+        messages: [{ role: "user", content: anthropicUserContent(params) }],
       }),
       cache: "no-store",
       signal,
@@ -546,7 +563,7 @@ async function streamOnce(
                 system: params.cache
                   ? [{ type: "text", text: params.system, cache_control: { type: "ephemeral" } }]
                   : params.system,
-                messages: [{ role: "user", content: params.user }],
+                messages: [{ role: "user", content: anthropicUserContent(params) }],
                 stream: true,
               }
             : {

@@ -1,11 +1,11 @@
 import { freeReflectsLeft } from "./free-reflect";
 import { chaptersForType, sectionKey } from "./blueprint";
-import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled } from "./cashflow-scenarios";
+import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
 import { calculateFinancials, financialsToReference } from "./financials";
-import { coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
+import { amountCheckPrompt, coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
 import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
 import { playbookForKsic, playbookForText } from "./industry-playbooks";
@@ -519,6 +519,9 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   if ("missing" in inputs) return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...intakeDetailChecks(coach, intake, null)].join("\n");
   const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, online } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
+  // 돈 입력이 실제 금액으로 보기 어려우면 그 금액으로 만든 숫자(본전·통장 흐름·업종 점검의 예산 비율)를 넘기지 않는다 — 돈 장의 빈 틀과 같은 판정
+  const implausible = implausibleMoneyFromFields(coach.fields);
+  if (implausible.length) return implausibleMoneyReference(implausible, { unitPrice, unitVariableCost });
   // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
   const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, online }) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
@@ -708,6 +711,22 @@ export function storeIntakeNote(coach: CoachState, intake: IntakeState, command:
   coach.messages.push({ id: command.requestId, role: "user", text: command.message, at });
 }
 
+function answerQuestionFor(intake: IntakeState, coach: CoachState, id: string | undefined) {
+  return intakeQuestions(intake, coach).find(item => item.id === id)
+    ?? (id === "business" || id === "industry" || id === "budget" || id === "hoursPerWeek" ? getIntakeQuestion("startup", intake.sector, id) : undefined);
+}
+
+/*
+ * 사용자가 직접 적은 금액이 현실 범위 밖이면(생활비 3,000원 등) 확인 없이 저장하지 않는다 — 화면은 같은 질문을 한 번 더 묻고
+ * [맞아요]를 누르면 confirmed로 다시 보낸다. 화면이 먼저 묻지 못한 경우(예전 화면·직접 호출)에도 서버가 같은 규칙으로 멈춘다.
+ * 자원 조건 입력·AI 제안 반영은 이 길을 거치지 않는다(사용자가 직접 고른 값의 확인이라 answer에만 건다).
+ */
+export function assertAmountConfirmed(intake: IntakeState, coach: CoachState, command: IntakeCommand) {
+  if (command.unknown || command.confirmed) return;
+  const prompt = amountCheckPrompt(answerQuestionFor(intake, coach, command.questionId), command.value);
+  if (prompt) throw new IntakeError("amount_check", prompt, 422);
+}
+
 export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
   const id = command.questionId;
   if (id === "candidate" && typeof command.value === "string" && command.value.includes(":idea:")) {
@@ -715,9 +734,7 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
     if (!proposal) throw new IntakeError("candidate_unknown", "이 사업에서 받은 제안이 맞는지 다시 확인해 주세요", 404);
     if (proposal.rejected || proposal.baseInputRevision !== (intake.ideaInputRevision ?? 0)) throw new IntakeError("candidate_stale", "제안을 받은 뒤 조건이 바뀌었어요. 바뀐 조건으로 다시 제안받아 주세요", 409);
   }
-  const questions = intakeQuestions(intake, coach);
-  const question = questions.find(item => item.id === id)
-    ?? (id === "business" || id === "industry" || id === "budget" || id === "hoursPerWeek" ? getIntakeQuestion("startup", intake.sector, id) : undefined);
+  const question = answerQuestionFor(intake, coach, id);
   if (!question) throw new IntakeError("question_unknown", "이 사업의 질문을 다시 불러와 주세요");
   const previousAnswer = intake.answers[question.id];
   const value = command.unknown ? null : validatedAnswer(question, command.value);
