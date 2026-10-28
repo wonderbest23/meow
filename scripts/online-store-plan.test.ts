@@ -119,7 +119,7 @@ async function main() {
     assert.equal((await send({ action: "answer", questionId: "business", value: "동네 아파트 상가 브런치 카페" })).sectorSuggestion?.sector, "food_beverage");
     // 채팅 화면이 확인 문구와 두 버튼을 그린다
     const ui = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
-    assert.ok(ui.includes("에 더 가까워 보여요. 업종을 바꿀까요?") && ui.includes(">바꾸기</button>") && ui.includes(">그대로 둘게요</button>") && ui.includes('action: "sector-keep"'));
+    assert.ok(ui.includes("에 더 가까워 보여요. {sectorCheckPrompt(sectorSuggestion)}") && ui.includes(">바꾸기</button>") && ui.includes(">그대로 둘게요</button>") && ui.includes('action: "sector-keep"'));
     // 표지: 사업 설명으로 찾은 업종 가이드 이름(넓은 업종 이름 대신)
     const route = readFileSync(new URL("../app/api/plan/document/route.ts", import.meta.url), "utf8");
     assert.ok(route.includes("documentIndustryLabel(plan)"));
