@@ -27,20 +27,49 @@ import { MessageMeta, WorkLog } from "./WorkLog";
 import { editFoundItem, marginLogItem } from "./work-log";
 import { splitSectionEditMessage } from "../../../../lib/plan-builder/studio-plan-edit";
 
+export const ENTRY_GREETING = "안녕하세요! 오늘은 어떤 사업을 새로 시작해볼까요?";
+export const ENTRY_QUESTION = "지금 어느 단계세요?";
+const GREETING_TYPING_MS = 600;
+const GREETING_CHAR_MS = 28;
+
+/** 빈 새 대화의 첫 인사 — 입력 중 점이 잠깐 보인 뒤 인사가 글자 단위로 나타난다. 다 나타나면 onReady(그때 첫 질문이 따라온다). 움직임 줄이기 설정이면 바로 다 보인다. */
+function CoachGreeting({ onReady }: { onReady: () => void }) {
+  const [phase, setPhase] = useState<"typing" | "greeting">("typing");
+  const ready = useRef(onReady); ready.current = onReady;
+  const words = ENTRY_GREETING.split(" ");
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setPhase("greeting"); ready.current(); return; }
+    const toGreeting = window.setTimeout(() => setPhase("greeting"), GREETING_TYPING_MS);
+    const toReady = window.setTimeout(() => ready.current(), GREETING_TYPING_MS + ENTRY_GREETING.length * GREETING_CHAR_MS + 450);
+    return () => { window.clearTimeout(toGreeting); window.clearTimeout(toReady); };
+  }, []);
+  let index = 0;
+  return <div className={styles.greeting} data-coach-greeting={phase}>
+    {phase === "typing" ? <TypingBubble /> : <p>
+      <span className={styles.srOnly}>{ENTRY_GREETING}</span>
+      <span aria-hidden="true">{words.map((word, w) => <Fragment key={w}>{w > 0 && " "}<span data-word>{[...word].map(char => { const delay = index++ * GREETING_CHAR_MS; return <span key={delay} data-char style={{ animationDelay: `${delay}ms` }}>{char}</span>; })}</span></Fragment>)}</span>
+    </p>}
+  </div>;
+}
+
 export function EntryChoices({ disabled, onStart, initialMessage, coach = false }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null; coach?: boolean }) {
+  const [greeted, setGreeted] = useState(false);
   const choices = [
     { mode: "exploring" as const, label: "아이디어를 찾고 있어요", Icon: Lightbulb },
     { mode: "startup" as const, label: "생각한 사업이 있어요", Icon: FileText },
     { mode: "operating" as const, label: "사업을 운영 중이에요", Icon: Store },
   ];
   // Coach chat opens like a messenger: a short greeting, the first question as a bubble, three pills to tap.
-  if (coach) return <section className={styles.chatHistory} aria-labelledby="intake-entry-heading" data-coach-entry>
-    {/* 첫 인사 말풍선은 두지 않는다 — 바로 첫 질문(r37 글 점검). 고르는 것이 단계라 질문도 단계를 묻는다(대화 기록 첫 줄과 같은 말) */}
-    {initialMessage && <><article className={styles.userMessage} data-coach-message="user"><p>{initialMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p></>}
-    <div className={`${styles.question} ${styles.chatQuestion}`}>
-      <h2 id="intake-entry-heading">지금 어느 단계세요?</h2>
+  if (coach) return <section className={styles.chatHistory} aria-label="대화 시작" data-coach-entry>
+    {/*
+     * 빈 새 대화는 인사부터 — 질문 말풍선 하나만 덩그러니 떠서 허전했다(대표 피드백 2026-10-29). 입력 중 점 → 인사가 글자 단위로 나타남 →
+     * 한 박자 뒤 첫 질문과 선택지. 첫 화면에서 글을 적어 들어온 경우는 내 말풍선 뒤에 바로 질문(인사는 건너뜀). 고르는 것이 단계라 질문도 단계를 묻는다(대화 기록 첫 줄과 같은 말)
+     */}
+    {initialMessage ? <><article className={styles.userMessage} data-coach-message="user"><p>{initialMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p></> : <CoachGreeting onReady={() => setGreeted(true)} />}
+    {(initialMessage || greeted) && <div className={`${styles.question} ${styles.chatQuestion}`}>
+      <h2 id="intake-entry-heading">{ENTRY_QUESTION}</h2>
       <div className={styles.chipRow} role="group" aria-label="대화 시작 선택지">{choices.map(({ mode, label }) => <button type="button" key={mode} className={styles.chip} disabled={disabled} onClick={() => onStart(mode)}>{label}</button>)}</div>
-    </div>
+    </div>}
   </section>;
   return <section className={styles.entry} aria-labelledby="intake-entry-heading">
     <div id="intake-entry-heading"><CoachWelcome tagline={false} /></div>
@@ -616,7 +645,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
     return <Fragment key={`log:${message.id}`}>{log!.node}{body}</Fragment>;
   };
   return <div className={styles.chatHistory} aria-label="지금까지의 대화">
-    <div className={styles.assistantMessage}><ChatSpeaker /><p>지금 어느 단계세요?</p></div>
+    <div className={styles.assistantMessage}><ChatSpeaker /><p>{ENTRY_GREETING}</p><p>{ENTRY_QUESTION}</p></div>
     <article className={styles.userMessage} data-coach-message="user"><p>{mode}</p></article>
     {snapshot.coach.messages.map(message => placeLog(message, (() => {
       if (snapshot.intake.job?.kind === "design" && message.id === `${snapshot.intake.job.id}:reply` && snapshot.coach.design?.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
