@@ -458,8 +458,10 @@ export function intakeDetailChecks(coach: CoachState, intake: IntakeState, scena
   const field = (key: CoachField["key"]) => coach.fields.find(item => item.key === key)?.value;
   const capacity = monthlyVolumeFromCapacity(field("capacity"));
   const volume = scenario?.volume ?? capacity?.volume ?? null;
-  const basis = scenario ? (scenario.actual ? "실적 기준" : "계획 판매량 기준") : "처리량 최대치 기준";
-  const volumeLabel = scenario ? "판매량" : "처리량";
+  // 예약·수업처럼 물건을 팔지 않는 사업은 '판매량·처리량' 대신 건수로 쓴다(계획서 품질 Q9 — 네일·과외 계산 자료에 물건 판매 말)
+  const service = ["visits", "enroll"].includes(intakeCashflowShape(coach, intake).cycle);
+  const basis = scenario ? (scenario.actual ? "실적 기준" : service ? "계획 건수 기준" : "계획 판매량 기준") : service ? "받을 수 있는 최대 건수 기준" : "처리량 최대치 기준";
+  const volumeLabel = scenario ? (service ? "계획 건수" : "판매량") : service ? "받을 수 있는 건수" : "처리량";
   // 예산·시간을 범위로 남겼으면 적은 쪽으로 계산한다(보수적)
   const hoursText = field("hoursPerWeek");
   const hoursMatch = (rangeLowerText(hoursText) ?? hoursText)?.replace(/\s|,/g, "").match(/^(?:주)?(\d+(?:\.\d+)?)(?:시간)?$/);

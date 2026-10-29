@@ -86,8 +86,10 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const flowLines = implausible.length ? [
     line("계산 상태", `${implausible.map(item => `${item.label} ${won(item.value)}`).join(" / ")}: 10만 원보다 적어 실제 금액으로 보기 어려워 손익을 계산하지 않음. 실제 금액으로 다시 입력하면 계산`, "missing", ["financials.inputs"], 150),
   ] : flow && careful ? [
-    line("첫 달 가정", `조심스러운 경우 ${careful.volumes[0].toLocaleString("ko-KR")}${flow.unit} 판매 / 매출 ${won(careful.volumes[0] * flow.unitPrice)} / 한 달 ${signed(careful.net[0])}${goalCase && flow.goal ? ` · 목표 경우 ${flow.goal.months}개월차 ${goalCase.volumes[Math.min(flow.goal.months, goalCase.volumes.length) - 1].toLocaleString("ko-KR")}${flow.unit}` : ""}`, "calculation", ["cashflow.careful.1"], 115),
+    line("첫 달 가정", `조심스러운 경우 ${careful.volumes[0].toLocaleString("ko-KR")}${flow.unit} ${flow.terms.sold} / 매출 ${won(careful.volumes[0] * flow.unitPrice)} / 한 달 ${signed(careful.net[0])}${goalCase && flow.goal ? ` · 목표 경우 ${flow.goal.months}개월차 ${goalCase.volumes[Math.min(flow.goal.months, goalCase.volumes.length) - 1].toLocaleString("ko-KR")}${flow.unit}` : ""}`, "calculation", ["cashflow.careful.1"], 115),
     line("산출 조건", `판매가 ${won(flow.unitPrice)} / 부가세 ${flow.shape.vat === "exempt" ? "0원(면세로 봄, 관할 세무서 확인)" : `${won(flow.vat)}(일반과세자 가정)`} / 건당 변동비 ${won(flow.unitPrice - flow.vat - flow.contribution)} / 한 건에 실제 남는 돈 ${won(flow.contribution)} / 월 고정비 ${won(flow.monthlyFixedCost)}`, "calculation", ["financials.inputs"], 130),
+    // 준비 기간(계획서 품질 Q9) — 문서 돈 장·12주 표와 같은 개업 주차에서 센 값
+    ...(flow.budget != null && flow.prepCost > 0 ? [line("준비 기간", `${flow.prep.openWeek != null ? `${flow.prep.openWeek}주차 개업 가정, ` : ""}문 열기 전 고정비 ${flow.prep.months}개월분 ${won(flow.prepCost)}(가정)`, "calculation", ["cashflow.prep"], 90)] : []),
   ] : null;
   const financialLines = flowLines ?? (firstMonth ? [
     line(coach?.stage === "operating" || period ? "월 운영 가정" : "첫 달 가정", `${firstMonth.volume.toLocaleString("ko-KR")}건 판매 / 매출 ${won(firstMonth.revenue)} / 영업손익 ${won(firstMonth.operatingProfit)}`, "calculation", ["financials.monthly.1"], 110),

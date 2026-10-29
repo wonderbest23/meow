@@ -72,7 +72,7 @@ async function main() {
     assert.deepEqual(vatOwners, [owner], "the VAT-type note reaches only the money chapter's data");
     assert.equal(table.match(/간이과세자는 업종에 따라/g)?.length, 1, "once under the table");
     assert.doesNotMatch(reference, /간이과세/);
-    assert.match(reference, /과세 유형\(일반·간이·면세\)에 따라 부가세가 달라진다는 안내는 돈 숫자를 맡은 장의 계산 표 아래에 한 번 실리므로, 본문에서는 다시 풀어 쓰지 않습니다/);
+    assert.match(reference, /과세 유형\(일반·간이·면세\)에 따라 부가세가 달라진다는 안내는 돈 숫자를 맡은 장의 계산 표 아래에만 있어 본문에서 다시 풀어 쓰지 않습니다/);
 
     // ── (2) 관심 조사 기준: 본전에 필요한 단골 수와 응답 수 ──
     // 본전 = 2,000,000 ÷ 4,682 → 월 428개 → 일주일 약 100개, 한 사람이 일주일에 1·2·3번 산다고 보면(가정) 100·50·34명

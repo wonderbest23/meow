@@ -54,10 +54,10 @@ async function main() {
     const all = { nail, candle, tutor, lunch };
 
     // ── 사업 모양: 구조 값·사업 유형으로 ──
-    assert.deepEqual(nail.shape, { premises: true, cycle: "visits", vat: "general" });
-    assert.deepEqual(candle.shape, { premises: false, cycle: "once", vat: "general" });
-    assert.deepEqual(tutor.shape, { premises: false, cycle: "enroll", vat: "exempt" });
-    assert.deepEqual(lunch.shape, { premises: true, cycle: "weekly", vat: "general" });
+    assert.deepEqual(nail.shape, { premises: true, cycle: "visits", vat: "general", trade: "beauty", exemptPossible: false, makesGoods: false, open: { week: 11, startWeek: 7 } });
+    assert.deepEqual(candle.shape, { premises: false, cycle: "once", vat: "general", trade: "other", exemptPossible: false, makesGoods: true, open: { week: 5, startWeek: 1 } });
+    assert.deepEqual(tutor.shape, { premises: false, cycle: "enroll", vat: "exempt", trade: "lesson", exemptPossible: false, makesGoods: false, open: { week: 8, startWeek: 1 } });
+    assert.deepEqual(lunch.shape, { premises: true, cycle: "weekly", vat: "general", trade: "food", exemptPossible: false, makesGoods: false, open: { week: 11, startWeek: 7 } });
 
     // ── (1) 매장 문장은 매장을 빌리는 사업에만 ──
     for (const { table } of [nail, lunch]) {
@@ -70,7 +70,7 @@ async function main() {
     }
     assert.match(candle.table, /\| 포장·택배 \| 확인 필요 \|[\s\S]*\| 스토어 판매·결제 수수료 \| 확인 필요 \|/);
     assert.match(tutor.table, /\| 결제 수수료\(카드·간편결제로 받을 때\) \| 확인 필요 \| 계좌이체로 받으면 없음/);
-    assert.match(tutor.reference, /영업을 시작한 뒤: 실제 판매 수/);
+    assert.match(tutor.reference, /영업을 시작한 뒤: 실제 등록 학생 수/, "Q9: 수업은 등록 학생 수로 센다");
 
     // ── (2) 구매 주기 가정과 세는 말 ──
     const weekly = /일주일에 1번이면/;
@@ -78,8 +78,8 @@ async function main() {
     assert.ok(lunch.reference.includes(SURVEY_DISCOUNT), "the food business keeps the Q6 discount sentence word for word");
     // 네일: 55,000 − 5,000 − 8,000 = 42,000원, 본전 월 43건 → 3·4·6주에 1번이면 30·40·60명
     assert.doesNotMatch(nail.reference, weekly);
-    assert.match(nail.reference, /본전\(한 달 43건\) ÷ 한 사람이 받는 횟수\(가정\) — 3주에 1번\(한 달 약 1\.4번\)이면 약 30명, 4주에 1번\(한 달 약 1\.1번\)이면 약 40명, 6주에 1번\(한 달 약 0\.7번\)이면 약 60명\(가정\)/);
-    assert.match(nail.reference, /본전 횟수\(하루 약 2건 \/ 일주일 약 10건 \/ 한 달 43건\) 이상이면 계획대로/);
+    assert.match(nail.reference, /본전\(한 달 43건\) ÷ 한 사람의 한 달 횟수\(= 4\.33 ÷ 주기\(주\), 가정\) — 3주에 1번\(한 달 약 1\.44번\)이면 약 30명, 4주에 1번\(한 달 약 1\.08번\)이면 약 40명, 6주에 1번\(한 달 약 0\.72번\)이면 약 60명\(가정\)/);
+    assert.match(nail.reference, /본전 예약·시술 건수\(하루 약 2건 \/ 일주일 약 10건 \/ 한 달 43건\) 이상이면 계획대로/);
     assert.ok(nail.reference.includes(surveyDiscount("visits")) && /날짜·횟수 없는 응답 × 0/.test(surveyDiscount("visits")));
     assert.match(nail.reference, /언제\(날짜\) 받겠는지와 몇 주에 한 번 받는지\(횟수\)/);
     // 캔들: 한 번 사는 상품 — 매주 반복 판매와 비교하지 않고 매달 새 구매자 수로
@@ -90,8 +90,8 @@ async function main() {
     assert.doesNotMatch(tutor.reference, /일주일에 1번이면|적은 수량|날짜·수량|× 월 4\.3주/);
     assert.match(tutor.reference, /본전은 한 달 등록 1명입니다\(한 사람이 한 달에 1번 등록, 가정\)/);
     assert.match(tutor.reference, /언제부터\(시작 월\) 몇 명이 등록하겠는지/);
-    assert.match(surveyDiscount("enroll"), /응답마다 적은 등록 인원 × 배수의 합 — 지인·가족 응답 × 0\.5\(절반\), 시작 월 없는 응답 × 0/);
-    assert.match(tutor.table, /처리량 최대치: 동시에 맡을 수 있는 인원 6명/);
+    assert.match(surveyDiscount("enroll", "lesson"), /예상 등록 = 응답마다 적은 등록 학생 수 × 배수의 합 — 시작 월을 남긴 모르는 사람 응답 × 0\.5\(실제 등록으로 이어지는 비율, 가정\), 지인·가족 응답 × 0\.25\(그 절반, 가정\), 시작 월 없는 응답 × 0/);
+    assert.match(tutor.table, /동시에 맡을 수 있는 인원 최대치: 동시에 맡을 수 있는 인원 6명/);
     for (const { reference } of Object.values(all)) assert.match(reference, /\(가정[),]|, 가정\)/, "assumptions are marked");
 
     // ── (3) 부가세: 면세일 수 있는 교육용역은 1/11을 빼지 않고, 근거·확인처·과세일 때를 함께 ──
@@ -111,10 +111,10 @@ async function main() {
     assert.equal(tutorFlow.breakEven, 1);
     assert.deepEqual(tutorFlow.scenarios.map(s => s.volumes[0]), [0, 1], "careful case is 0, not the break-even itself");
     assert.ok(tutorFlow.decision.floor < tutorFlow.decision.go);
-    assert.match(tutor.reference, /본전 등록 인원\(한 달 1명\) 이상이면 계획대로, 그보다 적으면\(한 달 0명\) 시작안을 바꿉니다\. 본전이 작아 '본전의 절반'을 따로 두면 기준이 겹치므로 규모를 줄이는 중간 단계는 두지 않습니다/);
+    assert.match(tutor.reference, /본전 등록 학생 수\(한 달 1명\) 이상이면 계획대로, 그보다 적으면\(한 달 0명\) 시작안을 바꿉니다\. 본전이 작아 '본전의 절반'을 따로 두면 기준이 겹치므로 규모를 줄이는 중간 단계는 두지 않습니다/);
     assert.match(tutor.table, /\| 조심스러운 경우 \| 0명 \|.*가정: 본전이 1명이라 절반 대신 0명 \|/);
     assert.doesNotMatch(tutor.reference, /중단선 아래로 내려가지 않습니다|초기 지출 한도: /, "no 'safe' sentence next to the stop line");
-    assert.match(tutor.reference, /준비 예산 2,000,000원으로는 중단선\(900,000원\)·영업 시작 전 고정비\(300,000원\)·조심스러운 경우 6개월 부족분\(1,800,000원\)을 함께 감당하지 못해 초기 지출 한도가 없습니다\(1,000,000원 모자람\)\. 초기 지출을 0원으로 해도 조심스러운 경우 영업 시작 뒤 3개월째에 중단선에 닿습니다/);
+    assert.match(tutor.reference, /준비 예산 2,000,000원으로는 중단선\(900,000원\)·영업 시작 전 고정비\(600,000원\)·조심스러운 경우 6개월 부족분\(1,800,000원\)을 함께 감당하지 못해 초기 지출 한도가 없습니다\(1,300,000원 모자람\)\. 초기 지출을 0원으로 해도 조심스러운 경우 영업 시작 뒤 2개월째에 중단선에 닿습니다/);
     // 본전 2·3(본전과 절반 사이에 들어갈 정수 없음)도 두 갈래, 본전 4부터 세 갈래
     const small = (fixed: number) => buildCashflowScenarios({ unitPrice: 400_000, unitVariableCost: 20_000, monthlyFixedCost: fixed, shape: tutor.shape })!;
     assert.deepEqual([small(700_000).breakEven, small(700_000).decision.floor], [2, 1]);
@@ -122,18 +122,18 @@ async function main() {
     assert.deepEqual([small(1_000_000).breakEven, small(1_000_000).decision.floor], [3, 2]);
     assert.match(cashflowReferenceOf(small(1_000_000)), /그보다 적으면\(한 달 2명\) 시작안을 바꿉니다/);
     assert.deepEqual([small(1_500_000).breakEven, small(1_500_000).decision.floor], [4, 2]);
-    assert.match(cashflowReferenceOf(small(1_500_000)), /본전의 절반\(한 달 2명\)보다 많으면 규모\(일하는 시간·상품 수\)를 줄여서/);
+    assert.match(cashflowReferenceOf(small(1_500_000)), /본전의 절반\(한 달 2명\)보다 많으면 규모\(수업 시간·반 수\)를 줄여서/);
     // 예산이 처음부터 중단선 이하이면 그렇다고
     assert.match(cashflowReferenceOf(buildCashflowScenarios({ unitPrice: 400_000, unitVariableCost: 20_000, monthlyFixedCost: 300_000, budget: "1,000,000원", shape: tutor.shape })!), /초기 지출을 0원으로 해도 영업 시작 때부터 남은 준비 예산이 중단선 아래입니다/);
 
-    // ── (5) 준비 기간 고정비(1개월, 가정)를 한도·중단선·버티는 기간에서 먼저 뺀다 ──
+    // ── (5) 준비 기간 고정비를 한도·중단선·버티는 기간에서 먼저 뺀다(Q9부터 기간은 12주 순서의 개업 주차에서 센다) ──
     assert.equal(PREP_MONTHS, 1);
-    assert.match(nail.reference, /- 문 열기 전 고정비: 계약부터 문 열 때까지 1개월\(가정, 12주 표에서 더 길면 한 달마다 1,800,000원 더\)에도 고정비 1,800,000원이 나가 준비 예산에서 먼저 뺍니다/);
+    assert.match(nail.reference, /- 문 열기 전 고정비: 계약부터 문 열 때까지 1개월\(가정 — 계약 7주차~11주차 개업, 4주 ÷ 4\.33 올림\)에도 고정비 1,800,000원이 나가 준비 예산에서 먼저 뺍니다/);
     // 네일 한도 = 20,000,000 − 5,400,000 − 1,800,000 − 876,000 × 6 = 7,544,000원
     assert.match(nail.reference, /초기 지출 한도: 준비 예산 20,000,000원 − 중단선 5,400,000원 − 문 열기 전 고정비 1,800,000원 − 조심스러운 경우 6개월 부족분 5,256,000원 = 7,544,000원\. 한도까지 쓰면 조심스러운 경우 문 연 뒤 6개월째에 중단선에 닿습니다/);
-    assert.match(candle.reference, /- 스토어 공개 전 고정비: 준비 기간 1개월\(가정, 12주 표에서 더 길면 한 달마다 400,000원 더\)에도 고정비 400,000원이 나가/);
+    assert.match(candle.reference, /- 스토어 공개 전 고정비: 준비 기간 1개월\(가정 — 1주차~5주차 개업, 4주 ÷ 4\.33 올림\)에도 고정비 400,000원이 나가/);
     assert.match(candle.reference, /= 2,283,490원\. 한도까지 쓰면 조심스러운 경우 스토어 공개 뒤 6개월째에 중단선에 닿습니다/);
-    assert.match(nail.table, /\| 4,000,000원 \| 14,200,000원 \| 약 7개월 \|/, "(20,000,000 − 4,000,000 − 1,800,000) ÷ 1,800,000");
+    assert.match(nail.table, /\| 4,000,000원 \| 14,200,000원 \| 약 4개월 \| 약 7개월 \|/, "(20,000,000 − 4,000,000 − 1,800,000) ÷ 1,800,000");
     assert.match(lunch.reference, /문 열기 전 고정비 2,000,000원 − 조심스러운 경우 6개월 부족분 5,988,312원 = 1,011,688원/);
     const known = buildCashflowScenarios({ unitPrice: 9000, unitVariableCost: 3500, monthlyFixedCost: 2_000_000, budget: "15,000,000원", setupCost: "5,000,000원" })!;
     assert.match(cashflowMarkdown(known), /통장 잔고는 준비 예산 15,000,000원에서 초기 지출 5,000,000원과 문 열기 전 고정비 2,000,000원을 뺀 8,000,000원에서 시작합니다/);
