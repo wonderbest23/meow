@@ -150,7 +150,7 @@ async function main() {
       assert.match(prompt("summary/executive"), /이 장에서만 쓰는 말: 대표가 정할 일\./);
       assert.match(prompt("strategy/promotion"), /이 장에서 쓰지 않는 말: 대표가 정할 일\('실행 요약' 장\), 한 건당 남는 돈에 대한 주의\('가격 전략' 장\), 관할 기관 문의 안내\('12주 할 일과 매달 볼 숫자' 장\)/);
       assert.doesNotMatch(prompt("strategy/promotion"), /이 장에서만 쓰는 말/);
-      assert.match(prompt("summary/roadmap"), /이 장에서만 쓰는 말: 관할 기관 문의 안내, 신고 전에 팔면 안 되는 이유\./);
+      assert.match(prompt("summary/roadmap"), /이 장에서만 쓰는 말: 관할 기관 문의 안내, 관심 조사 방법과 목표 응답 수, 주당 가능 시간과 영업시간의 차이, 신고 전에 팔면 안 되는 이유\./);
       assert.match(prompt("strategy/price"), /이 장에서만 쓰는 말: 한 건당 남는 돈에 대한 주의\./);
       // 실행 장이 없는 예전 종류는 관할 기관 문의 안내도 실행 요약이 맡는다
       const legacy = onePlaceNotes({ chapters: chaptersForType(undefined).flatMap(chapter => chapter.sections.map(section => ({ key: `${chapter.id}/${section.id}` }))), executionChapter: false });

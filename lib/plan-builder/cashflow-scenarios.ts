@@ -245,6 +245,8 @@ function unknownCostRows(result: CashflowScenarios): Array<{ item: string; note:
 }
 
 const VAT_BASIS = "판매가에 부가세가 들어 있고 일반과세자일 때 판매가의 1/11, 법정 세율 10%";
+/* 과세 유형 안내를 다른 장에서 다시 풀지 않게 가리키는 한 줄 — 안내 본문은 돈 장의 표 아래(unitMarginMarkdown) 한 곳에만 */
+const VAT_POINTER = "과세 유형(일반·간이·면세)에 따라 부가세가 달라진다는 안내는 돈 숫자를 맡은 장의 계산 표 아래에 한 번 실리므로, 본문에서는 다시 풀어 쓰지 않습니다.";
 const VAT_OTHER = "간이과세자는 업종에 따라 매출의 약 1.5~4%를 부가세로 내고, 한 해 매출이 4,800만 원 미만이면 내지 않습니다. 부가세가 면제되는 사업이면 빼지 않습니다. 재료를 살 때 낸 부가세 일부를 돌려받을 수도 있습니다. 어느 쪽인지는 사업자등록 전에 관할 세무서·홈택스에서 확인합니다";
 
 /** 본전이 '대표 수입 0원'이라는 것과 본전을 넘긴 뒤 대표 몫 — 입력 없이 계산되는 한 줄 */
@@ -281,6 +283,22 @@ function goalLine(result: CashflowScenarios): string {
 const periods = (daily: boolean, monthly: number, unit: string) => [perDay(daily, monthly, unit, text => text), monthly / 4.3 >= 1 ? `일주일 약 ${count(monthly / 4.3, unit)}` : "", `한 달 ${count(monthly, unit)}`].filter(Boolean).join(" / ");
 /** 관심 조사 결과와 견줄 한 기간 — 하루 판매 사업은 일주일(조사를 일주일 단위로 하므로), 그보다 적으면 한 달 */
 const surveyPeriod = (monthly: number, unit: string) => (monthly / 4.3 >= 1 ? `일주일 약 ${count(monthly / 4.3, unit)}` : `한 달 ${count(monthly, unit)}`);
+/*
+ * 본전에 필요한 단골 수 = 본전 판매량 ÷ 한 사람이 같은 기간에 사는 횟수(가정) — 계획서 품질 Q5(2026-10-28 재측정).
+ * '응답 30개로 일주일 본전 100건'처럼 응답 한 사람이 일주일에 몇 번 사야 하는지 따지지 않은 기준은 구조상 채울 수 없었다.
+ * 횟수는 입력이 아니므로 세 값(가정)을 나란히 보이고, 어느 값을 쓸지는 조사에서 받은 수량으로 확인한다.
+ */
+const WEEKLY_PURCHASES = [1, 2, 3] as const, MONTHLY_PURCHASES = [1, 2] as const;
+export function regularsNeeded(monthly: number): { period: "week" | "month"; rows: Array<{ times: number; people: number }> } {
+  const weekly = monthly / 4.3 >= 1;
+  const volume = weekly ? monthly / 4.3 : monthly;
+  return { period: weekly ? "week" : "month", rows: (weekly ? WEEKLY_PURCHASES : MONTHLY_PURCHASES).map(times => ({ times, people: Math.ceil(Math.round(volume) / times) })) };
+}
+const regularsLine = (monthly: number, unit: string) => {
+  const { period, rows } = regularsNeeded(monthly);
+  const word = period === "week" ? "일주일" : "한 달";
+  return `본전(${surveyPeriod(monthly, unit)}) ÷ 한 사람이 ${word}에 사는 횟수(가정) — ${rows.map(row => `${word}에 ${row.times}번이면 약 ${row.people.toLocaleString("ko-KR")}명`).join(", ")}(가정)`;
+};
 const monthsText = (months: number) => (months >= 12 ? "12개월 이상" : months < 1 ? "1개월도 못 버팀" : `약 ${months}개월`);
 
 /*
@@ -297,7 +315,7 @@ function decisionLines(result: CashflowScenarios): string[] {
   };
   return [
     `판단 기준(${chapterRef("summary/roadmap")}에서 씀): ${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로, 그보다 적고 본전의 절반(${periods(result.daily, decision.floor, unit)})보다 많으면 규모(공간·장비·상품 수)를 줄여서, 본전의 절반 이하면 시작안을 바꿉니다. 판단은 계약처럼 큰돈을 쓰기 전(출시 전)에 한 번, ${result.words.afterOpen}에 다시 합니다.`,
-    `계약·개업 전 판단(관심 조사 결과를 볼 때): 모은 주문 의사(수량)는 처리량(하루에 만들 수 있는 양)이 아니라 본전 판매량과 같은 기간끼리 비교합니다. 할인 원칙(제안): 지인·가족 응답은 절반 이하로 세고, 날짜·수량 없이 '관심 있다'고만 한 응답은 세지 않습니다. 통과 기준(제안): 할인한 주문 의사가 본전(${surveyPeriod(decision.go, unit)}) 이상이면 계약을 검토하고, 본전의 절반(${surveyPeriod(decision.floor, unit)}) 이하이면 계약하지 않고 시작안을 바꾸며, 그 사이면 규모를 줄여 다시 조사합니다. 주문 의사는 실제 구매보다 많게 나오므로, 이 기준을 넘어도 ${result.words.afterOpen} 실제 판매로 다시 판단합니다.`,
+    `계약·개업 전 판단(관심 조사 결과를 볼 때): 모은 주문 의사(수량)는 처리량(하루에 만들 수 있는 양)이 아니라 본전 판매량과 같은 기간끼리 비교합니다. 응답 하나는 손님 한 사람이므로, 응답 수는 본전에 필요한 단골 수와 비교합니다: ${regularsLine(decision.go, unit)}. 조사 글(질문 문구)에는 언제(날짜·요일) 몇 ${unit} 사겠는지 꼭 묻고, 날짜·수량을 남긴 응답만 셉니다. 할인 원칙(제안): 지인·가족 응답은 절반 이하로 세고, 날짜·수량 없이 '관심 있다'고만 한 응답은 세지 않습니다. 통과 기준(제안): 할인한 주문 의사(날짜·수량을 남긴 응답의 수량 합)가 본전(${surveyPeriod(decision.go, unit)}) 이상이고 응답한 사람 수가 위 단골 수(쓴 횟수 가정을 함께 밝힘) 이상이면 계약을 검토하고, 본전의 절반(${surveyPeriod(decision.floor, unit)}) 이하이면 계약하지 않고 시작안을 바꾸며, 그 사이면 규모를 줄여 다시 조사합니다. 모을 응답 수(목표 응답 수)를 위 단골 수보다 적게 잡으면 응답을 모두 받아도 통과 기준에 닿을 수 없으므로, 목표 응답 수는 단골 수 이상으로 잡습니다. 주문 의사는 실제 구매보다 많게 나오므로, 이 기준을 넘어도 ${result.words.afterOpen} 실제 판매로 다시 판단합니다.`,
     `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 아직 팔 수 없으면 주문 의사만으로 판매량 기준을 채웠다고 보지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 그래서 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 의견을 준 사람 중 날짜·수량까지 남긴 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)를 함께 봅니다.`,
     `${decision.goLabel}을 채우려면 닿아야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 그만큼의 사람에게 닿을 길(지나가는 사람, 단지 세대, 커뮤니티 회원 등)이 있어야 진행합니다.`,
     `${result.words.afterOpen}: 실제 판매 수를 위 기준과 매달 비교하고, 남은 준비 예산이 중단선 아래로 내려가면 계속할지 다시 정합니다. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
@@ -390,7 +408,8 @@ export function cashflowReference(result: CashflowScenarios, options: { basis?: 
     `계획 시나리오 계산(실적 아님). ${options.basis ? `${options.basis}으로 ` : ""}판매량을 하나로 정하지 않고 ${kinds(result)} 경우로 계산했습니다(처리량 최대치를 넘지 않음).`,
     `- 판매가 ${won(result.unitPrice)} / 변동비(한 ${result.unit}당 비용) ${won(unitCostOf(result))} / 부가세 ${won(result.vat)}(${VAT_BASIS}, 과세 유형 확인 필요) / 한 ${result.unit}에 실제 남는 돈 ${won(result.contribution)}`,
     `- 손익분기: 월 ${count(result.breakEven, result.unit)} (매출 ${won(result.breakEven * result.unitPrice)}) — 본전은 사업 비용(월 고정비)만 메우는 판매량 하나로 씁니다. 대표 생활비를 더한 판매량은 쓰지 않습니다.`,
-    `- 한 ${result.unit}에 실제 남는 돈에서 ${unknown}는 아직 빼지 않았습니다(확인 필요). 그래서 본전 판매량은 낙관적인 쪽이고, 이 값을 지어서 채우지 않습니다. ${VAT_OTHER}.`,
+    // 과세 유형 안내(VAT_OTHER)는 돈 장의 표 아래에만 싣는다 — 이 참고 문장은 모든 장에 들어가 같은 안내가 두 장에 거의 그대로 나왔다(계획서 품질 Q5)
+    `- 한 ${result.unit}에 실제 남는 돈에서 ${unknown}는 아직 빼지 않았습니다(확인 필요). 그래서 본전 판매량은 낙관적인 쪽이고, 이 값을 지어서 채우지 않습니다. ${VAT_POINTER}`,
     `- ${ownerShareLine(result)}`,
     // 하루 환산(월 26일 영업 — 처리량 환산과 같은 가정): 실행 장이 '하루 몇 개면 바꾼다' 같은 판단 기준을 숫자를 지어내지 않고 세우게 한다
     perDay(result.daily, result.breakEven, result.unit, text => `- 하루 환산(월 26일 ${result.words.day} 가정): 본전 ${text}`),

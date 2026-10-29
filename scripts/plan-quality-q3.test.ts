@@ -85,7 +85,7 @@ async function main() {
     // (다) 계약·개업 판단: 관심 조사 결과를 본전과 같은 기간끼리, 할인 원칙·통과 기준(제안) — 321개/월 ÷ 4.3 → 일주일 약 75개
     assert.match(reference, /계약·개업 전 판단\(관심 조사 결과를 볼 때\): 모은 주문 의사\(수량\)는 처리량\(하루에 만들 수 있는 양\)이 아니라 본전 판매량과 같은 기간끼리 비교합니다/);
     assert.match(reference, /할인 원칙\(제안\): 지인·가족 응답은 절반 이하로/);
-    assert.match(reference, /통과 기준\(제안\): 할인한 주문 의사가 본전\(일주일 약 75개\) 이상이면 계약을 검토하고/);
+    assert.match(reference, /통과 기준\(제안\): 할인한 주문 의사\(날짜·수량을 남긴 응답의 수량 합\)가 본전\(일주일 약 75개\) 이상이고 응답한 사람 수가 위 단골 수\(쓴 횟수 가정을 함께 밝힘\) 이상이면 계약을 검토하고/);
     const chapters = chaptersForType(lunch.plan.planType);
     const find = (key: string) => {
       const [chapterId, sectionId] = key.split("/");
