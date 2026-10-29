@@ -87,7 +87,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
     line("계산 상태", `${implausible.map(item => `${item.label} ${won(item.value)}`).join(" / ")}: 10만 원보다 적어 실제 금액으로 보기 어려워 손익을 계산하지 않음. 실제 금액으로 다시 입력하면 계산`, "missing", ["financials.inputs"], 150),
   ] : flow && careful ? [
     line("첫 달 가정", `조심스러운 경우 ${careful.volumes[0].toLocaleString("ko-KR")}${flow.unit} 판매 / 매출 ${won(careful.volumes[0] * flow.unitPrice)} / 한 달 ${signed(careful.net[0])}${goalCase && flow.goal ? ` · 목표 경우 ${flow.goal.months}개월차 ${goalCase.volumes[Math.min(flow.goal.months, goalCase.volumes.length) - 1].toLocaleString("ko-KR")}${flow.unit}` : ""}`, "calculation", ["cashflow.careful.1"], 115),
-    line("산출 조건", `판매가 ${won(flow.unitPrice)} / 부가세 ${won(flow.vat)}(일반과세자 가정) / 건당 변동비 ${won(flow.unitPrice - flow.vat - flow.contribution)} / 한 건에 실제 남는 돈 ${won(flow.contribution)} / 월 고정비 ${won(flow.monthlyFixedCost)}`, "calculation", ["financials.inputs"], 130),
+    line("산출 조건", `판매가 ${won(flow.unitPrice)} / 부가세 ${flow.shape.vat === "exempt" ? "0원(면세로 봄, 관할 세무서 확인)" : `${won(flow.vat)}(일반과세자 가정)`} / 건당 변동비 ${won(flow.unitPrice - flow.vat - flow.contribution)} / 한 건에 실제 남는 돈 ${won(flow.contribution)} / 월 고정비 ${won(flow.monthlyFixedCost)}`, "calculation", ["financials.inputs"], 130),
   ] : null;
   const financialLines = flowLines ?? (firstMonth ? [
     line(coach?.stage === "operating" || period ? "월 운영 가정" : "첫 달 가정", `${firstMonth.volume.toLocaleString("ko-KR")}건 판매 / 매출 ${won(firstMonth.revenue)} / 영업손익 ${won(firstMonth.operatingProfit)}`, "calculation", ["financials.monthly.1"], 110),
@@ -97,7 +97,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
     ...(coach ? [line("입력 비용", `${cost.label} ${cost.value} / ${unitCost.label} ${unitCost.value}`, cost.basis === "proposal" || unitCost.basis === "proposal" ? "proposal" : "user", ["coach.cost", "coach.unitCost"])] : []),
   ]);
   // 새로 시작하는 사업은 문서 돈 장과 같은 본전(부가세를 뺀 '실제 남는 돈' 기준)을 쓴다
-  if (flow && !implausible.length) financialLines.push(line("손익분기", `월 ${flow.breakEven.toLocaleString("ko-KR")}${flow.unit} / 매출 ${won(flow.breakEven * flow.unitPrice)}(부가세를 뺀 뒤, 대표 몫 0원)`, "calculation", ["cashflow.breakEven"], 90));
+  if (flow && !implausible.length) financialLines.push(line("손익분기", `월 ${flow.breakEven.toLocaleString("ko-KR")}${flow.unit} / 매출 ${won(flow.breakEven * flow.unitPrice)}(${flow.shape.vat === "exempt" ? `면세로 볼 때${flow.taxableBreakEven != null ? `, 과세면 월 ${flow.taxableBreakEven.toLocaleString("ko-KR")}${flow.unit}` : ""}` : "부가세를 뺀 뒤"}, 대표 몫 0원)`, "calculation", ["cashflow.breakEven"], 90));
   else if (financials?.breakEven) financialLines.push(line("손익분기", `월 ${financials.breakEven.units.toLocaleString("ko-KR")}건 / 매출 ${won(financials.breakEven.revenue)}`, "calculation", ["financials.breakEven"], 80));
   const evidenceLines: SummaryLine[] = [];
   if (period) {

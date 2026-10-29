@@ -1,6 +1,6 @@
 import { freeReflectsLeft } from "./free-reflect";
 import { chaptersForType, sectionKey } from "./blueprint";
-import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
+import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, cashflowShapeFor, type CashflowShape, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
@@ -365,6 +365,8 @@ export type IntakeScenarioInputs = {
   volumeSource?: "volume" | "actual" | "hours" | "capacity" | "occupancy";
   /** 온라인으로 파는 사업인지 — 돈 장이 '스토어 공개 전/후'로 쓴다 */
   online: boolean;
+  /** 돈 장의 사업 모양(매장을 빌리는지·구매 주기·부가세 면세 가능성) — 업종에 맞지 않는 매장 문장을 끈다(계획서 품질 Q7) */
+  shape: CashflowShape;
 };
 
 /**
@@ -372,6 +374,12 @@ export type IntakeScenarioInputs = {
  * 업종 코드 또는 사업 설명으로 업종 가이드를 찾고, 직접 고른 구조 → 설명 → 가이드 → 기본 구조 순으로 사업 유형을 정한다.
  */
 export function intakeSellsOnline(coach: Pick<CoachState, "business" | "fields">, intake: Pick<IntakeState, "ksic" | "sector" | "structure">): boolean {
+  const typeId = intakeBusinessType(coach, intake).typeId;
+  return !!typeId && ["ship", "app", "platform"].includes(typeId);
+}
+
+/** 사업 유형(business-types.ts)과 그 판정에 쓴 사업 설명 — 온라인 여부와 돈 장의 사업 모양이 같은 판정을 쓴다 */
+function intakeBusinessType(coach: Pick<CoachState, "business" | "fields">, intake: Pick<IntakeState, "ksic" | "sector" | "structure">) {
   const value = (key: string) => coach.fields.find(field => field.key === key)?.value ?? "";
   const described = [coach.business.description, value("business"), value("offer")].filter(Boolean).join(" ");
   const customer = value("customer") || null;
@@ -379,7 +387,13 @@ export function intakeSellsOnline(coach: Pick<CoachState, "business" | "fields">
   const effective = effectiveStructure(intake);
   const chosen = Object.fromEntries(STRUCTURE_AXES.flatMap(axis => effective.basis[axis] === "user" && effective.values[axis] ? [[axis, effective.values[axis]]] : [])) as Partial<BusinessStructure>;
   const typed = businessTypeFor({ chosen, description: described, customer: customer ?? undefined, playbookId: playbook?.id, structure: effective.values });
-  return !!typed && ["ship", "app", "platform"].includes(typed.type.id);
+  return { typeId: typed?.type.id ?? null, described, structure: effective.values };
+}
+
+/** 돈 장의 사업 모양 — 구조 값·사업 유형·사업 설명(집에서·과외 등)으로 정한다(cashflow-scenarios.ts cashflowShapeFor) */
+export function intakeCashflowShape(coach: Pick<CoachState, "business" | "fields">, intake: Pick<IntakeState, "ksic" | "sector" | "structure">): CashflowShape {
+  const { typeId, described, structure } = intakeBusinessType(coach, intake);
+  return cashflowShapeFor({ typeId, structure, description: described, online: !!typeId && ["ship", "app", "platform"].includes(typeId) });
 }
 /**
  * 손익 계산 입력(가격·변동비·고정비·월 판매량)을 한 곳에서 정한다. 문서 요약·AI 사업안·질문 화면이 같은 숫자를 쓰게 하는 단일 원천.
@@ -432,7 +446,7 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
       }
     }
   } else if (structure.revenue === "rental") notes.push(`입력한 월 예상 판매량 ${volume.toLocaleString("ko-KR")}건 사용: 이용률은 다시 곱하지 않습니다.`);
-  return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, volumeSource, online: intakeSellsOnline(coach, intake) };
+  return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, volumeSource, online: intakeSellsOnline(coach, intake), shape: intakeCashflowShape(coach, intake) };
 }
 
 /**
@@ -522,13 +536,13 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
     const assumed = intake.mode !== "operating" ? fixedCostAssumptionsFromFields(coach.fields) : null;
     return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...(assumed ? [fixedCostAssumptionReference(assumed)] : []), ...intakeDetailChecks(coach, intake, null)].join("\n");
   }
-  const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, online } = inputs;
+  const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, online, shape } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   // 돈 입력이 실제 금액으로 보기 어려우면 그 금액으로 만든 숫자(본전·통장 흐름·업종 점검의 예산 비율)를 넘기지 않는다 — 돈 장의 빈 틀과 같은 판정
   const implausible = implausibleMoneyFromFields(coach.fields);
   if (implausible.length) return implausibleMoneyReference(implausible, { unitPrice, unitVariableCost });
   // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
-  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, online }) : null;
+  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, online, shape }) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
   const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준` })] : [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
@@ -554,7 +568,8 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   const cycle = structure.revenue === "project" ? structureNumber(intake, "structure.salesCycleDays") : null;
   if (cycle != null) lines.push(`- 문의→계약 ${cycle}일: 첫 입금은 영업 시작 후 약 ${cycle}일 뒤부터 잡습니다.`);
   // 온라인 판매는 '영업일'이 아니라 만드는·보내는 날 — 처리량 환산 문구를 맞춘다(2026-10-22 캔들 스토어 '월 26일 영업')
-  const shownNotes = (flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치")) : notes).map(note => online ? note.replace(/월 26일 영업/g, "월 26일 작업") : note);
+  // 월 등록 사업은 '일주일 6명 × 4.3주'가 등록 인원이 아니다 — 돈 계산이 동시에 맡는 인원으로 따로 쓴다(계획서 품질 Q7)
+  const shownNotes = (flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치") && !(flow.shape.cycle === "enroll" && /× 월 (?:4\.3주|26일)/.test(note))) : notes).map(note => online ? note.replace(/월 26일 영업/g, "월 26일 작업") : note);
   return [...lines, ...shownNotes.map(note => `- ${note}`), ...intakeDetailChecks(coach, intake, volume === undefined || inputs.volumeSource === "capacity" ? null : { volume, actual: inputs.volumeSource === "actual" })].filter(Boolean).join("\n");
 }
 

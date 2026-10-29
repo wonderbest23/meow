@@ -197,12 +197,13 @@ async function main() {
   // ── 6. 버티는 기간 = (준비 예산 − 초기 지출) ÷ 월 고정비 — 대표 생활비는 넣지 않는다(계획서 품질 Q3, 2026-10-28) ──
   {
     const flow = buildCashflowScenarios({ unitPrice: 25000, unitVariableCost: 8000, monthlyFixedCost: 300000, capacity: "대표 혼자, 하루 20개", goal: "6개월 안에 월 매출 300만원", budget: "5,000,000원", online: true })!;
-    assert.deepEqual(flow.survival, [{ spend: 1000000, months: 13 }, { spend: 2000000, months: 10 }, { spend: 3000000, months: 6 }, { spend: 4000000, months: 3 }]);
+    // 스토어 공개 전 고정비(1개월, 가정 — 계획서 품질 Q7)도 먼저 뺀다
+    assert.deepEqual(flow.survival, [{ spend: 1000000, months: 12 }, { spend: 2000000, months: 9 }, { spend: 3000000, months: 5 }, { spend: 4000000, months: 2 }]);
     assert.equal(flow.stopReserve, 900000, "월 고정비 3개월분");
     const md = cashflowMarkdown(flow);
     assert.match(md, /\| 초기 지출 \| 남는 준비 예산 \| 버티는 기간 \|/);
-    assert.match(md, /\| 1,000,000원 \| 4,000,000원 \| 12개월 이상 \|/);
-    assert.match(md, /\| 4,000,000원 \| 1,000,000원 \| 약 3개월 \|/);
+    assert.match(md, /\| 1,000,000원 \| 3,700,000원 \| 12개월 이상 \|/);
+    assert.match(md, /\| 4,000,000원 \| 700,000원 \| 약 2개월 \|/);
     assert.ok(!/생활비까지|준비 기간 생활비|예산 밖에서 낼 때/.test(md), md);
     assert.ok(md.includes("중단선") || md.includes("900,000원(월 고정비 3개월분)"));
     assert.equal(cashflowMarkdown(flow), md, "deterministic");
@@ -212,7 +213,7 @@ async function main() {
     assert.match(md, /\| 포장·택배 \| 확인 필요 \|/);
     assert.match(md, /\| 스토어 판매·결제 수수료 \| 확인 필요 \|/);
     const ref = cashflowReference(flow);
-    assert.ok(ref.includes("스토어를 공개한 뒤: 실제 판매 수") && ref.includes("매출이 없어도 버티는 기간((준비 예산 − 초기 지출) ÷ 월 고정비): 초기 지출 1,000,000원이면 12개월 이상"), ref);
+    assert.ok(ref.includes("스토어를 공개한 뒤: 실제 판매 수") && ref.includes("매출이 없어도 버티는 기간((준비 예산 − 초기 지출 − 스토어 공개 전 고정비) ÷ 월 고정비): 초기 지출 1,000,000원이면 12개월 이상"), ref);
     const roomy = buildCashflowScenarios({ unitPrice: 25000, unitVariableCost: 8000, monthlyFixedCost: 300000, budget: "50,000,000원" })!;
     assert.ok(cashflowMarkdown(roomy).includes("문 연 뒤") || !cashflowMarkdown(roomy).includes("스토어 공개"), "store wording for non-online businesses");
     const { coach, intake } = candlePlan();
