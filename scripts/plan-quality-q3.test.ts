@@ -83,9 +83,9 @@ async function main() {
     assert.ok(!JSON.stringify(finance.lines).includes("생활비"));
 
     // (다) 계약·개업 판단: 관심 조사 결과를 본전과 같은 기간끼리, 할인 원칙·통과 기준(제안) — 321개/월 ÷ 4.3 → 일주일 약 75개
-    assert.match(reference, /계약·개업 전 판단\(관심 조사 결과를 볼 때\): 모은 주문 의사\(수량\)는 처리량\(하루에 만들 수 있는 양\)이 아니라 본전 판매량과 같은 기간끼리 비교합니다/);
-    assert.match(reference, /할인 원칙\(제안\): 지인·가족 응답은 절반 이하로/);
-    assert.match(reference, /통과 기준\(제안\): 할인한 주문 의사\(날짜·수량을 남긴 응답의 수량 합\)가 본전\(일주일 약 75개\) 이상이고 응답한 사람 수가 위 단골 수\(쓴 횟수 가정을 함께 밝힘\) 이상이면 계약을 검토하고/);
+    assert.match(reference, /계약·개업 전 판단\(관심 조사 결과를 볼 때\): 적은 수량에 할인 원칙을 곱한 '예상 구매'를 처리량\(하루에 만들 수 있는 양\)이 아니라 본전 판매량과 같은 기간끼리 비교합니다/);
+    assert.match(reference, /할인 원칙\(제안\): 예상 구매 = 응답마다 적은 수량 × 배수의 합 — 지인·가족 응답 × 0\.5\(절반\), 날짜·수량 없는 응답 × 0, 그 밖의 응답 × 1/);
+    assert.match(reference, /통과 기준\(제안\): 예상 구매가 본전\(일주일 약 75개\) 이상이고 날짜·수량을 남긴 응답 수가 위 단골 수\(쓴 횟수 가정을 함께 밝힘\) 이상이면 계약을 검토하고/);
     const chapters = chaptersForType(lunch.plan.planType);
     const find = (key: string) => {
       const [chapterId, sectionId] = key.split("/");
@@ -93,9 +93,9 @@ async function main() {
       return { chapter, section: chapter.sections.find(item => item.id === sectionId)! };
     };
     const input = (key: string) => ({ ...find(key), answers: {}, planType: lunch.plan.planType, business: lunch.coach.business, coachContext: coachContext(lunch.coach, reference), intakeContext: "" });
-    assert.match(buildUserPrompt(input("summary/roadmap")), /'이 결과면 바꾼다' 칸은 비워 두지 않고, 할인한 주문 의사를 처리량\(하루에 만들 수 있는 양\)이 아니라 본전 판매량과 같은 기간끼리 비교한/);
+    assert.match(buildUserPrompt(input("summary/roadmap")), /'이 결과면 바꾼다' 칸은 비워 두지 않고, 예상 구매\(응답자가 적은 수량에 그 줄의 할인 원칙 배수를 곱해 더한 값\)를 처리량\(하루에 만들 수 있는 양\)이 아니라 본전 판매량과 같은 기간끼리 비교한/);
     const system = sectionSystemPrompt(input("financials/expenses"));
-    assert.match(system, /할인한 주문 의사를 처리량\(하루에 만들 수 있는 양\)이 아니라 본전 판매량과 같은 기간끼리 비교하고/);
+    assert.match(system, /할인 원칙을 곱한 예상 구매를 처리량\(하루에 만들 수 있는 양\)이 아니라 본전 판매량과 같은 기간끼리 비교하고/);
     assert.match(system, /본전은 사업 비용\(월 고정비\)만 메우는 판매량 하나의 뜻으로 쓰고/);
     assert.match(system, /대표 개인 생활비를 더한 판매량이나 생활비로 줄어드는 버티는 기간은 만들지 않습니다/);
     assert.match(system, /'확인 필요'로 남은 칸에 금액을 지어 넣지 않고/);

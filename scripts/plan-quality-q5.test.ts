@@ -83,7 +83,7 @@ async function main() {
     assert.match(decision, /응답 수는 본전에 필요한 단골 수와 비교합니다: 본전\(일주일 약 100개\) ÷ 한 사람이 일주일에 사는 횟수\(가정\) — 일주일에 1번이면 약 100명, 일주일에 2번이면 약 50명, 일주일에 3번이면 약 34명\(가정\)/);
     assert.match(decision, /조사 글\(질문 문구\)에는 언제\(날짜·요일\) 몇 개 사겠는지 꼭 묻고, 날짜·수량을 남긴 응답만 셉니다/);
     assert.match(decision, /목표 응답 수는 단골 수 이상으로 잡습니다/);
-    assert.match(decision, /통과 기준\(제안\): 할인한 주문 의사\(날짜·수량을 남긴 응답의 수량 합\)가 본전\(일주일 약 100개\) 이상이고 응답한 사람 수가 위 단골 수/);
+    assert.match(decision, /통과 기준\(제안\): 예상 구매가 본전\(일주일 약 100개\) 이상이고 날짜·수량을 남긴 응답 수가 위 단골 수/);
     assert.doesNotMatch(decision, /30개|30명/, "no response count is invented in the data");
     assert.match(system, /관심 조사 글\(질문 문구\)을 쓸 때는 언제\(날짜·요일\) 몇 개\(수량\)를 사겠는지 묻는 칸을 꼭 넣습니다/);
     assert.match(system, /그 기준의 응답 수가 계산 자료의 '본전에 필요한 단골 수'보다 적으면/);

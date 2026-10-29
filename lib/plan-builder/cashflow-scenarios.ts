@@ -109,7 +109,17 @@ export type CashflowScenarios = {
   goods: boolean;
   breakEven: number; capacity: { volume: number; note: string } | null;
   goal: { revenue: number; months: number } | null; budget: number | null; setupCost: number | null;
-  scenarios: Scenario[]; carefulWorst: number; setupLimit: number | null; runOut: { label: string; month: number }[];
+  scenarios: Scenario[]; carefulWorst: number;
+  /**
+   * 초기 지출 한도 — 중단선에서 거꾸로 계산한다(계획서 품질 Q6): 준비 예산 − 중단선 − 조심스러운 경우 판단 기간(REVIEW_MONTHS) 동안 모자라는 돈.
+   * 예전에는 '준비 예산 − 조심스러운 경우 12개월 부족분'이라, 한도대로 쓰면 6개월차에 중단선에 걸려 두 기준이 어긋났다.
+   */
+  setupLimit: number | null;
+  /** 조심스러운 경우 판단 기간 동안 모자라는 돈(양수) */
+  reviewShortfall: number;
+  /** 초기 지출을 한도(또는 입력한 초기 지출)만큼 쓰면 조심스러운 경우 남은 준비 예산이 중단선에 닿는 달(0이면 문 열 때부터, null이면 12개월 안에 닿지 않음) */
+  stopMonth: number | null;
+  runOut: { label: string; month: number }[];
   /** 진행·축소·변경을 가르는 판매량(월) — 장마다 기준이 달라지지 않게 여기서 한 번만 정한다(2026-10-10 블라인드 검토) */
   decision: { go: number; goLabel: string; floor: number };
   /** 매출이 없어도 월 고정비를 낼 수 있는 달수 — (준비 예산 − 초기 지출) ÷ 월 고정비. 초기 지출을 모를 때 대표가 정할 수 있게 몇 가지로 */
@@ -125,6 +135,11 @@ export type CashflowScenarios = {
 };
 
 const MONTHS = 12;
+/*
+ * 판단 기간(가정) — 문을 연 뒤 실제 판매로 계속할지 판단할 시간. 초기 지출 한도는 조심스러운 경우에도 이 기간 동안
+ * 남은 준비 예산이 중단선(월 고정비 3개월분) 위에 있도록 거꾸로 계산한다(계획서 품질 Q6). 입력이 아닌 가정이라 문장에 '(가정)'으로 밝힌다.
+ */
+export const REVIEW_MONTHS = 6;
 const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
 const count = (value: number, unit: string) => `${Math.round(value).toLocaleString("ko-KR")}${unit}`;
 /*
@@ -192,7 +207,18 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   // 예산을 범위로 남겼으면 적은 쪽으로 계산한다(보수적)
   const budget = coachAmountLower(input.budget) ?? null, setupCost = coachAmount(input.setupCost) ?? null;
   const carefulWorst = Math.min(0, ...scenarios[0].cumulative);
-  const setupLimit = budget != null && setupCost == null ? budget + carefulWorst : null;
+  const fixed = input.monthlyFixedCost;
+  const stopReserve = fixed > 0 ? fixed * 3 : null;
+  // 초기 지출 한도와 중단선은 같은 논리에서 나온다: 한도대로 쓰면 조심스러운 경우 판단 기간이 끝나는 달에 남은 예산이 중단선에 닿는다
+  const reviewShortfall = -Math.min(0, scenarios[0].cumulative[REVIEW_MONTHS - 1]);
+  const setupLimit = budget != null && setupCost == null ? budget - (stopReserve ?? 0) - reviewShortfall : null;
+  const stopAt = (spend: number): number | null => {
+    if (budget == null || stopReserve == null) return null;
+    if (budget - spend <= stopReserve) return 0;
+    const month = scenarios[0].cumulative.findIndex(value => value < 0 && budget - spend + value <= stopReserve);
+    return month >= 0 ? month + 1 : null;
+  };
+  const stopMonth = setupCost != null ? stopAt(setupCost) : setupLimit != null && setupLimit > 0 ? stopAt(setupLimit) : null;
   // 초기 지출을 알면 실제 통장 잔고(준비 예산 − 초기 지출 + 누적)가 바닥나는 달을 센다
   const runOut = budget != null && setupCost != null
     ? scenarios.flatMap(s => { const month = s.cumulative.findIndex(value => budget - setupCost + value < 0); return month >= 0 ? [{ label: s.label, month: month + 1 }] : []; })
@@ -203,12 +229,10 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
    */
   const decision = { go: breakEven, goLabel: "본전 판매량", floor: careful };
   // 버티는 기간 = (준비 예산 − 초기 지출) ÷ 월 고정비(매출이 하나도 없다고 볼 때). 초기 지출을 모르면 준비 예산의 20·40·60·80%를 100만 원 단위로
-  const fixed = input.monthlyFixedCost;
   const survival = budget != null && fixed > 0
     ? (setupCost != null ? [setupCost] : [...new Set([0.2, 0.4, 0.6, 0.8].map(share => Math.round(budget * share / 1_000_000) * 1_000_000))].filter(spend => spend > 0 && spend < budget))
       .map(spend => ({ spend, months: Math.max(0, Math.floor((budget - spend) / fixed)) }))
     : [];
-  const stopReserve = fixed > 0 ? fixed * 3 : null;
   // 대안 가격: 가격 크기에 맞는 단위(500원·1,000원·1만 원)로 한 칸 낮게, 한두 칸 높게
   const step = input.unitPrice < 10_000 ? 500 : input.unitPrice < 100_000 ? 1_000 : 10_000;
   const priceAlternatives = [input.unitPrice - step, input.unitPrice + step, input.unitPrice + step * 2]
@@ -218,7 +242,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const unitNote = /세트/.test(input.offer ?? "") && capacityParsed && !/세트/.test(capacityParsed.unit)
     ? `처리량(${capacityParsed.note.replace(/월 26일 영업/g, `월 26일 ${words.day}`)})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
     : null;
-  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || !!input.online, breakEven, capacity, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: !!input.online };
+  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || !!input.online, breakEven, capacity, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, reviewShortfall, stopMonth, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: !!input.online };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < result.breakEven;
@@ -249,6 +273,12 @@ const VAT_BASIS = "판매가에 부가세가 들어 있고 일반과세자일 �
 const VAT_POINTER = "과세 유형(일반·간이·면세)에 따라 부가세가 달라진다는 안내는 돈 숫자를 맡은 장의 계산 표 아래에 한 번 실리므로, 본문에서는 다시 풀어 쓰지 않습니다.";
 const VAT_OTHER = "간이과세자는 업종에 따라 매출의 약 1.5~4%를 부가세로 내고, 한 해 매출이 4,800만 원 미만이면 내지 않습니다. 부가세가 면제되는 사업이면 빼지 않습니다. 재료를 살 때 낸 부가세 일부를 돌려받을 수도 있습니다. 어느 쪽인지는 사업자등록 전에 관할 세무서·홈택스에서 확인합니다";
 
+/*
+ * 돌려받는 돈과 써서 없어지는 돈(계획서 품질 Q6) — 초기 지출 입력은 한 숫자라 여기서 나누지 않고, 나눠 적는 원칙만 둔다.
+ * 보증금은 한도 안에 함께 센다: 계약 기간 동안은 통장에 없는 돈이라 중단선까지 버티는 데 쓸 수 없기 때문이다.
+ */
+const DEPOSIT_SPLIT = "초기 지출은 보증금처럼 계약이 끝나면 돌려받는 돈과 인테리어·장비·간판·권리금처럼 써서 없어지는 돈을 나눠 적습니다. 보증금도 계약 기간 동안은 통장에 없는 돈이라 초기 지출 한도 안에 함께 셉니다(돌려받는 때는 계약이 끝날 때입니다).";
+
 /** 본전이 '대표 수입 0원'이라는 것과 본전을 넘긴 뒤 대표 몫 — 입력 없이 계산되는 한 줄 */
 const ownerShareLine = (result: CashflowScenarios) =>
   `본전은 사업 비용만 메우는 판매량이라, 본전에서 대표님이 가져가는 돈은 0원입니다. 본전을 넘겨 1${result.unit} 더 팔 때마다 약 ${won(result.contribution)}이 대표님 몫으로 남습니다(소득세와 '확인 필요' 칸을 빼기 전).`;
@@ -257,11 +287,20 @@ const ownerShareLine = (result: CashflowScenarios) =>
 function cashflowFindings(result: CashflowScenarios): string[] {
   const lines: string[] = [];
   const careful = result.scenarios[0];
-  if (careful.net[0] < 0) lines.push(`조심스러운 경우 매달 ${won(-careful.net[0])}씩 모자라, 12개월 동안 사업에서 모자라는 돈은 ${won(-result.carefulWorst)}입니다.`);
-  if (result.setupLimit != null) lines.push(result.setupLimit > 0
-    ? `준비 예산 ${won(result.budget!)}에서 초기 지출을 ${won(result.setupLimit)} 이하로 써야 조심스러운 경우에도 ${result.words.after} 12개월 동안 모자라는 돈을 낼 수 있습니다.`
-    : `조심스러운 경우 12개월 동안 모자라는 돈이 준비 예산 ${won(result.budget!)}보다 많습니다. 초기 지출 전에 이미 모자랍니다.`);
-  if (result.stopReserve != null && result.budget != null) lines.push(`${result.words.afterOpen} 남은 준비 예산이 ${won(result.stopReserve)}(월 고정비 3개월분) 아래로 내려가면 계속할지 다시 정합니다.`);
+  if (careful.net[0] < 0) lines.push(`조심스러운 경우 매달 ${won(-careful.net[0])}씩, 12개월 동안 사업에서 ${won(-result.carefulWorst)} 모자랍니다.`);
+  if (result.stopReserve != null && result.budget != null) lines.push(`중단선: ${result.words.afterOpen} 남은 준비 예산이 ${won(result.stopReserve)}(월 고정비 3개월분)에 닿으면 계속할지 다시 정합니다.`);
+  const reserve = result.stopReserve ?? 0;
+  const reserveText = result.stopReserve != null ? ` − 중단선 ${won(result.stopReserve)}` : "";
+  if (result.setupLimit != null) lines.push(result.reviewShortfall === 0
+    ? `초기 지출 한도: 준비 예산 ${won(result.budget!)}${reserveText} = ${won(result.setupLimit)}. 조심스러운 경우에도 매달 모자라지 않아, 한도까지 써도 남은 준비 예산이 중단선 아래로 내려가지 않습니다.`
+    : result.setupLimit > 0
+      ? `초기 지출 한도: 준비 예산 ${won(result.budget!)}${reserveText} − 조심스러운 경우 ${REVIEW_MONTHS}개월 부족분 ${won(result.reviewShortfall)} = ${won(result.setupLimit)}. 한도까지 쓰면 조심스러운 경우 ${result.words.after} ${result.stopMonth ?? REVIEW_MONTHS}개월째에 중단선에 닿습니다(이 ${REVIEW_MONTHS}개월은 실제 판매로 판단할 기간, 가정).`
+      : `준비 예산 ${won(result.budget!)}으로는 중단선${result.stopReserve != null ? `(${won(reserve)})` : ""}과 조심스러운 경우 ${REVIEW_MONTHS}개월 동안 모자라는 돈(${won(result.reviewShortfall)})을 함께 감당하지 못합니다(${won(-result.setupLimit)} 모자람). 초기 지출을 쓰기 전에 이미 판단 기간 ${REVIEW_MONTHS}개월(가정)이 확보되지 않으므로, 고정비·규모를 줄이거나 예산을 다시 봅니다.`);
+  if (result.setupCost != null && result.stopReserve != null && result.budget != null) lines.push(result.stopMonth === 0
+    ? `초기 지출 ${won(result.setupCost)}을 쓰면 ${result.words.at}부터 남은 준비 예산이 중단선 아래입니다.`
+    : result.stopMonth != null
+      ? `초기 지출 ${won(result.setupCost)}을 쓰면 조심스러운 경우 ${result.words.after} ${result.stopMonth}개월째에 남은 준비 예산이 중단선에 닿습니다.`
+      : `초기 지출 ${won(result.setupCost)}을 써도 조심스러운 경우 12개월 안에 남은 준비 예산이 중단선에 닿지 않습니다.`);
   if (result.unitNote) lines.push(result.unitNote);
   for (const item of result.runOut) lines.push(`${item.label}에는 준비 예산에서 초기 지출을 뺀 돈이 ${item.month}개월차에 바닥납니다.`);
   const goal = result.scenarios.find(s => s.key === "goal");
@@ -307,6 +346,12 @@ const monthsText = (months: number) => (months >= 12 ? "12개월 이상" : month
  * 2026-10-28 검토: 계약 판단 칸이 비고, 관심 조사 결과를 '하루 만들 수 있는 개수(처리량)'와 비교했다 —
  * 관심 조사 결과는 본전 판매량과 같은 기간끼리 비교하고, 할인 원칙과 통과 기준을 '(제안)'으로 둔다. 숫자는 여기서 계산한다.
  */
+/*
+ * 관심 조사 할인 원칙 — 모든 장이 이 문장 하나를 인용한다(계획서 품질 Q6: 장마다 '절반'·'절반 이하'로 달랐고,
+ * 적은 수량 합을 본전과 그대로 비교해 수요를 부풀렸다). 배수는 입력이 아닌 제안이라 '(제안)'으로 둔다.
+ */
+export const SURVEY_DISCOUNT = "할인 원칙(제안): 예상 구매 = 응답마다 적은 수량 × 배수의 합 — 지인·가족 응답 × 0.5(절반), 날짜·수량 없는 응답 × 0, 그 밖의 응답 × 1.";
+
 function decisionLines(result: CashflowScenarios): string[] {
   const { decision, unit } = result;
   const reach = (rate: number) => {
@@ -315,8 +360,8 @@ function decisionLines(result: CashflowScenarios): string[] {
   };
   return [
     `판단 기준(${chapterRef("summary/roadmap")}에서 씀): ${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로, 그보다 적고 본전의 절반(${periods(result.daily, decision.floor, unit)})보다 많으면 규모(공간·장비·상품 수)를 줄여서, 본전의 절반 이하면 시작안을 바꿉니다. 판단은 계약처럼 큰돈을 쓰기 전(출시 전)에 한 번, ${result.words.afterOpen}에 다시 합니다.`,
-    `계약·개업 전 판단(관심 조사 결과를 볼 때): 모은 주문 의사(수량)는 처리량(하루에 만들 수 있는 양)이 아니라 본전 판매량과 같은 기간끼리 비교합니다. 응답 하나는 손님 한 사람이므로, 응답 수는 본전에 필요한 단골 수와 비교합니다: ${regularsLine(decision.go, unit)}. 조사 글(질문 문구)에는 언제(날짜·요일) 몇 ${unit} 사겠는지 꼭 묻고, 날짜·수량을 남긴 응답만 셉니다. 할인 원칙(제안): 지인·가족 응답은 절반 이하로 세고, 날짜·수량 없이 '관심 있다'고만 한 응답은 세지 않습니다. 통과 기준(제안): 할인한 주문 의사(날짜·수량을 남긴 응답의 수량 합)가 본전(${surveyPeriod(decision.go, unit)}) 이상이고 응답한 사람 수가 위 단골 수(쓴 횟수 가정을 함께 밝힘) 이상이면 계약을 검토하고, 본전의 절반(${surveyPeriod(decision.floor, unit)}) 이하이면 계약하지 않고 시작안을 바꾸며, 그 사이면 규모를 줄여 다시 조사합니다. 모을 응답 수(목표 응답 수)를 위 단골 수보다 적게 잡으면 응답을 모두 받아도 통과 기준에 닿을 수 없으므로, 목표 응답 수는 단골 수 이상으로 잡습니다. 주문 의사는 실제 구매보다 많게 나오므로, 이 기준을 넘어도 ${result.words.afterOpen} 실제 판매로 다시 판단합니다.`,
-    `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 아직 팔 수 없으면 주문 의사만으로 판매량 기준을 채웠다고 보지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 그래서 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 의견을 준 사람 중 날짜·수량까지 남긴 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)를 함께 봅니다.`,
+    `계약·개업 전 판단(관심 조사 결과를 볼 때): 적은 수량에 할인 원칙을 곱한 '예상 구매'를 처리량(하루에 만들 수 있는 양)이 아니라 본전 판매량과 같은 기간끼리 비교합니다. ${SURVEY_DISCOUNT} 날짜·수량을 남긴 응답 수는 본전에 필요한 단골 수와 비교합니다: ${regularsLine(decision.go, unit)}. 조사 글(질문 문구)에는 언제(날짜·요일) 몇 ${unit} 사겠는지 꼭 묻고, 날짜·수량을 남긴 응답만 셉니다(지인·가족인지도 물음). 통과 기준(제안): 예상 구매가 본전(${surveyPeriod(decision.go, unit)}) 이상이고 날짜·수량을 남긴 응답 수가 위 단골 수(쓴 횟수 가정을 함께 밝힘) 이상이면 계약을 검토하고, 예상 구매가 본전의 절반(${surveyPeriod(decision.floor, unit)}) 이하이면 계약하지 않고 시작안을 바꾸며, 그 사이면 규모를 줄여 다시 조사합니다. 목표 응답 수는 단골 수 이상으로 잡습니다(적으면 다 받아도 못 닿음). 예상 구매도 실제 구매보다 많게 나오므로, 이 기준을 넘어도 ${result.words.afterOpen} 실제 판매로 다시 판단합니다.`,
+    `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 아직 팔 수 없으면 주문 의사만으로 판매량 기준을 채웠다고 보지 않습니다. 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문에, 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 의견을 준 사람 중 날짜·수량까지 남긴 비율)과 경쟁 자료를 함께 봅니다.`,
     `${decision.goLabel}을 채우려면 닿아야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 그만큼의 사람에게 닿을 길(지나가는 사람, 단지 세대, 커뮤니티 회원 등)이 있어야 진행합니다.`,
     `${result.words.afterOpen}: 실제 판매 수를 위 기준과 매달 비교하고, 남은 준비 예산이 중단선 아래로 내려가면 계속할지 다시 정합니다. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
   ];
@@ -378,6 +423,7 @@ export function cashflowMarkdown(result: CashflowScenarios): string {
     ...rows,
     "",
     ...cashflowFindings(result).map(line => `- ${line}`),
+    result.budget != null ? `- ${DEPOSIT_SPLIT}` : undefined,
     `- ${opening != null ? `통장 잔고는 준비 예산 ${won(result.budget!)}에서 초기 지출 ${won(result.setupCost!)}을 뺀 ${won(opening)}에서 시작합니다.` : "통장 누적은 사업에서 들어오고 나간 돈만 더한 값입니다. 초기 지출은 빠져 있습니다."} 대표님 개인 생활비와 소득세는 이 계산에 넣지 않았습니다.`,
     result.capacity ? `- 처리량 최대치: ${dayWord(result, result.capacity.note)}. 어느 경우도 이보다 많이 팔지 않는다고 계산했습니다.` : undefined,
     ...(result.survival.length ? [
