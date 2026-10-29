@@ -69,9 +69,9 @@ async function main() {
     for (const text of [table, reference]) assert.doesNotMatch(text, /생활비까지|생활비선|준비 기간 생활비|1,800,000/);
     assert.match(reference, /- 손익분기: 월 321개/);
     assert.match(reference, /본전은 사업 비용\(월 고정비\)만 메우는 판매량 하나로 씁니다/);
-    // 버티는 기간 = (준비 예산 − 초기 지출) ÷ 월 고정비
-    assert.match(table, /\| 4,000,000원 \| 16,000,000원 \| 약 10개월 \|/);
-    assert.match(table, /\| 16,000,000원 \| 4,000,000원 \| 약 2개월 \|/);
+    // 버티는 기간 = (준비 예산 − 초기 지출 − 문 열기 전 고정비 1개월분(가정, Q7)) ÷ 월 고정비
+    assert.match(table, /\| 4,000,000원 \| 14,500,000원 \| 약 9개월 \|/);
+    assert.match(table, /\| 16,000,000원 \| 2,500,000원 \| 약 1개월 \|/);
     // 장을 쓰는 AI는 저장된 생활비를 받지 않는다
     const context = JSON.parse(coachContext(lunch.coach, reference)) as { fields: Array<{ key: string }> };
     assert.ok(!context.fields.some(field => field.key === "livingCost"));

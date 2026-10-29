@@ -18,13 +18,14 @@ assert.deepEqual(plain.scenarios.map(s => s.key), ["careful", "breakeven", "goal
 assert.equal(plain.scenarios[1].label, "본전", "본전의 뜻은 하나 — '생활비까지 버는 경우'는 없다");
 assert.equal(plain.scenarios[0].volumes[0], 763);
 assert.equal(plain.scenarios[0].net[0], -1_899_367);
-// 초기 지출 한도는 중단선에서 거꾸로(계획서 품질 Q6): 준비 예산 − 중단선(3개월분 11,400,000) − 조심스러운 경우 6개월 부족분(1,899,367 × 6)
-assert.equal(plain.setupLimit, 60_000_000 - 11_400_000 - 11_396_202);
+// 초기 지출 한도는 중단선에서 거꾸로(계획서 품질 Q6): 준비 예산 − 중단선(3개월분 11,400,000) − 문 열기 전 고정비(1개월, 가정, Q7) − 조심스러운 경우 6개월 부족분(1,899,367 × 6)
+assert.equal(plain.prepCost, 3_800_000);
+assert.equal(plain.setupLimit, 60_000_000 - 11_400_000 - 3_800_000 - 11_396_202);
 assert.equal(plain.stopMonth, 6, "spending the limit reaches the stop line in the careful case's month 6");
 assert.equal(plain.scenarios[2].volumes.at(-1), 2667, "goal: 12,000,000 ÷ 4,500, reached in month 6");
 assert.ok(plain.scenarios.every(s => s.volumes.every(v => v <= 3120)), "no case sells above the stated capacity");
-// 버티는 기간 = (준비 예산 − 초기 지출) ÷ 월 고정비(매출이 없다고 볼 때), 중단선 = 월 고정비 3개월분
-assert.deepEqual(plain.survival.map(row => [row.spend, row.months]), [[12_000_000, 12], [24_000_000, 9], [36_000_000, 6], [48_000_000, 3]]);
+// 버티는 기간 = (준비 예산 − 초기 지출 − 문 열기 전 고정비) ÷ 월 고정비(매출이 없다고 볼 때), 중단선 = 월 고정비 3개월분
+assert.deepEqual(plain.survival.map(row => [row.spend, row.months]), [[12_000_000, 11], [24_000_000, 8], [36_000_000, 5], [48_000_000, 2]]);
 assert.equal(plain.stopReserve, 11_400_000);
 // 대안 가격도 가격마다 부가세를 다시 뺀다: 4,000원 → 2,036원 → 1,867개
 assert.deepEqual(plain.priceAlternatives.map(alt => [alt.price, alt.breakEven]), [[4000, 1867], [5000, 1291], [5500, 1118]]);
@@ -51,13 +52,13 @@ assert.match(md, /### 세 가지 경우로 본 한 달/);
 assert.match(md, /하루 약 59개\(월 26일 영업 기준\)/, "daily businesses get the per-day line");
 assert.equal((md.match(/^\| \d+개월차 \|/gm) ?? []).length, 12, "12 monthly rows");
 assert.match(md, /### 매출이 없어도 버티는 기간/);
-assert.match(md, /\| 36,000,000원 \| 24,000,000원 \| 약 6개월 \|/);
+assert.match(md, /\| 36,000,000원 \| 20,200,000원 \| 약 5개월 \|/);
 assert.doesNotMatch(md, /생활비까지|생활비선|준비 기간 생활비|예산 밖에서 낼 때/, "대표 생활비로 만든 판매량·버티는 기간은 없다");
 assert.match(md, /대표님 개인 생활비와 소득세는 이 계산에 넣지 않았습니다/);
 assert.doesNotMatch(md, /12개월 손익 추정|흑자 전환/, "the old max-capacity profit table is gone");
 assert.equal((md.match(/```plan-chart/g) ?? []).length, 1, "one chart");
 // 서비스(단위 '건')는 포장·폐기 대신 그 밖의 건당 비용, 온라인은 포장·택배와 스토어 수수료
-const service = cashflowMarkdown(buildCashflowScenarios({ unitPrice: 150_000, unitVariableCost: 20_000, monthlyFixedCost: 600_000, capacity: "대표자 혼자 / 일주일 8건" })!);
+const service = cashflowMarkdown(buildCashflowScenarios({ unitPrice: 150_000, unitVariableCost: 20_000, monthlyFixedCost: 600_000, capacity: "대표자 혼자 / 일주일 8건", shape: { premises: false, cycle: "visits", vat: "general" } })!);
 assert.match(service, /\| 그 밖에 한 건마다 드는 돈\(이동비·소모품 등\) \| 확인 필요 \|/);
 assert.doesNotMatch(service, /폐기|포장/);
 assert.match(cashflowMarkdown(buildCashflowScenarios({ ...bakery, online: true })!), /\| 포장·택배 \| 확인 필요 \|[\s\S]*\| 스토어 판매·결제 수수료 \| 확인 필요 \|/);
@@ -83,16 +84,17 @@ assert.match(ref, /목표 경우 월별 판매선.*1개월차 763개, 2개월차
 assert.match(ref, /가격을 바꾸면\(500원씩,.*4,000원 → 본전 하루 약 72개/, "the price step is a sourced number too");
 assert.match(ref, /관심 글의 댓글·공감 수는 판매 수가 아니므로/);
 assert.match(ref, /중단선: 문을 연 뒤 남은 준비 예산이 11,400,000원\(월 고정비 3개월분\)에 닿으면 계속할지 다시 정합니다/);
-assert.match(ref, /초기 지출 한도: 준비 예산 60,000,000원 − 중단선 11,400,000원 − 조심스러운 경우 6개월 부족분 11,396,202원 = 37,203,798원\. 한도까지 쓰면 조심스러운 경우 문 연 뒤 6개월째에 중단선에 닿습니다/);
-assert.match(ref, /매출이 없어도 버티는 기간\(\(준비 예산 − 초기 지출\) ÷ 월 고정비\): 초기 지출 12,000,000원이면 12개월 이상/);
+assert.match(ref, /초기 지출 한도: 준비 예산 60,000,000원 − 중단선 11,400,000원 − 문 열기 전 고정비 3,800,000원 − 조심스러운 경우 6개월 부족분 11,396,202원 = 33,403,798원\. 한도까지 쓰면 조심스러운 경우 문 연 뒤 6개월째에 중단선에 닿습니다/);
+assert.match(ref, /매출이 없어도 버티는 기간\(\(준비 예산 − 초기 지출 − 문 열기 전 고정비\) ÷ 월 고정비\): 초기 지출 12,000,000원이면 약 11개월/);
+assert.match(ref, /문 열기 전 고정비: 계약부터 문 열 때까지 1개월\(가정, 12주 표에서 더 길면 한 달마다 3,800,000원 더\)에도 고정비 3,800,000원이 나가 준비 예산에서 먼저 뺍니다/);
 assert.doesNotMatch(ref, /생활비까지|생활비선|준비 기간 생활비/);
 
 // 초기 지출을 알면 그 한 줄로 버티는 기간을 센다
 const known = buildCashflowScenarios({ ...bakery, setupCost: "30000000원" })!;
-assert.deepEqual(known.survival, [{ spend: 30_000_000, months: 7 }]);
-// 30,000,000원 − 1,899,367원 × 10 ≤ 11,400,000원 → 10개월째에 중단선
-assert.equal(known.stopMonth, 10);
-assert.match(cashflowReference(known), /초기 지출 30,000,000원을 쓰면 조심스러운 경우 문 연 뒤 10개월째에 남은 준비 예산이 중단선에 닿습니다/);
+assert.deepEqual(known.survival, [{ spend: 30_000_000, months: 6 }]);
+// 30,000,000원 − 문 열기 전 고정비 3,800,000원 − 1,899,367원 × 8 ≤ 11,400,000원 → 8개월째에 중단선
+assert.equal(known.stopMonth, 8);
+assert.match(cashflowReference(known), /초기 지출 30,000,000원을 쓰면 조심스러운 경우 문 연 뒤 8개월째에 남은 준비 예산이 중단선에 닿습니다/);
 
 // 주·월 단위로 일하는 사업에는 하루 기준을 붙이지 않는다(출장 촬영 '일주일 8건')
 const photo = buildCashflowScenarios({ unitPrice: 150_000, unitVariableCost: 20_000, monthlyFixedCost: 600_000, capacity: "대표자 혼자 / 일주일 8건", budget: "5000000원" })!;

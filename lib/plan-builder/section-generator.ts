@@ -567,6 +567,12 @@ function logSectionReview(event: CoachReviewEvent) {
  * (한 번에 약 2분 반·600원 낭비). 표 세 개를 정해진 순서로 채우는 장이라 깊은 추론보다 출력 여유가 중요하다. 재시도는 그대로 둔다.
  */
 const MEDIUM_FIRST_SECTIONS = new Set(["summary/roadmap"]);
+/*
+ * 출력 한도 재시도는 항상 한 단계 낮은 추론 강도로(계획서 품질 Q7) — 12주 장은 medium으로 시작해도 한도(12,096)에 걸렸는데
+ * 재시도도 medium이라 같은 실패를 되풀이할 수 있었다. high → medium, medium → low.
+ */
+const LOWER_EFFORT = { high: "medium", medium: "low", low: "low" } as const;
+export const retryEffort = (effort: keyof typeof LOWER_EFFORT) => LOWER_EFFORT[effort];
 export function sectionEffort(input: Pick<SectionGenInput, "coachContext" | "chapter" | "section">): "high" | "medium" {
   return input.coachContext && !MEDIUM_FIRST_SECTIONS.has(`${input.chapter.id}/${input.section.id}`) ? "high" : "medium";
 }
@@ -580,7 +586,7 @@ export async function generateSection(
   if (!config) {
     return { markdown: fallbackSection(input), source: "fallback" };
   }
-  const write = async (effort: "high" | "medium") => {
+  const write = async (effort: "high" | "medium" | "low") => {
     let outputLimit = false;
     const text = await completeText(config, {
       kind: "generate",
@@ -596,14 +602,15 @@ export async function generateSection(
     });
     return { text, outputLimit };
   };
-  let { text, outputLimit } = await write(sectionEffort(input));
+  const effort = sectionEffort(input);
+  let { text, outputLimit } = await write(effort);
   /*
    * 추론이 한도를 다 써서 본문이 잘리면, 추론을 줄여 한 번만 다시 쓴다.
    * 실제 AI 재측정(2026-10-28)에서 '12주 할 일' 장이 16,192토큰을 다 쓰고 잘려 장 하나가 통째로 빠졌다(2차 15,826토큰으로 아슬아슬 통과).
    */
   if (!text && outputLimit && input.coachContext && !signal?.aborted) {
-    console.warn("[section] output_limit, retry with medium effort", JSON.stringify({ section: `${input.chapter.id}/${input.section.id}` }));
-    ({ text } = await write("medium"));
+    console.warn("[section] output_limit, retry with lower effort", JSON.stringify({ section: `${input.chapter.id}/${input.section.id}`, effort: retryEffort(effort) }));
+    ({ text } = await write(retryEffort(effort)));
   }
   if (!text || text.trim().length < 40) {
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다

@@ -61,20 +61,21 @@ async function main() {
 
     // ── (1) 돈 기준 하나: 초기 지출 한도를 중단선에서 거꾸로 ──
     // 한 개에 남는 돈 4,682원, 본전 월 428개, 조심스러운 경우 214개 → 매달 998,052원 모자람
-    // 한도 = 15,000,000 − 중단선 6,000,000 − 6개월 부족분 5,988,312 = 3,011,688원 → 한도대로 쓰면 6개월째에 중단선
+    // 한도 = 15,000,000 − 중단선 6,000,000 − 문 열기 전 고정비 2,000,000(1개월, 가정 — Q7) − 6개월 부족분 5,988,312 = 1,011,688원 → 한도대로 쓰면 6개월째에 중단선
     const flow = buildCashflowScenarios({ unitPrice: 9000, unitVariableCost: 3500, monthlyFixedCost: 2_000_000, capacity: "대표자 혼자 / 하루 40개", goal: "3개월 안에", budget: "15,000,000원" })!;
     assert.equal(REVIEW_MONTHS, 6);
     assert.equal(flow.scenarios[0].net[0], -998_052);
     assert.equal(flow.stopReserve, 6_000_000);
     assert.equal(flow.reviewShortfall, 5_988_312);
-    assert.equal(flow.setupLimit, 3_011_688);
+    assert.equal(flow.prepCost, 2_000_000);
+    assert.equal(flow.setupLimit, 1_011_688);
     assert.equal(flow.stopMonth, REVIEW_MONTHS, "spending the limit reaches the stop line exactly when the review period ends");
     // 한도대로 쓴 통장: 6개월째 남은 돈이 중단선과 같고, 그 전에는 위
-    const remaining = (month: number) => 15_000_000 - flow.setupLimit! + flow.scenarios[0].cumulative[month - 1];
+    const remaining = (month: number) => 15_000_000 - flow.setupLimit! - flow.prepCost + flow.scenarios[0].cumulative[month - 1];
     assert.equal(remaining(6), 6_000_000);
     assert.ok(remaining(5) > 6_000_000 && remaining(7) < 6_000_000);
     assert.match(reference, /- 중단선: 문을 연 뒤 남은 준비 예산이 6,000,000원\(월 고정비 3개월분\)에 닿으면 계속할지 다시 정합니다\./);
-    assert.match(reference, /- 초기 지출 한도: 준비 예산 15,000,000원 − 중단선 6,000,000원 − 조심스러운 경우 6개월 부족분 5,988,312원 = 3,011,688원\. 한도까지 쓰면 조심스러운 경우 문 연 뒤 6개월째에 중단선에 닿습니다\(이 6개월은 실제 판매로 판단할 기간, 가정\)/);
+    assert.match(reference, /- 초기 지출 한도: 준비 예산 15,000,000원 − 중단선 6,000,000원 − 문 열기 전 고정비 2,000,000원 − 조심스러운 경우 6개월 부족분 5,988,312원 = 1,011,688원\. 한도까지 쓰면 조심스러운 경우 문 연 뒤 6개월째에 중단선에 닿습니다\(이 6개월은 실제 판매로 판단할 기간, 가정\)/);
     assert.doesNotMatch(reference, /3,023,376|12개월 동안 모자라는 돈을 낼 수 있습니다/, "the old 12-month limit is gone");
     // 돌려받는 돈(보증금)과 써서 없어지는 돈 — 돈 장의 표 아래와 비용 장의 필수 항목에
     assert.match(table, /초기 지출은 보증금처럼 계약이 끝나면 돌려받는 돈과 인테리어·장비·간판·권리금처럼 써서 없어지는 돈을 나눠 적습니다\. 보증금도 계약 기간 동안은 통장에 없는 돈이라 초기 지출 한도 안에 함께 셉니다/);
@@ -86,11 +87,11 @@ async function main() {
     }
     // 이미 쓴 초기 지출을 알면 그 값으로 중단선 달을 센다 / 판단 기간을 확보하지 못하면 그렇다고 말한다
     const known = buildCashflowScenarios({ unitPrice: 9000, unitVariableCost: 3500, monthlyFixedCost: 2_000_000, capacity: "대표자 혼자 / 하루 40개", budget: "15,000,000원", setupCost: "5,000,000원" })!;
-    assert.equal(known.stopMonth, 5, "10,000,000 − 998,052 × 5 ≤ 6,000,000 → month 5");
+    assert.equal(known.stopMonth, 3, "15,000,000 − 5,000,000 − 2,000,000 − 998,052 × 3 ≤ 6,000,000 → month 3");
     const tight = buildCashflowScenarios({ unitPrice: 9000, unitVariableCost: 3500, monthlyFixedCost: 2_000_000, budget: "10,000,000원" })!;
     assert.ok(tight.setupLimit! < 0);
     const { cashflowReference } = await import("../lib/plan-builder/cashflow-scenarios");
-    assert.match(cashflowReference(tight), /준비 예산 10,000,000원으로는 중단선\(6,000,000원\)과 조심스러운 경우 6개월 동안 모자라는 돈\(5,988,312원\)을 함께 감당하지 못합니다/);
+    assert.match(cashflowReference(tight), /준비 예산 10,000,000원으로는 중단선\(6,000,000원\)·문 열기 전 고정비\(2,000,000원\)·조심스러운 경우 6개월 부족분\(5,988,312원\)을 함께 감당하지 못해 초기 지출 한도가 없습니다/);
 
     // ── (2) 관심 조사: 예상 구매 = 적은 수량 × 할인 배수 ──
     const decision = reference.split("\n").find(line => line.startsWith("- 계약·개업 전 판단"))!;
@@ -155,7 +156,7 @@ async function main() {
         assert.equal(result.source, "failed");
         efforts.set(key, seen);
       }
-      assert.deepEqual(efforts.get("summary/roadmap"), ["medium", "medium"], "roadmap starts at medium and keeps one retry");
+      assert.deepEqual(efforts.get("summary/roadmap"), ["medium", "low"], "roadmap starts at medium and retries one step lower (Q7)");
       assert.deepEqual(efforts.get("summary/executive"), ["high", "medium"], "other chapters keep high → medium retry");
       globalThis.fetch = () => { throw new Error("plan quality q6 tests must not fetch"); };
     }
