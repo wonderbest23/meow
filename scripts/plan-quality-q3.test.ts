@@ -70,8 +70,8 @@ async function main() {
     assert.match(reference, /- 손익분기: 월 321개/);
     assert.match(reference, /본전은 사업 비용\(월 고정비\)만 메우는 판매량 하나로 씁니다/);
     // 버티는 기간 = (준비 예산 − 초기 지출 − 문 열기 전 고정비 1개월분(가정, Q7)) ÷ 월 고정비
-    assert.match(table, /\| 4,000,000원 \| 14,500,000원 \| 약 9개월 \|/);
-    assert.match(table, /\| 16,000,000원 \| 2,500,000원 \| 약 1개월 \|/);
+    assert.match(table, /\| 4,000,000원 \| 14,500,000원 \| 약 6개월 \| 약 9개월 \|/);
+    assert.match(table, /\| 16,000,000원 \| 2,500,000원 \| 1개월도 못 버팀 \| 약 1개월 \|/);
     // 장을 쓰는 AI는 저장된 생활비를 받지 않는다
     const context = JSON.parse(coachContext(lunch.coach, reference)) as { fields: Array<{ key: string }> };
     assert.ok(!context.fields.some(field => field.key === "livingCost"));
@@ -84,7 +84,7 @@ async function main() {
 
     // (다) 계약·개업 판단: 관심 조사 결과를 본전과 같은 기간끼리, 할인 원칙·통과 기준(제안) — 321개/월 ÷ 4.3 → 일주일 약 75개
     assert.match(reference, /계약·개업 전 판단\(관심 조사 결과를 볼 때\): 적은 수량에 할인 원칙을 곱한 '예상 구매'를 처리량\(하루에 만들 수 있는 양\)이 아니라 본전 판매량과 같은 기간끼리 비교합니다/);
-    assert.match(reference, /할인 원칙\(제안\): 예상 구매 = 응답마다 적은 수량 × 배수의 합 — 지인·가족 응답 × 0\.5\(절반\), 날짜·수량 없는 응답 × 0, 그 밖의 응답 × 1/);
+    assert.match(reference, /할인 원칙\(제안\): 예상 구매 = 응답마다 적은 수량 × 배수의 합 — 날짜·수량을 남긴 모르는 사람 응답 × 0\.5\(실제 구매로 이어지는 비율, 가정\), 지인·가족 응답 × 0\.25\(그 절반, 가정\), 날짜·수량 없는 응답 × 0/);
     assert.match(reference, /통과 기준\(제안\): 예상 구매가 본전\(일주일 약 75개\) 이상이고 날짜·수량을 남긴 응답 수가 위 단골 수\(쓴 횟수 가정을 함께 밝힘\) 이상이면 계약을 검토하고/);
     const chapters = chaptersForType(lunch.plan.planType);
     const find = (key: string) => {

@@ -79,7 +79,7 @@ async function main() {
     const lesson = operatingPlan([["business", "성인 대상 기타 레슨"], ["industry", "education"], ["hoursPerWeek", 10], ["capacity", "대표자 혼자 / 일주일 10건"], ["education.sessionMinutes", 60]], "startup");
     const lessonText = planFinancialReference(lesson.coach, lesson.plan.answers);
     assert.ok(lessonText.includes("아직 없는 값"), "the P&L still waits for price and costs");
-    assert.ok(lessonText.includes("업종 점검(처리량 최대치 기준): 수업 시간은 월 43건 × 60분 = 월 43시간으로, 주당 가능 시간(월 43시간)의 99%입니다."), lessonText);
+    assert.ok(lessonText.includes("업종 점검(받을 수 있는 최대 건수 기준): 수업 시간은 월 43건 × 60분 = 월 43시간으로, 주당 가능 시간(월 43시간)의 99%입니다."), lessonText);
     const retail = operatingPlan([["business", "문구 스마트스토어"], ["industry", "retail_commerce"], ["structure.unitCost", 5000], ["budget", 1000000], ["retail_commerce.minimumOrder", 300]], "startup");
     const retailText = planFinancialReference(retail.coach, retail.plan.answers);
     assert.ok(retailText.includes("최소 발주 금액 300개 × 변동비 5,000원 = 1,500,000원, 준비 예산의 150%. 예산보다 많으므로"), retailText);

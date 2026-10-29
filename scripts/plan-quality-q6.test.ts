@@ -96,7 +96,7 @@ async function main() {
     // ── (2) 관심 조사: 예상 구매 = 적은 수량 × 할인 배수 ──
     const decision = reference.split("\n").find(line => line.startsWith("- 계약·개업 전 판단"))!;
     assert.ok(decision.includes(SURVEY_DISCOUNT), "the decision line carries the single discount sentence");
-    assert.match(SURVEY_DISCOUNT, /예상 구매 = 응답마다 적은 수량 × 배수의 합 — 지인·가족 응답 × 0\.5\(절반\), 날짜·수량 없는 응답 × 0, 그 밖의 응답 × 1/);
+    assert.match(SURVEY_DISCOUNT, /예상 구매 = 응답마다 적은 수량 × 배수의 합 — 날짜·수량을 남긴 모르는 사람 응답 × 0\.5\(실제 구매로 이어지는 비율, 가정\), 지인·가족 응답 × 0\.25\(그 절반, 가정\), 날짜·수량 없는 응답 × 0/);
     assert.match(decision, /적은 수량에 할인 원칙을 곱한 '예상 구매'를 처리량\(하루에 만들 수 있는 양\)이 아니라 본전 판매량과 같은 기간끼리 비교합니다/);
     assert.match(decision, /통과 기준\(제안\): 예상 구매가 본전\(일주일 약 100개\) 이상이고 날짜·수량을 남긴 응답 수가 위 단골 수/);
     assert.match(decision, /예상 구매가 본전의 절반\(일주일 약 50개\) 이하이면 계약하지 않고/);
