@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { readLaunch, launchSteps, launchStatus, LAUNCH_KEY, quoteAmount, quoteTotals, useOperatingWorkflow, type LaunchState } from "../../../lib/plan-builder/business-launch";
+import { readLaunch, launchSteps, launchStatus, LAUNCH_KEY, quoteAmount, quoteTotals, useOperatingWorkflow, type LaunchState, type LaunchStep } from "../../../lib/plan-builder/business-launch";
 import { readCoach } from "../../../lib/plan-builder/coach";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
 import { homepageHref, journeyLabel, journeyNext } from "../../../lib/plan-builder/journey";
@@ -15,7 +15,7 @@ import MarketingKitPanel from "./MarketingKit";
 import { useStudioDirty, useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import { useHomepageStatus } from "../use-homepage";
 import paneHeader from "./PaneHeaderActions.module.css";
-import { ChevronRight } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 
 /* 시작 방법 세 가지 — 확인 화면과 바꾸기 화면이 같은 이름을 쓴다 */
 const SETUP_CHOICES = {
@@ -27,6 +27,18 @@ const SETUP_KEYS = ["purpose", "workplace", "registered"] as const;
 const SETUP_TITLES = ["어디까지 도와드릴까요?", "일할 공간이 필요한가요?", "사업자등록은 하셨나요?"];
 const SETUP_SHORT = { purpose: "도움 받을 일", workplace: "일할 곳", registered: "사업자등록" } as const;
 function setupLabel(key: typeof SETUP_KEYS[number], value: string) { return (SETUP_CHOICES[key] as ReadonlyArray<readonly [string, string]>).find(([v]) => v === value)?.[1] ?? value; }
+/* 목록의 상태 — 모두 같은 회색 글씨라 마친 단계와 남은 단계가 구별되지 않았다(2026-10-29). 상태마다 색을 나누고 마친 단계엔 체크 */
+const STEP_STATUS = { decided: "대화에서 정함", done: "준비 완료", skipped: "나중에", pending: "진행 전", review: "다시 확인" } as const;
+/* 목록을 상태끼리 묶는다 — 섞여 있으면 무엇부터 할지 찾기 어려웠다(2026-10-29). 묶음 안은 다시 확인 먼저, 그다음 원래 단계 순서 */
+const STEP_GROUPS: { title: string; statuses: (keyof typeof STEP_STATUS)[] }[] = [
+  { title: "해야 할 일", statuses: ["review", "pending"] },
+  { title: "나중에 하기로 한 일", statuses: ["skipped"] },
+  { title: "마친 일", statuses: ["done", "decided"] },
+];
+function stepStatus(state: LaunchState, step: LaunchStep): keyof typeof STEP_STATUS { return step.decided && !state.records[step.id] ? "decided" : launchStatus(state, step); }
+function StepStatus({ status }: { status: keyof typeof STEP_STATUS }) {
+  return <small className={styles.status} data-status={status}>{status === "done" && <Check size={13} strokeWidth={2.75} aria-hidden="true" />}{STEP_STATUS[status]}</small>;
+}
 
 export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved: (plan: Plan) => void }) {
   const router = useRouter();
@@ -199,7 +211,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
         <div className={styles.stepActions}><button className={styles.secondary} disabled={busy} onClick={() => void saveStep("skipped", true)}>나중에 할게요</button><button className={styles.primary} disabled={busy} onClick={() => void saveStep("done", true)}>{busy ? "저장 중…" : "준비했어요 · 다음"}</button></div>
         <button className={styles.textLink} disabled={busy} onClick={() => void saveStep("pending", false)}>진행 중으로 저장</button>
       </> : <div className={styles.finish}><h2 ref={heading} tabIndex={-1}>{state.purpose === "ideas" ? "아이디어를 정리했어요" : "선택한 준비 과정을 확인했어요"}</h2><p>{skipped ? `${skipped}개는 나중에 하기로 남겼어요. 아래 과정에서 언제든 이어갈 수 있어요.` : "필요한 단계는 다시 열어 수정할 수 있어요."}</p><p>이 기록은 준비 상태이며, 실제 계약·등록·연결 완료를 대신하지 않아요.</p><Link className={styles.primary} href={businessChatHref(plan.id, "현재 사업의 다음 개선 방향을 함께 정하고 싶어요.")}>대화로 다음 방향 정하기<ChevronRight size={18} aria-hidden="true" /></Link></div>}
-      <details><summary>전체 과정과 지난 기록</summary><div className={styles.stepList}>{steps.map(step => <button key={step.id} disabled={busy} onClick={() => void selectStep(step.id)}><span>{step.title}</span><small>{step.decided && !state.records[step.id] ? "대화에서 정함" : { done: "준비 완료", skipped: "나중에", pending: "진행 전", review: "다시 확인" }[launchStatus(state, step)]}</small></button>)}</div></details>
+      <details><summary>전체 과정과 지난 기록</summary>{STEP_GROUPS.map(group => { const items = steps.filter(step => group.statuses.includes(stepStatus(state, step))).sort((a, b) => Number(stepStatus(state, b) === "review") - Number(stepStatus(state, a) === "review")); return items.length ? <section className={styles.stepGroup} key={group.title}><h3>{group.title} <span>{items.length}</span></h3><div className={styles.stepList}>{items.map(step => <button key={step.id} disabled={busy} onClick={() => void selectStep(step.id)}><span>{step.title}</span><StepStatus status={stepStatus(state, step)} /></button>)}</div></section> : null; })}</details>
     </>}
     {message && <p role="status">{message}</p>}
     {syncFailed && <button className={styles.secondary} disabled={busy} onClick={() => void persist(state)}>서버 저장 다시 시도</button>}
