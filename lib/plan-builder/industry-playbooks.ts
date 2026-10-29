@@ -177,7 +177,7 @@ const BASE_PLAYBOOKS: IndustryPlaybook[] = [
     id: "online-store", name: "온라인 쇼핑몰·스마트스토어", ksic: ["47912", "47919"],
     needs: ["팔 상품과 공급처(직접 제작·사입·위탁)", "상품 사진과 상세 설명", "택배 계약과 포장재", "교환·반품 기준"],
     steps: [
-      { title: "판매 상품의 별도 인증·신고 확인", where: "제품안전정보센터 · 식품안전나라 등", detail: "어린이 제품·전기용품·일부 생활용품은 KC 인증 표시가 있어야 팔 수 있고, 인터넷으로 팔 때는 인증 정보를 판매 페이지에 게시해야 해요. 건강기능식품은 판매업 신고, 직접 만들거나 수입한 화장품을 내 이름으로 팔면 화장품책임판매업 등록이 필요해요. 캔들·디퓨저·방향제 같은 생활화학제품은 팔기 전에 지정 시험기관에서 안전기준 검사를 받고 한국환경산업기술원에 신고해야 하고, 받은 신고번호를 제품과 판매 페이지에 적어야 해요. 식품은 파는 방식에 따라 영업 신고가 필요할 수 있어요. 상품부터 확인해요." },
+      { title: "판매 상품의 별도 인증·신고 확인", where: "제품안전정보센터(전기·어린이 제품 KC) · 한국환경산업기술원(초·방향제 같은 생활화학제품) · 식품안전나라(식품)", detail: "어린이 제품·전기용품·일부 생활용품은 KC 인증 표시가 있어야 팔 수 있고, 인터넷으로 팔 때는 인증 정보를 판매 페이지에 게시해야 해요. 건강기능식품은 판매업 신고, 직접 만들거나 수입한 화장품을 내 이름으로 팔면 화장품책임판매업 등록이 필요해요. 캔들·디퓨저·방향제 같은 생활화학제품은 팔기 전에 지정 시험기관에서 안전기준 검사를 받고 한국환경산업기술원에 신고해야 하고, 받은 신고번호를 제품과 판매 페이지에 적어야 해요. 식품은 파는 방식에 따라 영업 신고가 필요할 수 있어요. 상품부터 확인해요." },
       { title: "사업자등록", where: "관할 세무서 또는 홈택스", detail: "업종에 전자상거래 소매업을 넣어요. 블로그·카페 같은 SNS로 팔면 업종이 따로 있어요. 집 주소로도 등록할 수 있는지 확인해요." },
       { title: "구매안전서비스 이용확인증 받기", where: "판매 플랫폼 또는 결제·에스크로 업체", detail: "소비자가 물건을 받기 전에 돈을 내는 방식으로 팔면 결제대금예치(에스크로) 등 구매안전서비스 이용 확인증을 통신판매업 신고 때 함께 내야 해요. 오픈마켓·스마트스토어에서 팔면 플랫폼에서 발급받을 수 있는 경우가 많아요." },
       { title: "통신판매업 신고", where: "관할 시·군·구청 (정부24로도 신청)", detail: "직전 해 통신판매 거래 횟수가 공정거래위원회 고시 기준보다 적거나 간이과세자면 신고하지 않아도 돼요. 대상인지 먼저 확인해요." },
@@ -362,6 +362,49 @@ export function playbookChecklist(playbook: IndustryPlaybook): string {
   ].join("\n");
 }
 
+/*
+ * 해요체 → 합니다체(계획서 품질 Q10, 2026-10-29) — 업종 가이드의 주의점은 화면용 '~해요'체라, 작성 자료에 그대로 넘기면
+ * 네일·과외 계획서 본문에 '~해요'가 섞였다. 작성 자료로 넘길 때만 문장 끝을 '~합니다'로 바꾼다(화면 체크리스트는 그대로).
+ * 불규칙 활용은 낱말째 바꾸고(달라요→다릅니다), 나머지는 규칙으로 바꾼다. 바꾸지 못한 끝은 시험이 잡는다.
+ */
+const FORMAL_WORDS: Array<[string, string]> = [
+  ["아니에요", "아닙니다"], ["마세요", "않습니다"], ["달라요", "다릅니다"], ["따라요", "따릅니다"], ["들어요", "듭니다"], ["줄어요", "줄어듭니다"], ["늘어요", "늘어납니다"],
+  ["나와요", "나옵니다"], ["어려워요", "어렵습니다"], ["쉬워요", "쉽습니다"], ["봐요", "봅니다"], ["둬요", "둡니다"], ["써요", "씁니다"], ["커요", "큽니다"], ["나요", "납니다"], ["벗어나요", "벗어납니다"],
+];
+const FINAL_B = 17; // 받침 ㅂ
+const withFinalB = (syllable: string) => {
+  const code = syllable.charCodeAt(0) - 0xac00;
+  return code >= 0 && code < 11172 && code % 28 === 0 ? String.fromCharCode(syllable.charCodeAt(0) + FINAL_B) : null;
+};
+function formalWord(word: string): string {
+  for (const [casual, formal] of FORMAL_WORDS) if (word.endsWith(casual)) return word.slice(0, -casual.length) + formal;
+  const rules: Array<[RegExp, (stem: string) => string]> = [
+    [/이에요$|예요$/, stem => `${stem}입니다`],
+    [/으세요$/, stem => `${stem}습니다`],
+    [/세요$/, stem => { const last = withFinalB(stem.slice(-1)); return last ? `${stem.slice(0, -1)}${last}니다` : `${stem}세요`; }],
+    [/해요$/, stem => `${stem}합니다`], [/돼요$/, stem => `${stem}됩니다`], [/져요$/, stem => `${stem}집니다`], [/려요$/, stem => `${stem}립니다`], [/겨요$/, stem => `${stem}깁니다`], [/여요$/, stem => `${stem}입니다`],
+    [/[아어]요$/, stem => `${stem}습니다`],
+  ];
+  for (const [ending, make] of rules) if (ending.test(word)) return make(word.replace(ending, ""));
+  return word;
+}
+/** 문장 끝의 '~요'만 바꾼다 — '필요'·'중요' 같은 낱말은 그대로 */
+export function formalSentences(text: string): string {
+  return text.replace(/(\S+요)(?=[.,()」’'"]|\s|$)/g, word => /(?:필|중|수|소|주|개|교|강|약|화|목|금|토|일|월)요$/.test(word) && !/(?:세|해|돼)요$/.test(word) ? word : formalWord(word));
+}
+
+/*
+ * 신고·등록이 아닌 판매 준비 단계(계획서 품질 Q10) — '예약 받을 곳 열기(지도 서비스)'까지 '법정 절차 순서'로 불렸고,
+ * '오늘창업 홈페이지'가 '사업 홈페이지'로 바뀌어 대표가 고르지 않은 홈페이지에 수강 신청을 받는다고 쓰였다.
+ * 작성 자료에서는 창구 이름에서 서비스 홈페이지를 빼고, 판매 창구를 여는 단계에는 신고가 아니라는 표시를 붙인다.
+ */
+const NOT_FILING_STEP = "신고·등록이 아닌 판매 준비 — 대표가 정한 판매·예약 채널로";
+function contextStep(step: IndustryPlaybook["steps"][number]): string {
+  const where = step.where.split(/\s+·\s+/).filter(place => !/오늘창업\s*홈페이지/.test(place)).join(" · ");
+  if (/열기$/.test(step.title)) return `${step.title} (${NOT_FILING_STEP}${where ? `: ${where}` : ""})`;
+  return `${step.title} (${where})`;
+}
+
 /**
  * 계획서 작성 맥락용 짧은 요약 — 길이를 아끼려고 세부 설명은 뺀다.
  * 계획서 품질 Q8: 작성 자료는 8,000자 상한에 거의 닿아 있어(캔들 스토어 7,993자) 글에 쓰이지 않는 검토일은 넘기지 않고,
@@ -373,7 +416,7 @@ export function playbookContext(playbook: IndustryPlaybook, matchedBy: "ksic" | 
     ...(matchedBy === "description" ? { matchedBy: "사업 설명으로 찾은 업종입니다. 사업 내용과 다르면 이 가이드는 쓰지 않습니다." } : {}),
     rule: "공식 기관 안내를 정리한 신고·등록 순서입니다. 지역·규모·세부 업태에 따라 다르므로 계획서에는 '관할 기관 확인'을 붙여 쓰고, 여기에 없는 기한·수수료·면적 기준은 만들지 않습니다.",
     needs: playbook.needs,
-    steps: playbook.steps.map(step => `${step.title} (${step.where})`),
-    pitfalls: playbook.pitfalls,
+    steps: playbook.steps.map(contextStep),
+    pitfalls: playbook.pitfalls.map(formalSentences),
   };
 }
