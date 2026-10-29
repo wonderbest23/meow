@@ -14,10 +14,6 @@
 .root .card p { margin: 0; font-size: .875rem; line-height: 1.6; color: var(--app-body, #465365); text-wrap: pretty; }
 .who, .reason { display: block; font-size: .8125rem; line-height: 1.5; color: var(--app-muted, #5f6d80); }
 .reason { color: var(--app-selected-text, #244e84); }
-.badge { flex: none; padding: 3px 9px; border-radius: 999px; font-style: normal; font-size: .75rem; font-weight: 700; background: var(--app-soft, #edf3fc); color: var(--app-selected-text, #244e84); }
-.badge[data-tone="first"] { background: #1b64da; color: #fff; }
-.badge[data-tone="need"] { background: var(--app-warning-bg, #fff8e8); color: var(--app-warning, #795914); }
-.badge[data-tone="suggest"] { background: var(--app-success-bg, #eef8f2); color: var(--app-success, #267959); }
 .cardFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 8px; flex-wrap: wrap; }
 .price { font-size: .78125rem; color: var(--app-muted, #5f6d80); }
 .action { min-height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: var(--app-primary, #1b64da); color: #fff !important; font-size: .9375rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; cursor: pointer; }
@@ -40,12 +36,10 @@
 .history h3 { margin: 0 0 10px; font-size: 1.0625rem; }
 .history ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .history li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--app-raised, #f2f5f8); }
-.history li span { display: grid; gap: 2px; min-width: 0; }
+.history li > span { display: grid; gap: 2px; min-width: 0; }
 .history li strong { font-size: .9375rem; }
 .history li small { font-size: .78125rem; color: var(--app-muted, #5f6d80); }
-.history em { flex: none; font-style: normal; font-size: .8125rem; font-weight: 700; color: var(--app-selected-text, #244e84); }
-.history em[data-status="done"] { color: var(--app-success, #267959); }
-.history em[data-status="canceled"] { color: var(--app-muted, #5f6d80); }
+.historyStatus { flex: none; }
 @media (max-width: 640px) {
   .list { grid-template-columns: 1fr; }
   .cardFoot .action { flex: 1; }
@@ -75,10 +69,7 @@
 .buy b { font-size: .9375rem; color: var(--app-text, #202632); }
 .buy i { display: inline-flex; align-items: center; font-style: normal; font-size: .8125rem; font-weight: 700; color: #3182f6; }
 .buy .requested { font-size: .8125rem; color: var(--app-success, #267959); }
-.ribbon { position: absolute; top: 12px; right: 12px; padding: 3px 9px; border-radius: 999px; font-style: normal; font-size: .75rem; font-weight: 700; background: var(--app-soft, #edf3fc); color: var(--app-selected-text, #244e84); }
-.ribbon[data-tone="first"] { background: #1b64da; color: #fff; }
-.ribbon[data-tone="need"] { background: #ffefd6; color: #8a5300; }
-.ribbon[data-tone="suggest"] { background: #e3f6ea; color: #1f7a4f; }
+.ribbon { position: absolute; top: 12px; right: 12px; }
 .reason .ribbon { position: static; margin-right: 6px; }
 .icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; flex: none; }
 .icon svg { width: 26px; height: 26px; }
@@ -127,7 +118,7 @@
   .product > strong { font-size: .96875rem; }
   .icon { width: 44px; height: 44px; border-radius: 12px; }
   .icon svg { width: 22px; height: 22px; }
-  .ribbon { top: 10px; right: 10px; font-size: .6875rem; padding: 2px 7px; }
+  .ribbon { top: 10px; right: 10px; }
   /* 휴대폰: 아래에서 올라오는 판 */
   .overlay { place-items: end center; padding: 0; }
   .sheet { width: 100%; max-height: 92dvh; border-radius: 20px 20px 0 0; padding: 22px 18px calc(18px + env(safe-area-inset-bottom)); }
@@ -146,7 +137,6 @@
 .verifyResult li span { color: #5d6b7e; }
 .verifyResult li[data-ok] b { color: #16824f; }
 .verifyResult li small { color: #8a96a8; font-size: .75rem; }
-.ribbon[data-tone="done"] { background: #16a34a; color: #fff; }
 .product[data-badge="done"] { opacity: .78; }
 
 /*

@@ -352,14 +352,13 @@
   .actions[data-next] .nextButton svg { display:none; }
 }
 
-/* 내려받기 — '작성 완료'와 같은 작은 칩, 누를 수 있는 것만 파란 글씨 */
+/* 내려받기 — '작성 완료' 옆 작은 단추(테두리 칩), 파란 글씨 */
 .badgeRow .downloadBadge { background:var(--app-surface, #fff); color:var(--app-accent, #3182f6); font-size:.75rem; font-weight:600; line-height:normal; cursor:pointer; }
 .badgeRow .downloadBadge:hover { border-color:var(--app-line-strong); background:var(--app-panel-fill, #f9fafb); }
 
 /* 2장부터는 머리 묶음 대신 칩 줄만 */
 .compactHeading { margin-bottom: 20px; }
-/* '작성 완료'는 표시일 뿐 — 테두리 칩이면 '내려받기'와 똑같아 눌러야 하는 단추처럼 보였다. 옅은 초록 바탕, 테두리 없이 */
-.badgeRow .doneBadge { border-color: transparent; background: #e9f7ef; color: #1b7f4b; }
+/* '작성 완료'는 표시일 뿐이라 단추 모양이 아닌 공통 상태 배지(components/status-badge, 초록·체크) */
 /* 눌리는 칩은 손가락 크기로 */
 .badgeRow .downloadBadge { min-height: 34px; padding: 6px 12px; position: relative; }
 /* 보이는 칩은 34px 그대로, 누르는 자리만 위아래로 넓혀 44px */
@@ -563,8 +562,6 @@
 /* 대화로 고치는 중 — 장 머리 왼쪽 파란 줄 + 작은 표시 */
 .chapter[data-changing] .chapterLead::before { content:""; position:absolute; left:-22px; top:2px; bottom:0; width:3px; border-radius:3px; background:#cfe2fd; }
 .page[data-studio-pc] .chapterAction { min-height:32px; font-size:.78125rem; }
-.changingBadge { display:inline-flex; align-items:center; gap:5px; padding:3px 9px 3px 7px; border-radius:999px; background:#e8f3ff; color:#1b64da; font-size:.71875rem; font-weight:650; white-space:nowrap; }
-.changingBadge i { width:6px; height:6px; border-radius:50%; background:#3182f6; }
 .page[data-studio-pc] .section { margin:0 0 24px; }
 .page[data-studio-pc] .saveState:empty { display:none; }
 .page[data-studio-pc] .section > h3 { margin:0 0 10px; font-size:1.0625rem; font-weight:700; letter-spacing:-0.015em; color:#191f28; }

@@ -15,7 +15,8 @@ import MarketingKitPanel from "./MarketingKit";
 import { useStudioDirty, useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import { useHomepageStatus } from "../use-homepage";
 import paneHeader from "./PaneHeaderActions.module.css";
-import { Check, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { StatusBadge, type StatusTone } from "../../../components/status-badge";
 
 /* 시작 방법 세 가지 — 확인 화면과 바꾸기 화면이 같은 이름을 쓴다 */
 const SETUP_CHOICES = {
@@ -36,8 +37,9 @@ const STEP_GROUPS: { title: string; statuses: (keyof typeof STEP_STATUS)[] }[] =
   { title: "마친 일", statuses: ["done", "decided"] },
 ];
 function stepStatus(state: LaunchState, step: LaunchStep): keyof typeof STEP_STATUS { return step.decided && !state.records[step.id] ? "decided" : launchStatus(state, step); }
+const STEP_TONE: Record<keyof typeof STEP_STATUS, StatusTone> = { decided: "info", done: "success", skipped: "warning", pending: "neutral", review: "danger" };
 function StepStatus({ status }: { status: keyof typeof STEP_STATUS }) {
-  return <small className={styles.status} data-status={status}>{status === "done" && <Check size={13} strokeWidth={2.75} aria-hidden="true" />}{STEP_STATUS[status]}</small>;
+  return <StatusBadge tone={STEP_TONE[status]} done={status === "done"} className={styles.status}>{STEP_STATUS[status]}</StatusBadge>;
 }
 
 export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved: (plan: Plan) => void }) {
@@ -184,7 +186,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
       {current ? <>
         <span className={styles.eyebrow}>{steps.findIndex(s => s.id === current.id) + 1} / {steps.length}</span>
         <h2 ref={heading} tabIndex={-1}>{current.title}</h2><p>{current.task}</p>
-        {current.decided && !record && <span className={styles.decidedTag}>대화에서 정함</span>}
+        {current.decided && !record && <StatusBadge tone="info" className={styles.decidedTag}>대화에서 정함</StatusBadge>}
         {launchStatus(state, current) === "review" && <div className={styles.notice}>사업 정보가 바뀌었어요. 이전 기록은 유지했으니 지금 사업에 맞는지 다시 확인해 주세요.</div>}
         {current.checklist && <div className={styles.checklist} key={`check-${current.id}`}>
           <h3>준비할 것</h3>

@@ -45,9 +45,6 @@
 .thread { border-bottom:1px solid #e5e8eb; padding-bottom:4px; }
 .thread > .reply { margin:0 0 16px; padding:16px 0 16px 16px; }
 .itemHeading small { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.statusWaiting,.statusDone { display:inline-flex; align-items:center; min-height:22px; padding:0 8px; border-radius:4px; font-size:.75rem; font-weight:600; }
-.statusWaiting { background:#fff4e5; color:#8a4b00; }
-.statusDone { background:#e6f6ef; color:#05704f; }
 .inquiry summary { display:flex; align-items:center; gap:16px; list-style:none; }
 .inquiry summary::-webkit-details-marker { display:none; }
 .inquiry summary > svg { flex-shrink:0; color:#8b95a1; }

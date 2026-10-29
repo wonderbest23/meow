@@ -196,7 +196,7 @@
 .help { margin: 8px 0 0; font-size: .75rem; color: var(--text-muted, #6b7684); }
 
 /* 출시 기념가 표시 — 할인율·종전가 없이 지금 가격이 실제 판매가임을 알린다 */
-.launchTag { align-self: center; justify-self: center; margin: 0 auto 10px; width: fit-content; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--app-primary, #4a3aff) 12%, transparent); color: var(--app-primary, #4a3aff); font-size: .75rem; font-weight: 700; }
+.launchTag { margin: 0 0 10px; text-align: center; }
 /* 계획서 결제 화면에서 묶음으로 넘어가는 링크 */
 .upsell { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap; margin-top: 8px; font-size: .875rem; font-weight: 700; color: var(--app-primary, #4a3aff); text-decoration: none; }
 .upsell small { margin-left: 4px; font-weight: 500; color: var(--app-muted, #6b7280); }

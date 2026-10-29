@@ -497,7 +497,7 @@
 .ksicHint { color: #5f6b7a; font-size: .75rem; font-weight: 500; white-space: nowrap; }
 .ksicChip:disabled { opacity: .55; cursor: not-allowed; }
 .ksicChip strong { font-size: .875rem; font-weight: 600; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ksicChip span { font-size: .6875rem; color: var(--intake-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ksicChip > span { font-size: .6875rem; color: var(--intake-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ksicNote { display: block; margin-top: 4px; font-size: .75rem; color: var(--intake-muted); }
 
 .ksicSearch { display: block; min-width: 0; }
@@ -607,7 +607,6 @@
 .identityCompact { padding: 16px; margin: 12px 0; }
 .identityCompact .identityHeadline { font-size: 1.25rem; }
 .identityCompact .identityPitch { font-size: .875rem; }
-.identityKicker small { font-weight: 500; color: var(--intake-muted); }
 .identityNames > .textButton { justify-self: start; }
 @media (max-width: 480px) {
   .identity { padding: 18px 16px; }
@@ -672,7 +671,7 @@
 .page[data-coach] .chatQuestion .option[data-selected="true"], .page[data-coach] .chip[aria-pressed="true"], .page[data-coach] .chip[data-selected="true"], .page[data-coach] .ksicChip[aria-pressed="true"] { border-color: #111418; background: #111418; color: #fff; }
 /* 고른 칩에 마우스가 올라가 있어도(휴대폰은 누른 뒤 계속) 고른 모양을 지킨다 — 위 :hover 가 더 구체적이라 연한 배경이 흰 글자를 가렸다 */
 .page[data-coach] .chatQuestion .option[data-selected="true"]:hover, .page[data-coach] .chip[aria-pressed="true"]:hover:not(:disabled), .page[data-coach] .chip[data-selected="true"]:hover:not(:disabled), .page[data-coach] .ksicChip[aria-pressed="true"]:hover { border-color: #2b2f36; background: #2b2f36; color: #fff; }
-.page[data-coach] .chatQuestion .optionHint, .page[data-coach] .chipHint, .page[data-coach] .ksicChip span, .page[data-coach] .chipHelp { display: none; }
+.page[data-coach] .chatQuestion .optionHint, .page[data-coach] .chipHint, .page[data-coach] .ksicChip > span, .page[data-coach] .chipHelp { display: none; }
 .page[data-coach] .unknownChoice, .page[data-coach] .sendPartial { margin-top: 6px; border-color: #e5e7eb; color: #6b7280; }
 .page[data-coach] .unknownChoice[aria-pressed="true"] { border-color: #111418; background: #111418; color: #fff; }
 .page[data-coach] .chipSteps { gap: 10px; }
@@ -867,7 +866,7 @@
 
 /* 업종 추천 한 목록 — 첫 후보에 '추천' 표시(큰 분류 카드와 두 갈래로 권하지 않는다) */
 .ksicChip[data-recommended] { border-color: #7daaf0; background: #f3f8ff; }
-.ksicBadge { display: inline-block; margin-right: 6px; padding: 1px 7px; border-radius: 999px; background: #2868ce; color: white; font-size: .6875rem; font-style: normal; font-weight: 700; line-height: 1.125rem; vertical-align: 1px; }
+.ksicBadge { margin-right: 6px; }
 /* 대화로 고치기에서 [바꾸기]로 적용한 답 — 손님 말풍선 대신 가운데 한 줄 */
 .changeNote { width: fit-content; max-width: 92%; margin: 4px auto 22px; padding: 6px 12px; border-radius: 999px; background: #f3f5f8; color: #4b5563; font-size: .78125rem; line-height: 1.5; text-align: center; }
 
@@ -972,7 +971,6 @@ button.workLogRow { min-height: 32px; }
 .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended] strong { color: #191f28; font-size: .8125rem; font-weight: 600; }
 .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended]:hover { border-color: #3182f6; background: #e8f3ff; }
 .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended] .ksicHint { color: #4e5968; }
-.page[data-embedded][data-studio-pro] .ksicBadge { margin-right: 6px; padding: 1px 5px; border-radius: 4px; background: #1b64da; font-size: .65625rem; line-height: 1rem; }
 .page[data-embedded][data-studio-pro] .chatQuestion .suggestionChip svg { color: #3182f6; }
 .page[data-embedded][data-studio-pro] .chatQuestion .stepLegend, .page[data-embedded][data-studio-pro] .chatQuestion .ksicLead { color: #5f6b7c; font-size: .75rem; }
 .page[data-embedded][data-studio-pro] .chatQuestion .multiSendHint { margin: 8px 0 0; color: #5f6b7c; font-size: .75rem; }
@@ -1003,7 +1001,7 @@ button.workLogRow { min-height: 32px; }
 .page[data-embedded][data-studio-pro] .composer { display: flex; flex-direction: column; gap: 8px; padding: 6px 16px 12px; background: transparent; }
 .queueDock { display: grid; gap: 6px; }
 .queueRow { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 6px 6px 12px; border: 1px solid #e3e7ec; border-radius: 12px; background: #fff; font-size: .8125rem; }
-.queueBadge { flex: none; padding: 2px 6px; border-radius: 5px; background: #e8f3ff; color: #1b64da; font-size: .6875rem; font-weight: 700; white-space: nowrap; }
+.queueBadge { flex: none; }
 .queueText { flex: 1; min-width: 0; overflow: hidden; color: #191f28; white-space: nowrap; text-overflow: ellipsis; }
 .page .queueText { overflow-wrap: normal; }
 .queueButton { display: inline-grid; flex: none; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; }
@@ -1055,8 +1053,9 @@ button.workLogRow { min-height: 32px; }
 .page[data-embedded]:not([data-studio-pro]) .paneBar[data-done] { justify-content: flex-end; }
 
 /* '이 장 고치기'로 보낸 말의 장 이름 — 말풍선 위 오른쪽 작은 꼬리표(저장 글의 '[1장 사업 개요]' 머리표를 떼어 보인다 · PC 점검 2026-10-24) */
-.bubbleTag { width: fit-content; max-width: 84%; margin: 0 0 4px auto; padding: 1px 8px; border-radius: 6px; background: #f2f4f6; color: #4e5968; font-size: .71875rem; font-weight: 600; line-height: 1.125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.queueTag { flex: none; max-width: 40%; padding: 1px 6px; border-radius: 5px; background: #f2f4f6; color: #4e5968; font-size: .6875rem; font-weight: 600; line-height: 1.125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bubbleTag { max-width: 84%; margin: 0 0 4px auto; text-align: right; }
+.bubbleTag > span { max-width: 100%; }
+.queueTag { flex: none; max-width: 40%; }
 /* 다른 화면으로 가는 칩(계획서 보기 · 직접 고치기) — 글 끝에 › 를 같은 줄에 */
 .lockedTurn .chipRow a.chip { flex-direction: row; align-items: center; gap: 2px; padding-right: 10px; }
 .lockedTurn .chipRow a.chip > svg { flex: none; }

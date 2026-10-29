@@ -20,6 +20,7 @@ import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type Structur
 import { ksicNameHint, ksicSectorLabel } from "../../../../lib/plan-builder/ksic-hints";
 import { parseWonAmount } from "../../../../lib/plan-builder/answer-number";
 import styles from "../intake.module.css";
+import { StatusBadge } from "../../../../components/status-badge";
 import { chatTextPreview, questionPromptText, unitCostRanges } from "./model";
 import type { QuestionSuggestions } from "./AnswerSuggestions";
 import { editExamples } from "../../../../lib/plan-builder/edit-examples";
@@ -207,7 +208,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         <div className={styles.ksicChips}>{ksicShown.map((item, index) => {
           // 첫 후보에 '추천'을 단다 — 대화(코치)에서는 검색 결과도 가장 가까운 첫 후보를 추천으로 강조해 바로 누르게 한다
           const recommended = index === 0 && (coach ? ksicShown.length > 0 && !draft.ksic : recommendFirst && !ksicSearchable(ksicQuery.trim()));
-          return <button key={item.code} type="button" className={styles.ksicChip} data-recommended={recommended || undefined} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{recommended && <em className={styles.ksicBadge}>추천</em>}{item.name}{ksicNameHint(item.code) && <small className={styles.ksicHint}> ({ksicNameHint(item.code)})</small>}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>;
+          return <button key={item.code} type="button" className={styles.ksicChip} data-recommended={recommended || undefined} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{recommended && <StatusBadge tone="info" className={styles.ksicBadge}>추천</StatusBadge>}{item.name}{ksicNameHint(item.code) && <small className={styles.ksicHint}> ({ksicNameHint(item.code)})</small>}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>;
         })}</div>
         {recommendFirst && <button className={styles.textButton} type="button" disabled={disabled} aria-expanded="false" aria-controls="intake-industry-options" onClick={() => setManualIndustry(true)}><ListFilter size={16} aria-hidden="true" />목록에 없으면 직접 선택하기</button>}
       </div>}
@@ -641,7 +642,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
       const sectionEdit = message.role === "user" && !labelled ? splitSectionEditMessage(text) : null;
       return <div key={message.id} className={styles.chatTurn}>
         {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{questionPromptText(question.prompt)}</p></div>}
-        {sectionEdit?.tag && <p className={styles.bubbleTag}>{sectionEdit.tag}</p>}
+        {sectionEdit?.tag && <p className={styles.bubbleTag}><StatusBadge tone="neutral">{sectionEdit.tag}</StatusBadge></p>}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role}>
           {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={questionPromptText(text.replace(/(?:아래 )?"계획서 (?:다시 작성하기|에 반영하기)"/, "\"계획서에 반영하기\""))} /></> : <p>{sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)}</p>}
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
@@ -920,7 +921,7 @@ export function BusinessIdentityHero({ snapshot, disabled, onName, compact = fal
   const current = snapshot.coach.business.name;
   const submitCustom = (event: FormEvent) => { event.preventDefault(); const name = (custom ?? "").replace(/\s+/g, " ").trim(); if (name && onName) { onName(name); setCustom(null); } };
   return <section className={`${styles.identity} ${compact ? styles.identityCompact : ""}`} aria-label="사업 한 줄 정리">
-    <p className={styles.identityKicker}>사업 방향 <small>AI 초안</small></p>
+    <p className={styles.identityKicker}>사업 방향 <StatusBadge tone="neutral">AI 초안</StatusBadge></p>
     <h2 className={styles.identityHeadline}>{identity.headline}</h2>
     <p className={styles.identityPitch}>{identity.pitch}</p>
     {!compact && onName && <div className={styles.identityNames}>

@@ -7,6 +7,7 @@ import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
 import { finishNativePurchase, nativePlatform, nativePurchase } from "../../../lib/native-app";
 import { AlertCircle, CheckCircle2, ChevronRight, LogIn, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
+import { StatusBadge } from "../../../components/status-badge";
 import { ConsentList } from "../../../components/consent-list";
 import { documentHref } from "../../../lib/plan-builder/business-hub";
 import { homepageHref, payBackHref } from "../../../lib/plan-builder/journey";
@@ -377,7 +378,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           )}
         </p>
 
-        {!notSoldInApp && (product === "plan" || product === "homepage" || product === "bundle") && <p className={styles.launchTag}>{LAUNCH_PRICE_LABEL}</p>}
+        {!notSoldInApp && (product === "plan" || product === "homepage" || product === "bundle") && <p className={styles.launchTag}><StatusBadge tone="info">{LAUNCH_PRICE_LABEL}</StatusBadge></p>}
         {notSoldInApp ? null : extra ? (
           <div className={styles.price}>
             {extra.price.toLocaleString("ko-KR")}원

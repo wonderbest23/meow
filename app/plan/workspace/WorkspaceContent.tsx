@@ -5,6 +5,7 @@ import type { CoachField } from "../../../lib/plan-builder/coach";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../lib/plan-builder/coach-presentation";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import styles from "../BusinessHub.module.css";
+import { StatusBadge, type StatusTone } from "../../../components/status-badge";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { homepageHref, journeyLabel } from "../../../lib/plan-builder/journey";
@@ -14,9 +15,9 @@ import { splitCircledSteps } from "../../../lib/plan-builder/text-steps";
 
 export type WorkspaceView = "summary" | "documents" | "action" | "launch" | "operations";
 
-export function WorkspaceIdentity({ title, status, action }: { title: string; status: string; action?: ReactNode }) {
+export function WorkspaceIdentity({ title, status, tone = "info", action }: { title: string; status: string; tone?: StatusTone; action?: ReactNode }) {
   /* action — '대화 이어가기' 같은 작은 링크. 탭 줄 끝에 두면 폰에서 잘려 상태 칩 옆으로 옮겼다(대표 요청 2026-10-15) */
-  return <div className={styles.workspaceTitle}><div className={styles.workspaceTitleRow}><span className={styles.status}>{status}</span>{action}</div><h1>{title}</h1></div>;
+  return <div className={styles.workspaceTitle}><div className={styles.workspaceTitleRow}><StatusBadge tone={tone}>{status}</StatusBadge>{action}</div><h1>{title}</h1></div>;
 }
 
 export function WorkspaceNavigation({ view, onChange, children, operating = false }: { view: WorkspaceView; onChange: (view: WorkspaceView) => void; children?: ReactNode; operating?: boolean }) {

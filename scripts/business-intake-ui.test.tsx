@@ -510,7 +510,8 @@ async function main() {
   }
   const recommendedQuestion = renderToStaticMarkup(<QuestionForm inChat question={original.nextQuestion!} snapshot={suggestedBusiness} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
   // 세부 업종 후보가 있으면 한 목록으로 — 큰 분류 카드('이 업종 선택')는 숨기고 첫 후보에 '추천'(여정 점검 2026-10-23: 두 추천이 서로 달랐다)
-  for (const text of ["이 업종으로 정리할까요", "추천</em>", "직접 선택하기"]) assert.ok(recommendedQuestion.includes(text), text);
+  for (const text of ["이 업종으로 정리할까요", "직접 선택하기"]) assert.ok(recommendedQuestion.includes(text), text);
+  assert.match(recommendedQuestion, /data-tone="info"[^>]*>(?:<span[^>]*>)?추천<\/span>/, "첫 후보의 '추천'은 공통 상태 배지(파랑)");
   for (const text of ["입력하신 사업 내용을 보면", "이 업종 선택"]) assert.ok(!recommendedQuestion.includes(text), text);
   const cardOnly = renderToStaticMarkup(<QuestionForm inChat question={original.nextQuestion!} snapshot={{ ...suggestedBusiness, ksicCandidates: [] }} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
   for (const text of ["입력하신 사업 내용을 보면", "이 업종 선택", "직접 선택하기"]) assert.ok(cardOnly.includes(text), `후보가 없으면 큰 분류 카드: ${text}`);
@@ -966,7 +967,7 @@ async function main() {
     assert.match(card({ ...base, status: "note", target: "plan-section", label: "3장 시장과 고객 고치기" }), /메모로 남겨 뒀어요/);
     assert.equal(renderToStaticMarkup(<StudioEditTurns turns={[]} onApply={noop} onDismiss={noop} onUndo={noop} onRetry={noop} />), "");
     const queued = renderToStaticMarkup(<QueuedStudioRequests items={[item("q1", "가격을 2만원으로", { label: "3장 시장과 고객 고치기" })]} generating onCancel={noop} />);
-    assert.match(queued, /class="bubbleTag">3장 시장과 고객<\/p><article[^>]*><p>가격을 2만원으로<\/p>/, "장 이름은 말풍선 위 꼬리표, 말풍선에는 본문만");
+    assert.match(queued, /class="bubbleTag"><span[^>]*data-tone="neutral"[^>]*><span[^>]*>3장 시장과 고객<\/span><\/span><\/p><article[^>]*><p>가격을 2만원으로<\/p>/, "장 이름은 말풍선 위 꼬리표(공통 상태 배지), 말풍선에는 본문만");
     assert.match(queued, /대기 중 · 다 쓰면 반영할게요/);
     assert.match(queued, />취소<\/button>/);
 
@@ -981,7 +982,7 @@ async function main() {
     // 다음 요청 줄 — 입력창 바로 위 한 줄(연필은 입력창으로 되돌리기, ✕ 는 취소)
     const dockQueue = renderToStaticMarkup(<QueuedStudioRequests dock items={[item("q1", "가격을 2만원으로", { label: "3장 시장과 고객 고치기" })]} generating onCancel={noop} onEdit={noop} />);
     assert.match(dockQueue, /다음 요청/);
-    assert.match(dockQueue, /class="queueTag">3장 시장과 고객<\/span><span class="queueText"[^>]*>가격을 2만원으로<\/span>/);
+    assert.match(dockQueue, /class="[^"]*queueTag"[^>]*data-tone="neutral"[^>]*><span[^>]*>3장 시장과 고객<\/span><\/span><span class="queueText"[^>]*>가격을 2만원으로<\/span>/);
     assert.match(dockQueue, /기다리는 요청 고치기/);
     assert.match(dockQueue, /기다리는 요청 취소/);
     assert.doesNotMatch(dockQueue, /대기 중/, "'다음 요청' 이름표가 이미 말한다 — 대기 줄을 되풀이하지 않는다(r37)");

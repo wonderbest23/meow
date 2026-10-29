@@ -23,6 +23,7 @@ import { LANDING_LOGIN_REQUIRED, LANDING_LOGIN_MESSAGE, LandingSaveError, persis
 import { hasUnpublishedEdits, isLiveUpToDate, landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import Link from "next/link";
 import styles from "./page.module.css";
+import { StatusBadge } from "../../../components/status-badge";
 import PlanLoading, { Spinner } from "../PlanLoading";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
@@ -798,7 +799,7 @@ export function HomepageScreen() {
   const strip = studioPro ? <div className={styles.strip}>
     {/* 좁은 PC(1180px 이하)는 주소 가운데를 줄여(앞 몇 글자 … 끝 꼬리) 끝이 잘리지 않게 — 전체 주소는 title 에 */}
     <span className={styles.stripUrl} title={`${stripHost}${stripPath}`}><Globe size={14} aria-hidden /><b>{stripHost}</b><span className={styles.stripPathFull}>{stripPath}</span>{stripSlug && <span className={styles.stripPathShort} aria-hidden="true">/launch/{shortSlug(stripSlug)}</span>}</span>
-    <span className={styles.stripBadge} data-live={livePublished || undefined}>{stripBadge}</span>
+    <StatusBadge tone={livePublished ? "success" : "neutral"} className={styles.stripBadge}>{stripBadge}</StatusBadge>
     <span className={styles.stripGap} />
     {/* 휴대폰/컴퓨터 — 보통은 머리줄 가운데 알약에. 알약을 못 그리거나 머리줄 가운데가 비좁은 PC(1120px 이하)면 여기에 */}
     <span className={styles.stripDevice} data-always={hasCenter ? undefined : ""}>{deviceSwitch}</span>

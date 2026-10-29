@@ -7,6 +7,7 @@ import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import frame from "../chat/page.module.css";
 import styles from "./page.module.css";
+import { StatusBadge } from "../../../components/status-badge";
 import { HomepageLeadActions } from "../../../components/homepage-lead-actions";
 import { HomepageLeadNotification, useHomepageLeadNotifications } from "../../../components/homepage-lead-notifications";
 import { formatKoreanPhone } from "../../../lib/contact-links";
@@ -87,7 +88,7 @@ export default function InquiriesPage() {
                 <span className={styles.rowTop}><strong>{item.lead.name}</strong><small>{shortTime(item.lead.createdAt)}</small></span>
                 {/* 처리한 문의는 '전체'에서도 알아보게 — 예전엔 점이 없을 뿐이라 처리했는지 알 수 없었다(여정 점검 2026-10-22).
                     표시는 둘째 줄 오른쪽에 — 줄 끝에 두면 '처리 완료' 글자 폭만큼 위 시각이 안쪽으로 밀려 줄마다 어긋났다(감사 2026-10-23) */}
-                <span className={styles.rowMeta}><span className={styles.rowBiz}>{item.businessName}</span>{item.lead.handledAt === null ? <b className={styles.dot} aria-label="답할 문의" /> : <em className={styles.handledBadge}>처리 완료</em>}</span>
+                <span className={styles.rowMeta}><span className={styles.rowBiz}>{item.businessName}</span>{item.lead.handledAt === null ? <b className={styles.dot} aria-label="답할 문의" /> : <StatusBadge tone="neutral" className={styles.handledBadge}>처리 완료</StatusBadge>}</span>
                 <span className={styles.rowText}>{item.lead.message || "내용 없이 연락처만 남겼어요"}</span>
               </span>
             </button>

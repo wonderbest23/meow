@@ -220,15 +220,12 @@
 .sumStats + dl { margin-top:8px; border-top:0; }
 .liveSummary dl > div { display:grid; grid-template-columns:132px minmax(0,1fr) auto; gap:16px; align-items:baseline; padding:10px 6px; border-bottom:1px solid #eef0f3; scroll-margin:56px 0 24px; }
 .liveSummary dt { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0; font-size:.8125rem; color:#5f6b7c; }
-.liveSummary dt small { padding:1px 6px; border-radius:5px; background:#f1f3f6; font-size:.6875rem; font-weight:600; color:#4e5968; }
 .liveSummary dd { margin:0; font-size:.875rem; line-height:1.55; color:#191f28; white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
 /* 방금 대화에서 정한 줄 — 옅은 파랑 바탕 · '방금 정함'(다음 답까지), 처음 반영될 때 잠깐 테두리로 밝힌다 */
 .liveSummary dl > div[data-fresh] { border-radius:8px; border-bottom-color:transparent; background:linear-gradient(90deg,#eef5ff,#f7fbff); animation:studioFresh 1.8s ease-out; }
 .liveSummary dl > div[data-fresh] dd { font-weight:650; }
 .sumHead[data-fresh] { animation:studioFresh 1.8s ease-out; }
 @keyframes studioFresh { from { box-shadow:0 0 0 3px rgba(49,130,246,.28); } to { box-shadow:0 0 0 3px rgba(49,130,246,0); } }
-.sumTag { padding:2px 6px; border-radius:5px; background:#e8f3ff; color:#1b64da; font-size:.6875rem; font-weight:650; letter-spacing:0; white-space:nowrap; }
-.sumTitle .sumTag { font-size:.71875rem; }
 .sumStats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
 .sumStats > div { min-width:0; padding:10px 12px; border:1px solid #eef0f3; border-radius:10px; background:#fbfcfd; scroll-margin:56px 0 24px; }
 .sumStats > div[data-fresh] { border-color:#b7d3fb; background:#f4f9ff; animation:studioFresh 1.8s ease-out; }
