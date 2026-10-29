@@ -476,13 +476,13 @@ function siteLines(result: CashflowScenarios, short = false): string[] {
   ];
 }
 /* 매장을 빌리지 않는 사업(Q7) — 보증금·권리금·인테리어·간판 줄 대신 */
-const NO_PREMISES_SETUP = "매장을 빌리지 않으므로 보증금·권리금·인테리어·간판은 이 계산에 없습니다. 초기 지출은 장비·재료·교재·촬영처럼 써서 없어지는 돈만 항목별로 적습니다.";
+const NO_PREMISES_SETUP = "매장을 빌리지 않으므로 보증금·권리금·인테리어·간판은 이 계산에 없습니다. 초기 지출은 이 사업에 필요한 장비·재료처럼 써서 없어지는 돈만 항목별로 적습니다.";
 
 /*
  * 부가세 면세일 수 있는 사업(Q7 과외) — 법정 사실만: 교육용역 가운데 주무관청에 허가·인가·등록·신고한 학원·교습소 등이 제공하는 것은
  * 부가세가 면제된다(부가가치세법 제26조, 시행령). 이 사업이 해당하는지는 관할 세무서가 정하므로 면세·과세 두 경우의 본전을 함께 보인다.
  */
-const VAT_EXEMPT_BASIS = "교육용역 가운데 주무관청에 허가·인가·등록·신고한 학원·교습소 등이 제공하는 것은 부가세가 면제됩니다(부가가치세법 제26조). 과외는 교육청에 개인과외교습자로 신고하는지 등에 따라 달라지므로, 면세 여부는 사업자등록 전에 관할 세무서에서 확인합니다";
+const VAT_EXEMPT_BASIS = "교육용역 가운데 주무관청에 허가·인가·등록·신고한 학원·교습소 등이 제공하는 것은 부가세가 면제됩니다(부가가치세법 제26조제1항제6호·시행령 제36조). 신고한 개인과외가 여기에 드는지는 법령에 직접 적혀 있지 않으므로, 면세 여부는 사업자등록 전에 관할 세무서에서 확인합니다";
 const vatExemptLine = (result: CashflowScenarios) => `부가세: 면세로 보고 판매가에서 빼지 않았습니다(면세일 수 있음 — ${VAT_EXEMPT_BASIS}).${result.taxableBreakEven == null ? "" : ` 과세로 확인되면 판매가의 1/11(${won(vatInPrice(result.unitPrice))})을 빼야 해 한 ${result.unit}에 남는 돈이 ${won(result.contribution - vatInPrice(result.unitPrice))}으로 줄고, 본전은 ${result.taxableBreakEven === result.breakEven ? `그대로 월 ${count(result.breakEven, result.unit)}입니다` : `월 ${count(result.taxableBreakEven, result.unit)}으로 늘어납니다`}.`}`;
 
 /** 준비 기간 고정비의 이름과 기간 — 매장은 계약부터, 매장이 없으면 고정비가 나가기 시작할 때부터 */
@@ -673,9 +673,9 @@ function unitMarginMarkdown(result: CashflowScenarios): string[] {
     "",
     `| 항목 | 한 ${unit}당 | 근거 |`,
     "| --- | ---: | --- |",
-    `| 판매가 | ${won(result.unitPrice)} | 대표 입력 |`,
+    `| 판매가 | ${won(result.unitPrice)} | 대표님이 정한 값 |`,
     result.shape.vat === "exempt" ? "| 부가세 | 0원 | 면세일 수 있음(교육용역). 면세 여부는 관할 세무서 확인 |" : `| 부가세 | -${won(result.vat)} | ${VAT_BASIS}. 과세 유형 확인 필요 |`,
-    `| 한 ${unit}당 비용 | -${won(unitCostOf(result))} | 대표 입력 |`,
+    `| 한 ${unit}당 비용 | -${won(unitCostOf(result))} | 대표님이 정한 값 |`,
     ...unknownCostRows(result).map(row => `| ${row.item} | 확인 필요 | ${row.note} |`),
     `| **한 ${unit}에 실제 남는 돈** | **${won(result.contribution)}** | 확인 필요 칸을 빼기 전 값 |`,
     "",

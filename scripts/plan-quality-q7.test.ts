@@ -99,7 +99,7 @@ async function main() {
     assert.equal(tutorFlow.vat, 0);
     assert.equal(tutorFlow.contribution, 380_000, "400,000 − 20,000, no 1/11");
     assert.match(tutor.table, /\| 부가세 \| 0원 \| 면세일 수 있음\(교육용역\)\. 면세 여부는 관할 세무서 확인 \|/);
-    assert.match(tutor.table, /주무관청에 허가·인가·등록·신고한 학원·교습소 등이 제공하는 것은 부가세가 면제됩니다\(부가가치세법 제26조\)/);
+    assert.match(tutor.table, /주무관청에 허가·인가·등록·신고한 학원·교습소 등이 제공하는 것은 부가세가 면제됩니다\(부가가치세법 제26조제1항제6호·시행령 제36조\)/);
     assert.match(tutor.table, /면세 여부는 사업자등록 전에 관할 세무서에서 확인합니다\)\. 과세로 확인되면 판매가의 1\/11\(36,364원\)을 빼야 해 한 명에 남는 돈이 343,636원으로 줄고, 본전은 그대로 월 1명입니다/);
     assert.match(tutor.reference, /부가세 0원\(면세로 봄 — 교육용역은 면세일 수 있어 관할 세무서 확인 필요, 과세면 본전 월 1명\)/);
     const tutorSummary = buildExecutiveSummary(tutor.plan, tutor.coach.business).blocks.find(block => block.id === "finance")!.lines.map(line => line.value).join("\n");
