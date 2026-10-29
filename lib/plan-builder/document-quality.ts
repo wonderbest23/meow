@@ -25,9 +25,26 @@ function quantityMatches(text: string): Array<{ raw: string; value: string }> {
   return values;
 }
 
-/** 근거로 인정하는 숫자. 계산 표의 적자(-8,592,700원)를 본문은 '8,592,700원이 빠집니다'처럼 부호 없이 쓰므로 크기도 넣는다. */
+/*
+ * 근거로 인정하는 숫자. 계산 표의 적자(-8,592,700원)를 본문은 '8,592,700원이 빠집니다'처럼 부호 없이 쓰므로 크기도 넣는다.
+ * 1만 원 이상 금액은 천·만·십만 원 단위로 반올림·올림·내림한 값도 원래 값의 2% 안이면 인정한다 — 본문은 1,011,688원을 '약 101만 원'으로 읽기 쉽게 쓴다.
+ * 실제 AI 재측정(2026-10-29)에서 이 반올림 하나로 '비용' 장이 품질 검사에 두 번 걸려 통째로 빠졌다. 근거 없는 새 금액은 여전히 막는다.
+ */
 function sourceQuantities(source: string): Set<string> {
-  return new Set(quantities(source).flatMap(value => [value, value.replace(/^-/, "")]));
+  const allowed = new Set<string>();
+  for (const value of quantities(source)) {
+    const [number, unit] = value.split(":");
+    for (const exact of [Number(number), Math.abs(Number(number))]) {
+      allowed.add(`${exact}:${unit}`);
+      if (unit !== "원" || Math.abs(exact) < 10_000) continue;
+      for (const step of [1_000, 10_000, 100_000]) for (const round of [Math.round, Math.floor, Math.ceil]) {
+        const rounded = round(exact / step) * step;
+        // 원래 값과 2% 안쪽만 — '약 110만 원'처럼 크게 부풀린 값은 반올림으로 보지 않는다
+        if (Math.abs(rounded - exact) <= Math.abs(exact) * 0.02) allowed.add(`${rounded}:${unit}`);
+      }
+    }
+  }
+  return allowed;
 }
 
 /** KRW/percentage equality and structural checks only; counts, dates and semantic claims still require review. */
