@@ -482,7 +482,7 @@ const NO_PREMISES_SETUP = "매장을 빌리지 않으므로 보증금·권리금
  * 부가세 면세일 수 있는 사업(Q7 과외) — 법정 사실만: 교육용역 가운데 주무관청에 허가·인가·등록·신고한 학원·교습소 등이 제공하는 것은
  * 부가세가 면제된다(부가가치세법 제26조, 시행령). 이 사업이 해당하는지는 관할 세무서가 정하므로 면세·과세 두 경우의 본전을 함께 보인다.
  */
-const VAT_EXEMPT_BASIS = "교육용역 가운데 주무관청에 허가·인가·등록·신고한 학원·교습소 등이 제공하는 것은 부가세가 면제됩니다(부가가치세법 제26조제1항제6호·시행령 제36조). 신고한 개인과외가 여기에 드는지는 법령에 직접 적혀 있지 않으므로, 면세 여부는 사업자등록 전에 관할 세무서에서 확인합니다";
+const VAT_EXEMPT_BASIS = "교육용역 가운데 주무관청에 허가·인가·등록·신고한 학원·교습소 등이 제공하는 것은 부가세가 면제됩니다(부가가치세법 제26조). 혼자 가르치는 개인과외는 교육용역이나 인적용역 가운데 어느 면세 조항에 드는지 법령에 직접 적혀 있지 않으므로, 면세 여부는 사업자등록 전에 관할 세무서에서 확인합니다";
 const vatExemptLine = (result: CashflowScenarios) => `부가세: 면세로 보고 판매가에서 빼지 않았습니다(면세일 수 있음 — ${VAT_EXEMPT_BASIS}).${result.taxableBreakEven == null ? "" : ` 과세로 확인되면 판매가의 1/11(${won(vatInPrice(result.unitPrice))})을 빼야 해 한 ${result.unit}에 남는 돈이 ${won(result.contribution - vatInPrice(result.unitPrice))}으로 줄고, 본전은 ${result.taxableBreakEven === result.breakEven ? `그대로 월 ${count(result.breakEven, result.unit)}입니다` : `월 ${count(result.taxableBreakEven, result.unit)}으로 늘어납니다`}.`}`;
 
 /** 준비 기간 고정비의 이름과 기간 — 매장은 계약부터, 매장이 없으면 고정비가 나가기 시작할 때부터 */
