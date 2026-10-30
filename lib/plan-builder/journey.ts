@@ -3,6 +3,7 @@ import { launchStatus, launchSteps, readLaunch } from "./business-launch";
 import { readCoach } from "./coach";
 import type { Plan } from "./plan-store";
 import { JOURNEY_ORDER, journeyLabel, type JourneyStepId } from "./journey-steps";
+import { withJourneyGuide } from "./journey-guides";
 
 /*
  * 사용자가 겪는 흐름은 다섯 단계가 전부다 — 대화로 시작해서, 계획서를 만들고, 홈페이지를 만들고,
@@ -74,6 +75,8 @@ export type JourneyNext = { step: JourneyStepId; title: string; note: string; hr
  * 계획서를 다 만든 뒤 크게 보여 줄 다음 할 일 하나(+ 건너뛰는 길 하나).
  * 홈페이지가 다음 단계지만 결제 없이도 개업 준비로 넘어갈 수 있다 — 예전엔 홈페이지 결제 화면에서 막혔다.
  * 홈페이지를 공개했으면 순서대로 4단계(개업 준비)부터, 그것까지 마쳤으면 유지보수.
+ * 단계를 넘긴 다음 할 일에는 그 단계의 대화 세트(guide=, journey-guides.ts)를 싣는다 — 작업실이 말풍선과 미리 넣는 문장을 보인다.
+ * 만들어 둔 홈페이지 다듬기(draft)는 단계를 넘긴 게 아니라 싣지 않는다.
  */
 export function journeyNext(plan: Plan, homepage: HomepageStatus): JourneyNext {
   const operating = readCoach(plan.answers)?.stage === "operating";
@@ -81,9 +84,9 @@ export function journeyNext(plan: Plan, homepage: HomepageStatus): JourneyNext {
   const launchDone = launchProgress(plan) === "done";
   const skipToLaunch = launchDone ? undefined : { title: launchTitle, href: launchHref(plan.id) };
   if (homepage === "published") {
-    if (!launchDone) return { step: "launch", title: `${journeyLabel("launch", operating)}하기`, note: operating ? "지금 운영에서 바꿀 일과 홍보를 차례로 정리해요" : "업종 신고·사업자등록·결제·첫 홍보를 차례로 준비해요", href: launchHref(plan.id), secondary: { title: "유지보수하기", href: careHref(plan.id) } };
-    return { step: "care", title: "유지보수하기", note: "홈페이지를 고치고, 문의와 실적을 관리해요", href: careHref(plan.id) };
+    if (!launchDone) return { step: "launch", title: `${journeyLabel("launch", operating)}하기`, note: operating ? "지금 운영에서 바꿀 일과 홍보를 차례로 정리해요" : "업종 신고·사업자등록·결제·첫 홍보를 차례로 준비해요", href: withJourneyGuide(launchHref(plan.id), "homepage-published"), secondary: { title: "유지보수하기", href: careHref(plan.id) } };
+    return { step: "care", title: "유지보수하기", note: "홈페이지를 고치고, 문의와 실적을 관리해요", href: withJourneyGuide(careHref(plan.id), "launch-done") };
   }
   if (homepage === "draft") return { step: "homepage", title: "홈페이지 다듬고 공개하기", note: "만들어 둔 홈페이지를 고쳐서 인터넷에 공개해요", href: homepageHref(plan.id), secondary: skipToLaunch };
-  return { step: "homepage", title: "홈페이지 만들기", note: "이 계획서 내용으로 초안을 바로 만들어요", href: homepageHref(plan.id), secondary: skipToLaunch };
+  return { step: "homepage", title: "홈페이지 만들기", note: "이 계획서 내용으로 초안을 바로 만들어요", href: withJourneyGuide(homepageHref(plan.id), "plan-complete"), secondary: skipToLaunch };
 }

@@ -1,4 +1,8 @@
 /* 내 문의 — 메신저처럼 목록 | 대화 */
+/* 단계별 대화 세트의 안내 띠(guide=first-lead) — 목록 위 한 줄 */
+.guideBanner { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 10px 14px 10px 16px; border-bottom: 1px solid #d9e6fb; background: #eef4ff; color: #1d3f72; font-size: .875rem; font-weight: 600; line-height: 1.5; word-break: keep-all; }
+.guideBanner button { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: transparent; color: #1d3f72; cursor: pointer; }
+.guideBanner button:hover { background: #dfe9fb; }
 .wrap { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); background: #fff; }
 .list { min-height: 0; overflow-y: auto; border-right: 1px solid #e6e8ee; background: #fbfbfd; }
 .listHead { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 14px 10px; background: #fbfbfd; border-bottom: 1px solid #eef0f4; }

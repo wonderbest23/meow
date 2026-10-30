@@ -91,11 +91,11 @@ export function studioTarget(href: string, planId: string, origin = "https://one
   }
 }
 
-/** 링크가 실어 오는 한 번용 값 — 탭을 바꿀 때 앞 링크의 것이 남지 않게 지운다(해시도) */
-export const STUDIO_LINK_PARAMS = ["edit", "step", "start", "prompt"] as const;
+/** 링크가 실어 오는 한 번용 값 — 탭을 바꿀 때 앞 링크의 것이 남지 않게 지운다(해시도). guide 는 단계별 대화 세트(journey-guides.ts) */
+export const STUDIO_LINK_PARAMS = ["edit", "step", "start", "prompt", "guide"] as const;
 
 /**
- * 탭을 바꾼 뒤의 작업실 주소(경로 + 쿼리 + 해시). 앞 링크가 실어 온 값(edit · step · start · prompt)과 해시는 지우고
+ * 탭을 바꾼 뒤의 작업실 주소(경로 + 쿼리 + 해시). 앞 링크가 실어 온 값(edit · step · start · prompt · guide)과 해시는 지우고
  * 이번 링크의 값과 해시만 싣는다 — 탭을 그냥 누른 것(link 없음)이면 모두 지운다.
  * 단 대화 수정 모드(edit=chat)는 대화 칸이 계속 살아 있는 상태라, 이번 링크가 edit 를 새로 주지 않으면 그대로 둔다.
  */
