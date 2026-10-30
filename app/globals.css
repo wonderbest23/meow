@@ -14856,10 +14856,6 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .hk-fold-chev { flex: none; color: #8181a5; transition: transform .15s; }
 .hk-fold[open] .hk-fold-chev { transform: rotate(180deg); }
 .hk-fold-body { padding: 2px 18px 18px; border-top: 1px solid #f0f0f5; padding-top: 14px; }
-.hk-badge { padding: 2px 9px; border-radius: 999px; background: #f0f0f5; color: #5e5e72; font-style: normal; font-weight: 700; font-size: .71875rem; white-space: nowrap; }
-.hk-badge-warn { background: #fdeaea; color: #c0392b; }
-.hk-badge-ok { background: #e6f6ec; color: #1d7a45; }
-.hk-badge-info { background: #e8f0fd; color: #3272db; }
 /* 접수된 문의 — 문자 알림 받을 휴대폰 · 주간 리포트 */
 .hk-alerts { display: grid; gap: 8px; margin: 0 0 12px; padding: 12px 14px; border: 1px solid #e6e6ee; border-radius: 10px; background: #fafbff; }
 .hk-alerts form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
@@ -14950,7 +14946,6 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .hk-leads li > div { min-width: 0; flex: 1; }
 .hk-leads li[data-handled] { background: #f7f8fa; }
 .hk-leads li[data-handled] i { background: #a7adbb; }
-.hk-leads strong .hk-badge { margin-left: 6px; vertical-align: middle; }
 .hk-lead-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .hk-lead-btn { min-height: 44px; padding: 0 14px; border: 1px solid #d8dce6; border-radius: 10px; background: #fff; color: #1c1d21; font-size: .875rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; cursor: pointer; }
 .hk-lead-btn:hover { border-color: #3272db; color: #3272db; }

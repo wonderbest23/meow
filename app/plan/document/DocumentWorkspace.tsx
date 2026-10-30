@@ -8,6 +8,7 @@ import InlineDocEditor, { withBodyHeadingLevels } from "../InlineDocEditor";
 import PlanLoading from "../PlanLoading";
 import frame from "../chat/page.module.css";
 import styles from "./DocumentWorkspace.module.css";
+import { StatusBadge } from "../../../components/status-badge";
 import type { assembleSections } from "../../../lib/plan-builder/plan-store";
 import type { EditState } from "./use-document-edits";
 import { DocumentChapterHeading, DocumentReadHeading, DocumentSectionHeading } from "./DocumentReadContent";
@@ -558,7 +559,7 @@ export default function DocumentWorkspace(props: Props) {
                 : factEditable ? <button type="button" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>직접 고치기</button> : coachHref && <Link className={styles.noticeAction} href={coachHref}>대화로 고치기</Link>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}{facts.error.retry && <button type="button" className={styles.factRetry} disabled={facts.busy} onClick={retryReflect}><RefreshCw size={15} aria-hidden="true" />다시 시도</button>}</span>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter} data-changing={(studioPc && list.some(section => previews.has(section.key))) || undefined}>
                 <DocumentChapterHeading number={index + 1} title={name} pc={studioPc} lead={studioPc && index === 0 ? props.identity : undefined}
-                  actions={studioPc && list.some(section => previews.has(section.key)) ? <><span className={styles.changingBadge}><i aria-hidden="true" />대화로 고치는 중</span>{chapterActions(index, name)}</> : chapterActions(index, name)} />
+                  actions={studioPc && list.some(section => previews.has(section.key)) ? <><StatusBadge tone="info">대화로 고치는 중</StatusBadge>{chapterActions(index, name)}</> : chapterActions(index, name)} />
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
                   <DocumentSectionHeading number={props.numbering.get(section.key)?.num} title={section.sectionTitle} />
                   <div className={styles.body} data-fresh={props.freshKeys?.has(section.key) || undefined}>{factMode

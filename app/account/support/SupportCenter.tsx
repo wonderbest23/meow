@@ -8,6 +8,7 @@ import { inquiryCategories, inquiryCategory, inquiryDraftSchema, inquiryPreview,
 import type { SupportChat } from "../../../lib/support-chat/repository";
 import PlanLoading, { Spinner } from "../../plan/PlanLoading";
 import styles from "./support.module.css";
+import { StatusBadge } from "../../../components/status-badge";
 
 type Reply = { ownerScope: string; chat: SupportChat; requestId?: string; receivedMessageId?: string };
 type View = "write" | "history";
@@ -189,7 +190,7 @@ export default function SupportCenter() {
               const answered = thread.replies.length > 0;
               return <div className={styles.thread} key={thread.inquiry.id}>
                 <details className={styles.inquiry}>
-                  <summary><span className={styles.itemHeading}><small><span className={answered ? styles.statusDone : styles.statusWaiting}>{answered ? "답변 완료" : "답변 대기"}</span>보낸 문의 · {inquiry.category}</small><strong>{inquiry.subject}</strong><time dateTime={thread.inquiry.createdAt}>{dateLabel(thread.inquiry.createdAt)}</time></span><ChevronDown size={20} aria-hidden="true" /></summary>
+                  <summary><span className={styles.itemHeading}><small><StatusBadge tone={answered ? "success" : "warning"} done={answered}>{answered ? "답변 완료" : "답변 대기"}</StatusBadge>보낸 문의 · {inquiry.category}</small><strong>{inquiry.subject}</strong><time dateTime={thread.inquiry.createdAt}>{dateLabel(thread.inquiry.createdAt)}</time></span><ChevronDown size={20} aria-hidden="true" /></summary>
                   <p>{inquiry.message}</p>
                 </details>
                 {replies}

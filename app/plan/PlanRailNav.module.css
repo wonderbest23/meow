@@ -75,12 +75,6 @@
 
 .sampleTag {
   flex: none;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--app-raised);
-  font-size: .8125rem;
-  font-weight: 800;
-  color: var(--app-body);
 }
 
 .planBody {

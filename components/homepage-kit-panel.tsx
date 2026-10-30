@@ -18,6 +18,7 @@ import { createBusinessTemplate } from "../lib/landing/brainwave/business-conten
 import { homepageMissingInfo } from "../lib/landing/publish-check";
 import { carryEditedTexts, switchHomepageDesign } from "../lib/landing/ai-fill";
 import { askConfirm } from "./confirm-dialog";
+import { StatusBadge } from "./status-badge";
 import { applyBusinessContent } from "../lib/landing/page-data";
 import { LANDING_THEMES } from "../lib/landing/themes";
 import PlanLoading, { Spinner } from "../app/plan/PlanLoading";
@@ -426,7 +427,7 @@ export function HomepageKitPanel({
       id="hk-contact"
       icon={<PhoneCall size={18} />}
       title="손님 연락 방법"
-      badge={<em className={`hk-badge ${contactReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{contactReady ? contactInfo.label : formOff ? "문의 양식 — 꺼져 있음" : `${contactInfo.label} — 입력 필요`}</em>}
+      badge={<StatusBadge tone={contactReady ? "success" : "warning"}>{contactReady ? contactInfo.label : formOff ? "문의 양식 — 꺼져 있음" : `${contactInfo.label} — 입력 필요`}</StatusBadge>}
     >
       <div className="hk-contact-methods" role="radiogroup" aria-label="연결 방법">
         {CONTACT_METHODS.map((method) => (
@@ -474,7 +475,7 @@ export function HomepageKitPanel({
       id="hk-business"
       icon={<ShieldCheck size={18} />}
       title="사업자 정보"
-      badge={missing.length ? <em className="hk-badge hk-badge-warn">채울 것 {missing.length}개</em> : <em className="hk-badge hk-badge-ok">완료</em>}
+      badge={missing.length ? <StatusBadge tone="warning">채울 것 {missing.length}개</StatusBadge> : <StatusBadge tone="success" done>완료</StatusBadge>}
     >
       <div className="hk-grid">
         <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(e) => update({ businessName: e.target.value })} /></label>
@@ -527,7 +528,7 @@ export function HomepageKitPanel({
       id="hk-domain"
       icon={<Globe2 size={18} />}
       title="내 도메인 연결"
-      badge={site?.customDomain ? <em className={`hk-badge ${domainReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{domainReady ? site.customDomain : `${site.customDomain} · 연결 확인 중`}</em> : null}
+      badge={site?.customDomain ? <StatusBadge tone={domainReady ? "success" : "warning"}>{domainReady ? site.customDomain : `${site.customDomain} · 연결 확인 중`}</StatusBadge> : null}
     >
       <LandingDomainConnector
         onReadyChange={setDomainReady}
@@ -545,7 +546,7 @@ export function HomepageKitPanel({
       id="hk-leads"
       icon={<Inbox size={18} />}
       title="문의 알림 · 손님 문의"
-      badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건{openLeads ? ` · 답할 것 ${openLeads}건` : ""}</em>}
+      badge={leadsError ? <StatusBadge tone="danger">확인 필요</StatusBadge> : leads === null ? <StatusBadge tone="neutral">불러오는 중</StatusBadge> : <StatusBadge tone={leads.length ? "info" : "neutral"}>{leads.length}건{openLeads ? ` · 답할 것 ${openLeads}건` : ""}</StatusBadge>}
       hint={draft.leadCaptureEnabled ? undefined : "문의 양식이 꺼져 있어요"}
     >
       <HomepageAlertSettings projectId={projectId} suggestedPhone={draft.businessPhone} />

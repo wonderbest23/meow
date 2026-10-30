@@ -34,7 +34,7 @@ const MODULES = [
   "components/support-chat-home.module.css", "components/workspace-brand.module.css",
   // S4
   "app/plan/inquiries/page.module.css", "app/plan/info/PlanInfo.module.css", "app/plan/proposal/proposal.module.css",
-  "app/plan/document/PlanDocument.module.css", "app/plan/ReviewPanel.module.css", "app/plan/PlanList.module.css",
+  "app/plan/document/PlanDocument.module.css", "app/plan/PlanList.module.css",
   "app/plan/MarketEvidencePanel.module.css", "app/plan/workspace/ArtifactUpdatePanel.module.css",
 ];
 const PX_TEXT = /(?:font-size|line-height)\s*:[^;}]*\d(?:\.\d+)?px|(?:^|[;{\s])font\s*:[^;}]*\d(?:\.\d+)?px|--coach-(?:font|label|title|welcome-size)\s*:\s*[\d.]+px/m;

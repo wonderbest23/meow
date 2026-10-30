@@ -35,8 +35,11 @@ export function businessHubState(plan: Plan, runStatus?: string | null) {
   if (running) status = "문서 제작 중";
   if (isCoachJobActive(job)) status = "답변 준비 중";
   if (job?.status === "failed" || ["errored", "terminated"].includes(runStatus ?? "")) status = "다시 확인 필요";
-  return { coach, job, keys, documents, revision, stale, complete, status, running };
+  return { coach, job, keys, documents, revision, stale, complete, status, statusTone: HUB_STATUS_TONE[status] ?? "info", running };
 }
+
+/** 사업 상태 배지 색조(components/status-badge) — 끝남은 초록, 진행은 파랑, 반영할 것은 노랑, 실패는 빨강 */
+const HUB_STATUS_TONE: Record<string, "success" | "info" | "warning" | "danger"> = { "사업안 준비됨": "success", "문서 완성": "success", "수정 내용 반영 필요": "warning", "다시 확인 필요": "danger" };
 
 export function actionStatus(plan: Plan, action: string) {
   const record = plan.answers[ACTION_KEY];

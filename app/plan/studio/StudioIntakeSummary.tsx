@@ -7,6 +7,7 @@ import type { IntakeQuestion } from "../../../lib/plan-builder/intake-questions"
 import { wonLabel } from "../../../lib/plan-builder/intake-options";
 import { numericAnswer, plainText, summaryAnswerText } from "../chat/intake-ui/model";
 import styles from "./Studio.module.css";
+import { StatusBadge } from "../../../components/status-badge";
 
 /*
  * PC 작업실 — 대화가 끝나기 전 오른쪽 칸. 예전엔 '사업 방향 정리를 마쳐야 … / 대화로 가기'만 있었는데 대화는 바로 왼쪽에 있다
@@ -134,9 +135,9 @@ export default function StudioIntakeSummary({ snapshot }: { snapshot: IntakeSnap
   const numberRows = rows.filter(row => numeric(row) && !stats.some(stat => stat.id === row.id));
   const remaining = snapshot ? remainingCoreQuestions(snapshot) : [];
   const title = snapshot?.title && normalize(snapshot.title) !== normalize(business?.value ?? "") ? snapshot.title : "";
-  const freshTag = (id: string) => (fresh.includes(id) ? <span className={styles.sumTag}>방금 정함</span> : null);
+  const freshTag = (id: string) => (fresh.includes(id) ? <StatusBadge tone="info">방금 정함</StatusBadge> : null);
   const summaryRow = (row: SummaryRow) => <div key={row.id} data-row={row.id} data-fresh={fresh.includes(row.id) || undefined}>
-    <dt>{row.label}{row.proposal && <small>AI 초안</small>}</dt><dd>{row.value}</dd>{freshTag(row.id) ?? <span />}
+    <dt>{row.label}{row.proposal && <StatusBadge tone="neutral">AI 초안</StatusBadge>}</dt><dd>{row.value}</dd>{freshTag(row.id) ?? <span />}
   </div>;
 
   return <section className={styles.liveSummary} aria-labelledby="studio-live-summary-heading">

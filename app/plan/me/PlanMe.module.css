@@ -144,25 +144,6 @@
   color: var(--text-strong, var(--app-text));
 }
 
-.status {
-  padding: 3px 9px;
-  border-radius: 999px;
-  background: var(--surface-muted, var(--app-raised));
-  color: var(--text-body, var(--app-body));
-  font-size: .8125rem;
-  font-weight: 700;
-}
-
-.statusDone {
-  background: var(--app-success-bg);
-  color: #10794b;
-}
-
-.statusBad {
-  background: var(--app-danger-bg);
-  color: var(--app-danger);
-}
-
 .empty {
   margin: 0;
   padding: 4px 0 2px;

@@ -13,6 +13,7 @@ import type { ServiceBadge } from "../lib/services/recommend";
 import { isSamplePlan, loadState, type Plan } from "../lib/plan-builder/plan-store";
 import { newChatHref } from "../lib/plan-builder/studio";
 import styles from "./next-services.module.css";
+import { StatusBadge, type StatusTone } from "./status-badge";
 import { Spinner } from "../app/plan/PlanLoading";
 
 /*
@@ -31,6 +32,8 @@ type LoadState = { requests: MyServiceRequest[]; suggestedPhone: string; login: 
 const OPEN_STATUSES = new Set(["received", "contacted"]);
 
 /* 글만 늘어서 있으면 사장님이 무엇을 사는지 몰라 주저했다 — 쇼핑몰 상품처럼 그림·짧은 이름·포함 내용으로 */
+/** 추천 표시 색조 — 먼저·필요는 주의(노랑), 확인·추천은 파랑, 신청을 마친 것은 초록 */
+const SERVICE_BADGE_TONE: Record<ServiceBadge["tone"], StatusTone> = { first: "warning", need: "warning", check: "info", suggest: "info", done: "success" };
 const ICONS: Record<ServiceIcon, LucideIcon> = { badge: BadgeCheck, cart: ShoppingBag, shield: ShieldCheck, building: Building2, pen: PenLine, news: Newspaper, camera: Camera, megaphone: Megaphone };
 /* 연락 시간 — 직접 쓰지 않고 누르기만 */
 const TIME_CHOICES = ["아무 때나", "오전", "오후", "저녁"];
@@ -200,7 +203,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
         const Icon = ICONS[item.icon];
         return <li key={item.id}>
           <button type="button" className={styles.product} data-badge={badge?.tone} onClick={() => openDetail(item)} aria-label={`${item.title} 자세히 보기`}>
-            {badge ? <em className={styles.ribbon} data-tone={badge.tone}>{badge.label}</em> : null}
+            {badge ? <StatusBadge tone={SERVICE_BADGE_TONE[badge.tone]} done={badge.tone === "done"} className={styles.ribbon}>{badge.label}</StatusBadge> : null}
             <span className={styles.icon} data-tone={item.tone}><Icon aria-hidden /></span>
             <strong>{item.short}</strong>
             <span className={styles.tagline}>{item.summary}</span>
@@ -227,7 +230,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
               <p>{detail.summary}</p>
             </div>
           </div>
-          {badge ? <p className={styles.reason}><em className={styles.ribbon} data-tone={badge.tone}>{badge.label}</em> {badge.reason}</p> : null}
+          {badge ? <p className={styles.reason}><StatusBadge tone={SERVICE_BADGE_TONE[badge.tone]} done={badge.tone === "done"} className={styles.ribbon}>{badge.label}</StatusBadge> {badge.reason}</p> : null}
           <div className={styles.priceRow}><span>{servicePriceLabel(detail)}</span><span><Clock3 size={14} aria-hidden /> {detail.duration}</span></div>
           <h4>이렇게 해 드려요</h4>
           <ul className={styles.checks}>{detail.includes.map((line) => <li key={line}><Check size={16} aria-hidden /> {line}</li>)}</ul>
@@ -255,7 +258,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
       <ul>
         {state.requests.map((item) => <li key={item.id}>
           <span><strong>{findServiceRecord(item.serviceId)?.title ?? item.serviceId}</strong><small>{new Date(item.createdAt).toLocaleDateString("ko-KR")} · {formatKoreanPhone(item.phone)}</small></span>
-          <em data-status={item.status}>{SERVICE_REQUEST_STATUS_LABELS[item.status]}</em>
+          <StatusBadge tone={item.status === "done" ? "success" : item.status === "canceled" ? "neutral" : "info"} done={item.status === "done"} className={styles.historyStatus}>{SERVICE_REQUEST_STATUS_LABELS[item.status]}</StatusBadge>
         </li>)}
       </ul>
     </div> : null}

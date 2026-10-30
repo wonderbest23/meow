@@ -21,6 +21,7 @@ import PlanLoading from "./PlanLoading";
 import frame from "./chat/page.module.css";
 import styles from "./BusinessHub.module.css";
 import mine from "./MyBusinessList.module.css";
+import { StatusBadge } from "../../components/status-badge";
 import { askConfirm } from "../../components/confirm-dialog";
 import { useHomepageStatus } from "./use-homepage";
 
@@ -97,7 +98,7 @@ export default function PlanList() {
                 <strong className={mine.title}>{planDisplayName(p)}</strong>
                 {/* 소개가 사업 이름과 같으면(첫 답을 그대로 이름으로 쓴 사업) 같은 줄을 두 번 보이지 않는다 */}
                 {introduction && introduction.trim() !== p.title.trim() && <span className={mine.desc}>{introduction}</span>}
-                <span className={mine.meta}><span className={mine.stage}>{status.status}</span><HomepageStage planId={p.id} /><time dateTime={p.updatedAt}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")} 수정</time></span>
+                <span className={mine.meta}><StatusBadge tone={status.statusTone}>{status.status}</StatusBadge><HomepageStage planId={p.id} /><time dateTime={p.updatedAt}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")} 수정</time></span>
               </Link>}
               {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
                 /* Esc로 닫고 ⋯ 단추로 초점을 돌려준다(접근성 점검 2026-10-22) */
@@ -121,5 +122,5 @@ export default function PlanList() {
 function HomepageStage({ planId }: { planId: string }) {
   const status = useHomepageStatus(isSamplePlan(planId) ? null : planId);
   if (status !== "published" && status !== "draft") return null;
-  return <span className={mine.stage} data-homepage={status}>{status === "published" ? "홈페이지 공개 중" : "홈페이지 공개 전"}</span>;
+  return <StatusBadge tone={status === "published" ? "success" : "neutral"}>{status === "published" ? "홈페이지 공개 중" : "홈페이지 공개 전"}</StatusBadge>;
 }

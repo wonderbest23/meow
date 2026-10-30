@@ -11,6 +11,7 @@ import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
 import { displayOrderName } from "../../../lib/payments/order-display";
 import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
+import { StatusBadge } from "../../../components/status-badge";
 import PlanLoading from "../PlanLoading";
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import { askConfirm } from "../../../components/confirm-dialog";
@@ -293,18 +294,18 @@ export default function PlanMePage() {
                     <td data-label="상품">{displayOrderName(item.orderName) || "-"}</td>
                     <td data-label="금액" className={styles.amount}>{item.amount.toLocaleString("ko-KR")}원</td>
                     <td data-label="상태">
-                      <span className={`${styles.status} ${item.status === "done" ? styles.statusDone : BAD_STATUS.has(item.status) ? styles.statusBad : ""}`}>
+                      <StatusBadge tone={item.status === "done" ? "success" : BAD_STATUS.has(item.status) ? "danger" : "neutral"}>
                         {STATUS_LABEL[item.status] ?? item.status}
-                      </span>
+                      </StatusBadge>
                     </td>
                     <td data-label="일시">{new Date(item.paidAt ?? item.createdAt).toLocaleDateString("ko-KR")}</td>
                     <td data-label="환불">
                       {/* 환불이 끝나면 주문은 '환불됨'으로 바뀐다 — 그래도 요청 결과는 보여 준다 */}
                       {refund ? (
                         <>
-                          <span className={`${styles.status} ${refund.status === "done" ? styles.statusDone : refund.status === "rejected" ? styles.statusBad : ""}`}>
+                          <StatusBadge tone={refund.status === "done" ? "success" : refund.status === "rejected" ? "danger" : "neutral"}>
                             {REFUND_LABEL[refund.status]}
-                          </span>
+                          </StatusBadge>
                           {refund.status === "rejected" && refund.adminNote ? <small style={{ display: "block", marginTop: 4, color: "var(--text-soft, #667085)" }}>사유: {refund.adminNote}</small> : null}
                         </>
                       ) : item.status === "confirming" ? (

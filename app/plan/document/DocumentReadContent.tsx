@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { Check, Download } from "lucide-react";
+import { Download } from "lucide-react";
+import { StatusBadge } from "../../../components/status-badge";
 import styles from "./DocumentWorkspace.module.css";
 
 /**
@@ -22,7 +23,7 @@ export function DocumentReadHeading({ title, isSample, completed, identity, onDo
   const name = planDisplayName(title, isSample);
   if (studio && pc) return compact ? null : <h2 className={styles.srOnly}>{name}</h2>;
   /* 내려받기는 '작성 완료' 바로 옆에 같은 모양으로 — 아래 단추 줄에 세 개가 나란히 있던 게 어색했다(대표 요청 2026-10-17) */
-  const badges = (completed || onDownload) && <div className={styles.badgeRow}>{completed && <span className={`${styles.completedBadge} ${styles.doneBadge}`}><Check size={14} aria-hidden="true" />작성 완료</span>}{onDownload && <button type="button" className={`${styles.completedBadge} ${styles.downloadBadge}`} onClick={onDownload}><Download size={14} aria-hidden="true" />내려받기</button>}</div>;
+  const badges = (completed || onDownload) && <div className={styles.badgeRow}>{completed && <StatusBadge tone="success" done>작성 완료</StatusBadge>}{onDownload && <button type="button" className={`${styles.completedBadge} ${styles.downloadBadge}`} onClick={onDownload}><Download size={14} aria-hidden="true" />내려받기</button>}</div>;
   if (studio) {
     const narrowDownload = onDownload && <div className={`${styles.badgeRow} ${styles.narrowOnly}`}><button type="button" className={`${styles.completedBadge} ${styles.downloadBadge}`} onClick={onDownload}><Download size={14} aria-hidden="true" />내려받기</button></div>;
     if (compact) return narrowDownload ? <div className={`${styles.compactHeading} ${styles.narrowOnly}`}>{narrowDownload}</div> : null;

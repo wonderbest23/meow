@@ -69,4 +69,4 @@
 a.retry { display: inline-block; text-decoration: none; }
 
 /* 목록의 '처리 완료' 표시 */
-.handledBadge { flex: none; align-self: center; padding: 2px 8px; border-radius: 999px; background: #eef1f5; color: #5f6b7a; font-size: .71875rem; font-style: normal; font-weight: 600; white-space: nowrap; }
+.handledBadge { flex: none; align-self: center; }

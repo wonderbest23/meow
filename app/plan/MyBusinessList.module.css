@@ -10,8 +10,6 @@
 .title { display: -webkit-box; overflow: hidden; font-size: 1.0625rem; font-weight: 700; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .desc { display: -webkit-box; overflow: hidden; color: #6b7684; font-size: .875rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #6b7684; font-size: .8125rem; }
-.stage { padding: 3px 8px; border-radius: 6px; background: #f2f4f6; color: #4e5968; font-size: .75rem; font-weight: 600; }
-.stage[data-homepage="published"] { background: #e8f3ee; color: #1f6b46; }
 
 /* ⋯ 단추 — 카드 오른쪽 위 */
 .menu { position: absolute; top: 10px; right: 8px; }

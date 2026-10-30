@@ -7,6 +7,7 @@ import { hydrateFromServer, isSamplePlan, loadState, setActivePlan, type Plan } 
 import { planDisplayName } from "../../lib/plan-builder/business-name";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import styles from "./PlanRailNav.module.css";
+import { StatusBadge } from "../../components/status-badge";
 
 /*
  * 레일 안의 플랜 목록.
@@ -172,7 +173,7 @@ export default function PlanRailNav() {
               </span>
               <span className={styles.planName}>{planDisplayName(plan)}</span>
               {sample ? (
-                <span className={styles.sampleTag}>예시</span>
+                <StatusBadge tone="neutral" className={styles.sampleTag}>예시</StatusBadge>
               ) : (
                 <span className={styles.planCount}>
                   {done}/{total}
