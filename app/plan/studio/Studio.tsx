@@ -33,6 +33,7 @@ import { openLogin } from "../../../components/login-dialog";
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import StudioLoading from "./loading";
 import StudioIntakeSummary from "./StudioIntakeSummary";
+import { AppButton } from "../../../components/app-button";
 
 /*
  * 사업 작업실 — PC(1024px 이상)는 왼쪽 대화 칸 + 오른쪽 [사업계획서 | 홈페이지 | 개업 준비 | 유지보수] 탭,
@@ -703,7 +704,7 @@ export default function Studio() {
       if (lock && wide && !chatComplete) return <StudioIntakeSummary snapshot={plan ? intakeSnapshot : null} />;
       if (lock) return <div className={styles.locked}>
         <p>{lock.message}</p>
-        <button type="button" onClick={() => selectTab(lock.back, { focus: "heading" })}>{lock.label}</button>
+        <AppButton variant="primary" onClick={() => selectTab(lock.back, { focus: "heading" })}>{lock.label}</AppButton>
       </div>;
       return null;
     }
@@ -736,7 +737,7 @@ export default function Studio() {
     <span className={styles.progressBars} aria-hidden="true">{chips.map(chip => <b key={chip.step} data-state={chip.state} />)}</span>
   </span> : null;
   /* 작성 진행을 묻다 로그인이 풀렸으면(401) 머리줄에 다시 로그인하는 단추 — 로그인 팝업이 끝나면 지금 화면으로 돌아온다 */
-  const relogin = generationAuthLost && !missing ? <button key="relogin" type="button" className={styles.relogin} onClick={() => openLogin()}>다시 로그인하기</button> : null;
+  const relogin = generationAuthLost && !missing ? <AppButton key="relogin" variant="primary" size="small" className={styles.relogin} onClick={() => openLogin()}>다시 로그인하기</AppButton> : null;
   /* 휴대폰 머리줄 오른쪽 — 보이는 칸의 단추만(진행 단계는 아래 탭 줄의 ✓). PC 는 아래 한 줄 머리줄(topBar)이 맡는다 */
   const side = [relogin, headerSlot(tab)].filter(Boolean);
   const headerSide = !wide && side.length ? <>{side}</> : undefined;
@@ -798,7 +799,7 @@ export default function Studio() {
         {/* 로그인이 풀려 못 찾았으면 '다시 로그인하기'(팝업, 끝나면 이 주소로 돌아온다) — 사업이 사라진 게 아니다 */}
         {/* 가운데 — 내 사업 화면용 오른쪽 여백(96px)이 없는 작업실 전용 틀(1280 에서 28px 왼쪽으로 쏠렸다 — PC 점검 2026-10-24) */}
         {missing ? <div className={styles.missingNote}><div className={hub.content}>{signedOut
-          ? <MissingBusinessBody title="로그인이 풀렸어요" detail="다시 로그인하면 이 사업을 이어서 볼 수 있어요." action={<button type="button" className={hub.primary} onClick={() => openLogin()}>다시 로그인하기</button>} />
+          ? <MissingBusinessBody title="로그인이 풀렸어요" detail="다시 로그인하면 이 사업을 이어서 볼 수 있어요." action={<AppButton type="button" variant="primary" className={hub.primary} onClick={() => openLogin()}>다시 로그인하기</AppButton>} />
           : <MissingBusinessBody />}</div></div> : <div className={styles.studio} data-wide={wide || undefined}>
           {!wide && !chatOnly && <div className={styles.narrowTabs} data-appear={tabsAppear || undefined} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, NARROW_TABS, narrowSelected, item => narrowTarget(item as NarrowTab))}>
             {NARROW_TABS.map(item => {
@@ -819,7 +820,7 @@ export default function Studio() {
             {isSamplePlan(planId)
               ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
                 <h2>예시 사업이에요</h2>
-                <Link className={hub.primary} href={newChatHref()}><span className={styles.nowrap}>대화로 내 사업 시작하기</span><ChevronRight size={18} aria-hidden="true" /></Link>
+                <AppButton variant="primary" className={hub.primary} href={newChatHref()}><span className={styles.nowrap}>대화로 내 사업 시작하기</span><ChevronRight size={18} aria-hidden="true" /></AppButton>
               </section></div></div>
               : noChat
                 ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>

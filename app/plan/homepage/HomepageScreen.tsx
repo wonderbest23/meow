@@ -45,6 +45,7 @@ import paneHeader from "../workspace/PaneHeaderActions.module.css";
 import { paneLinkCapture } from "../document/pane-link";
 import { closedForLaunch } from "../../../lib/launch-scope";
 import PublishedMenu from "./PublishedMenu";
+import { AppButton } from "../../../components/app-button";
 
 /* 운영에서는 홈페이지 AI 수정 주소가 아직 닫혀 있다(lib/launch-scope) — 닫혀 있으면 대화로 고치기 권유·단추를 보이지 않는다 */
 const HOMEPAGE_CHAT_EDIT_OPEN = closedForLaunch("/api/projects/_/landing/ai-edit") === null;
@@ -679,9 +680,9 @@ export function HomepageScreen() {
     ? <PublishedMenu className={className} publicPath={publishedPath} disabled={busy} onUnpublish={() => void unpublishRef.current()} onCopied={() => setMessage("주소를 복사했어요.")}><Check size={15} aria-hidden /><span>공개됨</span></PublishedMenu>
     : null;
   const headerActions = kitEditing ? <div className={styles.headerActions}>
-    <button type="button" aria-label="저장" disabled={busy} onClick={() => void save()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span>저장</span></button>
+    <AppButton variant="secondary" size="small" type="button" aria-label="저장" disabled={busy} onClick={() => void save()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span>저장</span></AppButton>
     {/* 고친 게 없으면 손님 화면과 같다 — '새 버전 공개'를 늘 파랗게 켜 두면 눌러야 하는 줄 안다 */}
-    {publishedMenu(styles.headerPrimary) ?? <button type="button" className={styles.headerPrimary} disabled={busy} onClick={() => void publish()}>{action === "publishing" ? <Spinner /> : <Rocket size={15} />}<span>{site?.status === "published" ? "새 버전 공개" : site?.status === "unpublished" ? "다시 공개" : "공개하기"}</span></button>}
+    {publishedMenu(styles.headerPrimary) ?? <AppButton type="button" variant="primary" size="small" className={styles.headerPrimary} disabled={busy} onClick={() => void publish()}>{action === "publishing" ? <Spinner /> : <Rocket size={15} />}<span>{site?.status === "published" ? "새 버전 공개" : site?.status === "unpublished" ? "다시 공개" : "공개하기"}</span></AppButton>}
   </div> : undefined;
   /*
    * 작업실 안 — 저장·공개를 칸 위 도구 줄이 아니라 작업실 머리줄 오른쪽으로 올린다(시안: '홈페이지 공개하기'가 오른쪽 위 파란 단추).
@@ -739,21 +740,21 @@ export function HomepageScreen() {
     /* 새 배치 — 저장(보조) · 🌐 공개하기(파랑). 결제 전이면 공개하기만 두고 누르면 결제 안내 */
     if (studioPro) {
       if (!editable) return <div className={paneHeader.group}>
-        <button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} onClick={() => void payPromptRef.current()}><Globe size={15} aria-hidden /><span>공개하기</span></button>
+        <AppButton type="button" variant="primary" size="small" className={`${paneHeader.btn} ${paneHeader.primary}`} onClick={() => void payPromptRef.current()}><Globe size={15} aria-hidden /><span>공개하기</span></AppButton>
       </div>;
       const label = liveUpToDate ? "공개됨" : siteStatus === "published" ? "새 버전 공개" : siteStatus === "unpublished" ? "다시 공개" : "공개하기";
       return <div className={paneHeader.group}>
-        <button type="button" className={paneHeader.btn} aria-label={saveLabel} disabled={busy || !unsaved} data-done={!unsaved && action !== "saving" || undefined} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : unsaved ? <Save size={15} /> : <Check size={15} />}<span className={paneHeader.label}>{saveLabel}</span></button>
-        {publishedMenu(`${paneHeader.btn} ${paneHeader.primary}`) ?? <button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} disabled={busy} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : <Globe size={15} aria-hidden />}<span>{label}</span></button>}
+        <AppButton type="button" variant="secondary" size="small" className={paneHeader.btn} aria-label={saveLabel} disabled={busy || !unsaved} data-done={!unsaved && action !== "saving" || undefined} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : unsaved ? <Save size={15} /> : <Check size={15} />}<span className={paneHeader.label}>{saveLabel}</span></AppButton>
+        {publishedMenu(paneHeader.btn) ?? <AppButton type="button" variant="primary" size="small" className={`${paneHeader.btn} ${paneHeader.primary}`} disabled={busy} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : <Globe size={15} aria-hidden />}<span>{label}</span></AppButton>}
       </div>;
     }
     if (!kitEditing) return null;
     const label = liveUpToDate ? "공개됨" : siteStatus === "published" ? "새 버전 공개" : siteStatus === "unpublished" ? "다시 공개" : "공개하기";
     return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}>
       {previewSwitch}
-      <button type="button" className={paneHeader.btn} aria-label={saveLabel} disabled={busy || !unsaved} data-done={!unsaved && action !== "saving" || undefined} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : unsaved ? <Save size={15} /> : <Check size={15} />}<span className={paneHeader.label}>{saveLabel}</span></button>
+      <AppButton type="button" variant="secondary" size="small" className={paneHeader.btn} aria-label={saveLabel} disabled={busy || !unsaved} data-done={!unsaved && action !== "saving" || undefined} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : unsaved ? <Save size={15} /> : <Check size={15} />}<span className={paneHeader.label}>{saveLabel}</span></AppButton>
       {/* 처음 공개는 '홈페이지 공개하기' — 무엇을 공개하는지 머리줄에서도 읽히게(좁은 화면은 '공개하기'만) */}
-      {publishedMenu(`${paneHeader.btn} ${paneHeader.primary}`) ?? <button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} disabled={busy} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : <Rocket size={15} />}<span>{label === "공개하기" && <span className={paneHeader.longLabel}>홈페이지 </span>}{label}</span></button>}
+      {publishedMenu(paneHeader.btn) ?? <AppButton type="button" variant="primary" size="small" className={`${paneHeader.btn} ${paneHeader.primary}`} disabled={busy} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : <Rocket size={15} />}<span>{label === "공개하기" && <span className={paneHeader.longLabel}>홈페이지 </span>}{label}</span></AppButton>}
     </div>;
   }, [studioHeader, studioPro, editable, kitEditing, liveUpToDate, siteStatus, publishedPath, previewView, busy, action, unsaved, saveLabel]); // eslint-disable-line react-hooks/exhaustive-deps -- previewSwitch 는 previewView 로, publishedMenu 는 liveUpToDate·publishedPath·busy 로만 바뀐다
   useStudioHeaderActions(studioActions);
@@ -1023,11 +1024,11 @@ export function HomepageScreen() {
               ))}
             </ul>
           )}
-          <button type="button" className={styles.cta} onClick={() => { if (blocked.cta === "retry") window.location.reload(); else go(blockedHref(blocked.cta)); }}>
+          <AppButton type="button" variant="primary" className={styles.cta} onClick={() => { if (blocked.cta === "retry") window.location.reload(); else go(blockedHref(blocked.cta)); }}>
             {blocked.cta === "retry" ? "다시 시도" : blocked.cta === "pay" ? "결제하러 가기" : blocked.cta === "login" ? "로그인하기" : blocked.cta === "list" ? "내 사업으로" : screenPlanId ? "계획서 이어 쓰기" : "대화로 사업 시작하기"}
             {/* 다른 화면으로 가는 단추만 끝에 '>'(대표 규칙 2026-10-24) — 다시 시도는 이 화면에서 하는 일 */}
             {blocked.cta === "retry" ? null : <ChevronRight size={18} aria-hidden="true" />}
-          </button>
+          </AppButton>
         </div>
       )}
 
@@ -1052,17 +1053,17 @@ export function HomepageScreen() {
             </div>}
             <div className={styles.payActions}>
               {sample ? (
-                <a className={styles.cta} href="/plan/chat?new=1">내 사업으로 만들기<ChevronRight size={18} aria-hidden="true" /></a>
+                <AppButton as="a" variant="primary" className={styles.cta} href="/plan/chat?new=1">내 사업으로 만들기<ChevronRight size={18} aria-hidden="true" /></AppButton>
               ) : (
-                <button type="button" className={styles.cta} onClick={() => go(blockedHref("pay"))}>
+                <AppButton type="button" variant="primary" className={styles.cta} onClick={() => go(blockedHref("pay"))}>
                   {/* 화살표만 다음 줄로 떨어지지 않게 마지막 낱말과 붙인다(줄바꿈 없는 빈칸, 감사 r36) */}
                   {planPaid ? `결제하고 공개하기 · ${price.toLocaleString("ko-KR")}원` : "결제하기"}<ChevronRight size={18} aria-hidden="true" />
-                </button>
+                </AppButton>
               )}
               {/* 홈페이지는 나중에 해도 된다 — 결제 단추 하나뿐이라 개업 준비로 넘어갈 길이 없었다(여정 점검 2026-10-22) */}
-              {!sample && screenPlanId && <Link className={styles.ctaSecondary} href={launchHref(screenPlanId)} onClick={() => setActivePlan(screenPlanId)}>
+              {!sample && screenPlanId && <AppButton variant="text" className={styles.ctaSecondary} href={launchHref(screenPlanId)} onClick={() => setActivePlan(screenPlanId)}>
                 {journeyLabel("launch", !!screenPlan && readCoach(screenPlan.answers)?.stage === "operating")} 먼저<ChevronRight size={16} aria-hidden="true" />
-              </Link>}
+              </AppButton>}
             </div>
           </div>
           {/*
@@ -1138,8 +1139,8 @@ export function HomepageScreen() {
         <div className={styles.aiFillNotice} role="alert">
           <span>{saveTrouble === "login" ? LANDING_LOGIN_MESSAGE : "다른 화면에서 먼저 저장된 내용이 있어요. 최신 내용을 불러오거나, 지금 고친 내용으로 계속 고칠 수 있어요."}</span>
           {saveTrouble === "login"
-            ? <Link className={styles.troubleLink} href={blockedHref("login")}>다시 로그인하기</Link>
-            : <><button type="button" disabled={busy} onClick={() => void reloadLatest()}>최신 내용 불러오기</button><button type="button" onClick={() => setSaveTrouble(null)}>계속 고치기</button></>}
+            ? <AppButton variant="primary" size="small" className={styles.troubleLink} href={blockedHref("login")}>다시 로그인하기</AppButton>
+            : <><AppButton variant="secondary" size="small" type="button" disabled={busy} onClick={() => void reloadLatest()}>최신 내용 불러오기</AppButton><AppButton variant="text" size="small" type="button" onClick={() => setSaveTrouble(null)}>계속 고치기</AppButton></>}
         </div>
       )}
 
@@ -1147,8 +1148,8 @@ export function HomepageScreen() {
       {phase === "ready" && draft && editable && tokenShortage && tokenPayHref && (
         <p className={styles.aiFillNotice} role="status">
           <span>AI 수정 횟수를 다 써서 대화로 홈페이지를 고치지 못했어요. 충전한 뒤 대화에서 다시 말씀해 주세요.</span>
-          <button type="button" onClick={() => go(tokenPayHref)}>AI 수정 충전하기</button>
-          <button type="button" onClick={() => setTokenShortage(false)}>닫기</button>
+          <AppButton variant="primary" size="small" type="button" onClick={() => go(tokenPayHref)}>AI 수정 충전하기</AppButton>
+          <AppButton variant="text" size="small" type="button" onClick={() => setTokenShortage(false)}>닫기</AppButton>
         </p>
       )}
 
@@ -1156,10 +1157,10 @@ export function HomepageScreen() {
       {phase === "ready" && draft && editable && aiFillFailed && !aiFilling && projectId && site && (
         <p className={styles.aiFillNotice} role="status">
           <span>AI로 다듬지 못해 계획서 답을 그대로 넣었어요. 직접 고치거나 [다시 채우기]를 눌러 주세요.</span>
-          <button type="button" disabled={busy} onClick={() => {
+          <AppButton variant="secondary" size="small" type="button" disabled={busy} onClick={() => {
             if (landingDraftFingerprint(draft) !== landingDraftFingerprint(site.draft)) { setMessage("저장하지 않은 수정이 있어요. 먼저 저장한 뒤 다시 채워 주세요."); return; }
             void runAiFill(projectId, site.updatedAt, false);
-          }}>다시 채우기</button>
+          }}>다시 채우기</AppButton>
         </p>
       )}
 

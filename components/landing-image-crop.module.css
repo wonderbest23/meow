@@ -27,9 +27,7 @@
 .range input:disabled { cursor: default; opacity: .45; }
 .error { margin: 12px 0 0; color: #a72d34; font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .footer { display: flex; flex-shrink: 0; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid #e8ecf1; background: white; }
-.footer .original { margin-right: auto; padding: 8px 12px; font-weight: 500; }
-.footer .apply { background: #2e73e8; border-color: #2e73e8; color: #fff; }
-.footer .apply:hover { background: #205fcb; }
+.footer .original { margin-right: auto; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @keyframes enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 380px) { .header, .footer { padding: 10px 14px; }.body { padding: 10px 14px 14px; }.header h2 { font-size: 17px; }.ratioRow { gap: 8px; } }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ExternalLink, LoaderCircle, RefreshCw, Search } from "lucide-react";
+import { ExternalLink, RefreshCw, Search } from "lucide-react";
 import styles from "./MarketEvidencePanel.module.css";
 import { askConfirm } from "../../components/confirm-dialog";
+import { AppButton } from "../../components/app-button";
 
 /*
  * 공식 시장자료 자동검색 — 질문 화면의 관련 섹션(문제와 해결·시장 세그먼트·경쟁 분석)에 붙는다.
@@ -101,11 +102,11 @@ export default function MarketEvidencePanel({ planId, disabled }: { planId: stri
         </div>
         <div className={styles.actions}>
           {count > 0 && (
-            <button type="button" className={styles.ghost} onClick={() => setOpen((v) => !v)}>{open ? "접기" : "자료 보기"}</button>
+            <AppButton variant="secondary" size="small" onClick={() => setOpen((v) => !v)}>{open ? "접기" : "자료 보기"}</AppButton>
           )}
-          <button type="button" className={styles.primary} disabled={busy || disabled || !configured} onClick={() => void run()} title={!configured ? "운영용 OpenAI 연결이 필요합니다" : undefined}>
-            {busy ? <><LoaderCircle className={styles.spin} size={14} /> 검색 중 (최대 2분)</> : count ? <><RefreshCw size={14} /> 다시 검색</> : <><Search size={14} /> 공식자료 찾기</>}
-          </button>
+          <AppButton variant="primary" size="small" loading={busy} disabled={disabled || !configured} onClick={() => void run()} title={!configured ? "운영용 OpenAI 연결이 필요합니다" : undefined}>
+            {busy ? "검색 중 (최대 2분)" : count ? <><RefreshCw size={14} /> 다시 검색</> : <><Search size={14} /> 공식자료 찾기</>}
+          </AppButton>
         </div>
       </div>
 

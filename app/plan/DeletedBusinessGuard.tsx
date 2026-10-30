@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loadState, locallyDeletedPlanIds, planWasDeleted } from "../../lib/plan-builder/plan-store";
 import styles from "./DeletedBusinessGuard.module.css";
+import { AppButton } from "../../components/app-button";
 
 /* 화면으로 돌아올 때마다 서버에 묻지 않게 — 이 기기에서 지운 것은 바로 알고, 서버 확인은 이 간격마다 한 번 */
 const SERVER_CHECK_MS = 10_000;
@@ -59,6 +60,6 @@ export default function DeletedBusinessGuard() {
   return <dialog ref={dialog} className={styles.dialog} aria-labelledby="deleted-business-title" onCancel={event => { event.preventDefault(); router.replace("/plan"); }}>
     <h2 id="deleted-business-title">삭제된 사업이에요</h2>
     <p>잠시 뒤 내 사업 목록으로 옮겨 갈게요.</p>
-    <Link href="/plan" replace autoFocus>내 사업으로</Link>
+    <AppButton variant="primary" href="/plan" replace autoFocus>내 사업으로</AppButton>
   </dialog>;
 }

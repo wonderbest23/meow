@@ -17,6 +17,7 @@ import { useHomepageStatus } from "../use-homepage";
 import paneHeader from "./PaneHeaderActions.module.css";
 import { ChevronRight } from "lucide-react";
 import { StatusBadge, type StatusTone } from "../../../components/status-badge";
+import { AppButton } from "../../../components/app-button";
 
 /* 시작 방법 세 가지 — 확인 화면과 바꾸기 화면이 같은 이름을 쓴다 */
 const SETUP_CHOICES = {
@@ -149,10 +150,10 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   const headerNode = useMemo(() => {
     if (!studioHeader || !nextHref || !nextTitle) return null;
     return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}>
-      <a className={`${paneHeader.btn} ${paneHeader.primary}`} href={nextHref} onClick={event => {
+      <AppButton as="a" variant="primary" size="small" className={`${paneHeader.btn} ${paneHeader.primary}`} href={nextHref} onClick={event => {
         if (!studioNav || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
         event.preventDefault(); setActivePlan(plan.id); studioNav.push(nextHref);
-      }}><small>다음 단계</small>{nextTitle}<ChevronRight size={16} aria-hidden="true" /></a>
+      }}><small>다음 단계</small>{nextTitle}<ChevronRight size={16} aria-hidden="true" /></AppButton>
     </div>;
   }, [studioHeader, nextHref, nextTitle, studioNav, plan.id]);
   useStudioHeaderActions(headerNode);
@@ -167,7 +168,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
       <h2 ref={heading} tabIndex={-1}>{sample ? "준비 과정" : "이렇게 준비할게요"}</h2>
       <dl className={styles.confirmList}>{SETUP_KEYS.filter(key => key === "purpose" || state.purpose !== "ideas").map(key => <div key={key}><dt>{SETUP_SHORT[key]}</dt><dd>{sample && key === "purpose" ? "예시로 살펴보기" : setupLabel(key, state[key])}</dd></div>)}</dl>
       {/* 설명 글은 두지 않는다 — 단추 이름(바꾸기 · 이대로 시작하기)이 할 일을 말한다(r37 글 점검) */}
-      <div className={styles.stepActions}><button className={styles.secondary} disabled={busy} onClick={() => { setConfig(0); top(); }}>바꾸기</button><button className={styles.primary} disabled={busy} onClick={async () => { if ((await persist({ ...state, configured: true })).saved) { setConfig(null); setSelected(null); top(); } }}>{busy ? "저장 중…" : sample ? "준비 과정 둘러보기" : "이대로 시작하기"}</button></div>
+      <div className={styles.stepActions}><AppButton variant="secondary" className={styles.secondary} disabled={busy} onClick={() => { setConfig(0); top(); }}>바꾸기</AppButton><AppButton variant="primary" className={styles.primary} disabled={busy} onClick={async () => { if ((await persist({ ...state, configured: true })).saved) { setConfig(null); setSelected(null); top(); } }}>{busy ? "저장 중…" : sample ? "준비 과정 둘러보기" : "이대로 시작하기"}</AppButton></div>
     </div> : config !== null ? <div className={styles.setup}>
       <span className={styles.eyebrow}>시작 방법 {config + 1} / 3</span>
       <progress value={config + 1} max={3} aria-label="시작 방법 선택" />
@@ -175,11 +176,11 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
       <div className={styles.choices}>
         {SETUP_CHOICES[SETUP_KEYS[config]].map(([value, label]) => <button key={value} aria-pressed={value === state[SETUP_KEYS[config]]} onClick={() => setState({ ...state, [SETUP_KEYS[config]]: value })}>{label}</button>)}
       </div>
-      <div className={styles.stepActions}>{config > 0 && <button className={styles.secondary} onClick={() => { setConfig(config - 1); top(); }}>이전</button>}<button className={styles.primary} disabled={busy} onClick={async () => { if (config < 2 && state.purpose !== "ideas") { setConfig(config + 1); top(); } else if ((await persist({ ...state, configured: true })).saved) { setConfig(null); setSelected(null); top(); } }}>{config === 2 || state.purpose === "ideas" ? "내 과정 보기" : "다음"}</button></div>
+      <div className={styles.stepActions}>{config > 0 && <AppButton variant="secondary" className={styles.secondary} onClick={() => { setConfig(config - 1); top(); }}>이전</AppButton>}<AppButton variant="primary" className={styles.primary} disabled={busy} onClick={async () => { if (config < 2 && state.purpose !== "ideas") { setConfig(config + 1); top(); } else if ((await persist({ ...state, configured: true })).saved) { setConfig(null); setSelected(null); top(); } }}>{config === 2 || state.purpose === "ideas" ? "내 과정 보기" : "다음"}</AppButton></div>
     </div> : <>
       {readCoach(plan.answers)?.stage === "operating" && state.purpose === "launch" && <div className={styles.notice}>
         <p>이제 운영 중인 사업이에요. 시작할 때 남긴 기록을 유지하면서 운영 개선 과정으로 바꿀 수 있어요.</p>
-        <button className={styles.secondary} disabled={busy} onClick={() => void switchToImprovement()}>운영 개선으로 전환</button>
+        <AppButton variant="secondary" className={styles.secondary} disabled={busy} onClick={() => void switchToImprovement()}>운영 개선으로 전환</AppButton>
       </div>}
       <div className={styles.progressHeading}>{/* 바로 아래 단계 번호(2 / 10)와 같은 꼴이라 헷갈렸다 — 위는 마친 개수만(PC 점검 2026-10-24) */}<span>{done}개 마침{skipped ? ` · ${skipped}개 나중에` : ""}</span><button className={styles.textLink} onClick={() => { setConfig(0); top(); }}>진행 방식 변경</button></div>
       <progress value={done} max={steps.length} aria-label="실행 준비 완료" />
@@ -201,22 +202,22 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
           <h3>확인할 것</h3>
           <ul>{current.checks.map((item, index) => <li key={item}><label><input type="checkbox" checked={effectiveChecked.includes(`check:${index}`)} onChange={e => setChecked(e.target.checked ? [...effectiveChecked, `check:${index}`] : effectiveChecked.filter(id => id !== `check:${index}`))} /><span>{item}</span></label></li>)}</ul>
         </div> : null}
-        <details className={styles.material} key={current.id}><summary>{current.checklist ? "글로 복사하거나 고치기" : current.materialTitle}</summary><label className={styles.field}>직접 수정할 수 있어요<textarea aria-label="단계 자료 수정" rows={10} maxLength={20000} value={effectiveMaterial} onChange={e => setMaterial(e.target.value)} /></label><div className={styles.editActions}><button className={styles.secondary} onClick={async () => { try { await navigator.clipboard.writeText(effectiveMaterial); setMessage("내용을 복사했어요."); } catch { setMessage("복사하지 못했어요. 내용을 선택해 복사해 주세요."); } }}>내용 복사</button><button className={styles.secondary} onClick={() => setMaterial(current.material)}>현재 사업 정보로 초안 다시 채우기</button></div><small>저장된 정보로 구성한 초안이며, 미정 항목과 AI 제안은 확인 후 사용하세요.</small></details>
+        <details className={styles.material} key={current.id}><summary>{current.checklist ? "글로 복사하거나 고치기" : current.materialTitle}</summary><label className={styles.field}>직접 수정할 수 있어요<textarea aria-label="단계 자료 수정" rows={10} maxLength={20000} value={effectiveMaterial} onChange={e => setMaterial(e.target.value)} /></label><div className={styles.editActions}><AppButton variant="secondary" className={styles.secondary} onClick={async () => { try { await navigator.clipboard.writeText(effectiveMaterial); setMessage("내용을 복사했어요."); } catch { setMessage("복사하지 못했어요. 내용을 선택해 복사해 주세요."); } }}>내용 복사</AppButton><AppButton variant="secondary" className={styles.secondary} onClick={() => setMaterial(current.material)}>현재 사업 정보로 초안 다시 채우기</AppButton></div><small>저장된 정보로 구성한 초안이며, 미정 항목과 AI 제안은 확인 후 사용하세요.</small></details>
         <label className={styles.field}>메모 (선택)<textarea aria-label="실행 메모" rows={3} maxLength={10000} value={effectiveNote} onChange={e => setNote(e.target.value)} placeholder="정한 내용이나 실제로 확인한 내용을 남겨 주세요." /></label>
         {current.id === "workplace" && <details><summary>받은 견적 비교하기</summary><p>가격은 직접 받은 견적만 입력하세요. 부가세 포함 기준을 맞춰 비교하며, 적정 시세를 판정하지 않아요.</p>{(state.quotes.length ? state.quotes : [{ name: "", monthly: "", deposit: "", initial: "" }, { name: "", monthly: "", deposit: "", initial: "" }]).map((quote, index, quotes) => <div className={styles.quote} key={index}><h3>견적 {index + 1}</h3>{([['name', '업체 이름'], ['monthly', '월 비용 합계'], ['deposit', '보증금'], ['initial', '초기 비용']] as const).map(([key, label]) => <label className={styles.field} key={key}>{label}<input aria-label={`견적 ${index + 1} ${label}`} inputMode={key === "name" ? "text" : "numeric"} value={quote[key]} maxLength={key === "name" ? 100 : 20} placeholder={key === "name" ? "견적을 받은 업체" : "원 · 없으면 0"} onChange={e => { const raw = e.target.value.replace(/[^\d,억만천백원\s]/g, ""); const value = key === "name" ? e.target.value : /^[\d,]+$/.test(raw) ? raw.replace(/,/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ",") : raw; setState({ ...state, quotes: quotes.map((q, i) => i === index ? { ...q, [key]: value } : q) }); }} />{key !== "name" && <QuoteAmountNote value={quote[key]} />}</label>)}{quoteTotals(quote) ? <p>12개월 지출: {quoteTotals(quote)!.outflow.toLocaleString("ko-KR")}원<br />보증금 제외 비용: {quoteTotals(quote)!.fees.toLocaleString("ko-KR")}원</p> : <p>비용을 모두 입력하면 계산해요. 모르는 비용은 0원이 아니에요.</p>}</div>)}<small>월 비용이 12개월 동안 같다는 가정이며 보증금 회수 가능성은 별도 확인해야 해요.</small></details>}
-        {current.service === "website" && <div className={styles.services}><button className={styles.secondary} onClick={() => { setActivePlan(plan.id); router.push(homepageHref(plan.id)); }}>내 사업 홈페이지 열기</button><Link className={styles.secondary} href="/account/support?category=website" target="_blank" rel="noopener noreferrer" aria-label="디자인·개발 견적 문의 (새 탭)">디자인·개발 견적 문의</Link><small>고객센터에 필요한 내용을 남겨 주세요. 문의만으로 결제되지는 않아요.</small></div>}
+        {current.service === "website" && <div className={styles.services}><AppButton variant="secondary" className={styles.secondary} onClick={() => { setActivePlan(plan.id); router.push(homepageHref(plan.id)); }}>내 사업 홈페이지 열기</AppButton><AppButton variant="secondary" className={styles.secondary} href="/account/support?category=website" target="_blank" rel="noopener noreferrer" aria-label="디자인·개발 견적 문의 (새 탭)">디자인·개발 견적 문의</AppButton><small>고객센터에 필요한 내용을 남겨 주세요. 문의만으로 결제되지는 않아요.</small></div>}
         {current.links && <div className={styles.resources}>{current.links.map(link => <a href={link.url} target="_blank" rel="noopener noreferrer" key={link.url}>{link.title}</a>)}<small>공식 안내 확인: 2026. 9. 9. · 기관 화면에서 최신 내용을 확인해 주세요.</small></div>}
         {current.id === "marketing" && <MarketingKitPanel plan={plan} onSaved={onSaved} />}
         {current.id === "tax" && <details><summary>근처 세무사 찾아보기</summary><label className={styles.field}>희망 지역<input aria-label="세무사 희망 지역" maxLength={100} value={state.region} placeholder="예: 서울 마포구" onChange={e => setState({ ...state, region: e.target.value })} /></label>{state.region.trim() && <a className={styles.textLink} target="_blank" rel="noopener noreferrer" href={`https://map.naver.com/p/search/${encodeURIComponent(`${state.region.trim()} 세무사`)}`}>지도에서 직접 찾아보기</a>}<p>외부 검색이며 제휴·추천·예약 서비스가 아니에요.</p></details>}
         {current.caution && <p className={styles.caution}>{current.caution}</p>}
         <Link className={styles.textLink} href={businessChatHref(plan.id, aiPrompt)} onClick={async e => { e.preventDefault(); if (await saveStep(record?.status ?? "pending", false, true)) router.push(businessChatHref(plan.id, aiPrompt)); }}>이 내용으로 AI와 구체화하기</Link>
-        <div className={styles.stepActions}><button className={styles.secondary} disabled={busy} onClick={() => void saveStep("skipped", true)}>나중에 할게요</button><button className={styles.primary} disabled={busy} onClick={() => void saveStep("done", true)}>{busy ? "저장 중…" : "준비했어요 · 다음"}</button></div>
+        <div className={styles.stepActions}><AppButton variant="secondary" className={styles.secondary} disabled={busy} onClick={() => void saveStep("skipped", true)}>나중에 할게요</AppButton><AppButton variant="primary" className={styles.primary} disabled={busy} onClick={() => void saveStep("done", true)}>{busy ? "저장 중…" : "준비했어요 · 다음"}</AppButton></div>
         <button className={styles.textLink} disabled={busy} onClick={() => void saveStep("pending", false)}>진행 중으로 저장</button>
-      </> : <div className={styles.finish}><h2 ref={heading} tabIndex={-1}>{state.purpose === "ideas" ? "아이디어를 정리했어요" : "선택한 준비 과정을 확인했어요"}</h2><p>{skipped ? `${skipped}개는 나중에 하기로 남겼어요. 아래 과정에서 언제든 이어갈 수 있어요.` : "필요한 단계는 다시 열어 수정할 수 있어요."}</p><p>이 기록은 준비 상태이며, 실제 계약·등록·연결 완료를 대신하지 않아요.</p><Link className={styles.primary} href={businessChatHref(plan.id, "현재 사업의 다음 개선 방향을 함께 정하고 싶어요.")}>대화로 다음 방향 정하기<ChevronRight size={18} aria-hidden="true" /></Link></div>}
+      </> : <div className={styles.finish}><h2 ref={heading} tabIndex={-1}>{state.purpose === "ideas" ? "아이디어를 정리했어요" : "선택한 준비 과정을 확인했어요"}</h2><p>{skipped ? `${skipped}개는 나중에 하기로 남겼어요. 아래 과정에서 언제든 이어갈 수 있어요.` : "필요한 단계는 다시 열어 수정할 수 있어요."}</p><p>이 기록은 준비 상태이며, 실제 계약·등록·연결 완료를 대신하지 않아요.</p><AppButton variant="primary" className={styles.primary} href={businessChatHref(plan.id, "현재 사업의 다음 개선 방향을 함께 정하고 싶어요.")}>대화로 다음 방향 정하기<ChevronRight size={18} aria-hidden="true" /></AppButton></div>}
       <details><summary>전체 과정과 지난 기록</summary>{STEP_GROUPS.map(group => { const items = steps.filter(step => group.statuses.includes(stepStatus(state, step))).sort((a, b) => Number(stepStatus(state, b) === "review") - Number(stepStatus(state, a) === "review")); return items.length ? <section className={styles.stepGroup} key={group.title}><h3>{group.title} <span>{items.length}</span></h3><div className={styles.stepList}>{items.map(step => <button key={step.id} disabled={busy} onClick={() => void selectStep(step.id)}><span>{step.title}</span><StepStatus status={stepStatus(state, step)} /></button>)}</div></section> : null; })}</details>
     </>}
     {message && <p role="status">{message}</p>}
-    {syncFailed && <button className={styles.secondary} disabled={busy} onClick={() => void persist(state)}>서버 저장 다시 시도</button>}
+    {syncFailed && <AppButton variant="secondary" className={styles.secondary} disabled={busy} onClick={() => void persist(state)}>서버 저장 다시 시도</AppButton>}
   </div>;
 }
 

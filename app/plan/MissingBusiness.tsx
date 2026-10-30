@@ -7,6 +7,7 @@ import BusinessAppChrome from "./BusinessAppChrome";
 import styles from "./BusinessHub.module.css";
 import frame from "./chat/page.module.css";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../lib/plan-builder/missing-business";
+import { AppButton } from "../../components/app-button";
 
 /* 주소의 사업을 찾지 못했을 때 — 사업 관리·홈페이지 화면과 같은 말과 '내 사업으로' 길 하나(lib/plan-builder/missing-business.ts) */
 
@@ -19,8 +20,8 @@ export function MissingBusinessBody({ title = MISSING_BUSINESS_TITLE, detail = M
     <h2>{title}</h2>
     <p>{detail}</p>
     {/* 어디로 가는 단추인지 보이게 > 아이콘을 붙인다(대표 요청 2026-10-24) */}
-    {action ?? <Link className={styles.primary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></Link>}
-    {action ? <Link className={styles.secondary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></Link> : null}
+    {action ?? <AppButton variant="primary" className={styles.primary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton>}
+    {action ? <AppButton variant="secondary" className={styles.secondary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton> : null}
     {children}
   </section>;
 }

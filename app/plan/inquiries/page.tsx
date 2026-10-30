@@ -14,6 +14,7 @@ import { formatKoreanPhone } from "../../../lib/contact-links";
 import { homepageHref } from "../../../lib/plan-builder/journey";
 import { isSamplePlan, loadState } from "../../../lib/plan-builder/plan-store";
 import { AUTH_ERROR, markInquiryHandled, unansweredCount, useInquiries, type Inquiry } from "./use-inquiries";
+import { AppButton } from "../../../components/app-button";
 
 /** 받은 시각을 짧게 — 오늘이면 시:분, 아니면 월.일 */
 function shortTime(iso: string) {
@@ -69,17 +70,17 @@ export default function InquiriesPage() {
           </div>
           <button type="button" className={styles.refresh} onClick={() => refresh(true)} aria-label="문의 새로고침" title="새로고침"><RefreshCw size={16} /></button>
         </div>}
-        {error ? <p className={styles.notice} role="alert">{error} {error === AUTH_ERROR ? <Link className={styles.retry} href={`/account?next=${encodeURIComponent("/plan/inquiries")}`}>다시 로그인</Link> : <button type="button" className={styles.retry} onClick={() => refresh(true)}>다시 시도</button>}</p> : null}
+        {error ? <p className={styles.notice} role="alert">{error} {error === AUTH_ERROR ? <AppButton variant="text" size="small" className={styles.retry} href={`/account?next=${encodeURIComponent("/plan/inquiries")}`}>다시 로그인</AppButton> : <AppButton type="button" variant="text" size="small" className={styles.retry} onClick={() => refresh(true)}>다시 시도</AppButton>}</p> : null}
         {/* 불러오지 못했으면 '문의 없음'이라고 하지 않는다 — 있는 문의를 없다고 믿게 된다 */}
         {items === null ? null : shown.length === 0 ? <div className={styles.empty}>
           <Inbox size={28} aria-hidden />
           <strong>{filter === "open" && items?.length ? "답할 문의가 없어요" : "아직 들어온 문의가 없어요"}</strong>
           <p>홈페이지를 공개하면 여기로 모여요</p>
           {items.length === 0 && recentPlanId ? <div className={styles.emptyActions}>
-            <Link className={styles.emptyLink} href={homepageHref(recentPlanId)}>홈페이지 보기<ChevronRight size={18} aria-hidden="true" /></Link>
-            <Link className={styles.emptyLink} href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정<ChevronRight size={18} aria-hidden="true" /></Link>
+            <AppButton variant="primary" className={styles.emptyLink} href={homepageHref(recentPlanId)}>홈페이지 보기<ChevronRight size={18} aria-hidden="true" /></AppButton>
+            <AppButton variant="secondary" className={styles.emptyLink} href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정<ChevronRight size={18} aria-hidden="true" /></AppButton>
           </div> : null}
-          {items.length === 0 ? <button type="button" className={styles.emptyRefresh} onClick={() => refresh(true)}><RefreshCw size={14} aria-hidden /> 새로 확인</button> : null}
+          {items.length === 0 ? <AppButton type="button" variant="secondary" className={styles.emptyRefresh} onClick={() => refresh(true)}><RefreshCw size={14} aria-hidden /> 새로 확인</AppButton> : null}
         </div> : <ul className={styles.rows}>
           {shown.map(item => <li key={item.lead.id}>
             <button type="button" aria-current={item.lead.id === selected?.lead.id ? "true" : undefined} onClick={() => setSelectedId(item.lead.id)}>

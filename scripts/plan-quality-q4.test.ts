@@ -92,7 +92,7 @@ async function main() {
       const ui = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
       assert.ok(!ui.includes("coach && plan?.sectorSuggestion"));
       assert.ok(ui.includes('data?.code === "sector_check"') && ui.includes("installPlan(identity.plan)"));
-      assert.ok(ui.includes("{sectorCheckPrompt(sectorSuggestion)}") && ui.includes(">바꾸기</button>") && ui.includes(">그대로 둘게요</button>"));
+      assert.ok(ui.includes("{sectorCheckPrompt(sectorSuggestion)}") && ui.includes(">바꾸기</AppButton>") && ui.includes(">그대로 둘게요</AppButton>"));
       // 점검·재측정 스크립트도 확인에서 멈추지 않는다
       for (const script of ["../scripts/ui-audit/seed.mjs", "../scripts/plan-eval/run.mts", "../scripts/synthetic-e2e/drive.mts", "../scripts/synthetic-e2e/chat-personas.mts"]) {
         assert.ok(readFileSync(new URL(script, import.meta.url), "utf8").includes("sectorSuggestion"), script);

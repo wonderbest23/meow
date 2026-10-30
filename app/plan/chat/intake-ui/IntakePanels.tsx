@@ -21,6 +21,8 @@ import { ksicNameHint, ksicSectorLabel } from "../../../../lib/plan-builder/ksic
 import { parseWonAmount } from "../../../../lib/plan-builder/answer-number";
 import styles from "../intake.module.css";
 import { StatusBadge } from "../../../../components/status-badge";
+import { AppButton, type AppButtonSize, type AppButtonVariant } from "../../../../components/app-button";
+import theme from "../../../../components/workspace-theme.module.css";
 import { chatTextPreview, questionPromptText, unitCostRanges } from "./model";
 import type { QuestionSuggestions } from "./AnswerSuggestions";
 import { editExamples } from "../../../../lib/plan-builder/edit-examples";
@@ -213,7 +215,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
     {cardLabel && <p className={styles.questionCardLabel}>{cardLabel}</p>}
     {(!inChat || editing) && <div className={styles.questionMeta}>
       <span>{refining ? "선택 보완" : editing ? "답변 수정" : inChat ? "" : snapshot.coreComplete ? "선택 보완" : "기본 질문"}</span>
-      {editing && <button type="button" className={styles.textButton} onClick={onCancel}>{snapshot.coreComplete ? "마무리로 돌아가기" : "현재 질문으로"}</button>}
+      {editing && <AppButton type="button" variant="text" className={styles.textButton} onClick={onCancel}>{snapshot.coreComplete ? "마무리로 돌아가기" : "현재 질문으로"}</AppButton>}
     </div>}
     <h2 id="intake-question-heading" tabIndex={-1}>{showMention ? `${question.label}, 앞서 말한 내용으로 이어갈까요?` : showSuggested ? "이 업종으로 정리할까요?" : questionPromptText(question.prompt)}</h2>
     {question.hint && !showSuggested && !showMention && <p className={styles.questionHint}>{coach && numeric && question.unit === "원" && ladder.length > 0 ? "대략 고르면 가운데 값으로 계산해요. 정확히 알면 입력창에 적어 주세요." : question.hint}</p>}
@@ -224,8 +226,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         <blockquote>{mention.quote}</blockquote>
         <p>답변으로 쓸 내용: <strong>{mention.value}</strong></p>
         <div className={styles.suggestionActions}>
-          <button type="button" className={styles.primaryButton} disabled={disabled} onClick={() => send({ ...draft, text: mention.value, selected: [], unknown: false, dismissedMention: mention.key })}>이 내용 선택<Check size={17} aria-hidden="true" /></button>
-          <button type="button" className={styles.textButton} disabled={disabled} onClick={() => onChange({ ...draft, dismissedMention: mention.key })}>다르게 답하기</button>
+          <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={disabled} onClick={() => send({ ...draft, text: mention.value, selected: [], unknown: false, dismissedMention: mention.key })}>이 내용 선택<Check size={17} aria-hidden="true" /></AppButton>
+          <AppButton type="button" variant="text" className={styles.textButton} disabled={disabled} onClick={() => onChange({ ...draft, dismissedMention: mention.key })}>다르게 답하기</AppButton>
         </div>
       </div>}
       <div hidden={showMention}>
@@ -239,17 +241,17 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
           const recommended = index === 0 && (coach ? ksicShown.length > 0 && !draft.ksic : recommendFirst && !ksicSearchable(ksicQuery.trim()));
           return <button key={item.code} type="button" className={styles.ksicChip} data-recommended={recommended || undefined} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{recommended && <StatusBadge tone="info" className={styles.ksicBadge}>추천</StatusBadge>}{item.name}{ksicNameHint(item.code) && <small className={styles.ksicHint}> ({ksicNameHint(item.code)})</small>}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>;
         })}</div>
-        {recommendFirst && <button className={styles.textButton} type="button" disabled={disabled} aria-expanded="false" aria-controls="intake-industry-options" onClick={() => setManualIndustry(true)}><ListFilter size={16} aria-hidden="true" />목록에 없으면 직접 선택하기</button>}
+        {recommendFirst && <AppButton variant="text" className={styles.textButton} type="button" disabled={disabled} aria-expanded="false" aria-controls="intake-industry-options" onClick={() => setManualIndustry(true)}><ListFilter size={16} aria-hidden="true" />목록에 없으면 직접 선택하기</AppButton>}
       </div>}
       {suggestionCard && <div className={styles.industrySuggestion} role="group" aria-label="추천 업종">
         <p className={styles.suggestionReason}>입력하신 사업 내용을 보면 이 업종에 가까워 보여요. 맞는지 확인해 주세요.</p>
         <div className={styles.suggestedIndustry}><CheckCircle2 size={23} aria-hidden="true" /><strong>{suggested.label}</strong></div>
         <div className={styles.suggestionActions}>
-          <button className={styles.primaryButton} type="button" disabled={disabled} aria-pressed={draft.selected.includes(suggested.value)} onClick={() => send({ ...draft, custom: false, selected: [suggested.value], unknown: false, ksic: undefined })}>이 업종 선택<Check size={17} aria-hidden="true" /></button>
-          <button className={styles.textButton} type="button" disabled={disabled} aria-expanded="false" aria-controls="intake-industry-options" onClick={() => setManualIndustry(true)}><ListFilter size={16} aria-hidden="true" />직접 선택하기</button>
+          <AppButton variant="primary" className={styles.primaryButton} type="button" disabled={disabled} aria-pressed={draft.selected.includes(suggested.value)} onClick={() => send({ ...draft, custom: false, selected: [suggested.value], unknown: false, ksic: undefined })}>이 업종 선택<Check size={17} aria-hidden="true" /></AppButton>
+          <AppButton variant="text" className={styles.textButton} type="button" disabled={disabled} aria-expanded="false" aria-controls="intake-industry-options" onClick={() => setManualIndustry(true)}><ListFilter size={16} aria-hidden="true" />직접 선택하기</AppButton>
         </div>
       </div>}
-      {suggested && manualIndustry && <button type="button" className={styles.textButton} disabled={disabled} onClick={() => setManualIndustry(false)}>추천 업종 보기</button>}
+      {suggested && manualIndustry && <AppButton type="button" variant="text" className={styles.textButton} disabled={disabled} onClick={() => setManualIndustry(false)}>추천 업종 보기</AppButton>}
       {choice && !showSuggested && unknownFit && <p className={styles.fitNote}>{resourceFitLine(unknownFit)}</p>}
       {choice && !showSuggested && groups.map((group, index) => revealed(index) && <fieldset key={group.name ?? index} id={question.id === "industry" ? "intake-industry-options" : undefined} className={styles.options} data-step={groups.length > 1 ? index + 1 : undefined}>
         <legend className={groups.length > 1 && group.name ? styles.stepLegend : styles.srOnly}>{groups.length > 1 && group.name ? groupTitle(group.name) : question.label}</legend>
@@ -294,7 +296,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         {customPeriod && <div id="intake-period-range" className={styles.dateRange}>
           <label><span>시작일</span><input type="date" value={periodStart} max={periodEnd || undefined} disabled={disabled} onChange={event => setPeriodStart(event.target.value)} /></label>
           <label><span>종료일</span><input type="date" value={periodEnd} min={periodStart || undefined} disabled={disabled} onChange={event => setPeriodEnd(event.target.value)} /></label>
-          <button type="button" className={styles.secondaryButton} disabled={disabled || !customPeriodValid} onClick={() => commit(`${periodStart} / ${periodEnd}`)}>{inChat ? "기간 선택" : "이 기간으로 저장"}<Check size={17} aria-hidden="true" /></button>
+          <AppButton type="button" variant="secondary" className={styles.secondaryButton} disabled={disabled || !customPeriodValid} onClick={() => commit(`${periodStart} / ${periodEnd}`)}>{inChat ? "기간 선택" : "이 기간으로 저장"}<Check size={17} aria-hidden="true" /></AppButton>
         </div>}
       </div>}
       {inChat && <button type="button" className={styles.unknownChoice} aria-pressed={!!draft.unknown} disabled={disabled} onClick={() => (draft.unknown ? onChange : send)({ ...draft, text: "", custom: false, selected: [], unknown: !draft.unknown, ksic: undefined })}><strong>{coach ? "잘 모르겠어요" : "아직 정하지 않았어요"}</strong></button>}
@@ -309,8 +311,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         <p className={styles.fieldHint} id={hintId}>{question.kind === "number" ? `단위: ${question.unit || "숫자"}${question.period ? ` · ${question.period}` : ""}` : `${draft.text.length.toLocaleString("ko-KR")} / 1,200자`}</p>
       </div>}
       <div className={styles.formActions}>
-        {!inChat && <button className={styles.secondaryButton} type="button" disabled={disabled} onClick={() => onAnswer(null, true, question.id)}>아직 정하지 않았어요</button>}
-        {!inChat && <button className={styles.primaryButton} type="submit" disabled={disabled || !valid}>{editing ? "답변 수정" : "답변 저장"}<ArrowRight size={18} aria-hidden="true" /></button>}
+        {!inChat && <AppButton variant="secondary" className={styles.secondaryButton} type="button" disabled={disabled} onClick={() => onAnswer(null, true, question.id)}>아직 정하지 않았어요</AppButton>}
+        {!inChat && <AppButton variant="primary" className={styles.primaryButton} type="submit" disabled={disabled || !valid}>{editing ? "답변 수정" : "답변 저장"}<ArrowRight size={18} aria-hidden="true" /></AppButton>}
       </div>
       </div>
     </form>
@@ -409,7 +411,7 @@ function NumberQuick({ question, draft, presets, disabled, staging, onChange, on
       <button type="button" className={styles.stepButton} aria-label={`${step}${unit} 줄이기`} disabled={disabled || (current ?? 0) <= 0} onClick={() => setValue((current ?? 0) - stepFor(Math.max(0, (current ?? 0) - 1), unit))}>−</button>
       <label className={styles.stepValue}><span className={styles.srOnly}>{question.label}</span><input type="text" inputMode="decimal" autoComplete="off" maxLength={12} placeholder="0" value={numericText} disabled={disabled} onChange={event => onChange({ ...draft, unknown: false, text: event.target.value.replace(/[^\d.]/g, "") })} /><span>{unit}{question.period ? ` / ${question.period}` : ""}</span></label>
       <button type="button" className={styles.stepButton} aria-label={`${step}${unit} 늘리기`} disabled={disabled || (current ?? 0) >= max} onClick={() => setValue((current ?? 0) + step)}>+</button>
-      {!staging && <button type="button" className={styles.primaryButton} disabled={disabled || current === null || current > max} onClick={() => current !== null && onCommit(numberAnswer(current, unit))}>이 값으로 저장</button>}
+      {!staging && <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={disabled || current === null || current > max} onClick={() => current !== null && onCommit(numberAnswer(current, unit))}>이 값으로 저장</AppButton>}
     </div>
   </div>;
 }
@@ -428,7 +430,7 @@ function CostPriceHelper({ disabled, onCommit }: { disabled: boolean; onCommit: 
     <div className={styles.chipRow} role="group" aria-label="원가 비율">{COST_RATIO_PRESETS.map(value => <button key={value} type="button" className={styles.chip} aria-pressed={ratio === value} data-selected={ratio === value || undefined} disabled={disabled} onClick={() => setRatio(value)}>원가 {value}%</button>)}</div>
     {result && <div className={styles.costHelperResult}>
       <p>제안 판매가 <strong>{formatWon(result.price)}</strong> · 1개 팔 때마다 원가를 빼고 {formatWon(result.margin)}이 남아요 (원가 {ratio}% 기준).</p>
-      <button type="button" className={styles.secondaryButton} disabled={disabled} onClick={() => cost && onCommit(formatWon(result.price), cost)}>이 가격으로 입력<Check size={17} aria-hidden="true" /></button>
+      <AppButton type="button" variant="secondary" className={styles.secondaryButton} disabled={disabled} onClick={() => cost && onCommit(formatWon(result.price), cost)}>이 가격으로 입력<Check size={17} aria-hidden="true" /></AppButton>
     </div>}
   </details>;
 }
@@ -466,7 +468,7 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
     {!range && ranges.length > 0 && <div className={styles.chipRow} role="group" aria-label="금액 범위">{ranges.map((item, index) => <button key={item.label} type="button" className={styles.chip} disabled={disabled} onClick={() => pick(index)}>{item.label}</button>)}</div>}
     {!range && !keypad && onRange && <div className={styles.chipRow}><button type="button" className={styles.chip} disabled={disabled} onClick={() => openKeypad(null)}>{exactLabel}</button></div>}
     {range && <div className={styles.chipStep} role="group" aria-label={`${range.label} 안에서 고르기`}>
-      <p className={styles.stepLegend}>{range.label}<button type="button" className={styles.textButton} disabled={disabled} onClick={() => { setRangeIndex(null); setKeypad(false); }}>범위 다시 고르기</button></p>
+      <p className={styles.stepLegend}>{range.label}<AppButton type="button" variant="text" className={styles.textButton} disabled={disabled} onClick={() => { setRangeIndex(null); setKeypad(false); }}>범위 다시 고르기</AppButton></p>
       <div className={styles.chipRow}>
         {range.min !== null && range.min > 0 && <button type="button" className={styles.chip} disabled={disabled} onClick={() => onCommit(wonAnswer(range.min!))}>적게 잡아 {wonLabel(range.min)}</button>}
         {range.max !== null && <button type="button" className={styles.chip} disabled={disabled} onClick={() => onCommit(wonAnswer(range.max!))}>많게 잡아 {wonLabel(range.max)}</button>}
@@ -483,7 +485,7 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
         </div>
       </div>
       <p className={styles.keypadPreview}>{amount !== null ? `= ${formatWon(amount)}${question.period ? ` / ${question.period}` : ""}` : "숫자만 입력해 주세요"}</p>
-      <button type="button" className={styles.secondaryButton} disabled={disabled || amount === null} onClick={() => { if (amount === null) return; if (onExact) { onExact(amount); setKeypad(false); } else onCommit(wonAnswer(amount)); }}>{staging ? "금액 선택" : onExact ? "이 금액으로 적기" : "이 금액으로 저장"}<Check size={17} aria-hidden="true" /></button>
+      <AppButton type="button" variant="secondary" className={styles.secondaryButton} disabled={disabled || amount === null} onClick={() => { if (amount === null) return; if (onExact) { onExact(amount); setKeypad(false); } else onCommit(wonAnswer(amount)); }}>{staging ? "금액 선택" : onExact ? "이 금액으로 적기" : "이 금액으로 저장"}<Check size={17} aria-hidden="true" /></AppButton>
     </div>}
   </div>;
 }
@@ -588,7 +590,7 @@ export function ConversationText({ text }: { text: string }) {
   if (!preview) return <p>{text}</p>;
   return <div className={styles.conversationText}>
     <p>{expanded ? text : preview}</p>
-    <button type="button" className={styles.textButton} aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? "접기" : "전체 내용 보기"}</button>
+    <AppButton type="button" variant="text" className={styles.textButton} aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? "접기" : "전체 내용 보기"}</AppButton>
   </div>;
 }
 
@@ -694,7 +696,7 @@ export function AnswerHistory({ snapshot, drafts, onEdit, onKeepAsMemo, readOnly
   const orphaned = draftIds.filter(id => !snapshot.questions.some(question => question.id === id) && !["business", "industry"].includes(id));
   const questions = snapshot.questions.filter(question => snapshot.intake.answers[question.id] || (question.fieldKey && snapshot.coach.fields.some(field => field.key === question.fieldKey && field.basis === "user")) || draftIds.includes(question.id));
   if (!questions.length && !orphaned.length) return null;
-  return <>{orphaned.length > 0 && <section className={styles.recoveredDrafts} aria-labelledby="intake-recovered-heading"><h3 id="intake-recovered-heading">이전 질문에 입력한 내용</h3>{orphaned.map(id => <div key={id}><strong>{drafts[id].label || "이전 질문 답변"}</strong><p>{drafts[id].text || drafts[id].selected.join(", ") || "빈 답변"}</p><button type="button" className={styles.textButton} onClick={() => onKeepAsMemo(id)}>자유 메모로 가져오기</button></div>)}</section>}{questions.length > 0 && <details className={styles.history}><summary>이전 답변 <span>{questions.length}</span></summary><ul>{questions.map(question => {
+  return <>{orphaned.length > 0 && <section className={styles.recoveredDrafts} aria-labelledby="intake-recovered-heading"><h3 id="intake-recovered-heading">이전 질문에 입력한 내용</h3>{orphaned.map(id => <div key={id}><strong>{drafts[id].label || "이전 질문 답변"}</strong><p>{drafts[id].text || drafts[id].selected.join(", ") || "빈 답변"}</p><AppButton type="button" variant="text" className={styles.textButton} onClick={() => onKeepAsMemo(id)}>자유 메모로 가져오기</AppButton></div>)}</section>}{questions.length > 0 && <details className={styles.history}><summary>이전 답변 <span>{questions.length}</span></summary><ul>{questions.map(question => {
     const answer = snapshot.intake.answers[question.id];
     const labelled = answer && answer.status !== "unknown" ? Array.isArray(answer.value) ? answer.value.map(item => question.options?.find(option => option.value === item)?.label ?? item).join(", ") : question.options?.find(option => option.value === answer.value)?.label ?? (summaryAnswerText(question, answer.value, snapshot.candidateIdeas) || answerText(answer.value)) : "";
     /* 업종은 고른 세부 업종(화초 및 식물 소매업)을 앞에 — 큰 분류만 보이면 다른 걸 고른 줄 안다 */
@@ -726,8 +728,8 @@ export function ExtractionReview({ snapshot, disabled, onCommand }: { snapshot: 
       <details className={styles.disclosure}><summary>메모 원문 보기</summary><blockquote>{plainText(candidate.quote)}</blockquote></details>
     </div>
     <div className={styles.formActions}>
-      <button type="button" className={styles.secondaryButton} disabled={disabled} onClick={() => onCommand({ action: "confirm-extraction", rejectIds: [candidate.id] })}><X size={17} aria-hidden="true" />반영하지 않기</button>
-      <button type="button" className={styles.primaryButton} disabled={disabled || conflict.requiresOverwrite && !approved} onClick={() => onCommand({ action: "confirm-extraction", candidateIds: [candidate.id], overwriteIds: conflict.requiresOverwrite ? [candidate.id] : [] })}><Check size={17} aria-hidden="true" />이 내용 반영</button>
+      <AppButton type="button" variant="secondary" className={styles.secondaryButton} disabled={disabled} onClick={() => onCommand({ action: "confirm-extraction", rejectIds: [candidate.id] })}><X size={17} aria-hidden="true" />반영하지 않기</AppButton>
+      <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={disabled || conflict.requiresOverwrite && !approved} onClick={() => onCommand({ action: "confirm-extraction", candidateIds: [candidate.id], overwriteIds: conflict.requiresOverwrite ? [candidate.id] : [] })}><Check size={17} aria-hidden="true" />이 내용 반영</AppButton>
     </div>
   </section>;
 }
@@ -736,7 +738,7 @@ export function SavedNotes({ snapshot, disabled, onExtract }: { snapshot: Intake
   const labels = { queued: "정리 대기", processing: "정리 중", review: "확인 필요", stored: "보관됨", failed: "정리 실패" };
   const notes = snapshot.intake.notes;
   if (!notes.length) return <p className={styles.muted}>저장한 메모가 없습니다.</p>;
-  return <section className={styles.notes} aria-labelledby="intake-notes-heading"><div className={styles.sectionHeading}><h3 id="intake-notes-heading">저장한 메모</h3>{notes.some(note => ["failed", "queued"].includes(note.status)) && <button type="button" className={styles.textButton} disabled={disabled} onClick={onExtract}>메모 정리</button>}</div><ul>{[...notes].reverse().map(note => <li key={note.id}><div className={styles.noteMeta}><span data-failed={note.status === "failed"}>{labels[note.status]}</span><time dateTime={note.at}>{new Date(note.at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</time></div><p>{note.text}</p>{note.status === "failed" && <small>메모 원문은 저장되어 있습니다.</small>}</li>)}</ul></section>;
+  return <section className={styles.notes} aria-labelledby="intake-notes-heading"><div className={styles.sectionHeading}><h3 id="intake-notes-heading">저장한 메모</h3>{notes.some(note => ["failed", "queued"].includes(note.status)) && <AppButton type="button" variant="text" className={styles.textButton} disabled={disabled} onClick={onExtract}>메모 정리</AppButton>}</div><ul>{[...notes].reverse().map(note => <li key={note.id}><div className={styles.noteMeta}><span data-failed={note.status === "failed"}>{labels[note.status]}</span><time dateTime={note.at}>{new Date(note.at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</time></div><p>{note.text}</p>{note.status === "failed" && <small>메모 원문은 저장되어 있습니다.</small>}</li>)}</ul></section>;
 }
 
 // 요약 칸의 사업 구조 이름 — '고객·지불자'·'시장 구조' 같은 말 대신 쉬운 말로(여정 점검 2026-10-23). 저장 값과 문서 쪽 이름(STRUCTURE_LABELS)은 그대로다
@@ -855,7 +857,7 @@ export function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
  * 계획서를 다시 쓰는 버튼 하나. 횟수·안내는 누른 뒤 확인창에서만 보여 준다 —
  * 버튼 옆에 설명을 늘어놓으면 헷갈린다는 소유자 피드백(2026-10-07).
  */
-export function RewriteConfirm({ snapshot, disabled, label = "계획서에 반영하기", className, onConfirm }: { snapshot: IntakeSnapshot; disabled: boolean; label?: string; className?: string; onConfirm: () => void }) {
+export function RewriteConfirm({ snapshot, disabled, label = "계획서에 반영하기", variant = "primary", size = "default", className, onConfirm }: { snapshot: IntakeSnapshot; disabled: boolean; label?: string; variant?: AppButtonVariant; size?: AppButtonSize; className?: string; onConfirm: () => void }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
@@ -864,13 +866,13 @@ export function RewriteConfirm({ snapshot, disabled, label = "계획서에 반�
     return () => window.removeEventListener("keydown", close);
   }, [open]);
   return <>
-    <button type="button" className={className ?? styles.primaryButton} disabled={disabled} onClick={() => setOpen(true)} data-rewrite-open><FileText size={18} aria-hidden="true" />{label}</button>
-    {open && createPortal(<div className={styles.confirmBackdrop} onClick={() => setOpen(false)}>
+    <AppButton variant={variant} size={size} className={className} disabled={disabled} onClick={() => setOpen(true)} data-rewrite-open><FileText size={18} aria-hidden="true" />{label}</AppButton>
+    {open && createPortal(<div className={`${theme.tokens} ${styles.confirmBackdrop}`} onClick={() => setOpen(false)}>
       <div className={styles.confirmBox} role="dialog" aria-modal="true" aria-labelledby="rewrite-confirm-title" data-rewrite-confirm onClick={event => event.stopPropagation()}>
         <h3 id="rewrite-confirm-title">바뀐 내용으로 다시 쓸까요?</h3>
         <RewriteCost snapshot={snapshot} />
         <p>다 쓸 때까지 지금 계획서는 그대로 남아 있어요.</p>
-        <div className={styles.confirmActions}><button type="button" onClick={() => setOpen(false)}>취소</button><button type="button" autoFocus onClick={() => { setOpen(false); onConfirm(); }}>반영하기</button></div>
+        <div className={styles.confirmActions}><AppButton variant="secondary" onClick={() => setOpen(false)}>취소</AppButton><AppButton variant="primary" autoFocus onClick={() => { setOpen(false); onConfirm(); }}>반영하기</AppButton></div>
       </div>
     </div>, document.body)}
   </>;
@@ -905,16 +907,16 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     : "사업계획서 문서는 언제든 다시 열 수 있어요.";
   const reapply = step === "prepare" && snapshot.hasDocuments && snapshot.documentStatus === "stale";
   // 바뀐 내용은 없고 아직 안 쓴 항목만 남았으면(예전 무료 체험으로 앞 2개만 있음, 작성 중 실패) 남은 항목만 이어서 쓴다 — 다시 생성 횟수를 쓰지 않는다
-  if (step === "prepare" && snapshot.hasDocuments && !reapply && snapshot.missingSections) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />남은 {snapshot.missingSections}개 항목 이어서 작성하기</button>}</div>;
+  if (step === "prepare" && snapshot.hasDocuments && !reapply && snapshot.missingSections) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />남은 {snapshot.missingSections}개 항목 이어서 작성하기</AppButton>}</div>;
   if (minimal && !jobActive && (step === "prepare" && !snapshot.hasDocuments || step === "open")) return <div className={styles.resultAction} data-step={step}>
-    {step === "prepare" ? <button type="button" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />사업계획서 만들기</>}</button>
-      : <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 열기</Link>}
+    {step === "prepare" ? <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />사업계획서 만들기</>}</AppButton>
+      : <AppButton variant="primary" className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 열기</AppButton>}
     {step === "prepare" && <small className={styles.nextStepHint} role={preparing ? "status" : undefined}>{preparing ? "잠시만요. 결제 화면을 여는 중이에요." : payNote ?? "결제하면 바로 작성을 시작해요. 몇 분 걸려요."}</small>}
   </div>;
   // 계획서가 이미 있으면 단계 표시·설명·이전 계획서 링크 없이 버튼 하나만(확인창에서 안내).
   if (step === "prepare" && snapshot.hasDocuments) {
     if (reflect === "none" && !jobActive) return null;
-    return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <RewriteConfirm snapshot={snapshot} disabled={locked} onConfirm={onPrepare} className={reflect === "link" ? styles.textButton : undefined} />}</div>;
+    return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <RewriteConfirm snapshot={snapshot} disabled={locked} onConfirm={onPrepare} variant={reflect === "link" ? "text" : "primary"} />}</div>;
   }
   return <div className={styles.nextStep} data-active data-step={step}>
     <ol className={styles.stepper} aria-label="진행 단계">
@@ -922,9 +924,9 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
       <li data-state={step === "prepare" ? "current" : step === "open" ? "done" : "todo"}>{step === "open" ? <Check size={13} aria-hidden="true" /> : <span>2</span>}사업계획서 문서 작성</li>
     </ol>
     {jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <div className={styles.nextStepRow}>
-      {step === "design" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onDesign}>사업 방향 정리하기</button>}
-      {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "계획서에 반영하기" : "사업계획서 문서 작성하기"}</>}</button>}
-      {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 문서 열기</Link>}
+      {step === "design" && <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={locked} onClick={onDesign}>사업 방향 정리하기</AppButton>}
+      {step === "prepare" && <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "계획서에 반영하기" : "사업계획서 문서 작성하기"}</>}</AppButton>}
+      {step === "open" && <AppButton variant="primary" className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 문서 열기</AppButton>}
       {secondary}
     </div>}
     {!jobActive && reapply && <RewriteCost snapshot={snapshot} />}
@@ -964,11 +966,11 @@ export function BusinessIdentityHero({ snapshot, disabled, onName, compact = fal
         })}
       </div>
       {custom === null
-        ? <button type="button" className={styles.textButton} disabled={disabled} onClick={() => setCustom(identity.names.some(item => item.name === current) ? "" : current)}><PencilLine size={15} aria-hidden="true" />직접 정하기</button>
+        ? <AppButton type="button" variant="text" className={styles.textButton} disabled={disabled} onClick={() => setCustom(identity.names.some(item => item.name === current) ? "" : current)}><PencilLine size={15} aria-hidden="true" />직접 정하기</AppButton>
         : <form className={styles.identityCustom} onSubmit={submitCustom}>
             <input aria-label="사업 이름 직접 입력" maxLength={40} value={custom} autoFocus onChange={event => setCustom(event.target.value)} placeholder="예: 새벽커피" />
-            <button type="submit" className={styles.secondaryButton} disabled={disabled || !custom.trim()}>이 이름으로</button>
-            <button type="button" className={styles.textButton} onClick={() => setCustom(null)}>취소</button>
+            <AppButton type="submit" variant="secondary" className={styles.secondaryButton} disabled={disabled || !custom.trim()}>이 이름으로</AppButton>
+            <AppButton type="button" variant="text" className={styles.textButton} onClick={() => setCustom(null)}>취소</AppButton>
           </form>}
       <small className={styles.identityNote}>지금 이름: <b>{current}</b> · 고른 이름은 앞으로 만드는 계획서에 들어가요. 실제로 쓰기 전에 키프리스(kipris.or.kr)에서 같은 상표가 있는지 확인해 주세요.</small>
     </div>}
@@ -1002,7 +1004,7 @@ export function DesignResult({ snapshot, disabled, onName }: { snapshot: IntakeS
       <p className={styles.resultLabel}>지금 가게 이름</p>
       {onName ? <form className={styles.identityCustom} onSubmit={event => { event.preventDefault(); if (shopName && shopName !== current) { onName(shopName); setCustom(null); } }}>
           <input aria-label="지금 가게 이름" maxLength={40} value={custom ?? current} onChange={event => setCustom(event.target.value)} placeholder="간판에 적힌 이름 (예: 망원 아침빵집)" />
-          <button type="submit" className={styles.secondaryButton} disabled={disabled || !shopName || shopName === current}>이 이름으로</button>
+          <AppButton type="submit" variant="secondary" className={styles.secondaryButton} disabled={disabled || !shopName || shopName === current}>이 이름으로</AppButton>
         </form> : <h2 className={styles.resultName}>{businessDisplayName(current)}</h2>}
       <small className={styles.identityNote}>계획서와 홈페이지에 이 이름이 들어가요.</small>
       {onName && <div className={styles.resultNames} role="group" aria-label="추천 이름">
@@ -1032,8 +1034,8 @@ export function DesignResult({ snapshot, disabled, onName }: { snapshot: IntakeS
           </div>
         : <form className={styles.identityCustom} onSubmit={submitCustom}>
             <input aria-label="사업 이름 직접 입력" maxLength={40} value={custom} autoFocus onChange={event => setCustom(event.target.value)} placeholder="예: 새벽반찬" />
-            <button type="submit" className={styles.secondaryButton} disabled={disabled || !custom.trim()}>이 이름으로</button>
-            <button type="button" className={styles.textButton} onClick={() => setCustom(null)}>취소</button>
+            <AppButton type="submit" variant="secondary" className={styles.secondaryButton} disabled={disabled || !custom.trim()}>이 이름으로</AppButton>
+            <AppButton type="button" variant="text" className={styles.textButton} onClick={() => setCustom(null)}>취소</AppButton>
           </form>)}
     </div>
     <div className={styles.resultBlock}>

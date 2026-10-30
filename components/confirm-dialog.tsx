@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import styles from "./confirm-dialog.module.css";
+import theme from "./workspace-theme.module.css";
+import { AppButton } from "./app-button";
 
 /*
  * 확인창 — window.confirm / alert 대신 쓴다.
@@ -36,7 +38,7 @@ function ConfirmSheet({ options, onDone }: { options: ConfirmOptions; onDone: (o
   }, []);
   const finish = (ok: boolean) => onDone(ok, ok ? field.current?.value : undefined);
   const cancelLabel = options.cancelLabel === undefined ? "취소" : options.cancelLabel;
-  return <dialog ref={ref} role="dialog" aria-modal="true" className={styles.dialog} data-wide={options.wide || undefined} aria-labelledby={options.title ? "confirm-dialog-title" : undefined} aria-describedby={[options.message ? "confirm-dialog-message" : "", options.list?.length ? "confirm-dialog-list" : ""].filter(Boolean).join(" ") || undefined}
+  return <dialog ref={ref} role="dialog" aria-modal="true" className={`${theme.tokens} ${styles.dialog}`} data-wide={options.wide || undefined} aria-labelledby={options.title ? "confirm-dialog-title" : undefined} aria-describedby={[options.message ? "confirm-dialog-message" : "", options.list?.length ? "confirm-dialog-list" : ""].filter(Boolean).join(" ") || undefined}
     onCancel={event => { event.preventDefault(); finish(false); }}
     onClick={event => { if (event.target === event.currentTarget) finish(false); }}>
     <form method="dialog" onSubmit={event => { event.preventDefault(); finish(true); }}>
@@ -48,8 +50,8 @@ function ConfirmSheet({ options, onDone }: { options: ConfirmOptions; onDone: (o
       </div>
       {/* 단추 글이 길면(반 칸에 7글자 남짓) 360px 에서 두 줄로 꺾였다 — 좁은 화면에서는 세로로 쌓는다(휴대폰 점검 2026-10-24) */}
       <div className={styles.actions} data-single={cancelLabel ? undefined : ""} data-stack={cancelLabel && Math.max(cancelLabel.length, (options.confirmLabel ?? "확인").length) > 6 ? "" : undefined}>
-        {cancelLabel && <button type="button" className={styles.cancel} autoFocus={!options.input} onClick={() => finish(false)}>{cancelLabel}</button>}
-        <button type="submit" className={styles.confirm} data-danger={options.danger || undefined} autoFocus={!cancelLabel && !options.input}>{options.confirmLabel ?? "확인"}</button>
+        {cancelLabel && <AppButton variant="secondary" autoFocus={!options.input} onClick={() => finish(false)}>{cancelLabel}</AppButton>}
+        <AppButton type="submit" variant={options.danger ? "danger" : "primary"} className={styles.confirm} autoFocus={!cancelLabel && !options.input}>{options.confirmLabel ?? "확인"}</AppButton>
       </div>
     </form>
   </dialog>;

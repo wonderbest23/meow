@@ -20,6 +20,7 @@ import { DocLink } from "../../../components/doc-sheet";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed } from "../../../lib/plan-builder/plan-store";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import { fetchWithTimeout, koreanText } from "../../../lib/client/user-error";
+import { AppButton } from "../../../components/app-button";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -255,8 +256,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>결제 상태를 확인하지 못했어요</h1>
           <p className={styles.desc}>이미 결제했을 수도 있어요. 잠시 후 다시 확인해 주세요. 결제는 아직 진행되지 않았어요.</p>
-          <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 확인하기</button>
-          <Link href={planHref} className={styles.back}>← 사업계획서로 돌아가기</Link>
+          <AppButton type="button" variant="primary" className={styles.primary} onClick={() => window.location.reload()}>다시 확인하기</AppButton>
+          <AppButton href={planHref} variant="text" className={styles.back}>← 사업계획서로 돌아가기</AppButton>
         </div>
       </div>
     );
@@ -269,8 +270,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><LogIn size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>로그인이 필요해요</h1>
           <p className={styles.desc}>로그인하면 이 화면으로 돌아와요.</p>
-          <Link href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} className={`${styles.primary} ${styles.nav}`}>로그인 · 회원가입<ChevronRight size={18} aria-hidden="true" /></Link>
-          <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
+          <AppButton href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} variant="primary" className={`${styles.primary} ${styles.nav}`}>로그인 · 회원가입<ChevronRight size={18} aria-hidden="true" /></AppButton>
+          <AppButton href={laterHref} variant="text" className={styles.back}>← 나중에 하기</AppButton>
         </div>
       </div>
     );
@@ -288,7 +289,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>{MISSING_BUSINESS_TITLE}</h1>
           <p className={styles.desc}>{MISSING_BUSINESS_DETAIL} 결제는 진행되지 않았어요.</p>
-          <Link href="/plan" className={`${styles.primary} ${styles.nav}`}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></Link>
+          <AppButton href="/plan" variant="primary" className={`${styles.primary} ${styles.nav}`}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton>
         </div>
       </div>
     );
@@ -315,8 +316,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>홈페이지는 사업계획서와 함께 열어요</h1>
           <p className={styles.desc}>홈페이지 단독 {HOMEPAGE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원은 이 사업의 사업계획서를 결제한 분 전용이에요. 사업계획서 + 홈페이지를 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 함께 결제해 주세요.</p>
-          <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`} className={`${styles.primary} ${styles.nav}`}>사업계획서 + 홈페이지 결제하기<ChevronRight size={18} aria-hidden="true" /></Link>
-          <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
+          <AppButton href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`} variant="primary" className={`${styles.primary} ${styles.nav}`}>사업계획서 + 홈페이지 결제하기<ChevronRight size={18} aria-hidden="true" /></AppButton>
+          <AppButton href={laterHref} variant="text" className={styles.back}>← 나중에 하기</AppButton>
         </div>
       </div>
     );
@@ -329,7 +330,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>살 주소를 먼저 골라 주세요</h1>
           <p className={styles.desc}>홈페이지 화면 아래 ‘내 도메인 연결’에서 원하는 주소(.com·.kr·.co.kr)가 비어 있는지 확인한 뒤 결제할 수 있어요.</p>
-          <Link href={laterHref} className={`${styles.primary} ${styles.nav}`}>홈페이지로 돌아가기<ChevronRight size={18} aria-hidden="true" /></Link>
+          <AppButton href={laterHref} variant="primary" className={`${styles.primary} ${styles.nav}`}>홈페이지로 돌아가기<ChevronRight size={18} aria-hidden="true" /></AppButton>
         </div>
       </div>
     );
@@ -342,8 +343,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.icon} aria-hidden="true"><CheckCircle2 size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>{bundleBlocked && bothOwned ? "사업계획서와 홈페이지가 모두 열려 있어요" : bundleBlocked ? "묶음 대신 남은 상품만 결제해 주세요" : isHomepage ? "홈페이지는 이미 열려 있어요" : "이 사업계획서는 이미 열려 있어요"}</h1>
           <p className={styles.desc}>{bundleBlocked && bothOwned ? "따로 결제할 것이 없어요." : bundleBlocked ? `${info?.paid ? "사업계획서" : "홈페이지"}는 이미 열려 있어요. ${info?.paid ? "홈페이지" : "사업계획서"}만 따로 결제하면 돼요.` : isHomepage ? "결제가 확인돼서 사진·글·버튼을 고치고 공개할 수 있어요." : "결제가 확인돼서 전체 항목을 쓸 수 있어요."}</p>
-          {bundleBlocked && !bothOwned && planId && <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, ...(info?.paid ? { product: "homepage" } : {}) }).toString()}`} className={`${styles.primary} ${styles.nav}`}>{info?.paid ? "홈페이지만 결제하기" : "사업계획서만 결제하기"}<ChevronRight size={18} aria-hidden="true" /></Link>}
-          <Link href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={bundleBlocked ? styles.back : `${styles.primary} ${styles.nav}`}>{bundleBlocked ? "← " : null}{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}{bundleBlocked ? null : <ChevronRight size={18} aria-hidden="true" />}</Link>
+          {bundleBlocked && !bothOwned && planId && <AppButton href={`/plan/pay?${new URLSearchParams({ planId, planType, ...(info?.paid ? { product: "homepage" } : {}) }).toString()}`} variant="primary" className={`${styles.primary} ${styles.nav}`}>{info?.paid ? "홈페이지만 결제하기" : "사업계획서만 결제하기"}<ChevronRight size={18} aria-hidden="true" /></AppButton>}
+          <AppButton variant={bundleBlocked ? "text" : "primary"} href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={bundleBlocked ? styles.back : `${styles.primary} ${styles.nav}`}>{bundleBlocked ? "← " : null}{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}{bundleBlocked ? null : <ChevronRight size={18} aria-hidden="true" />}</AppButton>
         </div>
       </div>
     );
@@ -388,7 +389,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           /* 홈페이지 상품도 결제 여부를 못 받았으면 알린다 — 예전엔 가격만 보이고 실패가 드러나지 않았다(점검 r41-A) */
           <div className={styles.price} role="alert">
             <span>결제 정보를 확인하지 못했어요. 연결을 확인해 주세요.</span>
-            <button type="button" className={styles.retry} onClick={() => setInfoAttempt((n) => n + 1)}>다시 확인하기</button>
+            <AppButton type="button" variant="secondary" className={styles.retry} onClick={() => setInfoAttempt((n) => n + 1)}>다시 확인하기</AppButton>
           </div>
         ) : isHomepage ? (
           <div className={styles.price}>
@@ -468,7 +469,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <>
             {/* 결제를 아직 열지 않았을 때(출시 전·결제 설정 전) — '잠시 후 다시'는 기다리면 될 것처럼 읽혔다(감사 2026-10-23) */}
             <p className={styles.notice} role="status">{notSoldInApp ? "이 상품은 앱에서 결제할 수 없어요." : <>아직 결제를 열기 전이에요 · <Link href="/account/support">고객센터</Link></>}</p>
-            <Link href={laterHref} className={`${styles.primary} ${styles.nav} ${styles.blockedBack}`}>돌아가기<ChevronRight size={18} aria-hidden="true" /></Link>
+            <AppButton href={laterHref} variant="primary" className={`${styles.primary} ${styles.nav} ${styles.blockedBack}`}>돌아가기<ChevronRight size={18} aria-hidden="true" /></AppButton>
           </>
         ) : (
           <div className={styles.payBar} data-pay-bar>
@@ -476,14 +477,15 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
             {message ? <p ref={errorRef} tabIndex={-1} className={styles.payBarError} role="alert">{message}{paymentsClosed ? <> <Link href="/account/support">고객센터</Link></> : null}</p> : null}
             <div className={styles.payBarInner}>
               <p className={styles.payBarNote}>{agreed ? "약관과 결제 내용을 확인했어요" : `필수 항목 ${agreedCount}/${AGREEMENT_KEYS.length} 동의`}</p>
-              <button
+              <AppButton
                 type="button"
+                variant="primary"
                 className={styles.payBarButton}
                 onClick={!agreed ? askAgree : native ? startAppPayment : startPayment}
                 disabled={phase === "preparing" || phase === "opening" || (agreed && !native && registrantCheck !== null && !registrantCheck.ok)}
               >
                 {phase === "preparing" ? <><Spinner /> 결제 준비 중…</> : phase === "opening" ? <><Spinner /> 결제창을 여는 중…</> : <>{payAmount !== null ? `${payAmount.toLocaleString("ko-KR")}원 ` : ""}{native ? "결제하기" : "카드로 결제하기"}</>}
-              </button>
+              </AppButton>
             </div>
           </div>
         )}
@@ -496,7 +498,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
             {product === "domain" ? "결제가 끝나면 홈페이지 화면에서 가지고 있는 도메인의 www 주소를 넣고 ‘연결 시작’을 눌러요(홈페이지를 먼저 공개해야 해요). 도메인을 산 곳에서 안내대로 한 줄(CNAME)만 설정하면 보통 몇 분 안에 연결돼요."
               : "결제가 끝나면 적어 주신 명의자 이름으로 도메인을 등록해요(.com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일). 진행 상황은 홈페이지 화면에서 볼 수 있어요."}
           </p> : null}
-          <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
+          <AppButton href={laterHref} variant="text" className={styles.back}>← 나중에 하기</AppButton>
         </>}
       </div>
     </div>

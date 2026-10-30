@@ -25,27 +25,22 @@
 .root .form .cell:first-child .input { border-radius: 6px 6px 0 0; }
 .root .form .cell:last-child .input { border-radius: 0 0 6px 6px; }
 .root .form .cell:only-child .input { border-radius: 6px; }
-.root .form .input:focus { position: relative; z-index: 1; border-color: #246bd1; }
+.root .form .input:focus { position: relative; z-index: 1; border-color: var(--app-primary); }
 .root .form .input::placeholder { color: #6b7684; } /* 흰 바탕에서 4.5:1 이상(예전 #bdbdbd 1.9:1) */
 .root .form .input:is(:disabled, [readonly]) { opacity: .65; } /* 보내는 동안은 readOnly(초점 유지) — 모양은 disabled와 같게 */
-.root .form .consents input { width: 16px; height: 16px; margin: 0; flex-shrink: 0; accent-color: #246bd1; }
+.root .form .consents input { width: 16px; height: 16px; margin: 0; flex-shrink: 0; accent-color: var(--app-primary); }
 .root .form .fieldError { margin: 6px 0 0; color: #b42318; font-size: .8125rem; }
 
 .root .form .consents { display: grid; gap: 8px; margin: 16px 0 0; padding: 14px; border: 1px solid #ededed; border-radius: 6px; background: #fafafa; }
 .root .form .consents label { display: flex; align-items: center; gap: 8px; color: #424242; font-size: .8125rem; line-height: 1.5; }
-.root .form .consents a { color: #246bd1; text-decoration: underline; }
+.root .form .consents a { color: var(--app-primary); text-decoration: underline; }
 
 .root .form > p[role] { margin: 16px 0 0; }
 
-.root .form .primary { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 48px; margin: 20px 0 0; padding: 0 16px; border: 0; border-radius: 6px; background: #246bd1; color: #fff; font-size: 1rem; font-weight: 600; line-height: 1; cursor: pointer; transition: background .15s, opacity .15s; }
-.root .form .primary:hover:not(:disabled):not([aria-disabled=true]) { background: #1b5bb7; }
-.root .form .primary:disabled { opacity: .45; cursor: default; }
-.root .form[aria-busy=true] .primary { opacity: 1; background: #edf4ff; color: #246bd1; }
+.root .form .primary { width: 100%; margin: 20px 0 0; }
 
 /* 누르는 자리 44px — 늘어난 12px 중 위쪽 6px는 바깥 여백에서 빼서 글자 자리는 그대로 */
 .root .form .links { display: flex; justify-content: center; gap: 20px; margin: 12px 0 -6px; }
-.root .form .links button { min-height: 44px; padding: 0; border: 0; background: transparent; color: #424242; font-size: .8125rem; cursor: pointer; }
-.root .form .links button:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 /* SNS 간편 로그인 — 원형 아이콘 48 */
 .root .form .sns { display: grid; justify-items: center; gap: 16px; margin: 32px 0 0; }
@@ -79,7 +74,7 @@
 /* 보이는 모양은 그대로, 누르는 자리는 44px 높이로(예전 15px) */
 .root .form .footer a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 6px; color: #6b7684; font-size: .75rem; text-decoration: none; }
 .root .form .footer a:hover { text-decoration: underline; }
-.root .form .consents .consentAll { padding-bottom: 10px; border-bottom: 1px solid #e5e8eb; color: #191f28; font-size: .875rem; font-weight: 700; }
+.root .form .consents .consentAll { padding-bottom: 10px; border-bottom: 1px solid var(--app-line); color: var(--app-text); font-size: .875rem; font-weight: 700; }
 
 /* 약관 동의 — 공용 동의 목록(동그란 체크·(필수)·›). 예전 회색 상자·밑줄 링크 대신 */
 .root .form .consentList { margin: 18px 0 4px; }
@@ -89,6 +84,6 @@
 .root .form .reveal { position: absolute; top: 50%; right: 3px; z-index: 2; display: grid; place-items: center; width: 44px; height: 44px; margin: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; cursor: pointer; transform: translateY(-50%); }
 .root .form .cell + .cell.passwordCell .reveal { margin-top: -1px; }
 .root .form .reveal:hover { color: #4e5968; }
-.root .form .reveal[aria-pressed="true"] { color: #246bd1; }
-.root .form .reveal:focus-visible { outline: 2px solid #246bd1; outline-offset: -2px; }
+.root .form .reveal[aria-pressed="true"] { color: var(--app-primary); }
+.root .form .reveal:focus-visible { outline: 2px solid var(--app-primary); outline-offset: -2px; }
 .root .form .reveal svg { display: block !important; width: 20px; height: 20px; }

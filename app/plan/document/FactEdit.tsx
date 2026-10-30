@@ -23,6 +23,7 @@ function factShown(fact: { question: IntakeQuestion; value: IntakeValue; display
 }
 import intake from "../chat/intake.module.css";
 import styles from "./DocumentWorkspace.module.css";
+import { AppButton } from "../../../components/app-button";
 
 const HEADERS = { "x-business-intake": "2" };
 
@@ -210,7 +211,7 @@ export function FactCard({ edit, onPick, onRetry }: { edit: ReturnType<typeof us
     <strong>고칠 수 있는 곳만 표시했어요</strong>
     {!edit.snapshot && !edit.error && <p role="status">사업 정보를 불러오고 있어요…</p>}
     {edit.facts.length > 0 && <div className={styles.factChips}>{edit.facts.map(fact => <button key={fact.questionId} type="button" data-fact-chip={fact.questionId} disabled={edit.busy} onClick={event => onPick(fact.questionId, event.currentTarget.getBoundingClientRect())}><small>{fact.label}</small>{factShown(fact)}</button>)}</div>}
-    {edit.error && <p className={styles.factError} role="alert">{edit.error.message} {edit.error.href && <Link href={edit.error.href}>{edit.error.label}</Link>}{edit.error.retry && onRetry && <button type="button" className={styles.factRetry} disabled={edit.busy} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />다시 시도</button>}</p>}
+    {edit.error && <p className={styles.factError} role="alert">{edit.error.message} {edit.error.href && <Link href={edit.error.href}>{edit.error.label}</Link>}{edit.error.retry && onRetry && <AppButton type="button" variant="secondary" size="small" className={styles.factRetry} disabled={edit.busy} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />다시 시도</AppButton>}</p>}
   </section>;
 }
 
@@ -277,6 +278,6 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
         onChange={(answer, submit) => { setDraft(answer); if (submit) void save(answer); }}
         onAnswer={value => void save({ ...emptyAnswer(), text: String(value ?? "") })} onCancel={onClose} />
     </div>}
-    <footer><small>{amount ? "노란 금액은 바로 바뀌어요. 표와 계산된 숫자는 \"계획서에 반영하기\"로 맞춰요" : "바꾼 내용은 \"계획서에 반영하기\"를 누르면 계획서에 들어가요"}</small><button type="button" className={styles.primary} disabled={edit.busy || (amount ? won === null : !draftSubmission(fact.question, draft))} onClick={() => void (amount ? saveAmount() : save(draft))}>{checking ? "맞아요" : "바꾸기"}</button></footer>
+    <footer><small>{amount ? "노란 금액은 바로 바뀌어요. 표와 계산된 숫자는 \"계획서에 반영하기\"로 맞춰요" : "바꾼 내용은 \"계획서에 반영하기\"를 누르면 계획서에 들어가요"}</small><AppButton type="button" variant="primary" size="small" className={styles.primary} disabled={edit.busy || (amount ? won === null : !draftSubmission(fact.question, draft))} onClick={() => void (amount ? saveAmount() : save(draft))}>{checking ? "맞아요" : "바꾸기"}</AppButton></footer>
   </div>;
 }

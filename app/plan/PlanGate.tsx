@@ -5,6 +5,7 @@ import { activePlan } from "../../lib/plan-builder/plan-store";
 import Link from "next/link";
 import { KeyRound, Lock } from "lucide-react";
 import styles from "./PlanGate.module.css";
+import { AppButton } from "../../components/app-button";
 
 export interface PlanGateProps {
   reason: "login_required" | "payment_required";
@@ -40,12 +41,12 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
         <p className={styles.desc}>
           작성한 내용을 계정에 저장해 어느 기기에서든 이어서 쓸 수 있어요.
         </p>
-        <Link href={backTo} className={styles.primary}>
+        <AppButton href={backTo} variant="primary" className={styles.primary}>
           로그인 · 회원가입
-        </Link>
-        <Link href="/plan" className={styles.secondary}>
+        </AppButton>
+        <AppButton href="/plan" variant="secondary" className={styles.secondary}>
           완성 예시 보기
-        </Link>
+        </AppButton>
       </section>
     );
   }
@@ -72,16 +73,17 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
           {price.toLocaleString("ko-KR")}원 <span>이 문서 1부 · 1회 결제</span>
         </div>
       ) : null}
-      <Link
+      <AppButton
         href={(() => {
           const p = typeof window === "undefined" ? null : activePlan();
           const q = p ? `?planId=${encodeURIComponent(p.id)}&planType=${encodeURIComponent(p.planType)}` : "";
           return `/plan/pay${q}`;
         })()}
+        variant="primary"
         className={styles.primary}
       >
         이 문서 결제하고 계속하기
-      </Link>
+      </AppButton>
       <p className={styles.note}>
         지금까지 답한 내용은 그대로 남아 있어요. 결제 후 이 화면으로 돌아오면 이어서 작성돼요.
       </p>

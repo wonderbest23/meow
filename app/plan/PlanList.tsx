@@ -24,6 +24,7 @@ import mine from "./MyBusinessList.module.css";
 import { StatusBadge } from "../../components/status-badge";
 import { askConfirm } from "../../components/confirm-dialog";
 import { useHomepageStatus } from "./use-homepage";
+import { AppButton } from "../../components/app-button";
 
 /*
  * 내 사업 목록 하나. 예전엔 '사업 기획'(/plan/planning, 대화로 만든 사업만)과 '내 사업'(/plan, 전체)이
@@ -82,7 +83,7 @@ export default function PlanList() {
   return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="plans" backHref="/">
     {!state ? <PlanLoading fill variant="compact" note="내 사업을 불러오고 있어요" onRetry={() => retry.current()} /> : <div className={styles.scroll}><div className={styles.content} data-empty-list={plans.length === 0 && !error ? "" : undefined}>
         <p role="status" className={mine.status} data-empty={notice ? undefined : ""}>{notice}</p>
-        {plans.length === 0 && error ? <div role="alert" className={styles.error}><p>사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><button type="button" className={styles.primary} onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</button></div> : plans.length === 0 ? (
+        {plans.length === 0 && error ? <div role="alert" className={styles.error}><p>사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><AppButton type="button" variant="primary" className={styles.primary} onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</AppButton></div> : plans.length === 0 ? (
           /* 로그인 여부를 아직 모르면 자리만 잡아 둔다 — '사업이 없어요'를 먼저 보였다가 '로그인하면…'으로 바뀌며 화면이 한 번 흔들렸다(점검 r38) */
           !authChecked ? <section className={styles.empty} aria-hidden="true" /> : <BusinessEmptyState heading="h2" kind={signedIn === false ? "loggedOut" : "plans"} />
         ) : <>
@@ -92,7 +93,7 @@ export default function PlanList() {
           */}
           <div className={mine.list}>
             {plans.map(p => { const status=businessHubState(p); const introduction = (status.coach && currentBusinessDesign(status.coach)?.startingPlan.scope) || status.coach?.business.description || ""; return <article key={p.id} className={mine.row}>
-              {editing===p.id ? <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><input aria-label="사업 이름" aria-describedby={`rename-hint-${p.id}`} value={name} maxLength={100} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><button className={styles.primary}>저장</button><button type="button" onClick={()=>cancelRename(p.id)}>취소</button>
+              {editing===p.id ? <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><input aria-label="사업 이름" aria-describedby={`rename-hint-${p.id}`} value={name} maxLength={100} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><AppButton type="submit" variant="primary" className={styles.primary}>저장</AppButton><AppButton variant="text" onClick={()=>cancelRename(p.id)}>취소</AppButton>
                 {/* 열면 기존 이름을 골라 둔다(바로 새로 쓰게). 100자에 닿으면 더 써지지 않는 이유를 알린다. 홈페이지 이름은 따로 바뀐다 */}
                 <p id={`rename-hint-${p.id}`} className={mine.renameHint} aria-live="polite">{name.length >= 100 ? "이름은 100자까지 쓸 수 있어요. " : ""}홈페이지 이름은 홈페이지 화면에서 따로 바꿔요.</p></form> : <Link className={mine.open} href={openHref(p)} data-plan-open={p.id} aria-label={`${planDisplayName(p)} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "내 사업 화면 열기"}`}>
                 <strong className={mine.title}>{planDisplayName(p)}</strong>

@@ -16,6 +16,7 @@ import PlanLoading from "../PlanLoading";
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
+import { AppButton } from "../../../components/app-button";
 
 /*
  * /plan/me — 마이페이지.
@@ -238,7 +239,7 @@ export default function PlanMePage() {
       <section className={styles.card}>
         <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>내 정보</h2>
-          <button type="button" className={styles.logout} disabled={logoutBusy} onClick={() => void logout()}>{logoutBusy ? "로그아웃 중…" : "로그아웃"}</button>
+          <AppButton type="button" variant="secondary" className={styles.logout} disabled={logoutBusy} onClick={() => void logout()}>{logoutBusy ? "로그아웃 중…" : "로그아웃"}</AppButton>
         </div>
         <dl className={styles.rows}>
           <div className={styles.row}>
@@ -257,7 +258,7 @@ export default function PlanMePage() {
         <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>내 사업</h2>
           {/* 사업이 없으면 볼 목록도 없다 — 빈 목록으로 가는 단추를 두지 않는다(PC 점검 2026-10-24) */}
-          {(myPlans.length > 0 || plansStale) && <Link href="/plan" className={styles.cardAction}>내 사업 보기<ChevronRight size={18} aria-hidden="true" /></Link>}
+          {(myPlans.length > 0 || plansStale) && <AppButton href="/plan" variant="secondary" size="small" className={styles.cardAction}>내 사업 보기<ChevronRight size={18} aria-hidden="true" /></AppButton>}
         </div>
         {myPlans.length ? (
           <dl className={styles.rows}>
@@ -269,7 +270,7 @@ export default function PlanMePage() {
             ))}
           </dl>
         ) : (
-          plansStale ? <p className={styles.empty} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <div className={styles.emptyPlans}><p className={styles.empty}>아직 시작한 사업이 없어요.</p><Link href="/plan/chat?new=1" className={`${styles.cardAction} ${styles.emptyAction}`}>새 대화로 시작하기<ChevronRight size={18} aria-hidden="true" /></Link></div>
+          plansStale ? <p className={styles.empty} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <div className={styles.emptyPlans}><p className={styles.empty}>아직 시작한 사업이 없어요.</p><AppButton href="/plan/chat?new=1" variant="secondary" className={`${styles.cardAction} ${styles.emptyAction}`}>새 대화로 시작하기<ChevronRight size={18} aria-hidden="true" /></AppButton></div>
         )}
       </section>
 
@@ -310,9 +311,9 @@ export default function PlanMePage() {
                         </>
                       ) : item.status === "confirming" ? (
                         <>
-                          <button type="button" className={styles.refundBtn} disabled={recheckBusy === item.orderId} onClick={() => void recheck(item.orderId)}>
+                          <AppButton type="button" variant="secondary" size="small" className={styles.refundBtn} disabled={recheckBusy === item.orderId} onClick={() => void recheck(item.orderId)}>
                             {recheckBusy === item.orderId ? "확인 중…" : "결제 다시 확인"}
-                          </button>
+                          </AppButton>
                           {recheckMessage[item.orderId] ? <small style={{ display: "block", marginTop: 4, color: "var(--text-soft, #667085)" }}>{recheckMessage[item.orderId]}</small> : null}
                         </>
                       ) : item.status !== "done" ? (
@@ -324,9 +325,9 @@ export default function PlanMePage() {
                         /* 환불 상태를 못 읽었으면 '환불 요청'을 다시 보이지 않는다(이미 접수했을 수 있다) */
                         <small style={{ color: "var(--text-soft, #667085)" }}>환불 상태를 확인하지 못했어요</small>
                       ) : (
-                        <button type="button" className={styles.refundBtn} onClick={() => { setRefundFor(refundFor === item.orderId ? null : item.orderId); setRefundReason(""); setRefundMessage(""); }}>
+                        <AppButton type="button" variant="secondary" size="small" className={styles.refundBtn} onClick={() => { setRefundFor(refundFor === item.orderId ? null : item.orderId); setRefundReason(""); setRefundMessage(""); }}>
                           환불 요청
-                        </button>
+                        </AppButton>
                       )}
                     </td>
                   </tr>
@@ -343,10 +344,10 @@ export default function PlanMePage() {
                             maxLength={1000}
                           />
                           <div>
-                            <button type="button" className={styles.refundSubmit} disabled={refundBusy || refundReason.trim().length < 5} onClick={() => void submitRefund(item.orderId)}>
+                            <AppButton type="button" variant="primary" size="small" className={styles.refundSubmit} disabled={refundBusy || refundReason.trim().length < 5} onClick={() => void submitRefund(item.orderId)}>
                               {refundBusy ? "접수 중…" : "환불 요청 접수"}
-                            </button>
-                            <button type="button" className={styles.refundCancel} onClick={() => setRefundFor(null)}>닫기</button>
+                            </AppButton>
+                            <AppButton type="button" variant="secondary" size="small" className={styles.refundCancel} onClick={() => setRefundFor(null)}>닫기</AppButton>
                           </div>
                         </div>
                       </td>
@@ -372,9 +373,9 @@ export default function PlanMePage() {
               계정과 작성한 사업·문서가 모두 지워져요. 공개한 홈페이지도 함께 지워져 그 주소로 더는 열리지 않고,
               연결한 내 도메인도 끊어져요. 결제·환불 기록은 법령상 보존 의무가 있어 사람과 연결되지 않는 형태로만 남아요.
             </p>
-            <button ref={deleteOpener} type="button" className={styles.dangerBtn} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>
+            <AppButton ref={deleteOpener} type="button" variant="secondary" className={styles.dangerBtn} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>
               탈퇴 진행하기
-            </button>
+            </AppButton>
           </>
         ) : (
           <div className={styles.deleteForm}>
@@ -397,15 +398,16 @@ export default function PlanMePage() {
             />
             {deleteMessage && <p id="delete-error" className={styles.deleteError} role="alert">{deleteMessage}</p>}
             <div>
-              <button
+              <AppButton
                 type="button"
+                variant="danger"
                 className={styles.dangerBtn}
                 disabled={deleteBusy || deleteEmail.trim().length < (account.email ? 5 : NO_EMAIL_CONFIRM.length)}
                 onClick={() => void deleteAccount()}
               >
                 {deleteBusy ? "처리 중…" : "탈퇴하기"}
-              </button>
-              <button type="button" className={styles.refundCancel} onClick={() => { setShowDelete(false); window.requestAnimationFrame(() => deleteOpener.current?.focus()); }}>취소</button>
+              </AppButton>
+              <AppButton type="button" variant="secondary" className={styles.refundCancel} onClick={() => { setShowDelete(false); window.requestAnimationFrame(() => deleteOpener.current?.focus()); }}>취소</AppButton>
             </div>
           </div>
         )}

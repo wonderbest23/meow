@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, ChevronRight, RefreshCw, X } from "lucide-react";
 import { generationEta, type GenerationProgress } from "../../lib/plan-builder/generation-progress";
 import styles from "./GenerationProgress.module.css";
+import { AppButton } from "../../components/app-button";
 
 export type GenerationState = GenerationProgress & { runStatus: string | null };
 // "complete" here means the run ended with sections still missing (the route only asks while done < total): a section failed twice and was skipped.
@@ -186,8 +187,8 @@ export function GenerationDialog({ planId, open, state, onClose }: { planId: str
       </li>)}
     </ol>
     <footer>
-      <button type="button" className={styles.secondary} onClick={onClose}>{finished ? "닫기" : "닫고 기다리기"}</button>
-      <Link className={styles.primary} href={`/plan/document?planId=${encodeURIComponent(planId)}`} aria-disabled={!done} onClick={event => { if (!done) event.preventDefault(); }}>{finished ? "사업계획서 열기" : "작성된 부분 보기"}<ChevronRight size={18} aria-hidden="true" /></Link>
+      <AppButton type="button" variant="secondary" className={styles.secondary} onClick={onClose}>{finished ? "닫기" : "닫고 기다리기"}</AppButton>
+      <AppButton variant="primary" className={styles.primary} href={`/plan/document?planId=${encodeURIComponent(planId)}`} aria-disabled={!done} onClick={event => { if (!done) event.preventDefault(); }}>{finished ? "사업계획서 열기" : "작성된 부분 보기"}<ChevronRight size={18} aria-hidden="true" /></AppButton>
     </footer>
   </dialog>;
 }
@@ -237,8 +238,8 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
     {waiting.length > 0 && <p className={styles.cardWaiting}>{stalled ? "남은 항목" : "대기"}: {/* 항목 이름과 뒤 구분점을 한 덩어리로 묶는다 — 줄 끝에서 '요약' 하나만 다음 줄로 떨어지지 않게(PC 점검 2026-10-24) */}{waiting.map((section, index) => <Fragment key={section.title + index}>{index > 0 && " "}<span>{section.title}{index < waiting.length - 1 && " ·"}</span></Fragment>)}</p>}
     {(stalled || note !== null) && <p className={styles.cardNote}>{stalled ? done ? "다 쓴 장은 저장돼 있어요." : "한 장도 쓰지 못했어요. 계속 안 되면 고객센터로 알려 주세요." : note ?? "창을 닫아도 계속 써요."}</p>}
     {(stalled || onOpen && done > 0) && <div className={styles.cardActions}>
-      {stalled && <button type="button" className={styles.cardPrimary} disabled={retryDisabled} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />남은 항목 이어서 쓰기</button>}
-      {onOpen && done > 0 && <button type="button" className={styles.cardSecondary} onClick={onOpen}>쓴 부분 보기</button>}
+      {stalled && <AppButton type="button" variant="primary" size="small" className={styles.cardPrimary} disabled={retryDisabled} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />남은 항목 이어서 쓰기</AppButton>}
+      {onOpen && done > 0 && <AppButton type="button" variant="secondary" size="small" className={styles.cardSecondary} onClick={onOpen}>쓴 부분 보기</AppButton>}
     </div>}
   </section>;
 }

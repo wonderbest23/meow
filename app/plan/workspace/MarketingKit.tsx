@@ -8,6 +8,7 @@ import { businessProfile } from "../../../lib/plan-builder/business-launch";
 import { loadState, pushToServer, saveAnswers, type Plan } from "../../../lib/plan-builder/plan-store";
 import { openLogin } from "../../../components/login-dialog";
 import styles from "./LaunchWorkspace.module.css";
+import { AppButton } from "../../../components/app-button";
 
 type Saved = { kit: MarketingKit; generatedAt: string };
 
@@ -64,7 +65,7 @@ export default function MarketingKitPanel({ plan, onSaved }: { plan: Plan; onSav
       <Megaphone size={20} aria-hidden="true" />
       <div><strong>홍보 키트 · SNS 4주 운영표</strong><p>계획서의 상품·고객·채널로 {labels.placeIntro}, {labels.openingMessage}, {labels.flyer}, 첫 게시물 3개, {labels.reviewRequest}, 4주 SNS 운영표를 한 번에 만들어요.</p></div>
     </div>
-    <button type="button" className={kit ? styles.secondary : styles.primary} disabled={busy} onClick={() => void generate()}>{busy ? "만드는 중… (1분 안팎)" : kit ? <><RefreshCw size={16} aria-hidden="true" />다시 만들기</> : "홍보 키트 만들기"}</button>
+    <AppButton variant={kit ? "secondary" : "primary"} className={kit ? styles.secondary : styles.primary} disabled={busy} onClick={() => void generate()}>{busy ? "만드는 중… (1분 안팎)" : kit ? <><RefreshCw size={16} aria-hidden="true" />다시 만들기</> : "홍보 키트 만들기"}</AppButton>
     {needsPayment && <Link className={styles.textLink} href={`/plan/pay?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=plan`}>사업계획서 결제하고 홍보 키트 열기</Link>}
     {message && <p role="status">{message}</p>}
     {kit && <>

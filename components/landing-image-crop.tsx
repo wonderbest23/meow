@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent 
 import { Check, Crop, RotateCcw, X } from "lucide-react";
 import { IMAGE_CROP_ASPECTS, clampCropValue, cropImageFile, drawImageCrop, imageCropOutputSize, imageCropRect, loadCropImage, type ImageCropAspect, type ImageCropPosition } from "../lib/landing/image-crop";
 import styles from "./landing-image-crop.module.css";
+import { AppButton } from "./app-button";
 
 export type LandingImageCropProps = {
   file: File | null;
@@ -129,6 +130,6 @@ export default function LandingImageCrop({ file, onApply, onCancel, initialAspec
       </fieldset>
       {error && <p className={styles.error} role="alert">{error}</p>}
     </div>
-    <footer className={styles.footer}><button type="button" className={styles.original} disabled={!image || busy} onClick={useOriginal}>원본 사용</button><button type="button" onClick={cancel}>취소</button><button type="button" className={styles.apply} disabled={!image || busy} onClick={() => void apply()}><Check size={18} aria-hidden="true" />{busy ? "처리 중" : "적용"}</button></footer>
+    <footer className={styles.footer}><AppButton type="button" variant="secondary" className={styles.original} disabled={!image || busy} onClick={useOriginal}>원본 사용</AppButton><AppButton variant="secondary" type="button" onClick={cancel}>취소</AppButton><AppButton type="button" variant="primary" className={styles.apply} disabled={!image || busy} onClick={() => void apply()}><Check size={18} aria-hidden="true" />{busy ? "처리 중" : "적용"}</AppButton></footer>
   </dialog>;
 }

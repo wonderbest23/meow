@@ -11,6 +11,7 @@ import workspace from "../app/plan/BusinessHub.module.css";
 import theme from "./workspace-theme.module.css";
 import documentStyles from "../app/plan/document/DocumentWorkspace.module.css";
 import styles from "./home-workspace-demo.module.css";
+import { AppButton } from "./app-button";
 
 const sampleFields: CoachField[] = sample.fields.map(field => ({ key: field.key as CoachField["key"], value: field.value, basis: "user", quote: field.value, messageId: "public-sample" }));
 
@@ -130,14 +131,14 @@ export function HomeWorkspaceDemo({ previewProgress }: { previewProgress?: numbe
               <div className={styles.pages}>
                 <section className={`${workspace.section} ${styles.summary}`} data-workspace-page>
                   <WorkspaceSummary description={sample.description} fields={sampleFields}>
-                    <button className={workspace.primary}>대화로 수정하기</button>
+                    <AppButton variant="primary" className={workspace.primary}>대화로 수정하기</AppButton>
                   </WorkspaceSummary>
                 </section>
                 <section className={`${workspace.section} ${styles.documents}`} data-workspace-page>
                   <h2>내 사업 자료</h2>
                   <WorkspaceDocumentStatus complete count={sample.count} total={sample.count} onOpen={noop} />
-                  <button className={workspace.secondary}>자료를 더 다듬기</button>
-                  <div className={workspace.nextStep}><span>계획 다음 단계</span><h3>내 사업의 시작 순서 정하기</h3><p>지금 선택한 사업의 상품·운영·홈페이지 준비를 이어가요.</p><button className={workspace.secondary}>준비 과정 이어가기</button></div>
+                  <AppButton variant="secondary" className={workspace.secondary}>자료를 더 다듬기</AppButton>
+                  <div className={workspace.nextStep}><span>계획 다음 단계</span><h3>내 사업의 시작 순서 정하기</h3><p>지금 선택한 사업의 상품·운영·홈페이지 준비를 이어가요.</p><AppButton variant="secondary" className={workspace.secondary}>준비 과정 이어가기</AppButton></div>
                 </section>
               </div>
             </div>
@@ -153,7 +154,7 @@ export function HomeWorkspaceDemo({ previewProgress }: { previewProgress?: numbe
                 <section className={documentStyles.section}><DocumentSectionHeading number="1.1" title={sample.section} /><div className={documentStyles.body}><div className="tiptap" contentEditable={false} dangerouslySetInnerHTML={{ __html: sample.html }} /></div></section>
               </div>
             </article></div>
-            <footer className={`${documentStyles.actions} ${styles.readerActions}`}><button className={documentStyles.secondary} disabled>예시 · 읽기 전용</button><button className={documentStyles.primary}>내려받기</button></footer>
+            <footer className={`${documentStyles.actions} ${styles.readerActions}`}><AppButton variant="secondary" className={documentStyles.secondary} disabled>예시 · 읽기 전용</AppButton><AppButton variant="primary" className={documentStyles.primary}>내려받기</AppButton></footer>
           </div>
         </div>
       </div>

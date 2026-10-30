@@ -1,7 +1,4 @@
-/* 머리줄 '공개됨' — 끝난 상태 모양은 그대로, 누르면 메뉴가 열린다 */
-.trigger[data-done] { cursor:pointer !important; }
-/* 누를 수 있게 됐으니 올려도 연한 모양 그대로 — 파란 단추의 hover 가 덮어 글씨가 흐려졌다. 두 모듈 어느 쪽 순서여도 이기게 클래스를 겹쳐 쓴다 */
-.trigger.trigger[data-done]:is(:hover, [aria-expanded=true]):not(:disabled) { border-color:#c9dbf8; background:#e2ecfc; color:var(--app-primary, #3272db); }
+/* 머리줄 '공개됨' — 끝난 상태라 보조 단추(공통 버튼 secondary)로 두고, 누르면 메뉴가 열린다 */
 
 .menu { position:fixed; z-index:1000; display:grid; gap:2px; width:max-content; min-width:200px; max-width:calc(100vw - 32px); padding:6px; border:1px solid #e3e7ec; border-radius:12px; background:#fff; box-shadow:0 12px 32px rgba(16,24,40,.14); animation:menuRise .14s ease-out; }
 .menu button { display:flex; align-items:center; gap:10px; width:100%; min-height:36px; padding:0 12px; border:0; border-radius:8px; background:transparent; color:#333d4b; font:inherit; font-size:.875rem; font-weight:600; text-align:left; white-space:nowrap; cursor:pointer; }

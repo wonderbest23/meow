@@ -24,6 +24,7 @@ import { loadState } from "../../../lib/plan-builder/plan-store";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { FactCard, FactPopover, highlightFacts, pendingFactChanges, previewFactChanges, useFactEdit } from "./FactEdit";
 import { RewriteConfirm } from "../chat/intake-ui/IntakePanels";
+import { AppButton, type AppButtonSize } from "../../../components/app-button";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { restoreRangeTildes } from "../../../lib/plan-builder/range-tildes";
 import { withTableCellLabels } from "../../../lib/plan-builder/table-cells";
@@ -105,13 +106,13 @@ function SecondaryNext({ planId, homepage }: { planId: string; homepage: Homepag
   return <p className={styles.secondaryNext}><Link href={secondary.href}>{secondary.title} →</Link></p>;
 }
 
-function NextStepButton({ planId, homepage, className = styles.nextButton }: { planId: string; homepage: HomepageStatus; className?: string }) {
+function NextStepButton({ planId, homepage, header = false, size = "default" }: { planId: string; homepage: HomepageStatus; header?: boolean; size?: AppButtonSize }) {
   const plan = loadState().plans.find(item => item.id === planId);
   if (!plan) return null;
   const next = journeyNext(plan, homepage);
   /* 머리줄(PC) 단추는 이름만 — '다음 단계 · 홈페이지 만들기'의 앞말은 단추 자리가 이미 말한다(r37 글 점검). 낭독기는 aria-label 로 듣는다 */
-  if (className !== styles.nextButton) return <Link className={className} href={next.href} aria-label={`다음 단계: ${next.title}`}><b>{next.title}</b><ChevronRight size={16} aria-hidden="true" /></Link>;
-  return <Link className={className} href={next.href}><span>다음 단계</span><b>{next.title}</b><ChevronRight size={20} aria-hidden="true" /></Link>;
+  if (header) return <AppButton variant="primary" size="small" className={`${paneHeader.btn} ${paneHeader.primary}`} href={next.href} aria-label={`다음 단계: ${next.title}`}><b>{next.title}</b><ChevronRight size={16} aria-hidden="true" /></AppButton>;
+  return <AppButton variant="primary" size={size} className={styles.nextButton} href={next.href}><span>다음 단계</span><b>{next.title}</b><ChevronRight size={20} aria-hidden="true" /></AppButton>;
 }
 
 export default function DocumentWorkspace(props: Props) {
@@ -369,7 +370,7 @@ export default function DocumentWorkspace(props: Props) {
    * 작업실 안에서는 '대화로 고치기'가 장 머리·도구 줄에 따로 있어 이 단추는 바로 직접 고치기를 연다. 예전 화면만 고르는 창(대화로 · 직접)을 연다.
    */
   const chooseEdit = EDIT_CHAT && !!coachHref && !pane;
-  const editButton = summaryMode ? null : <button className={styles.secondary} disabled={!grouped.length || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (chooseEdit) setModal("edit"); else setFactMode(true); return; } setEditing(!editing); }}>{editing ? "수정 마치기" : factEditable && chooseEdit ? "고치기" : "직접 고치기"}</button>;
+  const editButton = (size: AppButtonSize = "default") => summaryMode ? null : <AppButton variant="secondary" size={size} className={styles.secondary} disabled={!grouped.length || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (chooseEdit) setModal("edit"); else setFactMode(true); return; } setEditing(!editing); }}>{editing ? "수정 마치기" : factEditable && chooseEdit ? "고치기" : "직접 고치기"}</AppButton>;
   /*
    * 3단계(작업실 안): 장마다 '대화로 고치기' — 대화 칸 입력창을 그 장 고치기로 연다(nav.composeInChat).
    * 고치기는 대화 칸의 기존 채팅 수정(바꿀 사실 카드 → 바꾸기/그대로 두기)이 맡는다 — 계획서 칸은 plan-section 처리기를 등록하지 않는다.
@@ -386,24 +387,24 @@ export default function DocumentWorkspace(props: Props) {
   /* PC 새 화면은 '직접 고치기'가 칸 위 얇은 줄에 하나만 있다 — 장 머리에는 '대화로 고치기'만 */
   const directInChapter = directEditable && !studioPc;
   const chapterActions = (index: number, name: string) => !pane || isSample || !planId || factMode || editing || !(chatEdit || directInChapter) ? undefined : <>
-    {chatEdit && <button type="button" className={`${styles.chapterAction} ${styles.chapterChatAction}`} aria-label={`${index + 1}장 ${name} — 대화로 고치기`} onClick={() => askChatEdit(index)}><MessageSquare size={14} aria-hidden="true" />대화로 고치기</button>}
-    {directInChapter && <button type="button" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 직접 고치기`} onClick={directEdit}><PenLine size={14} aria-hidden="true" />직접 고치기</button>}
+    {chatEdit && <AppButton type="button" variant="text" size="small" className={`${styles.chapterAction} ${styles.chapterChatAction}`} aria-label={`${index + 1}장 ${name} — 대화로 고치기`} onClick={() => askChatEdit(index)}><MessageSquare size={14} aria-hidden="true" />대화로 고치기</AppButton>}
+    {directInChapter && <AppButton type="button" variant="text" size="small" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 직접 고치기`} onClick={directEdit}><PenLine size={14} aria-hidden="true" />직접 고치기</AppButton>}
   </>;
-  const actionButtons = factMode ? <>
-    <button className={styles.secondary} onClick={async () => {
+  const actionButtons = (size: AppButtonSize = "default") => factMode ? <>
+    <AppButton variant="secondary" size={size} className={styles.secondary} onClick={async () => {
       if (factsUnapplied && factSavedHere && !await askConfirm({ message: "고친 내용을 아직 계획서에 반영하지 않았어요. 반영하지 않고 마칠까요?", confirmLabel: "그냥 마치기", cancelLabel: "계속 고치기" })) return;
       setFactMode(false); setFactPick(null);
-    }}>수정 마치기</button>
+    }}>수정 마치기</AppButton>
     {/* 반영 단추는 여기 하나뿐 — 노란 카드에도 있어 두 번 보였다(대표 결정 r39). 바로 다시 쓸까요? 확인창을 연다 */}
-    {factsUnapplied && facts.snapshot && <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" className={styles.primary} onConfirm={() => void reflectFacts()} />}
+    {factsUnapplied && facts.snapshot && <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" size={size} className={styles.primary} onConfirm={() => void reflectFacts()} />}
   </> : isSample ? <>
     {/* 예시 계획서 — 예전엔 누를 수 없는 회색 '예시 · 읽기 전용'만 있어 고장 난 것처럼 보였고 다음으로 갈 길이 없었다. 예시라는 표시는 문서 제목 위에 있다 */}
     {/* 다른 화면으로 가는 단추라 끝에 › — PC 작업실은 늘 보이는 대화 칸에 같은 단추가 있어 여기서는 뺀다(PC 점검 2026-10-24) */}
-    {!studioPc && <Link className={styles.nextButton} href="/plan/chat?new=1">내 사업 시작하기<ChevronRight size={20} aria-hidden="true" /></Link>}
+    {!studioPc && <AppButton variant="primary" size={size} className={styles.nextButton} href="/plan/chat?new=1">내 사업 시작하기<ChevronRight size={20} aria-hidden="true" /></AppButton>}
   </> : <>
     {/* 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다 · 내려받기는 문서 위 '작성 완료' 옆으로 옮겼다(대표 요청 2026-10-17) */}
-    {editButton}
-    {showNext && planId && <NextStepButton planId={planId} homepage={homepage} />}
+    {editButton(size)}
+    {showNext && planId && <NextStepButton planId={planId} homepage={homepage} size={size} />}
   </>;
   const hasActions = factMode || (isSample ? !studioPc : !summaryMode || Boolean(showNext && planId));
   const singleAction = !factMode && !(!summaryMode && showNext && planId);
@@ -412,7 +413,7 @@ export default function DocumentWorkspace(props: Props) {
    * 문서 위 도구 줄에는 보기 바꾸기(상세/한 장 요약)·장 번호·수정하기만 남긴다. 좁은 화면은 머리줄이 좁아
    * 예전처럼 칸 아래 단추 줄(수정하기 · 다음 단계)과 문서 머리의 내려받기를 쓴다.
    */
-  const toolbarButtons = studioHeader && !factMode && !isSample ? editButton : actionButtons;
+  const toolbarButtons = studioHeader && !factMode && !isSample ? editButton("small") : actionButtons("small");
   const toolbarHas = studioHeader && !factMode && !isSample ? !summaryMode : hasActions;
   /* 내려받기는 문서 머리의 칩과 같은 기준 — 상세 항목이 하나라도 있을 때 */
   const canDownloadDoc = grouped.length > 0;
@@ -420,8 +421,8 @@ export default function DocumentWorkspace(props: Props) {
   const studioActions = useMemo(() => {
     if (!studioHeader || isSample || (!canDownloadDoc && !headerNext)) return null;
     return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`} onClickCapture={paneLinkCapture(nav, planId)}>
-      {canDownloadDoc && <button type="button" className={paneHeader.btn} aria-label="내려받기" onClick={() => setModal("download")}><Download size={15} aria-hidden="true" /><span className={paneHeader.label}>내려받기</span></button>}
-      {headerNext && planId && <NextStepButton planId={planId} homepage={homepage} className={`${paneHeader.btn} ${paneHeader.primary}`} />}
+      {canDownloadDoc && <AppButton variant="secondary" size="small" className={paneHeader.btn} aria-label="내려받기" onClick={() => setModal("download")}><Download size={15} aria-hidden="true" /><span className={paneHeader.label}>내려받기</span></AppButton>}
+      {headerNext && planId && <NextStepButton planId={planId} homepage={homepage} header />}
     </div>;
   }, [studioHeader, isSample, canDownloadDoc, headerNext, planId, homepage, nav]);
   useStudioHeaderActions(studioActions);
@@ -523,7 +524,7 @@ export default function DocumentWorkspace(props: Props) {
             {!centerInHeader && picker}
             <span className={styles.stripSpace} />
             {/* 문서가 아직 없으면(작성 전) 보기 바꾸기 · 직접 고치기를 두지 않는다(r37 점검) */}
-            {!grouped.length && !props.writing && !factMode ? null : factMode || isSample ? <div className={styles.stripActions}>{actionButtons}</div> : <>
+            {!grouped.length && !props.writing && !factMode ? null : factMode || isSample ? <div className={styles.stripActions}>{actionButtons("small")}</div> : <>
               {props.summary && <div className={styles.stripSeg} role="group" aria-label="문서 보기 방식">
                 <button type="button" aria-pressed={!summaryMode} onClick={() => { setSummaryMode(false); scroller()?.scrollTo({ top: 0 }); }}>상세 계획서</button>
                 <button type="button" aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroller()?.scrollTo({ top: 0 }); }}>한 장 요약</button>
@@ -547,7 +548,7 @@ export default function DocumentWorkspace(props: Props) {
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
             {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong>{planId && !studioHeader && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
-            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty} data-pane={pane ? "" : undefined}>{pane ? <h2>아직 만든 문서가 없어요</h2> : <h1>아직 만든 문서가 없어요</h1>}{/* 작업실 안은 대화 칸에 있는 '사업계획서 만들기'로 — 예전 '사업안으로 돌아가기'는 어디로 가는지 몰랐다(r37 점검) */}{pane ? <Link className={styles.emptyPrimary} href={coachHref ?? back}>사업계획서 만들기<ChevronRight size={18} aria-hidden="true" /></Link> : <><p>사업 이야기를 이어서 계획서를 만들어 보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></>}</div> : <article className={styles.article}>
+            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty} data-pane={pane ? "" : undefined}>{pane ? <h2>아직 만든 문서가 없어요</h2> : <h1>아직 만든 문서가 없어요</h1>}{/* 작업실 안은 대화 칸에 있는 '사업계획서 만들기'로 — 예전 '사업안으로 돌아가기'는 어디로 가는지 몰랐다(r37 점검) */}{pane ? <AppButton variant="primary" className={styles.emptyPrimary} href={coachHref ?? back}>사업계획서 만들기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <><p>사업 이야기를 이어서 계획서를 만들어 보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></>}</div> : <article className={styles.article}>
               {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} pc={studioPc} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
@@ -555,8 +556,8 @@ export default function DocumentWorkspace(props: Props) {
               {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onRetry={retryReflect} />}
               {props.notice && !props.writing && !factMode && <div className={`${styles.notice} ${styles.noticeRow}`} role="status"><span>{props.notice}</span>{factEditable && facts.snapshot?.documentStatus === "stale"
                 /* 반영 단추는 바로 '다시 쓸까요?' 확인창을 연다 — 예전엔 고치기 화면만 열려 같은 단추를 또 찾아 눌러야 했다 */
-                ? <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" className={styles.noticeAction} onConfirm={() => void reflectFacts()} />
-                : factEditable ? <button type="button" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>직접 고치기</button> : coachHref && <Link className={styles.noticeAction} href={coachHref}>대화로 고치기</Link>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}{facts.error.retry && <button type="button" className={styles.factRetry} disabled={facts.busy} onClick={retryReflect}><RefreshCw size={15} aria-hidden="true" />다시 시도</button>}</span>}</div>}
+                ? <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" size="small" className={styles.noticeAction} onConfirm={() => void reflectFacts()} />
+                : factEditable ? <AppButton type="button" variant="primary" size="small" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>직접 고치기</AppButton> : coachHref && <AppButton variant="primary" size="small" className={styles.noticeAction} href={coachHref}>대화로 고치기</AppButton>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}{facts.error.retry && <AppButton type="button" variant="secondary" size="small" className={styles.factRetry} disabled={facts.busy} onClick={retryReflect}><RefreshCw size={15} aria-hidden="true" />다시 시도</AppButton>}</span>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter} data-changing={(studioPc && list.some(section => previews.has(section.key))) || undefined}>
                 <DocumentChapterHeading number={index + 1} title={name} pc={studioPc} lead={studioPc && index === 0 ? props.identity : undefined}
                   actions={studioPc && list.some(section => previews.has(section.key)) ? <><StatusBadge tone="info">대화로 고치는 중</StatusBadge>{chapterActions(index, name)}</> : chapterActions(index, name)} />
@@ -585,7 +586,7 @@ export default function DocumentWorkspace(props: Props) {
               ? <button type="button" className={styles.pagerNext} onClick={() => selectChapter(chapter + 1)} aria-label={`다음 장: ${chapter + 2}장 ${grouped[chapter + 1][0]}`}><span>{chapter + 2}장 {grouped[chapter + 1][0]}</span><ChevronRight size={16} aria-hidden="true" /></button>
               : <button type="button" className={styles.pagerNext} onClick={readAll}><span>전체 이어 읽기</span></button>}
           </nav>}
-          {hasActions && <footer className={styles.actions} data-next={showNext || undefined} data-single={singleAction || undefined} data-fact-mode={factMode || undefined}>{actionButtons}</footer>}
+          {hasActions && <footer className={styles.actions} data-next={showNext || undefined} data-single={singleAction || undefined} data-fact-mode={factMode || undefined}>{actionButtons()}</footer>}
         </div>
       </div>}
     </BusinessAppChrome>

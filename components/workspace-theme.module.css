@@ -21,6 +21,10 @@
   --app-success-bg: #eef8f2;
   --app-panel-fill: #ffffff;
   --app-primary-fill: var(--brand-primary, #1b64da);
+  /* 공통 버튼(components/app-button) — 누를 때 조금 어둡게, 포커스 선은 흰 바탕 3:1 이상(주 색 70%) */
+  --app-primary-hover: color-mix(in srgb, var(--app-primary) 85%, var(--app-text));
+  --app-danger-hover: color-mix(in srgb, var(--app-danger) 85%, var(--app-text));
+  --app-focus-ring: color-mix(in srgb, var(--app-primary) 70%, var(--app-surface));
   --surface: var(--app-surface);
   --surface-2: var(--app-raised);
   --surface-soft: var(--app-raised);

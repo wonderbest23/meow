@@ -5,7 +5,6 @@
 .confirmList { display:grid; gap:0; margin:24px 0 8px; border-top:1px solid var(--app-line); }.confirmList > div { display:flex; justify-content:space-between; gap:16px; padding:14px 0; border-bottom:1px solid var(--app-line); }.confirmList dt { color:var(--app-muted); font-size:.875rem; }.confirmList dd { margin:0; font-size:.9375rem; font-weight:600; text-align:right; }
 .confirmNote { font-size:.875rem; color:var(--app-muted); line-height:1.7; }
 .choices button[aria-pressed=true] { border-color:var(--app-primary); background:var(--app-soft); color:var(--app-accent); box-shadow:inset 0 0 0 1px var(--app-primary); }
-.primary,.secondary { display:flex; align-items:center; justify-content:center; gap:8px; min-height:52px; border:0; border-radius:8px; padding:14px 18px; font-size:1rem; font-weight:600; text-align:center; }.primary { background:var(--app-primary); color:#fff; }.primary:hover { background:#1957c2; }.secondary { background:var(--app-raised); color:var(--app-text); }
 .stepActions,.editActions { display:flex; gap:10px; margin:24px 0 12px; }.stepActions > *, .editActions > * { flex:1; min-width:0; }.editActions { flex-wrap:wrap; }
 .field { display:flex; flex-direction:column; gap:8px; font-size:.9375rem; color:var(--app-text); margin:20px 0; font-weight:600; }.field :is(input,textarea) { width:100%; min-width:0; padding:14px; font:inherit; font-size:1rem; font-weight:400; line-height:1.7; color:var(--app-text); border:1px solid var(--app-line); border-radius:8px; background:var(--app-surface); resize:vertical; }.field small { font-size:.75rem; color:var(--app-muted); font-weight:400; }
 .field :is(input,textarea):focus { outline:2px solid #90baff; border-color:var(--app-primary); }
@@ -30,7 +29,7 @@
 @media(max-width:760px) { .launch { padding-bottom:calc(84px + env(safe-area-inset-bottom)); } }
 
 /* 홍보 키트 · SNS 4주 운영표 */
-.kit { display: grid; gap: 12px; margin: 8px 0 16px; padding: 16px; border: 1px solid var(--app-line, #e5e8eb); border-radius: 12px; background: var(--app-surface, #fff); }
+.kit { display: grid; gap: 12px; margin: 8px 0 16px; padding: 16px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface, #fff); }
 .kitHead { display: flex; gap: 10px; align-items: flex-start; }
 .kitHead strong { font-size: .9375rem; }
 .kit .kitHead p { margin: 4px 0 0; font-size: .8125rem; line-height: 1.6; color: var(--app-muted, #6b7684); }
@@ -45,13 +44,13 @@
 .kit .kitBlock > p.kitTags { display: flex; flex-wrap: wrap; gap: 2px 8px; white-space: normal; }
 .kit .kitTags > span { display: inline-block; white-space: nowrap; word-break: keep-all; }
 .kit .kitBlock button { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; min-height: 36px; padding: 6px 0; line-height: 1.4; }
-.kit details.kitWeek { margin: 0; padding: 4px 0; border-top: 1px solid var(--app-line, #e5e8eb); }
-.kit .kitWeek > summary { cursor: pointer; padding: 10px 0; font-weight: 600; font-size: .875rem; line-height: 1.5; color: var(--app-text, #191f28); }
+.kit details.kitWeek { margin: 0; padding: 4px 0; border-top: 1px solid var(--app-line); }
+.kit .kitWeek > summary { cursor: pointer; padding: 10px 0; font-weight: 600; font-size: .875rem; line-height: 1.5; color: var(--app-text); }
 .kit .kitWeek ol { display: grid; gap: 10px; margin: 4px 0 8px; padding-left: 18px; }
 .kit .kitWeek li { display: grid; gap: 2px; font-size: .8125rem; line-height: 1.6; }
 .kit .kitWeek li button { justify-self: start; }
 /* 올릴 글은 위 블록 본문(14px)과 같은 크기로 — 크기를 안 정해 전역 문단 크기(약 19px)를 받아 혼자 커 보였다(실제 AI 점검 2026-10-22) */
-.kit .kitWeek li p { margin: 0; white-space: pre-wrap; font-size: .875rem; line-height: 1.7; color: var(--app-text, #191f28); }
+.kit .kitWeek li p { margin: 0; white-space: pre-wrap; font-size: .875rem; line-height: 1.7; color: var(--app-text); }
 
 /* 업종 준비 체크리스트 — 예전엔 '- [ ]·■'가 섞인 글 덩어리를 접힌 입력칸에 넣어 읽기 어려웠다 */
 .checklist { display:grid; gap:4px; margin:20px 0; padding:16px; border:1px solid var(--app-line); border-radius:12px; background:var(--app-surface); }

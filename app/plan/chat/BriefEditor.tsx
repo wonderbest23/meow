@@ -7,6 +7,7 @@ import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation
 import { planOwnerEpoch } from "../../../lib/plan-builder/plan-store";
 import styles from "./page.module.css";
 import { askConfirm } from "../../../components/confirm-dialog";
+import { AppButton } from "../../../components/app-button";
 
 const groups: Record<string, CoachField["key"][]> = {
   intro: ["business", "problem", "goal"],
@@ -86,8 +87,8 @@ export default function BriefEditor({ coach, section, onSave, onClose, onDirty }
     </div>
     <div className={`${styles.documentActions} ${styles.inlineEditActions}`}>
       {error && <p role="alert" className={styles.inlineEditError}>{error}</p>}
-      <button type="button" className={styles.editLink} disabled={busy} onClick={cancel}>취소</button>
-      <button type="submit" className={styles.primary} disabled={!dirty || busy || coach.revision !== base.revision}>{busy ? "저장 중…" : "저장"}</button>
+      <AppButton type="button" variant="secondary" className={styles.editLink} disabled={busy} onClick={cancel}>취소</AppButton>
+      <AppButton type="submit" variant="primary" className={styles.primary} disabled={!dirty || busy || coach.revision !== base.revision}>{busy ? "저장 중…" : "저장"}</AppButton>
     </div>
   </form>;
 }

@@ -8,6 +8,7 @@ import { rewriteErrorMessage, rewriteExpired, type RewriteCommand, type RewriteP
 import { renderableProposal } from "../../../lib/plan-builder/proposal-revision";
 import type { DeckSlide } from "../../../lib/plan-builder/deck-plan";
 import styles from "./proposal.module.css";
+import { AppButton } from "../../../components/app-button";
 
 function SlideContent({ slide, previous }: { slide: DeckSlide; previous?: DeckSlide }) {
   return <div className={styles.reviewContent}><h4 data-changed={previous && slide.title !== previous.title || undefined}>{slide.title}</h4>{slide.lead && <p data-changed={previous && slide.lead !== previous.lead || undefined}>{slide.lead}</p>}
@@ -62,15 +63,15 @@ export default function SourceUpdatePanel({ planId, saved, sourceChanged, canUpd
   return <section className={styles.sourceUpdate} aria-label="원문 변경 반영">
     {retainedCharts.length > 0 && <p role="status">차트 확인 필요 {retainedCharts.length}개 페이지. 본문 갱신은 차트 값을 바꾸거나 최신으로 확인하지 않습니다</p>}
     <div className={styles.updateHeading}><FileDiff size={19} /><div><strong>{job?.status === "ready" ? "검토할 새 문안이 있어요" : "원문과 제안서의 변경분"}</strong><p>현재 제안서는 승인 전까지 그대로 유지됩니다</p></div>
-      <button disabled={!canUpdate || loading} onClick={() => { if (open) setOpen(false); else if (pending) setOpen(true); else void inspect(); }}>{open ? "접기" : job?.status === "ready" ? "새 문안 검토" : "변경분 확인"}</button>
+      <AppButton variant="secondary" disabled={!canUpdate || loading} onClick={() => { if (open) setOpen(false); else if (pending) setOpen(true); else void inspect(); }}>{open ? "접기" : job?.status === "ready" ? "새 문안 검토" : "변경분 확인"}</AppButton>
     </div>
     {open && <div className={styles.updateBody}>
       {message && <p role="alert">{message}</p>}
       {loading && <p role="status"><LoaderCircle className={styles.spin} size={16} />처리 상태 확인 중</p>}
       {job?.status === "running" && <p role="status">{expired ? rewriteErrorMessage("timeout") : job.claimedAt ? "새 문안 작성 중이에요. 저장된 요청으로 상태를 확인합니다" : "요청을 저장했어요. 실행 접수를 기다리는 동안 기존 제안서는 그대로 보관됩니다"}</p>}
-      {job?.status === "running" && !job.claimedAt && !expired && <button disabled={loading || !canUpdate} onClick={() => void command({ type: "generate", id: job.id, hash: job.preview.hash, consent: true })}>같은 요청으로 실행 접수 확인</button>}
+      {job?.status === "running" && !job.claimedAt && !expired && <AppButton variant="secondary" disabled={loading || !canUpdate} onClick={() => void command({ type: "generate", id: job.id, hash: job.preview.hash, consent: true })}>같은 요청으로 실행 접수 확인</AppButton>}
       {job?.status === "failed" && <p role="alert">{rewriteErrorMessage(job.error)}</p>}
-      {pending && job?.status !== "ready" && <button disabled={loading || !canUpdate} onClick={() => void command({ type: "dismiss", id: job!.id })}><X size={16} />{job?.status === "running" && !expired ? "결과 반영 취소" : "검토 닫기"}</button>}
+      {pending && job?.status !== "ready" && <AppButton variant="secondary" disabled={loading || !canUpdate} onClick={() => void command({ type: "dismiss", id: job!.id })}><X size={16} />{job?.status === "running" && !expired ? "결과 반영 취소" : "검토 닫기"}</AppButton>}
       {impact && <><div className={styles.updateSummary}><span>연관 페이지 {impact.affected.length}장</span><span>이미지와 배치 유지</span><span>직접 수정한 문안 {impact.affected.filter(slide => slide.textConflict).length}장</span></div>
         <details className={styles.sourceDiff}><summary>바뀐 원문 {impact.changedSections.length}개</summary>{(job?.status === "ready" ? job.preview : preview)?.payload.changes.map(change => <section key={change.section}><h3>{change.section}</h3><div className={styles.compare}><div><small>이전</small><pre>{change.before || "없음"}</pre></div><div><small>현재</small><pre>{change.after || "삭제됨"}</pre></div></div></section>)}</details>
       </>}
@@ -81,14 +82,14 @@ export default function SourceUpdatePanel({ planId, saved, sourceChanged, canUpd
           {before.chart && <p role="status">차트 값은 이번 문안 갱신에 포함되지 않아 그대로 보관됩니다. 본문을 교체해도 차트가 있는 페이지는 최신 확인이 필요한 상태로 남습니다</p>}
           {item.textConflict && <fieldset><legend>직접 수정한 항목이나 확인할 차트가 있어요</legend><label><input type="radio" name={item.slideId} checked={choices[item.slideId] === "keep_manual"} onChange={() => setChoices({ ...choices, [item.slideId]: "keep_manual" })} />내 문안 유지</label><label><input type="radio" name={item.slideId} checked={choices[item.slideId] === "use_revised"} onChange={() => setChoices({ ...choices, [item.slideId]: "use_revised" })} />새 문안으로 교체</label>{choices[item.slideId] === "keep_manual" && <p>직접 고친 항목은 이전 가격이나 조건이 남을 수 있어요. 유지할 내용을 확인해 주세요</p>}</fieldset>}
         </article>;
-      })}</div><div className={styles.updateActions}><button disabled={loading || !canUpdate} onClick={() => void command({ type: "dismiss", id: job.id })}><X size={16} />반영하지 않기</button><button className={styles.primary} disabled={loading || !canUpdate || job.preview.impact.affected.some(item => item.textConflict && !choices[item.slideId])} onClick={() => void command({ type: "apply", id: job.id, expectedRevision: saved.revision, choices })}><Check size={16} />확인한 문안 반영</button></div></>}
+      })}</div><div className={styles.updateActions}><AppButton variant="secondary" disabled={loading || !canUpdate} onClick={() => void command({ type: "dismiss", id: job.id })}><X size={16} />반영하지 않기</AppButton><AppButton variant="primary" className={styles.primary} disabled={loading || !canUpdate || job.preview.impact.affected.some(item => item.textConflict && !choices[item.slideId])} onClick={() => void command({ type: "apply", id: job.id, expectedRevision: saved.revision, choices })}><Check size={16} />확인한 문안 반영</AppButton></div></>}
       {preview && !pending && <><ul className={styles.impactList}>{preview.impact.affected.map(item => <li key={item.slideId}>{item.title}{item.textConflict && <small>직접 수정한 문안 있음</small>}</li>)}</ul>
         <section className={styles.transmission} aria-label="AI 전송 자료 확인"><h3>AI에 보낼 자료</h3><p>사업명과 설명, 관련 원문 {preview.payload.sources.length}개, 변경 전후 내용, 슬라이드 {preview.payload.slides.length}장의 기본 문안을 보냅니다. 이미지와 배치 좌표, 직접 편집한 문안은 제외합니다</p>
           <details className={styles.sourceDiff}><summary>전송 자료 전체 보기</summary><pre>{JSON.stringify(preview.payload, null, 2)}</pre></details>
           <p>{preview.target ? `전송 대상: ${preview.target.provider} · ${preview.target.model}` : "현재 실제 사업 자료의 외부 AI 전송은 닫혀 있어요"}</p>
           <p>작성과 검수에 최대 2회 요청하며 생성된 문안도 같은 대상으로 전송합니다. 원문이나 전송 대상이 바뀌면 다시 확인합니다</p>
           <label><input type="checkbox" checked={consent} disabled={!preview.target || loading} onChange={event => setConsent(event.target.checked)} />위 자료를 확인했고 표시된 AI로 전송하는 데 동의합니다</label>
-          <div className={styles.updateActions}><button className={styles.primary} disabled={!preview.target || !consent || loading || !canUpdate} onClick={() => { const request = generationRequest.current ?? { type: "generate" as const, id: crypto.randomUUID(), hash: preview.hash, consent: true as const }; generationRequest.current = request; void command(request); }}>{generationRequest.current ? "같은 요청 상태 확인" : "동의한 자료로 새 문안 작성"}</button></div>
+          <div className={styles.updateActions}><AppButton variant="primary" className={styles.primary} disabled={!preview.target || !consent || loading || !canUpdate} onClick={() => { const request = generationRequest.current ?? { type: "generate" as const, id: crypto.randomUUID(), hash: preview.hash, consent: true as const }; generationRequest.current = request; void command(request); }}>{generationRequest.current ? "같은 요청 상태 확인" : "동의한 자료로 새 문안 작성"}</AppButton></div>
         </section>
       </>}
     </div>}
