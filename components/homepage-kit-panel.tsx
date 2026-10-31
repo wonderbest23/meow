@@ -25,6 +25,7 @@ import PlanLoading, { Spinner } from "../app/plan/PlanLoading";
 import { AddressSearchButton } from "./address-search";
 import { nativePlatform } from "../lib/native-app";
 import { showCopyText } from "./confirm-dialog";
+import { FieldError, FieldGroup, FieldHelp, FieldLabel, TextField } from "./app-field";
 
 /*
  * 킷 페이지 홈페이지 화면.
@@ -441,13 +442,13 @@ export function HomepageKitPanel({
       {formOff && <p className="hk-contact-hint" role="status">문의 양식이 꺼져 있어 손님이 문의 버튼을 눌러도 신청할 수 없어요. 아래 ‘사업자 정보’에서 문의 양식을 켜거나, 전화·카카오톡 등 다른 연결 방법을 골라 주세요.</p>}
       <div className="hk-grid">
         {contactInfo.field === "phone" ? (
-          <label className="wide"><span>전화번호</span><input inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder={contactInfo.placeholder} /></label>
+          <FieldLabel className="wide"><span>전화번호</span><TextField inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder={contactInfo.placeholder} /></FieldLabel>
         ) : null}
         {contactInfo.field && contactInfo.field !== "phone" ? (
-          <label className="wide"><span>{contactInfo.label} 주소</span>
-            <input inputMode="url" value={contact[contactInfo.field]} onChange={(e) => setContact({ [contactInfo.field as string]: e.target.value } as Partial<LandingContact>)}
+          <FieldLabel className="wide"><span>{contactInfo.label} 주소</span>
+            <TextField inputMode="url" value={contact[contactInfo.field]} onChange={(e) => setContact({ [contactInfo.field as string]: e.target.value } as Partial<LandingContact>)}
               onBlur={(e) => setContact({ [contactInfo.field as string]: normalizeWebUrl(e.target.value) } as Partial<LandingContact>)} placeholder={contactInfo.placeholder} />
-          </label>
+          </FieldLabel>
         ) : null}
       </div>
       {!contactReady && !formOff ? <p className="hk-contact-warn">{contactInfo.field === "phone" ? "전화번호" : "주소"}를 넣으면 버튼이 연결돼요. {draft.leadCaptureEnabled ? " 그 전까지는 문의 양식으로 연결돼요." : " 지금은 문의 양식도 꺼져 있어 손님이 연락할 곳이 없어요."}</p> : null}
@@ -458,9 +459,9 @@ export function HomepageKitPanel({
         </label>
         {contact.quickBar ? (
           <div className="hk-grid">
-            {contactInfo.field !== "phone" ? <label><span>전화번호</span><input inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder="010-1234-5678" /></label> : null}
-            {contact.method !== "kakao" ? <label><span>카카오톡 채널</span><input inputMode="url" value={contact.kakaoUrl} onChange={(e) => setContact({ kakaoUrl: e.target.value })} onBlur={(e) => setContact({ kakaoUrl: normalizeWebUrl(e.target.value) })} placeholder="https://pf.kakao.com/_xxxxx" /></label> : null}
-            {contact.method !== "booking" ? <label><span>예약 페이지</span><input inputMode="url" value={contact.bookingUrl} onChange={(e) => setContact({ bookingUrl: e.target.value })} onBlur={(e) => setContact({ bookingUrl: normalizeWebUrl(e.target.value) })} placeholder="https://booking.naver.com/…" /></label> : null}
+            {contactInfo.field !== "phone" ? <FieldLabel><span>전화번호</span><TextField inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder="010-1234-5678" /></FieldLabel> : null}
+            {contact.method !== "kakao" ? <FieldLabel><span>카카오톡 채널</span><TextField inputMode="url" value={contact.kakaoUrl} onChange={(e) => setContact({ kakaoUrl: e.target.value })} onBlur={(e) => setContact({ kakaoUrl: normalizeWebUrl(e.target.value) })} placeholder="https://pf.kakao.com/_xxxxx" /></FieldLabel> : null}
+            {contact.method !== "booking" ? <FieldLabel><span>예약 페이지</span><TextField inputMode="url" value={contact.bookingUrl} onChange={(e) => setContact({ bookingUrl: e.target.value })} onBlur={(e) => setContact({ bookingUrl: normalizeWebUrl(e.target.value) })} placeholder="https://booking.naver.com/…" /></FieldLabel> : null}
           </div>
         ) : null}
       </div>
@@ -478,14 +479,14 @@ export function HomepageKitPanel({
       badge={missing.length ? <StatusBadge tone="warning">채울 것 {missing.length}개</StatusBadge> : <StatusBadge tone="success" done>완료</StatusBadge>}
     >
       <div className="hk-grid">
-        <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(e) => update({ businessName: e.target.value })} /></label>
-        <label><span>대표자</span><input value={draft.businessRepresentative} onChange={(e) => update({ businessRepresentative: e.target.value })} placeholder="사업자등록증과 같은 이름" /></label>
-        <label><span>전화번호</span><input type="tel" inputMode="tel" autoComplete="tel" value={draft.businessPhone} onChange={(e) => update({ businessPhone: e.target.value, businessContact: e.target.value })} placeholder="010-0000-0000" /></label>
-        <label><span>이메일</span><input type="email" autoComplete="email" value={draft.businessEmail} onChange={(e) => update({ businessEmail: e.target.value })} onBlur={() => setEmailLeft(true)} placeholder="hello@mybusiness.kr" aria-invalid={emailMessage ? true : undefined} aria-describedby={emailMessage ? "hk-email-error" : undefined} />{emailMessage && <small id="hk-email-error" className="hk-slug-error" role="alert">{emailMessage}</small>}</label>
-        <label><span>사업자등록번호</span><input inputMode="numeric" value={draft.businessRegistrationNumber} onChange={(e) => update({ businessRegistrationNumber: e.target.value })} placeholder="000-00-00000" /></label>
-        <label><span>통신판매업 신고번호</span><input value={draft.mailOrderSalesNumber} onChange={(e) => update({ mailOrderSalesNumber: e.target.value })} placeholder="없으면 비워 두세요" /></label>
-        <div className="wide address-field"><label><span>사업장 주소</span><input value={draft.businessAddress} onChange={(e) => update({ businessAddress: e.target.value })} placeholder="고객 문의를 처리할 수 있는 실제 주소" /></label><AddressSearchButton onPick={(picked) => update({ businessAddress: picked.address })} /></div>
-        <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(e) => update({ openHours: e.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무" /></label>
+        <FieldLabel><span>사업 이름</span><TextField value={draft.businessName} maxLength={120} onChange={(e) => update({ businessName: e.target.value })} /></FieldLabel>
+        <FieldLabel><span>대표자</span><TextField value={draft.businessRepresentative} onChange={(e) => update({ businessRepresentative: e.target.value })} placeholder="사업자등록증과 같은 이름" /></FieldLabel>
+        <FieldLabel><span>전화번호</span><TextField type="tel" inputMode="tel" autoComplete="tel" value={draft.businessPhone} onChange={(e) => update({ businessPhone: e.target.value, businessContact: e.target.value })} placeholder="010-0000-0000" /></FieldLabel>
+        <FieldLabel><span>이메일</span><TextField type="email" autoComplete="email" value={draft.businessEmail} onChange={(e) => update({ businessEmail: e.target.value })} onBlur={() => setEmailLeft(true)} placeholder="hello@mybusiness.kr" aria-invalid={emailMessage ? true : undefined} aria-describedby={emailMessage ? "hk-email-error" : undefined} />{emailMessage && <small id="hk-email-error" className="hk-slug-error" role="alert">{emailMessage}</small>}</FieldLabel>
+        <FieldLabel><span>사업자등록번호</span><TextField inputMode="numeric" value={draft.businessRegistrationNumber} onChange={(e) => update({ businessRegistrationNumber: e.target.value })} placeholder="000-00-00000" /></FieldLabel>
+        <FieldLabel><span>통신판매업 신고번호</span><TextField value={draft.mailOrderSalesNumber} onChange={(e) => update({ mailOrderSalesNumber: e.target.value })} placeholder="없으면 비워 두세요" /></FieldLabel>
+        <div className="wide address-field"><FieldLabel><span>사업장 주소</span><TextField value={draft.businessAddress} onChange={(e) => update({ businessAddress: e.target.value })} placeholder="고객 문의를 처리할 수 있는 실제 주소" /></FieldLabel><AddressSearchButton onPick={(picked) => update({ businessAddress: picked.address })} /></div>
+        <FieldLabel className="wide"><span>영업시간</span><TextField value={draft.openHours} onChange={(e) => update({ openHours: e.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무" /></FieldLabel>
         <label className="wide hk-switch">
           <input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(e) => update({ leadCaptureEnabled: e.target.checked })} />
           <span>고객 문의 양식 받기 <small>문의는 손님 문의에 모여요</small></span>
@@ -502,18 +503,18 @@ export function HomepageKitPanel({
           <input type="checkbox" checked={draft.analyticsEnabled} onChange={(e) => update({ analyticsEnabled: e.target.checked })} />
           <span>방문 수 세기 <small>동의한 손님만 세요. 주간 리포트의 '방문'과 '버튼 누름'이 여기서 나와요(끄면 0).</small></span>
         </label>
-        {draft.leadCaptureEnabled ? <label><span>개인정보 문의처</span><input value={draft.privacyContact} onChange={(e) => update({ privacyContact: e.target.value, privacyPolicy: privacyPolicyWithContact(draft.privacyPolicy, e.target.value) })} placeholder="이메일 또는 전화번호" /></label> : null}
-        <label><span>문의 버튼 문구</span><input value={draft.ctaLabel} maxLength={40} onChange={(e) => update({ ctaLabel: e.target.value })} /></label>
+        {draft.leadCaptureEnabled ? <FieldLabel><span>개인정보 문의처</span><TextField value={draft.privacyContact} onChange={(e) => update({ privacyContact: e.target.value, privacyPolicy: privacyPolicyWithContact(draft.privacyPolicy, e.target.value) })} placeholder="이메일 또는 전화번호" /></FieldLabel> : null}
+        <FieldLabel><span>문의 버튼 문구</span><TextField value={draft.ctaLabel} maxLength={40} onChange={(e) => update({ ctaLabel: e.target.value })} /></FieldLabel>
         <div className="wide hk-slug-field">
-          <label htmlFor="hk-slug"><span>무료 주소 끝부분</span></label>
-          <div className="slug-input" data-invalid={slugMessage ? "" : undefined}><em>/launch/</em><input id="hk-slug" ref={slugRef} value={draft.slug} maxLength={60} autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="url"
+          <FieldLabel htmlFor="hk-slug"><span>무료 주소 끝부분</span></FieldLabel>
+          <FieldGroup className="slug-input"><em>/launch/</em><input id="hk-slug" ref={slugRef} value={draft.slug} maxLength={60} autoCapitalize="none" autoCorrect="off" spellCheck={false} inputMode="url"
             aria-invalid={slugMessage ? true : undefined} aria-describedby="hk-slug-help"
-            onChange={(e) => update({ slug: e.target.value.toLowerCase() })} onBlur={() => setSlugLeft(true)} /></div>
-          <small id="hk-slug-help" className={slugMessage ? "hk-slug-error" : "hk-slug-hint"} role={slugMessage ? "alert" : undefined}>
-            {slugMessage || (liveSlug && liveSlug !== draft.slug
+            onChange={(e) => update({ slug: e.target.value.toLowerCase() })} onBlur={() => setSlugLeft(true)} /></FieldGroup>
+          {slugMessage
+            ? <FieldError id="hk-slug-help" className="hk-slug-note" role="alert">{slugMessage}</FieldError>
+            : <FieldHelp id="hk-slug-help" className="hk-slug-note">{liveSlug && liveSlug !== draft.slug
               ? `지금 손님 주소는 /launch/${liveSlug} 예요. ‘새 버전 공개’를 누르면 주소가 바뀌고 예전 주소로는 열리지 않아요.`
-              : "영어 소문자·숫자·- 로 3글자 이상 적어 주세요. 예: dongne-bbang")}
-          </small>
+              : "영어 소문자·숫자·- 로 3글자 이상 적어 주세요. 예: dongne-bbang"}</FieldHelp>}
         </div>
       </div>
       {/* 이 칸에서 고친 것을 바로 저장 — 위로 스크롤해 전체 저장을 찾지 않게 */}

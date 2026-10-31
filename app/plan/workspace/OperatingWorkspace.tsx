@@ -17,6 +17,7 @@ import { autoInquiriesValue, type HomepageInquiries } from "../../../lib/plan-bu
 import { useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import paneHeader from "./PaneHeaderActions.module.css";
 import { AppButton } from "../../../components/app-button";
+import { FieldLabel, Select, TextArea, TextField } from "../../../components/app-field";
 
 type Draft = Omit<PeriodInput, "metrics"> & { metrics: Record<typeof METRICS[number]["key"], string> };
 /** 운영 중인 사업 대화에서 말한 실적(기간·실제 매출) — 첫 기록을 채우는 데만 쓴다(저장은 사장님이 누를 때) */
@@ -261,12 +262,12 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
     {!state && !error && <PlanLoading note="운영 기록을 불러오고 있어요" />}
     {editor && <form ref={formRef} className={styles.editor} onSubmit={event => { event.preventDefault(); void save(); }}>
       <div className={styles.editorHeading}><h3>{editor.revision === null ? "새 기간 기록" : "기간 기록 수정"}</h3><button type="button" aria-label="기간 편집 닫기" title="기간 편집 닫기" disabled={busy} onClick={closeEditor}><X size={20} /></button></div>
-      <fieldset disabled={busy}><legend>기록 기간</legend><div className={styles.twoColumns}><label>시작일<input type="date" required {...fieldProps("start")} value={draft.start} onChange={e => { touched("start"); setDraft({ ...draft, start: e.target.value }); }} />{fieldError("start")}</label><label>종료일<input type="date" required min={draft.start} {...fieldProps("end")} value={draft.end} onChange={e => { touched("end"); setDraft({ ...draft, end: e.target.value }); }} />{fieldError("end")}</label></div></fieldset>
-      <fieldset disabled={busy}><legend>실제 실적</legend><p className={styles.note}>알 수 없는 값은 비워 두세요. 발생하지 않았다면 0을 입력하세요.</p><div className={styles.twoColumns}>{METRICS.map(m => { const limit = metricLimit(m.unit, draft.metrics[m.key]); return <label key={m.key}>{m.label} ({m.unit})<input type="text" inputMode="numeric" autoComplete="off" maxLength={m.unit === "원" ? 17 : 8} {...fieldProps(m.key)} aria-invalid={invalid === m.key || !!limit || undefined} value={draft.metrics[m.key]} onChange={e => {
+      <fieldset disabled={busy}><legend>기록 기간</legend><div className={styles.twoColumns}><FieldLabel>시작일<TextField type="date" required {...fieldProps("start")} value={draft.start} onChange={e => { touched("start"); setDraft({ ...draft, start: e.target.value }); }} />{fieldError("start")}</FieldLabel><FieldLabel>종료일<TextField type="date" required min={draft.start} {...fieldProps("end")} value={draft.end} onChange={e => { touched("end"); setDraft({ ...draft, end: e.target.value }); }} />{fieldError("end")}</FieldLabel></div></fieldset>
+      <fieldset disabled={busy}><legend>실제 실적</legend><p className={styles.note}>알 수 없는 값은 비워 두세요. 발생하지 않았다면 0을 입력하세요.</p><div className={styles.twoColumns}>{METRICS.map(m => { const limit = metricLimit(m.unit, draft.metrics[m.key]); return <FieldLabel key={m.key}>{m.label} ({m.unit})<TextField type="text" inputMode="numeric" autoComplete="off" maxLength={m.unit === "원" ? 17 : 8} {...fieldProps(m.key)} aria-invalid={invalid === m.key || !!limit || undefined} value={draft.metrics[m.key]} onChange={e => {
           /* 금액은 13자리(1조)까지, 건수는 8자리까지만 받는다 — 한도를 넘는 값은 칸 아래에 바로 안내한다(저장 전에) */
           const digits = e.target.value.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, "").slice(0, m.unit === "원" ? 13 : 8);
           touched(m.key); setDraft({ ...draft, metrics: { ...draft.metrics, [m.key]: m.unit === "원" ? withCommas(digits) : digits } });
-        }} />{fieldError(m.key) ?? (limit && <small role="status" className={styles.fieldError}>{limit}</small>)}</label>; })}</div>
+        }} />{fieldError(m.key) ?? (limit && <small role="status" className={styles.fieldError}>{limit}</small>)}</FieldLabel>; })}</div>
         {homepage?.linked && <p className={styles.note} role="status">
           홈페이지로 들어온 문의 {homepage.inquiries.toLocaleString("ko-KR")}건(이 기간){draft.metrics.inquiries === String(homepage.inquiries) ? " — 문의 칸에 넣어 두었어요. 전화·방문 문의가 더 있으면 더해서 고쳐 주세요." : ""}
           {draft.metrics.inquiries !== String(homepage.inquiries) && <> <AppButton type="button" variant="secondary" size="small" className={styles.inlineButton} onClick={() => { autoInquiries.current = String(homepage.inquiries); setDraft({ ...draft, metrics: { ...draft.metrics, inquiries: String(homepage.inquiries) } }); }}>{homepage.inquiries}건으로 넣기</AppButton></>}
@@ -274,11 +275,11 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
         </p>}</fieldset>
       <fieldset disabled={busy}><legend>돌아보기와 다음 행동</legend>{([
         ["feedback", "고객 반응", 3000], ["keep", "유지할 점", 1500], ["change", "바꿀 점", 1500], ["nextAction", "다음 개선 행동", 1500], ["successCriterion", "확인 기준", 1000],
-      ] as const).map(([key, label, max]) => <label key={key}>{label}<textarea {...fieldProps(key)} value={draft[key]} maxLength={max} rows={key === "feedback" ? 3 : 2} onChange={e => { touched(key); setDraft({ ...draft, [key]: e.target.value }); }} />{fieldError(key)}</label>)}</fieldset>
+      ] as const).map(([key, label, max]) => <FieldLabel key={key}>{label}<TextArea {...fieldProps(key)} value={draft[key]} maxLength={max} rows={key === "feedback" ? 3 : 2} onChange={e => { touched(key); setDraft({ ...draft, [key]: e.target.value }); }} />{fieldError(key)}</FieldLabel>)}</fieldset>
       <div className={styles.actions}><AppButton type="submit" variant="primary" className={styles.primary} disabled={busy}><Save size={18} />{busy ? "저장 중" : "기록 저장"}</AppButton><AppButton variant="secondary" type="button" disabled={busy} onClick={closeEditor}>취소</AppButton></div>
     </form>}
     {state && !editor && mode === "periods" && (period ? <>
-      <div className={styles.selectRow}><label>기록 기간<select value={selected} disabled={busy || analysisDirty} onChange={e => { setSelected(e.target.value); setNotice(""); }}>{state.periods.map(p => <option key={p.id} value={p.id} title={periodLabel(p)}>{periodShortLabel(p)}</option>)}</select></label>{!sample && <AppButton variant="secondary" size="small" disabled={busy || analysisDirty} onClick={() => edit(period)}><Pencil size={17} />수정</AppButton>}</div>
+      <div className={styles.selectRow}><FieldLabel>기록 기간<Select value={selected} disabled={busy || analysisDirty} onChange={e => { setSelected(e.target.value); setNotice(""); }}>{state.periods.map(p => <option key={p.id} value={p.id} title={periodLabel(p)}>{periodShortLabel(p)}</option>)}</Select></FieldLabel>{!sample && <AppButton variant="secondary" size="small" disabled={busy || analysisDirty} onClick={() => edit(period)}><Pencil size={17} />수정</AppButton>}</div>
       <p className={styles.meta}>{periodDays(period)}일 기록 · 마지막 저장 {stamp(period.updatedAt)}</p>
       <Comparison period={period} baseline={baseline} /><PeriodNotes period={period} />
       {!sample && <div className={styles.actions}><AppButton variant="primary" className={styles.primary} disabled={busy || analysisDirty || !period.nextAction || !period.successCriterion || state.reports.some(r => r.source === "user-records" && JSON.stringify(referenceFor(r.period, r.baseline)) === JSON.stringify(referenceFor(period, baseline)))} onClick={requestArchive}><Archive size={18} />리포트 보관</AppButton></div>}
@@ -291,7 +292,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
       {canAddPeriod && chatRecord && <><AppButton type="button" variant="primary" className={styles.primary} disabled={busy || analysisDirty} onClick={() => editFromChat(chatRecord)}><FileText size={18} />대화에서 말한 실적으로 첫 기록 만들기</AppButton><small className={styles.note}>{`${chatRecord.start} ~ ${chatRecord.end}`}{chatRecord.revenue !== null ? ` · 실제 매출 ${chatRecord.revenue.toLocaleString("ko-KR")}원` : ""} · 저장 전에 고칠 수 있어요</small></>}
     </div>)}
     {state && !editor && mode === "reports" && (report ? <>
-      <label className={styles.reportSelect}>보관한 리포트<select value={reportId} onChange={e => setReportId(e.target.value)}>{state.reports.map(r => <option key={r.id} value={r.id}>{periodLabel(r.period)} · {new Date(r.createdAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 보관</option>)}</select></label>
+      <FieldLabel className={styles.reportSelect}>보관한 리포트<Select value={reportId} onChange={e => setReportId(e.target.value)}>{state.reports.map(r => <option key={r.id} value={r.id}>{periodLabel(r.period)} · {new Date(r.createdAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 보관</option>)}</Select></FieldLabel>
       <article className={styles.report} aria-label="보관된 개선 리포트">
         <header><h3>{report.businessTitle} 운영 개선 리포트</h3><p>{periodLabel(report.period)} · {periodDays(report.period)}일</p><p className={styles.meta}>{stamp(report.createdAt)} 보관</p></header>
         <p className={styles.note}>{report.source === "ai-assisted" ? "직접 적은 실적, AI가 짐작한 원인, 고른 행동을 나눠 보관했어요. 실적이나 원인을 따로 확인한 결과는 아니에요." : "직접 적은 실적과 기간 비교를 보관한 기록이에요. AI 분석이나 실적을 따로 확인한 결과는 아니에요."}</p>

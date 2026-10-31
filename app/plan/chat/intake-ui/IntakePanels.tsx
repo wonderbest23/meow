@@ -19,6 +19,7 @@ import { CoachWelcome } from "../../../../components/coach-chat-ui";
 import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
 import { ksicNameHint, ksicSectorLabel } from "../../../../lib/plan-builder/ksic-hints";
 import { parseWonAmount } from "../../../../lib/plan-builder/answer-number";
+import { FieldGroup, FieldLabel, TextArea, TextField } from "../../../../components/app-field";
 import styles from "../intake.module.css";
 import { StatusBadge } from "../../../../components/status-badge";
 import { AppButton, type AppButtonSize, type AppButtonVariant } from "../../../../components/app-button";
@@ -232,7 +233,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       </div>}
       <div hidden={showMention}>
       {inChat && question.id === "industry" && !manualIndustry && <div className={styles.ksicCandidates} role="group" aria-label="표준산업분류 후보">
-        {!coach && <label className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><input type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></label>}
+        {!coach && <FieldLabel className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><TextField type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></FieldLabel>}
         {/* 대화(코치)에서는 '찾은 업종이에요…' 같은 안내를 빼고 추천 칩 하나를 눈에 띄게 한다(대표 요청 2026-10-24) — 여러 업종이 섞인 경우만 알린다 */}
         {ksicShown.length > 0 && (!coach || snapshot.structure?.fallback === "compound") && <p className={styles.ksicLead}>{snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : recommendFirst ? "이야기해 주신 내용과 가까운 업종이에요. 맞는 걸 눌러 주세요." : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
         {ksicSearchable(ksicQuery.trim()) && ksicSearched && ksicShown.length === 0 && <p className={styles.ksicLead}>{ksicSearch.failed ? "업종 검색이 잠시 연결되지 않았어요. 아래에서 골라 주시거나 잠시 후 다시 입력해 주세요." : coach ? "맞는 업종을 못 찾았어요. 다른 이름으로 찾거나 아래에서 골라 주세요." : "맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다."}</p>}
@@ -294,8 +295,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
           <button type="button" className={styles.presetChip} data-selected={customPeriod || undefined} aria-expanded={customPeriod} aria-controls="intake-period-range" disabled={disabled} onClick={() => setCustomPeriod(value => !value)}>직접 선택</button>
         </div>
         {customPeriod && <div id="intake-period-range" className={styles.dateRange}>
-          <label><span>시작일</span><input type="date" value={periodStart} max={periodEnd || undefined} disabled={disabled} onChange={event => setPeriodStart(event.target.value)} /></label>
-          <label><span>종료일</span><input type="date" value={periodEnd} min={periodStart || undefined} disabled={disabled} onChange={event => setPeriodEnd(event.target.value)} /></label>
+          <FieldLabel><span>시작일</span><TextField type="date" value={periodStart} max={periodEnd || undefined} disabled={disabled} onChange={event => setPeriodStart(event.target.value)} /></FieldLabel>
+          <FieldLabel><span>종료일</span><TextField type="date" value={periodEnd} min={periodStart || undefined} disabled={disabled} onChange={event => setPeriodEnd(event.target.value)} /></FieldLabel>
           <AppButton type="button" variant="secondary" className={styles.secondaryButton} disabled={disabled || !customPeriodValid} onClick={() => commit(`${periodStart} / ${periodEnd}`)}>{inChat ? "기간 선택" : "이 기간으로 저장"}<Check size={17} aria-hidden="true" /></AppButton>
         </div>}
       </div>}
@@ -306,8 +307,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       </details>}
       {!choice && !inChat && <div className={styles.answerField}>
         <label className={styles.srOnly} htmlFor={`intake-answer-${question.id}`}>{candidate && draft.custom ? "직접 생각한 사업" : question.label}</label>
-        {question.kind === "number" ? <div className={styles.numberField}><input id={`intake-answer-${question.id}`} type="text" inputMode="decimal" autoComplete="off" maxLength={80} value={draft.text} onChange={event => onChange({ ...draft, text: event.target.value })} aria-describedby={hintId} /><span>{question.unit}</span></div>
-          : <textarea id={`intake-answer-${question.id}`} rows={5} maxLength={1200} value={draft.text} onChange={event => onChange({ ...draft, text: event.target.value })} aria-describedby={hintId} />}
+        {question.kind === "number" ? <FieldGroup className={styles.numberField}><input id={`intake-answer-${question.id}`} type="text" inputMode="decimal" autoComplete="off" maxLength={80} value={draft.text} onChange={event => onChange({ ...draft, text: event.target.value })} aria-describedby={hintId} /><span>{question.unit}</span></FieldGroup>
+          : <TextArea className={styles.answerText} id={`intake-answer-${question.id}`} rows={5} maxLength={1200} value={draft.text} onChange={event => onChange({ ...draft, text: event.target.value })} aria-describedby={hintId} />}
         <p className={styles.fieldHint} id={hintId}>{question.kind === "number" ? `단위: ${question.unit || "숫자"}${question.period ? ` · ${question.period}` : ""}` : `${draft.text.length.toLocaleString("ko-KR")} / 1,200자`}</p>
       </div>}
       <div className={styles.formActions}>
@@ -389,7 +390,7 @@ function CountStep({ question, unit, count, disabled, onCount }: { question: Int
     {presets.length > 0 && <div className={styles.chipRow}>{presets.map(preset => <button key={preset} type="button" className={styles.chip} aria-pressed={count === preset} data-selected={count === preset || undefined} disabled={disabled} onClick={() => onCount(count === preset ? undefined : preset)}>{numberPresetLabel(presetQuestion, preset)}</button>)}</div>}
     <div className={styles.stepper} role="group" aria-label="수량 조정">
       <button type="button" className={styles.stepButton} aria-label={`${step}${unit} 줄이기`} disabled={disabled || (count ?? 0) <= 0} onClick={() => onCount(Math.max(0, (count ?? 0) - stepFor(Math.max(0, (count ?? 0) - 1), unit)))}>−</button>
-      <label className={styles.stepValue}><span className={styles.srOnly}>수량</span><input type="text" inputMode="numeric" autoComplete="off" maxLength={9} placeholder="0" value={count === undefined ? "" : String(count)} onChange={event => { const digits = event.target.value.replace(/[^\d]/g, ""); onCount(digits ? Number(digits) : undefined); }} /><span>{unit}</span></label>
+      <FieldGroup as="label" className={styles.stepValue}><span className={styles.srOnly}>수량</span><input type="text" inputMode="numeric" autoComplete="off" maxLength={9} placeholder="0" value={count === undefined ? "" : String(count)} onChange={event => { const digits = event.target.value.replace(/[^\d]/g, ""); onCount(digits ? Number(digits) : undefined); }} /><span>{unit}</span></FieldGroup>
       <button type="button" className={styles.stepButton} aria-label={`${step}${unit} 늘리기`} disabled={disabled} onClick={() => onCount((count ?? 0) + step)}>+</button>
     </div>
   </div>;
@@ -409,7 +410,7 @@ function NumberQuick({ question, draft, presets, disabled, staging, onChange, on
     {presets.length > 0 && <div className={styles.chipRow} role="group" aria-label="자주 고르는 값">{presets.map(preset => <button key={preset} type="button" className={styles.chip} data-selected={current === preset || undefined} disabled={disabled} onClick={() => onCommit(numberAnswer(preset, unit))}>{numberPresetLabel(question, preset)}</button>)}</div>}
     <div className={styles.stepper} role="group" aria-label="값 조정">
       <button type="button" className={styles.stepButton} aria-label={`${step}${unit} 줄이기`} disabled={disabled || (current ?? 0) <= 0} onClick={() => setValue((current ?? 0) - stepFor(Math.max(0, (current ?? 0) - 1), unit))}>−</button>
-      <label className={styles.stepValue}><span className={styles.srOnly}>{question.label}</span><input type="text" inputMode="decimal" autoComplete="off" maxLength={12} placeholder="0" value={numericText} disabled={disabled} onChange={event => onChange({ ...draft, unknown: false, text: event.target.value.replace(/[^\d.]/g, "") })} /><span>{unit}{question.period ? ` / ${question.period}` : ""}</span></label>
+      <FieldGroup as="label" className={styles.stepValue}><span className={styles.srOnly}>{question.label}</span><input type="text" inputMode="decimal" autoComplete="off" maxLength={12} placeholder="0" value={numericText} disabled={disabled} onChange={event => onChange({ ...draft, unknown: false, text: event.target.value.replace(/[^\d.]/g, "") })} /><span>{unit}{question.period ? ` / ${question.period}` : ""}</span></FieldGroup>
       <button type="button" className={styles.stepButton} aria-label={`${step}${unit} 늘리기`} disabled={disabled || (current ?? 0) >= max} onClick={() => setValue((current ?? 0) + step)}>+</button>
       {!staging && <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={disabled || current === null || current > max} onClick={() => current !== null && onCommit(numberAnswer(current, unit))}>이 값으로 저장</AppButton>}
     </div>
@@ -426,7 +427,7 @@ function CostPriceHelper({ disabled, onCommit }: { disabled: boolean; onCommit: 
   return <details className={styles.costHelper}>
     <summary>가격을 모르겠다면 원가로 계산해 보기</summary>
     <p className={styles.chipHelp}>상품 1개(서비스 1건)를 만드는 데 드는 재료·포장·외주비를 넣고, 판매가에서 원가가 차지할 비율을 골라 주세요. 업종마다 다르니 내 원가 구조에 맞는 비율을 고르면 돼요.</p>
-    <label className={styles.costHelperInput}><span>1개당 원가</span><input inputMode="numeric" value={costText} placeholder="예: 1500" disabled={disabled} onChange={event => setCostText(event.target.value.replace(/[^\d,]/g, ""))} /><em>원</em></label>
+    <FieldLabel className={styles.costHelperInput}><span>1개당 원가</span><FieldGroup as="span"><input inputMode="numeric" value={costText} placeholder="예: 1500" disabled={disabled} onChange={event => setCostText(event.target.value.replace(/[^\d,]/g, ""))} /><em>원</em></FieldGroup></FieldLabel>
     <div className={styles.chipRow} role="group" aria-label="원가 비율">{COST_RATIO_PRESETS.map(value => <button key={value} type="button" className={styles.chip} aria-pressed={ratio === value} data-selected={ratio === value || undefined} disabled={disabled} onClick={() => setRatio(value)}>원가 {value}%</button>)}</div>
     {result && <div className={styles.costHelperResult}>
       <p>제안 판매가 <strong>{formatWon(result.price)}</strong> · 1개 팔 때마다 원가를 빼고 {formatWon(result.margin)}이 남아요 (원가 {ratio}% 기준).</p>
@@ -478,7 +479,7 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
     </div>}
     {keypad && <div className={styles.keypad} role="group" aria-label="정확한 금액 입력">
       <div className={styles.keypadRow}>
-        <input id={`intake-exact-${question.id}`} type="text" inputMode="decimal" autoComplete="off" maxLength={14} placeholder="0" disabled={disabled} aria-label={`정확한 금액 (${unitScale === 10000 ? "만원" : "원"} 단위)`} value={amountText} onChange={event => setAmountText(event.target.value.replace(/[^\d.,]/g, ""))} />
+        <TextField id={`intake-exact-${question.id}`} type="text" inputMode="decimal" autoComplete="off" maxLength={14} placeholder="0" disabled={disabled} aria-label={`정확한 금액 (${unitScale === 10000 ? "만원" : "원"} 단위)`} value={amountText} onChange={event => setAmountText(event.target.value.replace(/[^\d.,]/g, ""))} />
         <div className={styles.unitToggle} role="group" aria-label="입력 단위">
           <button type="button" aria-pressed={unitScale === 10000} disabled={disabled} onClick={() => { if (unitScale !== 10000) { setUnitScale(10000); setAmountText(amount !== null && amount % 10000 === 0 ? String(amount / 10000) : ""); } }}>만원</button>
           <button type="button" aria-pressed={unitScale === 1} disabled={disabled} onClick={() => { if (unitScale !== 1) { setUnitScale(1); setAmountText(amount !== null ? String(amount) : ""); } }}>원 단위</button>
@@ -968,7 +969,7 @@ export function BusinessIdentityHero({ snapshot, disabled, onName, compact = fal
       {custom === null
         ? <AppButton type="button" variant="text" className={styles.textButton} disabled={disabled} onClick={() => setCustom(identity.names.some(item => item.name === current) ? "" : current)}><PencilLine size={15} aria-hidden="true" />직접 정하기</AppButton>
         : <form className={styles.identityCustom} onSubmit={submitCustom}>
-            <input aria-label="사업 이름 직접 입력" maxLength={40} value={custom} autoFocus onChange={event => setCustom(event.target.value)} placeholder="예: 새벽커피" />
+            <TextField aria-label="사업 이름 직접 입력" maxLength={40} value={custom} autoFocus onChange={event => setCustom(event.target.value)} placeholder="예: 새벽커피" />
             <AppButton type="submit" variant="secondary" className={styles.secondaryButton} disabled={disabled || !custom.trim()}>이 이름으로</AppButton>
             <AppButton type="button" variant="text" className={styles.textButton} onClick={() => setCustom(null)}>취소</AppButton>
           </form>}
@@ -1003,7 +1004,7 @@ export function DesignResult({ snapshot, disabled, onName }: { snapshot: IntakeS
     <div className={styles.resultBlock}>
       <p className={styles.resultLabel}>지금 가게 이름</p>
       {onName ? <form className={styles.identityCustom} onSubmit={event => { event.preventDefault(); if (shopName && shopName !== current) { onName(shopName); setCustom(null); } }}>
-          <input aria-label="지금 가게 이름" maxLength={40} value={custom ?? current} onChange={event => setCustom(event.target.value)} placeholder="간판에 적힌 이름 (예: 망원 아침빵집)" />
+          <TextField aria-label="지금 가게 이름" maxLength={40} value={custom ?? current} onChange={event => setCustom(event.target.value)} placeholder="간판에 적힌 이름 (예: 망원 아침빵집)" />
           <AppButton type="submit" variant="secondary" className={styles.secondaryButton} disabled={disabled || !shopName || shopName === current}>이 이름으로</AppButton>
         </form> : <h2 className={styles.resultName}>{businessDisplayName(current)}</h2>}
       <small className={styles.identityNote}>계획서와 홈페이지에 이 이름이 들어가요.</small>
@@ -1033,7 +1034,7 @@ export function DesignResult({ snapshot, disabled, onName }: { snapshot: IntakeS
             <button type="button" className={styles.chip} disabled={disabled} onClick={() => setCustom(identity.names.some(item => item.name === current) ? "" : current)}>직접 수정하기</button>
           </div>
         : <form className={styles.identityCustom} onSubmit={submitCustom}>
-            <input aria-label="사업 이름 직접 입력" maxLength={40} value={custom} autoFocus onChange={event => setCustom(event.target.value)} placeholder="예: 새벽반찬" />
+            <TextField aria-label="사업 이름 직접 입력" maxLength={40} value={custom} autoFocus onChange={event => setCustom(event.target.value)} placeholder="예: 새벽반찬" />
             <AppButton type="submit" variant="secondary" className={styles.secondaryButton} disabled={disabled || !custom.trim()}>이 이름으로</AppButton>
             <AppButton type="button" variant="text" className={styles.textButton} onClick={() => setCustom(null)}>취소</AppButton>
           </form>)}

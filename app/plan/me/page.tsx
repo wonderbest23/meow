@@ -17,6 +17,7 @@ import { loadAuthSession } from "../../../lib/client/auth-session";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { AppButton } from "../../../components/app-button";
+import { FieldError, TextArea, TextField } from "../../../components/app-field";
 
 /*
  * /plan/me — 마이페이지.
@@ -335,7 +336,7 @@ export default function PlanMePage() {
                     <tr>
                       <td colSpan={5}>
                         <div className={styles.refundForm}>
-                          <textarea
+                          <TextArea
                             aria-label="환불 사유"
                             rows={2}
                             value={refundReason}
@@ -385,7 +386,8 @@ export default function PlanMePage() {
                 ? <>되돌릴 수 없어요. 계속하려면 로그인한 이메일 <b>{account.email}</b> 을 그대로 적어 주세요.</>
                 : <>되돌릴 수 없어요. 계속하려면 아래 칸에 <b>{NO_EMAIL_CONFIRM}</b> 를 그대로 적어 주세요.</>}
             </p>
-            <input
+            <TextField
+              className={styles.deleteInput}
               aria-label={account.email ? "탈퇴 확인용 이메일" : "탈퇴 확인 문구"}
               type={account.email ? "email" : "text"}
               autoFocus
@@ -396,7 +398,7 @@ export default function PlanMePage() {
               aria-invalid={deleteMessage ? true : undefined}
               aria-describedby={deleteMessage ? "delete-guide delete-error" : "delete-guide"}
             />
-            {deleteMessage && <p id="delete-error" className={styles.deleteError} role="alert">{deleteMessage}</p>}
+            {deleteMessage && <FieldError id="delete-error" className={styles.deleteError} role="alert">{deleteMessage}</FieldError>}
             <div>
               <AppButton
                 type="button"

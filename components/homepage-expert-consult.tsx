@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Check } from "lucide-react";
 import { HOMEPAGE_EXPERT_SERVICE_ID } from "../lib/services/catalog";
 import { Spinner } from "../app/plan/PlanLoading";
+import { FieldLabel, TextArea, TextField } from "./app-field";
 
 /*
  * 홈페이지 6번 '전문가 상담' — 담당자가 직접 손봐 주는 고퀄리티 개선 상담 신청(소유자 요청 2026-10-09).
@@ -55,14 +56,14 @@ export function HomepageExpertConsult({ planId }: { planId: string | null }) {
   return (
     <form className="hk-expert" onSubmit={submit}>
       <p className="hk-expert-note">담당자가 전화로 원하는 부분을 듣고 사진·문구·디자인을 직접 다듬어 드려요. 비용은 상담 후 안내해요.</p>
-      <label>
+      <FieldLabel>
         <span>연락받을 휴대폰</span>
-        <input type="tel" inputMode="tel" autoComplete="tel" maxLength={13} placeholder="010-0000-0000" value={phone} onChange={event => setPhone(event.target.value)} required />
-      </label>
-      <label>
+        <TextField type="tel" inputMode="tel" autoComplete="tel" maxLength={13} placeholder="010-0000-0000" value={phone} onChange={event => setPhone(event.target.value)} required />
+      </FieldLabel>
+      <FieldLabel>
         <span>고치고 싶은 부분 (선택)</span>
-        <textarea rows={3} maxLength={1000} placeholder="예: 첫 화면 사진을 가게 사진으로, 메뉴 표를 깔끔하게" value={memo} onChange={event => setMemo(event.target.value)} />
-      </label>
+        <TextArea rows={3} maxLength={1000} placeholder="예: 첫 화면 사진을 가게 사진으로, 메뉴 표를 깔끔하게" value={memo} onChange={event => setMemo(event.target.value)} />
+      </FieldLabel>
       {message && <p className="hk-expert-error" role="alert">{message}</p>}
       <div className="hk-fold-save"><button type="submit" disabled={!planId || state === "sending" || !phone.trim()}>{state === "sending" ? "신청하는 중" : "전문가 상담 신청하기"}</button></div>
     </form>

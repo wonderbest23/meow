@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import styles from "./confirm-dialog.module.css";
 import theme from "./workspace-theme.module.css";
 import { AppButton } from "./app-button";
+import { TextField } from "./app-field";
 
 /*
  * 확인창 — window.confirm / alert 대신 쓴다.
@@ -46,7 +47,7 @@ function ConfirmSheet({ options, onDone }: { options: ConfirmOptions; onDone: (o
         {options.title && <h2 id="confirm-dialog-title">{options.title}</h2>}
         {options.message && <p id="confirm-dialog-message">{options.message}</p>}
         {options.list?.length ? <ul id="confirm-dialog-list" className={styles.list}>{options.list.map(item => <li key={item}>{item}</li>)}</ul> : null}
-        {options.input && <input ref={field} className={styles.field} aria-label={options.input.label} type={options.input.type ?? "text"} defaultValue={options.input.value} readOnly={options.input.readOnly} autoComplete="off" autoCapitalize="off" spellCheck={false} onFocus={event => { if (options.input?.readOnly) event.currentTarget.select(); }} />}
+        {options.input && <TextField ref={field} className={styles.field} aria-label={options.input.label} type={options.input.type ?? "text"} defaultValue={options.input.value} readOnly={options.input.readOnly} autoComplete="off" autoCapitalize="off" spellCheck={false} onFocus={event => { if (options.input?.readOnly) event.currentTarget.select(); }} />}
       </div>
       {/* 단추 글이 길면(반 칸에 7글자 남짓) 360px 에서 두 줄로 꺾였다 — 좁은 화면에서는 세로로 쌓는다(휴대폰 점검 2026-10-24) */}
       <div className={styles.actions} data-single={cancelLabel ? undefined : ""} data-stack={cancelLabel && Math.max(cancelLabel.length, (options.confirmLabel ?? "확인").length) > 6 ? "" : undefined}>

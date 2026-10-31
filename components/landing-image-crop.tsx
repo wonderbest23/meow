@@ -5,6 +5,7 @@ import { Check, Crop, RotateCcw, X } from "lucide-react";
 import { IMAGE_CROP_ASPECTS, clampCropValue, cropImageFile, drawImageCrop, imageCropOutputSize, imageCropRect, loadCropImage, type ImageCropAspect, type ImageCropPosition } from "../lib/landing/image-crop";
 import styles from "./landing-image-crop.module.css";
 import { AppButton } from "./app-button";
+import { FieldLabel, Select } from "./app-field";
 
 export type LandingImageCropProps = {
   file: File | null;
@@ -121,9 +122,9 @@ export default function LandingImageCrop({ file, onApply, onCancel, initialAspec
       <div className={styles.metadata}><span>{dimensions ? `원본 ${dimensions.width} × ${dimensions.height}` : ""}</span><output aria-label="자르기 출력 크기">{output ? `${output.width} × ${output.height}px` : ""}</output></div>
       <fieldset className={styles.controls} disabled={!image || busy}>
         <legend className={styles.srOnly}>이미지 자르기 설정</legend>
-        <div className={styles.ratioRow}><label htmlFor={`${titleId}-ratio`}>비율</label><select id={`${titleId}-ratio`} value={aspect} onChange={event => { setAspect(event.target.value as ImageCropAspect); setPosition(centered); }}>
+        <div className={styles.ratioRow}><FieldLabel htmlFor={`${titleId}-ratio`}>비율</FieldLabel><Select id={`${titleId}-ratio`} value={aspect} onChange={event => { setAspect(event.target.value as ImageCropAspect); setPosition(centered); }}>
           {IMAGE_CROP_ASPECTS.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}
-        </select><button type="button" className={styles.icon} title="원본으로 재설정" aria-label="원본으로 재설정" onClick={() => { setAspect("original"); setPosition(centered); }}><RotateCcw size={18} /></button></div>
+        </Select><button type="button" className={styles.icon} title="원본으로 재설정" aria-label="원본으로 재설정" onClick={() => { setAspect("original"); setPosition(centered); }}><RotateCcw size={18} /></button></div>
         <label className={styles.range}>확대<output>{Math.round(position.zoom * 100)}%</output><input type="range" aria-label="확대" min="100" max="400" step="1" value={Math.round(position.zoom * 100)} aria-valuetext={`${Math.round(position.zoom * 100)}%`} onChange={event => setPosition(current => ({ ...current, zoom: Number(event.target.value) / 100 }))} /></label>
         <label className={styles.range}>가로 위치<output>{Math.round(position.x * 100)}%</output><input type="range" aria-label="가로 위치" min="0" max="100" step="1" value={Math.round(position.x * 100)} disabled={!rect || !dimensions || dimensions.width - rect.width < 0.001} aria-valuetext={`${Math.round(position.x * 100)}%`} onChange={event => setPosition(current => ({ ...current, x: Number(event.target.value) / 100 }))} /></label>
         <label className={styles.range}>세로 위치<output>{Math.round(position.y * 100)}%</output><input type="range" aria-label="세로 위치" min="0" max="100" step="1" value={Math.round(position.y * 100)} disabled={!rect || !dimensions || dimensions.height - rect.height < 0.001} aria-valuetext={`${Math.round(position.y * 100)}%`} onChange={event => setPosition(current => ({ ...current, y: Number(event.target.value) / 100 }))} /></label>

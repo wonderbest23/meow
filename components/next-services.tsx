@@ -16,6 +16,7 @@ import styles from "./next-services.module.css";
 import { StatusBadge, type StatusTone } from "./status-badge";
 import { Spinner } from "../app/plan/PlanLoading";
 import { AppButton } from "./app-button";
+import { FieldLabel, TextField } from "./app-field";
 
 /*
  * '다음 단계' — 홈페이지 다음으로 맡길 수 있는 일(마케팅).
@@ -182,7 +183,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
     {checkAvailable && adminOffered ? <form className={styles.verify} onSubmit={(event) => void runCheck(event)}>
       <div className={styles.verifyHead}><BadgeCheck size={18} aria-hidden /><strong>이미 등록·신고하셨나요?</strong><small>번호만 넣으면 국세청·공정위에서 바로 확인해요</small></div>
       <div className={styles.verifyRow}>
-        <input inputMode="numeric" autoComplete="off" value={bno} onChange={(event) => setBno(event.target.value)} placeholder="사업자등록번호 10자리" aria-label="사업자등록번호" />
+        <TextField inputMode="numeric" autoComplete="off" value={bno} onChange={(event) => setBno(event.target.value)} placeholder="사업자등록번호 10자리" aria-label="사업자등록번호" />
         <AppButton variant="primary" type="submit" disabled={checking}>{checking ? <Spinner /> : null} 확인</AppButton>
       </div>
       {checkError ? <p className={styles.error} role="alert">{checkError}</p> : null}
@@ -241,11 +242,11 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
             : sample ? <><p className={styles.prepare} style={{ marginBottom: 12 }}>예시 사업이라 신청할 수 없어요. 내 사업을 만든 뒤 신청해 주세요.</p><AppButton variant="primary" className={styles.cta} href={newChatHref()}>대화로 내 사업 시작하기</AppButton></>
             : state?.login ? <AppButton variant="primary" className={styles.cta} href={`/account?next=${encodeURIComponent(loginNext)}`}>로그인하고 신청하기</AppButton>
             : <form className={styles.form} onSubmit={(event) => void submit(event, detail)}>
-              <label><span>연락받을 휴대폰</span><input inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-1234-5678" /></label>
+              <FieldLabel><span>연락받을 휴대폰</span><TextField inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-1234-5678" /></FieldLabel>
               <div className={styles.times} role="radiogroup" aria-label="연락 받기 좋은 시간">
                 {TIME_CHOICES.map((choice) => <button key={choice} type="button" role="radio" aria-checked={(preferredTime || "아무 때나") === choice} className={(preferredTime || "아무 때나") === choice ? styles.timeOn : ""} onClick={() => setPreferredTime(choice === "아무 때나" ? "" : choice)}>{choice}</button>)}
               </div>
-              <label><span>남길 말 <small>(선택)</small></span><input value={memo} maxLength={500} onChange={(event) => setMemo(event.target.value)} placeholder="예: 다음 주 안에 하고 싶어요" /></label>
+              <FieldLabel><span>남길 말 <small>(선택)</small></span><TextField value={memo} maxLength={500} onChange={(event) => setMemo(event.target.value)} placeholder="예: 다음 주 안에 하고 싶어요" /></FieldLabel>
               {formError ? <p className={styles.error} role="alert">{formError}</p> : null}
               <AppButton type="submit" variant="primary" className={styles.cta} disabled={sending || !state}>{sending ? <Spinner /> : null} 신청하기</AppButton>
               <small className={styles.note}>신청은 무료예요. 상담 후 진행 여부를 정하시면 돼요.</small>

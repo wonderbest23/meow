@@ -7,6 +7,7 @@ import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availabi
 import { artifactErrorMessage, artifactSlideText, type ArtifactCommand, type ArtifactPreview, type ArtifactUpdateView } from "../../../lib/plan-builder/artifact-updates";
 import styles from "./ArtifactUpdatePanel.module.css";
 import { AppButton } from "../../../components/app-button";
+import { FieldLabel, Select } from "../../../components/app-field";
 
 /** 항목 이름 — 제목이 있으면 제목, 없으면 키 */
 function artifactItemTitle(item: { title?: unknown; key?: unknown; id?: unknown }): string {
@@ -94,7 +95,7 @@ export default function ArtifactUpdatePanel({ businessId }: { businessId?: strin
       {aiNeeded && <label><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} /> {preview.target ? `${preview.target.provider} ${preview.target.model}에 선택한 사업 자료를 전송하는 데 동의합니다` : "AI 연동 갱신은 아직 제공 준비 중이에요"}</label>}
       <AppButton variant="primary" disabled={busy || Boolean(aiNeeded && (!preview.target || !consent))} onClick={() => void send({ type: "generate", id: crypto.randomUUID(), hash: preview.hash, base: preview.base, consent: true, includeHomepage })}>변경안 만들기</AppButton>
     </div>}
-    {!!jobs.length && <label className={styles.history}>변경 기록<select value={selected} onChange={event => setSelected(event.target.value)}>{jobs.map(item => <option key={item.id} value={item.id}>{new Date(item.createdAt).toLocaleString("ko-KR")} · {statuses[item.status]}</option>)}</select></label>}
+    {!!jobs.length && <FieldLabel className={styles.history}>변경 기록<Select value={selected} onChange={event => setSelected(event.target.value)}>{jobs.map(item => <option key={item.id} value={item.id}>{new Date(item.createdAt).toLocaleString("ko-KR")} · {statuses[item.status]}</option>)}</Select></FieldLabel>}
     {job && <div>
       <p>{statuses[job.status]} · 완료 {job.chunks.filter(chunk => chunk.status === "complete").length} / {job.chunks.length}</p>
       {job.error && <p>{artifactErrorMessage(job.error)}</p>}

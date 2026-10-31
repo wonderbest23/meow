@@ -181,16 +181,7 @@
   gap: 8px;
   padding: 10px 0 4px;
 }
-.refundForm textarea {
-  width: 100%;
-  border: 1.5px solid var(--border-soft, var(--app-line));
-  background: var(--surface-soft, var(--app-raised));
-  border-radius: 10px;
-  padding: 10px 12px;
-  font: inherit;
-  font-size: .8125rem;
-  resize: vertical;
-}
+/* 입력칸 모양은 공통 입력칸(components/app-field)이 정한다 — 여기서는 자리만 */
 .refundForm > div {
   display: flex;
   gap: 8px;
@@ -223,15 +214,8 @@
   line-height: 1.7;
   color: var(--text-body, var(--app-body));
 }
-.deleteForm input {
-  width: 100%;
+.deleteInput {
   max-width: 320px;
-  border: 1.5px solid var(--border-soft, var(--app-line));
-  background: var(--surface-soft, var(--app-raised));
-  border-radius: 10px;
-  padding: 11px 13px;
-  font: inherit;
-  font-size: .875rem;
 }
 .deleteForm > div {
   display: flex;
@@ -241,11 +225,6 @@
 .deleteForm > .deleteError,
 .deleteError {
   margin: 0;
-  font-size: .8125rem;
-  color: var(--app-danger);
-}
-.deleteForm input[aria-invalid="true"] {
-  border-color: var(--app-danger);
 }
 
 /* 폰: 결제 내역 표를 한 건씩 카드로 — 다섯 칸을 한 줄에 두면 환불 단추가 화면 밖으로 밀렸다 */
@@ -256,7 +235,6 @@
   .table td { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 0; white-space: normal; }
   .table td[data-label]::before { content: attr(data-label); color: var(--text-muted, var(--app-muted)); font-size: .8125rem; flex: none; }
   .table td[colspan] { display: block; }
-  .table textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
 }
 
 /* 화면에는 안 보이고 읽기 프로그램만 읽는 제목 — 같은 이름이 위 머리말에 이미 있다 */

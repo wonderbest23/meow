@@ -21,6 +21,7 @@ import { hydrateFromServer, isSamplePlan, lastHydrationFailed } from "../../../l
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import { fetchWithTimeout, koreanText } from "../../../lib/client/user-error";
 import { AppButton } from "../../../components/app-button";
+import { FieldError, FieldHelp, FieldLabel, TextField } from "../../../components/app-field";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -416,23 +417,25 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
             <p className={styles.supply}><strong>제공 시점</strong>{SUPPLY[product]}</p>
             {isDomainPurchase ? <fieldset className={styles.registrant}>
               <legend>도메인 명의자 <small>(도메인은 이 분 이름으로 등록돼요)</small></legend>
-              <label className={styles.phone}><span>이름(실명)</span><input autoComplete="name" value={registrant.name} onChange={setReg("name")} placeholder="홍길동" /></label>
-              <label className={styles.phone}><span>휴대폰</span><input type="tel" inputMode="numeric" autoComplete="tel" value={registrant.phone} onChange={setReg("phone")} placeholder="01012345678" maxLength={13} /></label>
+              <FieldLabel className={styles.phone}><span>이름(실명)</span><TextField autoComplete="name" value={registrant.name} onChange={setReg("name")} placeholder="홍길동" /></FieldLabel>
+              <FieldLabel className={styles.phone}><span>휴대폰</span><TextField type="tel" inputMode="numeric" autoComplete="tel" value={registrant.phone} onChange={setReg("phone")} placeholder="01012345678" maxLength={13} /></FieldLabel>
               {/* 주소는 카카오 우편번호 검색으로 채운다(오타·우편번호 누락 방지) — 못 불러오면 손으로 적어도 된다 */}
               <div className={styles.registrantRow}>
-                <label className={styles.phone}><span>우편번호</span><input inputMode="numeric" autoComplete="postal-code" value={registrant.postalCode} onChange={setReg("postalCode")} placeholder="03900" maxLength={5} /></label>
+                <FieldLabel className={styles.phone}><span>우편번호</span><TextField inputMode="numeric" autoComplete="postal-code" value={registrant.postalCode} onChange={setReg("postalCode")} placeholder="03900" maxLength={5} /></FieldLabel>
                 <div className={styles.phone}><span>주소</span><AddressSearchButton onPick={pickAddress} label={registrant.address ? "다시 검색" : "주소 검색"} /></div>
               </div>
-              <label className={styles.phone}><input aria-label="주소" autoComplete="street-address" value={registrant.address} onChange={setReg("address")} placeholder="주소 검색을 누르면 채워져요" /></label>
-              <label className={styles.phone}><span>상세 주소 <small>(선택)</small></span><input value={registrant.addressDetail} onChange={setReg("addressDetail")} placeholder="2층 201호" /></label>
-              <small>등록기관(도메인 관리 기관)에 그대로 전달돼요. 사업자등록증의 주소와 같으면 좋아요.</small>
+              <FieldLabel className={styles.phone}><TextField aria-label="주소" autoComplete="street-address" value={registrant.address} onChange={setReg("address")} placeholder="주소 검색을 누르면 채워져요" /></FieldLabel>
+              <FieldLabel className={styles.phone}><span>상세 주소 <small>(선택)</small></span><TextField value={registrant.addressDetail} onChange={setReg("addressDetail")} placeholder="2층 201호" /></FieldLabel>
+              <FieldHelp>등록기관(도메인 관리 기관)에 그대로 전달돼요. 사업자등록증의 주소와 같으면 좋아요.</FieldHelp>
             </fieldset> : null}
             {/* 결제 안내 문자는 카드 결제용 — 앱 결제는 스토어가 영수증을 보낸다 */}
-            {!native && <label className={styles.phone}>
-              <span>결제 안내 받을 휴대폰 <small>(선택)</small></span>
-              <input type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} />
-              <small>{phoneInvalid ? "010으로 시작하는 11자리로 적어 주세요." : `결제 완료 문자 1회${receiptByEmail ? " · 영수증은 가입한 이메일로도 가요" : ""}`}</small>
-            </label>}
+            {!native && <div className={styles.phone}>
+              <FieldLabel className={styles.phone}>
+                <span>결제 안내 받을 휴대폰 <small>(선택)</small></span>
+                <TextField type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} aria-describedby="notice-phone-help" />
+              </FieldLabel>
+              {phoneInvalid ? <FieldError id="notice-phone-help">010으로 시작하는 11자리로 적어 주세요.</FieldError> : <FieldHelp id="notice-phone-help">{`결제 완료 문자 1회${receiptByEmail ? " · 영수증은 가입한 이메일로도 가요" : ""}`}</FieldHelp>}
+            </div>}
             {/* 약관 동의 — 공용 동의 목록(동그란 체크·(필수)·›, 대표 요청 2026-10-16). 환불 제한처럼 꼭 읽어야 할 설명은 그 줄 아래에 그대로 */}
             <div ref={consentRef} className={styles.consentAnchor}>
             {nudge && !agreed ? <p className={styles.nudge} role="alert">필수 항목에 모두 동의해 주세요</p> : null}

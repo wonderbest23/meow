@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ConsentList } from "./consent-list";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import { googleClientId } from "../lib/google-client-id";
 import { nativeIdToken, nativePlatform } from "../lib/native-app";
 import { prepareAccountSignIn } from "../lib/plan-builder/plan-store";
@@ -14,6 +14,7 @@ import { DocLink } from "./doc-sheet";
 import { Eye, EyeOff } from "lucide-react";
 import { apiMessage, userErrorMessage } from "../lib/client/user-error";
 import { AppButton } from "./app-button";
+import { FieldError, TextField } from "./app-field";
 import theme from "./workspace-theme.module.css";
 
 /*
@@ -310,7 +311,9 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   const entry = mode === "login" || mode === "register";
   const kakao = () => window.location.assign(`/api/auth/kakao${next ? `?next=${encodeURIComponent(next)}` : ""}`);
   /* 보내는 동안 칸·로그인 단추는 disabled 대신 readOnly·aria-disabled로 둔다 — disabled면 누른 자리의 초점이 body로 떨어졌다(접근성 점검 2026-10-22). 다시 보내기는 submit의 busy가 막는다 */
-  const passwordField = (label: string, value: string, set: (value: string) => void, autoComplete: string) => <PasswordField label={label} value={value} onChange={set} autoComplete={autoComplete} disabled={busy} />;
+  const mismatch = Boolean(passwordConfirm) && password !== passwordConfirm;
+  const mismatchId = useId();
+  const passwordField = (label: string, value: string, set: (value: string) => void, autoComplete: string, error?: string) => <PasswordField label={label} value={value} onChange={set} autoComplete={autoComplete} disabled={busy} error={error} />;
 
   /*
    * 레퍼런스(오늘의집 로그인): 로고 → 이메일·비밀번호를 한 상자로 → 로그인 → 비밀번호 재설정 · 회원가입
@@ -330,15 +333,15 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           {mode === "reset" && <p className={styles.sub}>8자 이상으로 정해 주세요.</p>}
         </header>
         <div className={styles.group}>
-          {mode !== "reset" && <label className={styles.cell}><span className={styles.srOnly}>이메일</span><input ref={emailInput} className={styles.input} type="email" required readOnly={busy} placeholder="이메일" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></label>}
+          {mode !== "reset" && <label className={styles.cell}><span className={styles.srOnly}>이메일</span><TextField ref={emailInput} type="email" required readOnly={busy} aria-disabled={busy || undefined} placeholder="이메일" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></label>}
           {/*
             * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
             * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 된다. 규칙이 필요한 화면에서만 칸 아래 안내로 붙인다.
             */}
           {mode !== "recover" && passwordField(mode === "reset" ? "새 비밀번호 (8자 이상)" : mode === "register" ? "비밀번호 (8자 이상)" : "비밀번호", password, setPassword, mode === "login" ? "current-password" : "new-password")}
-          {(mode === "register" || mode === "reset") && passwordField("비밀번호 확인", passwordConfirm, setPasswordConfirm, "new-password")}
+          {(mode === "register" || mode === "reset") && passwordField("비밀번호 확인", passwordConfirm, setPasswordConfirm, "new-password", mismatch ? mismatchId : undefined)}
         </div>
-        {passwordConfirm && password !== passwordConfirm && <small className={styles.fieldError}>비밀번호가 서로 달라요.</small>}
+        {mismatch && <FieldError id={mismatchId} className={styles.fieldError}>비밀번호가 서로 달라요.</FieldError>}
         {mode === "register" && <ConsentList className={styles.consentList} items={[
           { key: "terms", label: "이용약관 동의", href: "/terms" },
           { key: "privacy", label: "개인정보 수집·이용 동의", href: "/privacy" },
@@ -385,11 +388,11 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
  * 비밀번호 칸 — 오른쪽 눈 아이콘을 누르면 친 글자를 보여 준다(대표 요청 2026-10-22: 휴대폰에서 무엇을 쳤는지 확인할 수 없었다).
  * 칸마다 따로 켜고 끈다. 아이콘을 눌러도 입력 칸의 커서는 그대로 둔다.
  */
-function PasswordField({ label, value, onChange, autoComplete, disabled }: { label: string; value: string; onChange: (value: string) => void; autoComplete: string; disabled: boolean }) {
+function PasswordField({ label, value, onChange, autoComplete, disabled, error }: { label: string; value: string; onChange: (value: string) => void; autoComplete: string; disabled: boolean; error?: string }) {
   const [shown, setShown] = useState(false);
   return <label className={`${styles.cell} ${styles.passwordCell}`}>
     <span className={styles.srOnly}>{label}</span>
-    <input className={styles.input} type={shown ? "text" : "password"} required readOnly={disabled} minLength={8} placeholder={label} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+    <TextField className={styles.input} type={shown ? "text" : "password"} required readOnly={disabled} aria-disabled={disabled || undefined} aria-invalid={error ? true : undefined} aria-describedby={error} minLength={8} placeholder={label} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
     <button type="button" className={styles.reveal} aria-label={shown ? "비밀번호 숨기기" : "비밀번호 보기"} aria-pressed={shown} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => setShown((current) => !current)}>
       {shown ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
     </button>

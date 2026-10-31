@@ -3521,9 +3521,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .domain-connector-title > em.ready { background: #efeefb; color: #3272db; }
 .domain-connector-title > em svg { width: 12px; height: 12px; }
 .domain-connect-form { padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
-.domain-connect-form label { min-width: 0; display: grid; gap: 6px; }
-.domain-connect-form label span { color: #2c3440; font-size: .625rem; font-weight: 900; }
-.domain-connect-form input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid #b0b8c1; border-radius: 6px; background: #fff; color: #0d0a2c; font-size: .8125rem; }
+/* 도메인 칸 입력칸·라벨 모양은 공통 입력칸(components/app-field) */
 .domain-connect-form > button { min-height: 44px; padding: 0 15px; border: 0; border-radius: 6px; background: #3272db; color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: .75rem; font-weight: 900; }
 .domain-connect-form > button svg { width: 16px; }
 .domain-connect-form > button:disabled { background: #8b95a1; cursor: not-allowed; }
@@ -14859,9 +14857,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 /* 접수된 문의 — 문자 알림 받을 휴대폰 · 주간 리포트 */
 .hk-alerts { display: grid; gap: 8px; margin: 0 0 12px; padding: 12px 14px; border: 1px solid #e6e6ee; border-radius: 10px; background: #fafbff; }
 .hk-alerts form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: end; }
-.hk-alerts-phone { display: grid; gap: 5px; min-width: 0; }
-.hk-alerts-phone span { font-size: .78125rem; font-weight: 700; color: #191f28; }
-.hk-alerts-phone input { min-height: 42px; padding: 0 12px; border: 1px solid #c9d1dc; border-radius: 8px; font-size: .9375rem; background: #fff; }
+.hk-alerts-phone { min-width: 0; } /* 모양은 공통 입력칸(components/app-field) */
 .hk-alerts form > button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 8px; background: #3272db; color: #fff; font-weight: 700; font-size: .84375rem; }
 .hk-alerts form > button:disabled { background: #b8c2cf; }
 .hk-alerts-agree { grid-column: 1 / -1; display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.5; color: #4e5968; }
@@ -14923,12 +14919,10 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .hk .hk-url-btn svg { display: inline-block !important; }
 .hk-url { flex-wrap: wrap; }
 .hk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
-.hk-grid label { display: grid; gap: 5px; font-size: .78125rem; color: #5e5e72; }
 .hk-grid label.wide { grid-column: 1 / -1; }
-.hk-grid input:not([type="checkbox"]) { min-height: 40px; padding: 0 12px; border: 1px solid #e1e1e8; border-radius: 8px; font-size: .875rem; color: #1c1d21; background: #fff; }
-.hk-grid .slug-input { display: flex; align-items: center; border: 1px solid #e1e1e8; border-radius: 8px; overflow: hidden; }
-.hk-grid .slug-input em { padding: 0 10px; background: #f5f5fa; color: #5a5d78; font-style: normal; font-size: .8125rem; line-height: 2.5rem; }
-.hk-grid .slug-input input { border: 0; flex: 1; }
+/* 편집 칸 입력칸·라벨 모양은 공통 입력칸(components/app-field) — 여기서는 자리만. 주소 앞 '/launch/' 는 묶음 칸 안 글자 */
+.hk-grid .slug-input { overflow: visible; }
+.hk-grid .slug-input em { padding: 0; color: var(--app-muted); font-style: normal; font-size: 1rem; }
 .hk-switch { display: flex !important; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 8px; background: #f5f5fa; }
 .hk-switch input { margin-top: 3px; }
 .hk-switch span { color: #1c1d21; font-weight: 700; font-size: .84375rem; }
@@ -17202,9 +17196,7 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 /* 홈페이지 5번 칸: 문의는 '내 문의'에서 */
 /* 홈페이지 6번 전문가 상담 */
 .hk-expert { display: grid; gap: 12px; }
-.hk-expert label { display: grid; gap: 6px; font-size: .8125rem; font-weight: 600; color: #374151; }
-.hk-expert input, .hk-expert textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font: inherit; font-size: .9375rem; font-weight: 400; color: #111418; background: #fff; }
-.hk-expert textarea { resize: vertical; min-height: 76px; }
+/* 상담 신청 입력칸·라벨 모양은 공통 입력칸(components/app-field) */
 .hk-expert-note { margin: 0; color: #4b5563; font-size: .875rem; line-height: 1.6; display: flex; align-items: center; gap: 6px; }
 .hk-expert-done { margin: 0; display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 12px; background: #ecfdf3; color: #067647; font-weight: 600; font-size: .875rem; }
 .hk-expert-error { margin: 0; color: #b42318; font-size: .8125rem; }
@@ -17394,10 +17386,9 @@ html:has([data-app-surface]) { background: #fff; }
 
 /* 무료 주소 끝부분 — 칸 바로 아래 안내·오류 */
 .hk-grid .hk-slug-field { grid-column: 1 / -1; display: grid; gap: 5px; }
-.hk-grid .hk-slug-field > label { font-size: .78125rem; color: #5e5e72; }
-.hk-grid .slug-input[data-invalid] { border-color: #e5484d; box-shadow: 0 0 0 2px rgba(229, 72, 77, .14); }
-.hk-slug-hint { color: #6b6f7d; font-size: .78125rem; line-height: 1.5; }
-.hk-slug-error { color: #c0282d; font-size: .8125rem; font-weight: 600; line-height: 1.5; }
+.hk-slug-note { margin: 0; }
+/* 이메일 칸 오류 줄(라벨 안 <small>) — 공통 입력칸 오류 줄과 같은 규격 */
+.hk-slug-error { color: var(--app-danger); font-size: .8125rem; font-weight: 500; line-height: 1.5; }
 
 /* 공개 멈추기 — 다른 주소 단추와 같은 모양, 글자만 옅은 빨강 */
 .hk-url-btn.hk-url-stop { color: #b42318; }
