@@ -238,7 +238,7 @@ export default function PlanMePage() {
       {/* 큰 제목 '마이페이지'는 위 머리말과 겹쳐 뺐다(대표 요청 2026-10-15) — 읽기 프로그램용 제목만 남긴다 */}
       <h1 className={styles.srTitle}>내 계정</h1>
 
-      <section className={styles.card}>
+      <section className={styles.card} id="me-info">
         <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>내 정보</h2>
           <AppButton type="button" variant="secondary" className={styles.logout} disabled={logoutBusy} onClick={() => void logout()}>{logoutBusy ? "로그아웃 중…" : "로그아웃"}</AppButton>
@@ -276,7 +276,7 @@ export default function PlanMePage() {
         )}
       </section>
 
-      <section className={styles.card}>
+      <section className={styles.card} id="me-payments">
         <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>결제 내역</h2>
         </div>

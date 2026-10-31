@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, Menu, X } from "lucide-react";
+import { ChevronLeft, ChevronsUpDown, Menu, UserRound, X } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import drawer from "./AppDrawer.module.css";
 import styles from "./chat/page.module.css";
@@ -14,6 +14,21 @@ import { useDialogFocus } from "../../components/use-dialog-focus";
 import { useStudioPane } from "./studio/StudioContext";
 import studio from "./studio/Studio.module.css";
 import { STUDIO_CLASSIC_PARAM, STUDIO_ENABLED, studioEntryHref } from "../../lib/plan-builder/studio";
+import chrome from "./AppChrome.module.css";
+import ProfileMenu from "./ProfileMenu";
+import MobileTabBar from "./MobileTabBar";
+import { accountInitial, accountName, useAccount } from "./use-account";
+import { unansweredCount, useInquiries } from "./inquiries/use-inquiries";
+
+/*
+ * 휴대폰 아래 3탭 막대를 그리는 화면 — 입력칸·아래 단추가 있는 작업 화면(대화·계획서·홈페이지·사업 관리·작업실·결제·손님 문의)은 빼서
+ * 막대가 입력칸·단추를 가리지 않게 한다.
+ */
+const TABBAR_PATHS = ["/plan", "/plan/me", "/plan/info", "/account/support"];
+function showsTabBar(pathname: string) {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return TABBAR_PATHS.includes(path);
+}
 
 /*
  * 예전 4개 화면(대화·계획서·홈페이지·사업 관리)에서 같은 사업의 작업실로 가는 작은 링크 — 플래그를 켰을 때, 예전 화면을
@@ -36,7 +51,7 @@ function StudioEntryLink({ withActions }: { withActions: boolean }) {
  */
 export type ChromeMenu = { button: (className: string, size?: number) => ReactNode; open: () => void; isOpen: boolean };
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true, topBar }: {
+export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true, topBar, home = false }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new" | "inquiries"; backHref?: string; showRail?: boolean;
   /** 화면 안에서 한 단계 되돌리기(예: 내 문의 상세 → 목록) — 있으면 머리말 뒤로 단추가 주소 이동 대신 이것을 부른다 */
   onBack?: () => void;
@@ -46,11 +61,20 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
   titleHeading?: boolean;
   /** 머리줄을 대신 그린다(작업실 PC) — 서랍 · 저장 실패 안내 · 본문 바로가기 자리는 그대로 */
   topBar?: (menu: ChromeMenu) => ReactNode;
+  /** 로그인 뒤 첫 화면(/plan) — 머리줄 대신 휴대폰은 계정 알약 · 아바타(56px), PC 는 머리줄 없이 판 전체가 그라데이션 */
+  home?: boolean;
 }) {
   /* 작업실 칸 안이면 머리줄·서랍·왼쪽 메뉴는 작업실이 한 번만 그린다 — 여기서는 칸 단추 줄(actions)과 본문만 */
   const pane = useStudioPane();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  /* 프로필 시트(휴대폰 아바타) — 로그인 상태·답할 문의 수는 왼쪽 메뉴와 같은 곳에서 읽는다(요청은 나눠 쓴다) */
+  const [profile, setProfile] = useState(false);
+  const account = useAccount(pathname ?? "");
+  const inquiries = useInquiries(account?.authenticated === true);
+  const unanswered = inquiries.items ? unansweredCount(inquiries.items) : 0;
+  const tabBar = showsTabBar(pathname || "");
+  useEffect(() => { setProfile(false); }, [pathname]);
   const [sync, setSync] = useState<PlanSyncStatus>("idle");
   useEffect(() => { setSync(planSyncStatus());return subscribePlanSync(() => setSync(planSyncStatus())); }, []);
   /* 화면을 옮기면 서랍은 닫는다 */
@@ -78,12 +102,15 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     if (!active || active === document.body) toggle.current?.focus({ preventScroll: true });
   }, [open]);
   const menuButton = (className: string, size = 24) => <button ref={toggle} type="button" className={className} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls={open ? "app-drawer" : undefined} onClick={() => setOpen(!open)}><Menu size={size} /></button>;
+  const avatarButton = <button type="button" className={chrome.avatar} data-guest={account?.authenticated ? undefined : ""} aria-haspopup="dialog" aria-expanded={profile} aria-label={`프로필 메뉴 열기${unanswered ? ` · 답할 문의 ${unanswered}건` : ""}`} onClick={() => setProfile(true)}>
+    {account?.authenticated ? accountInitial(account) : <UserRound aria-hidden="true" />}{unanswered ? <em aria-hidden="true" /> : null}
+  </button>;
   if (pane) return <>
     {actions && <div className={studio.paneToolbar}>{actions}</div>}
     {children}
   </>;
   return <>
-    {showRail && <aside className={`${shell.rail} ${shell.railStatic} ${styles.railHost} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open}>
+    {showRail && <aside className={`${chrome.side} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open || profile} data-app-side="">
       <RailMenu active={active} documentToc={documentToc} />
     </aside>}
     {/*
@@ -100,8 +127,16 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
       {/* 서랍에서 장을 고르면 서랍을 닫고 그 장을 보여 준다 */}
       <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
     </aside>}
-    <div className={styles.appSurface} data-app-surface="" inert={open}>
-      {topBar ? topBar({ button: menuButton, open: () => setOpen(true), isOpen: open }) : <header className={styles.header}>
+    <div className={`${styles.appSurface} ${chrome.surface} ${home ? chrome.hero : ""}`} data-app-surface="" data-solo={showRail ? undefined : ""} data-tabbar={tabBar ? "" : undefined} inert={open || profile}>
+      {/* 휴대폰 첫 화면 머리 56px — 계정 알약(누르면 내 사업 메뉴 서랍) · 아바타(프로필 시트) */}
+      {home && <header className={chrome.homeBar}>
+        <button type="button" className={chrome.pill} aria-haspopup="dialog" aria-expanded={open} aria-label="내 사업 메뉴 열기" onClick={() => setOpen(true)}>
+          <b aria-hidden="true">{accountInitial(account)}</b><span>{accountName(account) || "오늘창업"}</span><ChevronsUpDown aria-hidden="true" />
+        </button>
+        {avatarButton}
+      </header>}
+      {/* 첫 화면은 위 머리(homeBar)만 — PC 는 머리줄 없이 판 전체가 첫 화면이다 */}
+      {home ? null : <>{topBar ? topBar({ button: menuButton, open: () => setOpen(true), isOpen: open }) : <header className={styles.header}>
         {onBack
           ? <button type="button" className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} onClick={onBack} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></button>
           : <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>}
@@ -110,14 +145,20 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
         <div className={styles.headerTitle}>{titleHeading ? <h1><strong title={title}>{title}</strong></h1> : <strong title={title}>{title}</strong>}{subtitle && <span>{subtitle}</span>}</div>
         {STUDIO_ENABLED && <Suspense fallback={null}><StudioEntryLink withActions={!!actions} /></Suspense>}
         {actions && <div className={styles.headerActions}>{actions}</div>}
-        <div className={`${styles.headerMenu} ${showRail ? drawer.narrowOnly : ""}`}>
+        {/* PC — 왼쪽 메뉴가 없는 화면만 메뉴 단추. 휴대폰 — 메뉴 단추 대신 아바타(프로필 시트, 그 안에 '내 사업 메뉴') */}
+        {!showRail && <div className={`${styles.headerMenu} ${drawer.wideOnly}`}>
           {menuButton(styles.menuToggle)}
+        </div>}
+        <div className={`${styles.headerMenu} ${drawer.narrowOnly}`}>
+          {avatarButton}
         </div>
-      </header>}
+      </header>}</>}
       {sync === "offline" && <div className={styles.syncNotice} role="status">변경한 내용을 서버에 저장하지 못했어요.<button onClick={()=>void pushToServer()}>다시 저장</button></div>}
       {/* 본문 바로가기(SkipLink)가 데려오는 자리 — 머리줄 바로 아래 */}
       <span id="plan-content" tabIndex={-1} className="plan-content-anchor" />
       {children}
     </div>
+    {tabBar && <MobileTabBar />}
+    <ProfileMenu open={profile} onClose={() => setProfile(false)} account={account} unanswered={unanswered} anchor="sheet" onOpenMenu={() => setOpen(true)} />
   </>;
 }
