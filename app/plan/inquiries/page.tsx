@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Inbox, RefreshCw } from "lucide-react";
+import { ChevronRight, Inbox, RefreshCw, X } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import frame from "../chat/page.module.css";
@@ -12,6 +12,7 @@ import { HomepageLeadActions } from "../../../components/homepage-lead-actions";
 import { HomepageLeadNotification, useHomepageLeadNotifications } from "../../../components/homepage-lead-notifications";
 import { formatKoreanPhone } from "../../../lib/contact-links";
 import { homepageHref } from "../../../lib/plan-builder/journey";
+import { GUIDE_PARAM, journeyGuide, readJourneyGuide, type JourneyGuideCode } from "../../../lib/plan-builder/journey-guides";
 import { isSamplePlan, loadState } from "../../../lib/plan-builder/plan-store";
 import { AUTH_ERROR, markInquiryHandled, unansweredCount, useInquiries, type Inquiry } from "./use-inquiries";
 
@@ -47,6 +48,13 @@ export default function InquiriesPage() {
     const recent = loadState().plans.filter(plan => !isSamplePlan(plan.id)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
     setRecentPlanId(recent?.id ?? null);
   }, []);
+  /*
+   * 단계별 대화 세트(journey-guides.ts) — 이 화면에는 대화 칸이 없어 guide= 로 들어오면 화면 위에 안내 띠 한 줄(고정 문구, 저장 없음).
+   * 주소는 화면을 그린 뒤에 읽는다 — useSearchParams 는 Suspense 경계가 필요해 목록 화면 전체가 늦게 그려진다.
+   */
+  const [guide, setGuide] = useState<JourneyGuideCode | null>(null);
+  useEffect(() => { setGuide(readJourneyGuide(new URLSearchParams(window.location.search).get(GUIDE_PARAM))); }, []);
+  const guideBanner = guide ? journeyGuide(guide, "") : null;
   // 휴대폰(목록·상세가 한 화면씩)인지 — 머리말 뒤로 단추가 상세에서 목록으로 돌아가게 할 때만 쓴다
   const [phone, setPhone] = useState(false);
   useEffect(() => {
@@ -59,6 +67,7 @@ export default function InquiriesPage() {
 
   return <main className={frame.page}>{/* 휴대폰에서 문의를 열어 둔 동안 머리말 뒤로 단추는 목록으로 — 상세 안의 두 번째 뒤로 단추는 뺐다(뒤로가 두 개였다) */}
     <BusinessAppChrome title="손님 문의" active="inquiries" onBack={selected && phone ? () => setSelectedId(null) : undefined}>
+    {guideBanner?.banner && <p className={styles.guideBanner} role="status" data-journey-guide={guideBanner.code}><span>{guideBanner.message}</span><button type="button" onClick={() => setGuide(null)} aria-label="안내 닫기" title="닫기"><X size={16} aria-hidden="true" /></button></p>}
     {items === null && !error ? <PlanLoading fill variant="compact" note="문의를 불러오고 있어요" onRetry={() => refresh(true)} /> : <div className={styles.wrap} data-detail={selected ? "" : undefined} data-empty={items?.length === 0 || undefined}>
       <aside className={styles.list} aria-label="문의 목록">
         {/* 문의가 하나도 없으면 0개짜리 거름 단추는 빼고, 새로 확인하는 단추만 빈 화면 안에 둔다 */}

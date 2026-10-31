@@ -46,6 +46,7 @@ suites.push("plan-account-switch");
 suites.push("landing-idea-carry");
 suites.push("studio-navigation");
 suites.push("studio-plan-edit");
+suites.push("journey-guides");
 suites.push("owner-decisions-r39");
 suites.push("owner-decisions-r40");
 suites.push("ui-audit-r41a");
