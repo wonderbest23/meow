@@ -4,12 +4,14 @@ import { Fragment, Suspense, useEffect, useMemo, useRef, useState, useSyncExtern
 import { nativePlatform } from "../../lib/native-app";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Check, ChevronRight, FolderClosed } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, FolderClosed } from "lucide-react";
 import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan, type PlanTitleNotice } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
 import { isStudioTab, stepForStudioTab, studioHref, studioTabForStep, STUDIO_PATH, STUDIO_REDIRECT } from "../../lib/plan-builder/studio";
-import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
+import { businessChatHref, shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
+import { readCoach } from "../../lib/plan-builder/coach";
+import { readCoachJob } from "../../lib/plan-builder/coach-job-types";
 import { planDisplayName } from "../../lib/plan-builder/business-name";
 import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
@@ -168,10 +170,15 @@ const sameWorkspaceTab = (event: { preventDefault: () => void }, planId: string,
   window.dispatchEvent(new CustomEvent(WORKSPACE_TAB_REQUEST, { detail: tab }));
 };
 
-export default function BusinessRailTree({ documentToc, onPlanCount }: {
+export default function BusinessRailTree({ documentToc, onPlanCount, grouped = false }: {
   documentToc?: DocumentToc;
   /** 사업이 몇 개인지 확인되면 알려 준다(못 불러왔으면 부르지 않는다) — 사업이 없으면 메뉴가 '내 문의'를 막는다 */
   onPlanCount?: (count: number) => void;
+  /**
+   * 왼쪽 메뉴(lovable 배치) — '내 사업'은 위 메뉴 칸이 맡고, 여기서는 묶음 제목(내 사업 ⌄) 아래 사업 목록(20px 글자 아바타 + 이름)
+   * · '모든 사업 보기' · '최근 대화' 묶음을 그린다. 사업을 누르면 그 사업의 목차가 펼쳐지는 것은 같다.
+   */
+  grouped?: boolean;
 }) {
   const pathname = usePathname() || "";
   /* 저장된 사업은 브라우저에만 있다 — 서버가 그린 첫 화면과 어긋나지 않게 올라온 뒤에 그린다 */
@@ -275,6 +282,41 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
     const next = !listOpen;
     setListOpen(next);
     try { localStorage.setItem(LIST_OPEN_KEY, next ? "1" : "0"); } catch { /* 이번 화면에서만 */ }
+  }
+
+  if (grouped) {
+    const inStudio = pathname.startsWith(STUDIO_PATH);
+    const chatHref = (plan: Plan) => (inStudio || STUDIO_REDIRECT ? studioHref(plan.id, "chat") : businessChatHref(plan.id));
+    /* 최근 대화 — 대화가 있는 사업 다섯 개(최근 수정 순) */
+    const recent = plans.filter(plan => !!readCoach(plan.answers) || !!readCoachJob(plan.answers)).slice(0, 5);
+    return <div className={`${styles.tree} ${styles.grouped}`}>
+      <Suspense fallback={null}><UrlPlanWatcher onChange={setUrlPlanId} /></Suspense>
+      <button type="button" className={styles.group} aria-expanded={listOpen} aria-controls="rail-plan-list" onClick={toggleList}>
+        <span>내 사업</span><ChevronDown className={styles.groupCaret} data-open={listOpen || undefined} aria-hidden="true" />
+      </button>
+      {listOpen && mounted && <div className={styles.list} id="rail-plan-list">
+        {remoteFailed && plans.length === 0 && <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>}
+        {checked && !remoteFailed && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요</p>}
+        {plans.map(plan => {
+          const isCurrent = plan.id === currentId;
+          const open = openId === undefined ? isCurrent : openId === plan.id;
+          const display = planDisplayName(plan);
+          return <div key={plan.id} className={styles.plan}>
+            <button type="button" className={styles.planRow} data-current={isCurrent || undefined} aria-expanded={open} title={display} onClick={() => setOpenId(open ? null : plan.id)}>
+              <b className={styles.letter} aria-hidden="true">{display.trim().charAt(0) || "사"}</b>
+              <span>{planDisplayName(plan)}</span>
+            </button>
+            {open && <PlanBranch plan={plan} here={isCurrent ? step : null} documentToc={documentToc} pathname={pathname} />}
+          </div>;
+        })}
+        <Link href="/plan?view=all" className={styles.more}>모든 사업 보기</Link>
+      </div>}
+      <p className={styles.groupTitle}>최근 대화</p>
+      {mounted && <div className={styles.recent}>
+        {recent.length ? recent.map(plan => <Link key={plan.id} href={chatHref(plan)} className={styles.recentRow} title={planDisplayName(plan)} onClick={() => setActivePlan(plan.id)}>{planDisplayName(plan)}</Link>)
+          : <span className={styles.more}>아직 대화가 없어요</span>}
+      </div>}
+    </div>;
   }
 
   return <div className={styles.tree}>
