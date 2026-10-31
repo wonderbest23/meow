@@ -10,6 +10,7 @@ import PlanLoading, { Spinner } from "../../plan/PlanLoading";
 import styles from "./support.module.css";
 import { StatusBadge } from "../../../components/status-badge";
 import { AppButton } from "../../../components/app-button";
+import { FieldHelp, FieldLabel, Select, TextArea, TextField } from "../../../components/app-field";
 
 type Reply = { ownerScope: string; chat: SupportChat; requestId?: string; receivedMessageId?: string };
 type View = "write" | "history";
@@ -177,10 +178,10 @@ export default function SupportCenter() {
           </nav>
           {receipt && <p className={styles.success} role="status"><CheckCircle2 size={20} aria-hidden="true" />{receipt}</p>}
           {view === "write" && draft ? <form className={styles.form} onSubmit={submit} aria-busy={busy}>
-            <label>문의 유형<select value={draft.category} disabled={busy} onChange={event => edit({ category: inquiryCategory(event.target.value) })}>{inquiryCategories.map(category => <option key={category.value} value={category.value}>{category.label}</option>)}</select></label>
-            <label>제목<input value={draft.subject} maxLength={80} required disabled={busy} onChange={event => edit({ subject: event.target.value })} placeholder="어떤 도움이 필요하신가요?" /></label>
-            <label>문의 내용<textarea rows={7} maxLength={1800} required disabled={busy} value={draft.message} onChange={event => edit({ message: event.target.value })} placeholder="불편했던 상황이나 궁금한 점을 남겨 주세요." /></label>
-            <div className={styles.fieldFooter}><small>비밀번호·인증번호·결제정보는 적지 마세요.</small><span>{draft.message.length.toLocaleString()} / 1,800</span></div>
+            <FieldLabel>문의 유형<Select value={draft.category} disabled={busy} onChange={event => edit({ category: inquiryCategory(event.target.value) })}>{inquiryCategories.map(category => <option key={category.value} value={category.value}>{category.label}</option>)}</Select></FieldLabel>
+            <FieldLabel>제목<TextField value={draft.subject} maxLength={80} required disabled={busy} onChange={event => edit({ subject: event.target.value })} placeholder="어떤 도움이 필요하신가요?" /></FieldLabel>
+            <FieldLabel>문의 내용<TextArea className={styles.message} rows={7} maxLength={1800} required disabled={busy} value={draft.message} onChange={event => edit({ message: event.target.value })} placeholder="불편했던 상황이나 궁금한 점을 남겨 주세요." aria-describedby="support-message-help" /></FieldLabel>
+            <div className={styles.fieldFooter}><FieldHelp id="support-message-help">비밀번호·인증번호·결제정보는 적지 마세요.</FieldHelp><span>{draft.message.length.toLocaleString()} / 1,800</span></div>
             <AppButton variant="primary" className={styles.primary} type="submit" disabled={busy || !draft.subject.trim() || !draft.message.trim()}>{busy ? <Spinner /> : <Send size={18} aria-hidden="true" />}{busy ? "접수 중" : "문의 접수"}</AppButton>
           </form> : view === "history" && <section className={styles.history} aria-label="문의와 답변">
             <div className={styles.historyHeading}><h2>내 문의와 답변</h2><button type="button" className={styles.iconButton} aria-label="문의 내역 새로고침" title="문의 내역 새로고침" onClick={() => void load()}><RefreshCw size={20} /></button></div>

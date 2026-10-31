@@ -9,6 +9,7 @@ import type { ExpertPatch } from "../../../lib/plan-builder/coach-expert";
 import { PROPOSAL_BUSINESS_FIELDS, proposalFinancialPreview, type BusinessConditionsView } from "../../../lib/plan-builder/proposal-business";
 import styles from "./proposal.module.css";
 import { AppButton } from "../../../components/app-button";
+import { FieldLabel, TextField } from "../../../components/app-field";
 
 const valuesFor = (business: BusinessConditionsView) => Object.fromEntries(PROPOSAL_BUSINESS_FIELDS.map(({ key }) => [key, business.fields.find(field => field.key === key)?.value ?? ""]));
 const won = (value: number) => `${value.toLocaleString("ko-KR")}원`;
@@ -73,7 +74,7 @@ export default function BusinessConditionsPanel({ planId, business, sourceChange
       {(staleForm || conflict) && <p role="alert">다른 화면에서 사업 정보를 수정했어요. 작성한 값은 유지됩니다</p>}
       <form onSubmit={event => { event.preventDefault(); void save(); }}>
         <fieldset className={styles.businessFields} disabled={busy || !canUpdate || !!pending.current}>
-          {PROPOSAL_BUSINESS_FIELDS.map(({ key, label }) => <label key={key}>{label}<input aria-label={label} maxLength={1200} value={values[key]} onChange={event => { setValues({ ...values, [key]: event.target.value }); setMessage(""); }} /></label>)}
+          {PROPOSAL_BUSINESS_FIELDS.map(({ key, label }) => <FieldLabel key={key}>{label}<TextField aria-label={label} maxLength={1200} value={values[key]} onChange={event => { setValues({ ...values, [key]: event.target.value }); setMessage(""); }} /></FieldLabel>)}
         </fieldset>
         <section className={styles.calculation} aria-label="월 예상 손익 비교"><h3>월 예상 손익</h3>{after ? <dl>{([{ key: "revenue", label: "매출" }, { key: "variableCost", label: "변동비" }, { key: "operatingProfit", label: "영업손익" }] as const).map(({ key, label }) => <div key={key}><dt>{label}</dt><dd>{dirty && before && before[key] !== after[key] && <del>{won(before[key])}</del>}<strong>{won(after[key])}</strong></dd></div>)}</dl> : <p>판매가와 비용은 금액으로, 판매 건수는 숫자로 입력해 주세요. 미입력 비용은 0원으로 계산하지 않아요</p>}<small>입력한 판매량이 매월 같다는 가정이며 실제 실적이 아닙니다. 세금과 현금흐름은 별도 확인이 필요해요</small></section>
         {message && <p className={styles.businessMessage} role="status">{message}</p>}

@@ -1,26 +1,24 @@
-.root { color: #202832; letter-spacing: 0; min-width: 0; }
-.root button, .root a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 10px 14px; border: 1px solid #dbe1e8; border-radius: 6px; background: #fff; color: #344256; font-size: .875rem; font-weight: 600; line-height: 1.5; text-decoration: none; cursor: pointer; }
+.root { color: var(--app-text); letter-spacing: 0; min-width: 0; }
+.root button, .root a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 10px 14px; border: 1px solid var(--app-line); border-radius: 6px; background: #fff; color: var(--app-body); font-size: .875rem; font-weight: 600; line-height: 1.5; text-decoration: none; cursor: pointer; }
 .root button:disabled { opacity: .5; cursor: not-allowed; }
 .root button:hover:not(:disabled), .root a:hover { background: #f1f5fb; }
 .root .inlineButton { margin-left: 4px; }
 .root .inlineButton > svg { flex: none; margin-left: -4px; }
-.root button:focus-visible, .root a:focus-visible, .root input:focus-visible, .root textarea:focus-visible, .root select:focus-visible { outline: 2px solid #276deb; outline-offset: 3px; }
+.root button:focus-visible, .root a:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 3px; }
 .heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .heading h2 { margin: 0; font-size: 1.375rem; line-height: 1.4; }
-.heading p { font-size: .8125rem; color: #69788a; margin: 8px 0 0; }
+.heading p { font-size: .8125rem; color: var(--app-muted); margin: 8px 0 0; }
 .counts span { white-space: nowrap; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.tabs { display: flex; gap: 6px; border-bottom: 1px solid #dbe1e8; margin-bottom: 28px; }
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--app-line); margin-bottom: 28px; }
 .tabs button { border: 0; border-radius: 0; border-bottom: 2px solid transparent; padding: 12px 16px; background: none; }
-.tabs button[aria-pressed=true] { border-bottom-color: #286fe8; color: #2464cb; }
-.root label { display: grid; gap: 8px; color: #465367; font-size: .875rem; font-weight: 600; min-width: 0; }
-.root input, .root textarea, .root select { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; border: 1px solid #ced7e2; background: #fff; color: #202832; border-radius: 6px; padding: 10px 12px; font: inherit; font-weight: 400; line-height: 1.6; }
-.root textarea { resize: vertical; }
+.tabs button[aria-pressed=true] { border-bottom-color: var(--app-primary); color: var(--app-primary); }
+/* 입력칸·라벨 모양은 공통 입력칸(components/app-field)이 정한다 — 여기서는 자리만 */
 .root fieldset { padding: 0; border: 0; margin: 0 0 28px; display: grid; gap: 16px; min-width: 0; }
 .root legend { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
 /* 묶음 제목 바로 아래 안내는 8px(제목→본문) — 예전엔 16+10px 로 벌어졌다 */
 .root legend + .note { margin-top: -8px; }
-.root .note, .root .meta { font-size: .8125rem; line-height: 1.7; color: #687589; margin: 10px 0; }
+.root .note, .root .meta { font-size: .8125rem; line-height: 1.7; color: var(--app-muted); margin: 10px 0; }
 .twoColumns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-items: start; }
 .editorHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .editorHeading h3 { margin: 0; font-size: 1.125rem; }
@@ -30,31 +28,30 @@
 .tableScroll { overflow-x: auto; margin: 20px 0 12px; }
 .comparison table { width: 100%; border-collapse: collapse; font-size: .875rem; font-variant-numeric: tabular-nums; }
 .comparison caption { text-align: left; margin-bottom: 12px; font-size: 1rem; font-weight: 700; }
-.comparison th, .comparison td { padding: 14px 10px; border-bottom: 1px solid #e2e7ed; text-align: right; white-space: nowrap; }
+.comparison th, .comparison td { padding: 14px 10px; border-bottom: 1px solid var(--app-line); text-align: right; white-space: nowrap; }
 .comparison th:first-child { text-align: left; }
-.comparison thead { background: #f4f6f8; color: #5f6c7e; font-size: .75rem; }
-.comparison small { display: block; color: #738096; font-size: .75rem; margin-top: 3px; }
+.comparison thead { background: #f4f6f8; color: var(--app-muted); font-size: .75rem; }
+.comparison small { display: block; color: var(--app-muted); font-size: .75rem; margin-top: 3px; }
 .notes { margin: 24px 0; }
-.notes > div { display: grid; grid-template-columns: 120px minmax(0,1fr); gap: 20px; padding: 18px 0; border-bottom: 1px solid #e2e7ed; }
-.notes dt { color: #687589; font-size: .875rem; }
+.notes > div { display: grid; grid-template-columns: 120px minmax(0,1fr); gap: 20px; padding: 18px 0; border-bottom: 1px solid var(--app-line); }
+.notes dt { color: var(--app-muted); font-size: .875rem; }
 .notes dd { margin: 0; font-size: .9375rem; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: balance; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
-.root .warning { color: #80561a; background: #fff7e9; padding: 12px; font-size: .8125rem; line-height: 1.7; border-left: 3px solid #d7a24d; }
-.error { border-left: 3px solid #bd464b; padding: 12px; background: #fff3f3; margin: 16px 0; }
+.root .warning { color: var(--app-warning); background: #fff7e9; padding: 12px; font-size: .8125rem; line-height: 1.7; border-left: 3px solid #d7a24d; }
+.error { border-left: 3px solid var(--app-danger); padding: 12px; background: #fff3f3; margin: 16px 0; }
 .error p { font-size: .875rem; line-height: 1.6; margin: 0 0 10px; }
 .error p:last-child { margin-bottom: 0; }
 /* 칸 아래 입력 확인 안내 — 고칠 칸 바로 밑에(예전엔 폼 위에 떠 어느 칸인지 몰랐다) */
-.root .fieldError { color: #b3363c; font-size: .8125rem; font-weight: 600; line-height: 1.5; }
-.root input[aria-invalid=true], .root textarea[aria-invalid=true] { border-color: #bd464b; box-shadow: 0 0 0 1px #bd464b; }
-.root .success { color: #227353; font-size: .875rem; line-height: 1.6; }
+.root .fieldError { color: var(--app-danger); font-size: .8125rem; font-weight: 500; line-height: 1.5; }
+.root .success { color: var(--app-success); font-size: .875rem; line-height: 1.6; }
 /* 아래는 다음 묶음(맡길 수 있는 일)이 40px 띄운다 — 빈 칸 아래 여백까지 더해 90px 넘게 벌어지지 않게 */
-.empty { padding: 52px 16px 12px; text-align: center; color: #687589; }
-.empty h3 { font-size: 1.125rem; color: #394759; }
+.empty { padding: 52px 16px 12px; text-align: center; color: var(--app-muted); }
+.empty h3 { font-size: 1.125rem; color: var(--app-body); }
 .empty p { font-size: .875rem; }
 .report { margin-top: 30px; }
 .report header h3 { font-size: 1.25rem; line-height: 1.5; overflow-wrap: anywhere; margin: 0 0 12px; }
 .report header p { font-size: .875rem; }
-.dialog { border: 1px solid #dbe1e8; border-radius: 8px; width: min(460px,calc(100% - 48px)); padding: 24px; color: #202832; }
+.dialog { border: 1px solid var(--app-line); border-radius: 8px; width: min(460px,calc(100% - 48px)); padding: 24px; color: var(--app-text); }
 .dialog::backdrop { background: rgb(16 24 36 / .35); }
 .dialog h3 { font-size: 1.125rem; line-height: 1.6; margin: 0 0 14px; }
 .dialog p { font-size: .875rem; line-height: 1.8; }
@@ -63,8 +60,6 @@
   .heading h2 { font-size: 1.25rem; }
   .heading > button { flex-shrink: 0; padding: 10px; font-size: .8125rem; }
   .twoColumns { gap: 12px; }
-  .root input { padding: 10px 8px; font-size: 1rem; }
-  .root textarea, .root select { font-size: 1rem; }
   .comparison th, .comparison td { padding: 12px 6px; font-size: .75rem; }
   .notes > div { grid-template-columns: 1fr; gap: 6px; }
   .notes dd { font-size: .875rem; }

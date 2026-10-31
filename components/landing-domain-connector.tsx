@@ -17,6 +17,7 @@ import type { LandingDomainConnection } from "../lib/landing/custom-domain";
 import type { LandingSiteRecord } from "../lib/landing/domain";
 import type { DomainAvailability, DomainRequestStatus } from "../lib/landing/domain-purchase";
 import { Spinner } from "../app/plan/PlanLoading";
+import { FieldLabel, TextField } from "./app-field";
 
 type DomainPurchase = { domain: string; status: DomainRequestStatus; orderId: string; paidAt: string };
 type DomainEntitlement = { active: boolean; expiresAt: string | null; required: boolean; planId: string; price: number; purchasePrice?: number; purchase?: DomainPurchase | null };
@@ -209,7 +210,7 @@ export function LandingDomainConnector({
       ) : null}
       {!connectedHostname ? (
         <div className="domain-connect-form">
-          <label><span>{purchase ? "연결할 주소" : "구매한 도메인"}</span><input value={hostname} onChange={(event) => setHostname(event.target.value)} placeholder="www.mybrand.com" autoCapitalize="none" autoCorrect="off" /></label>
+          <FieldLabel><span>{purchase ? "연결할 주소" : "구매한 도메인"}</span><TextField value={hostname} onChange={(event) => setHostname(event.target.value)} placeholder="www.mybrand.com" autoCapitalize="none" autoCorrect="off" /></FieldLabel>
           <button disabled={!published || busy || hostname.trim().length < 4 || (waitingRegistration && hostname.trim().toLowerCase() === purchasedHostname)} onClick={() => void connect()}>{action === "connecting" ? <Spinner /> : <Globe2 />} 연결 시작</button>
           {!published && <small>먼저 위의 ‘공개하기’를 눌러 홈페이지를 공개해 주세요.</small>}
         </div>
@@ -263,7 +264,7 @@ export function DomainPurchaseForm({ planQuery, price, initial }: { planQuery: s
       <strong>도메인이 없어요 — 대신 사서 연결해 주세요</strong>
       <p>원하는 주소를 적으면 사장님 명의로 등록하고 연결까지 해 드려요. 첫해 등록비 포함, .com·.kr·.co.kr 주소만 가능해요.</p>
       <form className="domain-connect-form" onSubmit={(event) => { event.preventDefault(); void check(); }}>
-        <label><span>원하는 주소</span><input value={value} onChange={(event) => { setValue(event.target.value); setResult(null); setError(""); }} placeholder="mybrand.co.kr" autoCapitalize="none" autoCorrect="off" inputMode="url" /></label>
+        <FieldLabel><span>원하는 주소</span><TextField value={value} onChange={(event) => { setValue(event.target.value); setResult(null); setError(""); }} placeholder="mybrand.co.kr" autoCapitalize="none" autoCorrect="off" inputMode="url" /></FieldLabel>
         <button type="submit" disabled={checking || value.trim().length < 4}>{checking ? <Spinner /> : <Search />} 비어 있는지 확인</button>
       </form>
       {error ? <p className="domain-purchase-result taken" role="alert">{error}</p> : null}

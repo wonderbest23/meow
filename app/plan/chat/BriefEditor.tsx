@@ -8,6 +8,7 @@ import { planOwnerEpoch } from "../../../lib/plan-builder/plan-store";
 import styles from "./page.module.css";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { AppButton } from "../../../components/app-button";
+import { FieldLabel, TextArea, TextField } from "../../../components/app-field";
 
 const groups: Record<string, CoachField["key"][]> = {
   intro: ["business", "problem", "goal"],
@@ -70,9 +71,9 @@ export default function BriefEditor({ coach, section, onSave, onClose, onDirty }
     finally { requestPending.current = false; setBusy(false); }
   }
   function field(key: string, label: string, required = false) {
-    return <label className={styles.inlineField} key={key}>{label}{key === "title"
-      ? <input value={values[key] ?? ""} maxLength={100} required disabled={busy} onChange={e => setValues(v => ({ ...v, [key]: e.target.value }))} />
-      : <textarea value={values[key] ?? ""} rows={key === "business" || key === "usableText" ? 5 : 3} maxLength={1200} required={required} disabled={busy} placeholder="아직 정하지 않았다면 비워 두세요" onChange={e => setValues(v => ({ ...v, [key]: e.target.value }))} />}</label>;
+    return <FieldLabel className={styles.inlineField} key={key}>{label}{key === "title"
+      ? <TextField value={values[key] ?? ""} maxLength={100} required disabled={busy} onChange={e => setValues(v => ({ ...v, [key]: e.target.value }))} />
+      : <TextArea value={values[key] ?? ""} rows={key === "business" || key === "usableText" ? 5 : 3} maxLength={1200} required={required} disabled={busy} placeholder="아직 정하지 않았다면 비워 두세요" onChange={e => setValues(v => ({ ...v, [key]: e.target.value }))} />}</FieldLabel>;
   }
   const keys = groups[section] ?? [];
   return <form ref={form} className={styles.inlineEditor} onSubmit={save} aria-label="사업 정보 직접 수정">

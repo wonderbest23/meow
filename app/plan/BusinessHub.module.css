@@ -20,7 +20,7 @@
 .businessOpen { display:block; color:var(--app-text); }.businessOpen h2 { font-size:1.3125rem; margin-bottom:8px; }.businessOpen p { font-size:.875rem; color:var(--app-muted); margin-bottom:20px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
 .rowBottom { display:flex; justify-content:space-between; align-items:center; gap:12px; }.rowBottom small { color:var(--app-muted); font-size:.75rem; }.rowBottom > span { display:flex; gap:6px; align-items:center; color:var(--app-accent); font-size:.875rem; font-weight:600; }
 .rowMenu { position:relative; }.rowMenu summary { display:grid; place-items:center; width:44px; height:44px; border-radius:50%; cursor:pointer; list-style:none; color:var(--app-muted); }.rowMenu summary::-webkit-details-marker { display:none; }.rowMenu[open] summary { background:var(--app-raised); }.rowMenu > div { position:absolute; right:0; top:48px; z-index:2; background:var(--app-surface); border:1px solid var(--app-line); box-shadow:0 8px 24px color-mix(in srgb, var(--app-text) 7%, transparent); border-radius:8px; padding:6px; width:140px; }.rowMenu button { display:block; width:100%; border:0; background:var(--app-surface); min-height:44px; text-align:left; padding:10px; color:var(--app-text); }.rowMenu button:hover { background:var(--app-raised); }
-.rename { display:flex; gap:8px; flex-wrap:wrap; }.rename input { min-width:0; width:100%; padding:14px; border:1px solid var(--app-line); border-radius:8px; font:inherit; }
+.rename { display:flex; gap:8px; flex-wrap:wrap; } /* 이름 칸 모양은 공통 입력칸(components/app-field) */
 .samples { border-top:1px solid var(--app-line); margin-top:40px; padding-top:8px; }.samples summary { cursor:pointer; padding:20px 0; color:var(--app-muted); font-size:.9375rem; font-weight:600; }.sampleRow { width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px; min-height:60px; background:var(--app-raised); border:0; border-radius:8px; text-align:left; margin:10px 0; color:var(--app-text); }
 .content .muted { font-size:.875rem; color:var(--app-muted); }.content .error { color:var(--app-danger); font-size:.875rem; }
 /* 불러오기 실패 — 다시 시도 단추 */
@@ -30,10 +30,10 @@
 .workspaceTitle { margin-bottom:28px; }
 .tabs { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-bottom:32px; }
 .tabs button,.tabs a { min-width:0; min-height:52px; display:flex; align-items:center; justify-content:center; border:1px solid var(--app-line); border-radius:8px; background:var(--app-surface); color:var(--app-body); font-size:.9375rem; font-weight:600; line-height:1.5; padding:12px 8px; text-align:center; transition:background .16s,border-color .16s,box-shadow .16s,transform .16s; -webkit-tap-highlight-color:transparent; }
-.tabs :is(button,a):hover { background:var(--app-soft); border-color:#a9c9f5; }
-.tabs [aria-pressed=true],.tabs [aria-pressed=true]:hover { background:var(--app-selected); border-color:var(--app-selected); color:#fff; font-weight:700; box-shadow:0 3px 8px color-mix(in srgb, var(--app-primary) 15%, transparent); }
+.tabs :is(button,a):hover { background:var(--app-soft); border-color:var(--app-line-strong); }
+.tabs [aria-pressed=true],.tabs [aria-pressed=true]:hover { background:var(--app-selected); border-color:var(--app-selected); color:var(--app-surface); font-weight:700; box-shadow:0 3px 8px color-mix(in srgb, var(--app-primary) 15%, transparent); }
 .tabs :is(button,a):active { transform:scale(.97); }
-.content :is(button,a,summary):focus-visible { outline:3px solid #90baff; outline-offset:3px; }
+.content :is(button,a,summary):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:3px; }
 /* 사업 요약의 ①·② 단계 — 한 문단에 붙어 있던 것을 줄마다 나눈다 */
 .summarySteps { list-style:none; margin:0 0 16px; padding:0; display:grid; gap:6px; line-height:1.65; word-break:keep-all; overflow-wrap:anywhere; }
 .summarySteps li { padding-left:1.4em; text-indent:-1.4em; }
@@ -61,14 +61,14 @@
 .tabs { background: transparent; padding: 0; gap: 10px; }
 @media(max-width:900px) { .tabs > :nth-child(5):last-child { grid-column:1 / -1; } }
 .tabs :is(button,a) { background: var(--app-panel-fill); border-color: var(--app-line); color: var(--app-body); }
-.tabs [aria-pressed=true],.tabs [aria-pressed=true]:hover { background: var(--app-selected); color: var(--app-selected-text); border-color: #aec4df; box-shadow: inset 0 -2px 0 #7d9dc7; }
+.tabs [aria-pressed=true],.tabs [aria-pressed=true]:hover { background: var(--app-selected); color: var(--app-selected-text); border-color: var(--app-line-strong); box-shadow: inset 0 -2px 0 #7d9dc7; }
 .keyFacts .fact { background: var(--app-raised); border-color: var(--app-line); }
-.count { color: var(--app-accent); border: 1px solid #c7d8ed; background: var(--app-soft); }
+.count { color: var(--app-accent); border: 1px solid var(--app-line-strong); background: var(--app-soft); }
 .fileTypes li { background: var(--app-raised); }
 .notice { border-left: 3px solid #8da9cd; background: var(--app-raised); }
 @media(max-width:900px) { .content { padding-top: 28px; }.workspaceTitle { padding-bottom: 22px; } }
-.nextStep { margin-top: 28px; padding: 24px 0; border-top: 1px solid #dce2e9; }
-.nextStep > span { color: #5e7187; font-size: .8125rem; font-weight: 600; }
+.nextStep { margin-top: 28px; padding: 24px 0; border-top: 1px solid var(--app-line); }
+.nextStep > span { color: var(--app-muted); font-size: .8125rem; font-weight: 600; }
 .nextStep h3 { margin: 8px 0; font-size: 1.25rem; }
 .nextStep p { margin: 0 0 16px; font-size: .9375rem; }
 
@@ -86,7 +86,7 @@
  */
 .tabs { display: flex; gap: 0; overflow-x: auto; margin-bottom: 24px; padding: 0; border-bottom: 1px solid var(--app-line); scrollbar-width: none; }
 .tabs::-webkit-scrollbar { display: none; }
-.tabs button { flex: none; min-height: 48px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: #6b7684; font-size: .9375rem; font-weight: 600; box-shadow: none; }
+.tabs button { flex: none; min-height: 48px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--app-muted); font-size: .9375rem; font-weight: 600; box-shadow: none; }
 .tabs button:hover { background: transparent; color: var(--app-text); border-color: transparent; }
 .tabs [aria-pressed=true], .tabs [aria-pressed=true]:hover { background: transparent; border-color: transparent; border-bottom-color: var(--app-text); color: var(--app-text); font-weight: 700; box-shadow: none; }
 .tabs a { flex: none; margin-left: auto; min-height: 48px; padding: 0 4px 0 14px; border: 0; background: transparent; color: var(--app-primary); font-size: .875rem; font-weight: 600; }

@@ -5,13 +5,12 @@
 
 .body { display: grid; gap: 8px; padding: 26px 24px 20px; text-align: center; }
 .body h2 { margin: 0; font-size: 1.125rem; font-weight: 700; line-height: 1.4; }
-.body p { margin: 0; color: #4e5968; font-size: .9375rem; line-height: 1.55; white-space: pre-line; word-break: keep-all; text-wrap: pretty; }
-.field { width: 100%; min-height: 48px; margin-top: 8px; padding: 0 14px; border: 1px solid #d1d6db; border-radius: 10px; background: #fff; color: var(--app-text); font: inherit; font-size: 1rem; text-align: left; }
-.field:focus { outline: none; border-color: var(--app-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-primary) 13%, transparent); }
-.field[readonly] { background: #f9fafb; color: #4e5968; font-size: .90625rem; }
-.body h2 + p { color: #6b7684; font-size: .90625rem; }
+.body p { margin: 0; color: var(--app-body); font-size: .9375rem; line-height: 1.55; white-space: pre-line; word-break: keep-all; text-wrap: pretty; }
+/* 입력칸 모양은 공통 입력칸(components/app-field)이 정한다 — 여기서는 자리만 */
+.field { margin-top: 8px; text-align: left; }
+.body h2 + p { color: var(--app-muted); font-size: .90625rem; }
 /* 항목 목록 — 가운데 정렬 문장 대신 왼쪽 정렬로 한 줄에 하나씩 */
-.list { margin: 4px 0 0; padding: 12px 14px 12px 32px; border-radius: 10px; background: #f9fafb; color: #333d4b; font-size: .90625rem; line-height: 1.6; text-align: left; word-break: keep-all; }
+.list { margin: 4px 0 0; padding: 12px 14px 12px 32px; border-radius: 10px; background: #f9fafb; color: var(--app-text); font-size: .90625rem; line-height: 1.6; text-align: left; word-break: keep-all; }
 .list li + li { margin-top: 2px; }
 
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 16px; }

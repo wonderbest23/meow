@@ -5,18 +5,18 @@
 .page button { cursor:pointer; transition:background .16s,transform .16s; }
 .page button:active:not(:disabled) { transform:scale(.98); }
 .page button:disabled { cursor:default; }
-.page :is(button,a,input):focus-visible { outline:3px solid #90baff; outline-offset:3px; }
-.page :global(.site-header) { border-bottom:1px solid #f2f4f6; }
+.page :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:3px; }
+.page :global(.site-header) { border-bottom:1px solid var(--app-line); }
 .auth { width:min(400px,calc(100% - 40px)); margin:56px auto 80px; }
 .eyebrow { display:block; margin-bottom:12px; font-size:.8125rem; font-weight:600; color:var(--app-primary); }
 .auth h1 { font-size:1.75rem; line-height:1.4; font-weight:700; margin:0 0 4px; color:var(--app-text); }
-.message,.error { font-size:.875rem; line-height:1.7; margin:0; padding:14px 16px; border:1px solid #d6e4f8; border-radius:8px; color:#1957b5; background:#f5f9ff; text-wrap:balance; }
-.error { background:#fff6f5; border-color:#f4d0cd; color:#b42318; }.fieldError { color:#b42318; font-size:.75rem; }
+.message,.error { font-size:.875rem; line-height:1.7; margin:0; padding:14px 16px; border:1px solid var(--app-line); border-radius:8px; color:var(--app-primary); background:#f5f9ff; text-wrap:balance; }
+.error { background:#fff6f5; border-color:#f4d0cd; color:var(--app-danger); }.fieldError { color:var(--app-danger); font-size:.75rem; }
 .loading { max-width:448px; margin:80px auto; }
 .page .supportLink { display:flex; align-items:center; gap:16px; padding:20px 0; border-top:1px solid var(--app-line); color:var(--app-primary); text-decoration:none; }
 .supportLink > span { flex:1; min-width:0; display:grid; gap:5px; }
 .supportLink strong { font-size:1.125rem; font-weight:700; color:var(--app-text); }
-.supportLink small { font-size:.875rem; color:#6b7684; line-height:1.6; }
+.supportLink small { font-size:.875rem; color:var(--app-muted); line-height:1.6; }
 .supportLink > svg { flex-shrink:0; }
 @media(max-width:600px) { .auth { margin:32px auto 56px; }.auth h1 { font-size:1.625rem; }.page .auth > form { gap:18px; }.loading { margin:48px auto; } }
 @media(prefers-reduced-motion:reduce) { .page * { animation:none!important; transition:none!important; } }
@@ -24,6 +24,6 @@
 /* 링크 로그인 확인: 어느 계정인지 보여 주고 사용자가 확인해야 로그인한다 */
 .linkConfirm { display: grid; gap: 14px; text-align: center; }
 .linkConfirm h1 { margin: 0; font-size: 1.5rem; line-height: 1.4; word-break: keep-all; }
-.linkAccount { margin: 0; padding: 14px 16px; border: 1px solid #e3e9f1; border-radius: 12px; background: #f7f9fc; font-size: 1rem; font-weight: 700; color: var(--app-text); overflow-wrap: anywhere; }
-.linkAccount small { display: block; margin-top: 4px; font-size: .75rem; font-weight: 500; color: #6b7684; }
-.linkNote { margin: 0; font-size: .8125rem; line-height: 1.65; color: #4e5968; word-break: keep-all; }
+.linkAccount { margin: 0; padding: 14px 16px; border: 1px solid var(--app-line); border-radius: 12px; background: #f7f9fc; font-size: 1rem; font-weight: 700; color: var(--app-text); overflow-wrap: anywhere; }
+.linkAccount small { display: block; margin-top: 4px; font-size: .75rem; font-weight: 500; color: var(--app-muted); }
+.linkNote { margin: 0; font-size: .8125rem; line-height: 1.65; color: var(--app-body); word-break: keep-all; }

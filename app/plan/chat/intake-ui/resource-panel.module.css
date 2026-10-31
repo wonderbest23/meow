@@ -1,20 +1,19 @@
-.panel { margin-top: 24px; padding-top: 24px; border-top: 1px solid #dce3ed; color: #283444; font-size: .875rem; line-height: 1.65; overflow-wrap: anywhere; }
+.panel { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--app-line); color: var(--app-text); font-size: .875rem; line-height: 1.65; overflow-wrap: anywhere; }
 .panel h3 { margin: 0 0 16px; font-size: 1.125rem; letter-spacing: 0; }
 .panel details { margin: 16px 0; }
 .panel summary { cursor: pointer; font-weight: 600; padding: 8px 0; }
 .fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; border: 0; padding: 16px 0; margin: 0; min-width: 0; }
 .fields legend { font-weight: 600; padding: 0; }
-.fields label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.fields input:not([type=checkbox]), .fields select { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #1c2533; font: inherit; font-size: 1rem; }
-.fields small, .candidate small { color: #64748b; display: block; }
-.fields .check { grid-column: 1 / -1; flex-direction: row; align-items: flex-start; }
+/* 입력칸·라벨 모양은 공통 입력칸(components/app-field)이 정한다 — 여기서는 자리만 */
+.fields small, .candidate small { color: var(--app-muted); display: block; font-weight: 400; }
+.fields .check { grid-column: 1 / -1; display: flex; flex-direction: row; align-items: flex-start; gap: 6px; }
 .check input { margin-top: 5px; flex: 0 0 auto; }
-.selected, .candidate { padding: 16px 0; border-bottom: 1px solid #e3e8ef; }
+.selected, .candidate { padding: 16px 0; border-bottom: 1px solid var(--app-line); }
 .fit { display: grid; gap: 4px; margin-top: 8px; font-size: .8125rem; font-weight: 400; }
-.fit [data-fit=exceeded] { color: #a43e2c; }
-.fit [data-fit=fits] { color: #17745b; }
-.fit [data-fit=unknown] { color: #697586; }
-.fit [data-fit=conditional] { color: #855d14; }
+.fit [data-fit=exceeded] { color: var(--app-danger); }
+.fit [data-fit=fits] { color: var(--app-success); }
+.fit [data-fit=unknown] { color: var(--app-muted); }
+.fit [data-fit=conditional] { color: var(--app-warning); }
 .quote { margin-top: 20px; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media (max-width: 480px) { .fields { grid-template-columns: minmax(0, 1fr); } }
