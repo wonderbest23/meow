@@ -6,6 +6,7 @@ import { Check, RefreshCw, X } from "lucide-react";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { artifactErrorMessage, artifactSlideText, type ArtifactCommand, type ArtifactPreview, type ArtifactUpdateView } from "../../../lib/plan-builder/artifact-updates";
 import styles from "./ArtifactUpdatePanel.module.css";
+import { AppButton } from "../../../components/app-button";
 
 /** 항목 이름 — 제목이 있으면 제목, 없으면 키 */
 function artifactItemTitle(item: { title?: unknown; key?: unknown; id?: unknown }): string {
@@ -77,9 +78,9 @@ export default function ArtifactUpdatePanel({ businessId }: { businessId?: strin
   const ready = job?.status === "ready";
   const allChosen = job && job.preview.documents.every(item => documents[item.key]) && job.preview.slides.every(item => slides[item.id]) && (!job.preview.homepage || job.preview.homepage.changed.every(id => homepage[id]));
   const aiNeeded = preview && (preview.documents.some(item => !item.locked) || preview.slides.length > 0);
-  return <section className={styles.panel} aria-label="결과물 변경 관리"><header><h3>결과물 함께 수정하기</h3><button onClick={() => void compare()} disabled={busy}><RefreshCw size={17} /> 변경 범위 확인</button></header>
+  return <section className={styles.panel} aria-label="결과물 변경 관리"><header><h3>결과물 함께 수정하기</h3><AppButton variant="secondary" onClick={() => void compare()} disabled={busy}><RefreshCw size={17} /> 변경 범위 확인</AppButton></header>
     {message && <p role="status">{message}</p>}
-    {pending.current && !busy && <button onClick={() => void send(pending.current!)}><RefreshCw size={16} /> 같은 요청 다시 확인</button>}
+    {pending.current && !busy && <AppButton variant="secondary" onClick={() => void send(pending.current!)}><RefreshCw size={16} /> 같은 요청 다시 확인</AppButton>}
     {preview && <div className={styles.preview}>
       {/* PPT 는 제공 준비 중이면 세지 않는다 — 'PPT 0장'은 없는 결과물처럼 보인다 */}
       <p>사업계획서 {preview.documents.length}항목{PPT_GENERATION_VERIFIED ? ` · PPT ${preview.slides.length}장` : ""} · 홈페이지 {preview.homepage?.changed.length ?? 0}항목</p>
@@ -91,7 +92,7 @@ export default function ArtifactUpdatePanel({ businessId }: { businessId?: strin
       </ul></details>}
       {preview.homepage && <label><input type="checkbox" checked={includeHomepage} onChange={event => setIncludeHomepage(event.target.checked)} /> 홈페이지 초안도 함께 비교</label>}
       {aiNeeded && <label><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} /> {preview.target ? `${preview.target.provider} ${preview.target.model}에 선택한 사업 자료를 전송하는 데 동의합니다` : "AI 연동 갱신은 아직 제공 준비 중이에요"}</label>}
-      <button disabled={busy || Boolean(aiNeeded && (!preview.target || !consent))} onClick={() => void send({ type: "generate", id: crypto.randomUUID(), hash: preview.hash, base: preview.base, consent: true, includeHomepage })}>변경안 만들기</button>
+      <AppButton variant="primary" disabled={busy || Boolean(aiNeeded && (!preview.target || !consent))} onClick={() => void send({ type: "generate", id: crypto.randomUUID(), hash: preview.hash, base: preview.base, consent: true, includeHomepage })}>변경안 만들기</AppButton>
     </div>}
     {!!jobs.length && <label className={styles.history}>변경 기록<select value={selected} onChange={event => setSelected(event.target.value)}>{jobs.map(item => <option key={item.id} value={item.id}>{new Date(item.createdAt).toLocaleString("ko-KR")} · {statuses[item.status]}</option>)}</select></label>}
     {job && <div>
@@ -103,10 +104,10 @@ export default function ArtifactUpdatePanel({ businessId }: { businessId?: strin
         {job.preview.documents.map(item => <Compare key={item.id} title={item.title} before={item.before} after={job.documents.find(draft => draft.key === item.key)?.markdown ?? ""} locked={item.locked} value={documents[item.key]} onChange={value => setDocuments(previous => ({ ...previous, [item.key]: value }))} />)}
         {job.preview.slides.map(item => <Compare key={item.id} title={`PPT · ${item.title}`} before={item.before} after={artifactSlideText(job.slides.find(slide => slide.id === item.id))} value={slides[item.id]} onChange={value => setSlides(previous => ({ ...previous, [item.id]: value }))} />)}
         {job.preview.homepage?.sourcePreview.changes.map(item => <Compare key={item.id} title={`홈페이지 · ${item.label}${item.conflict ? " · 직접 수정됨" : ""}`} before={item.before} after={item.after} value={homepage[item.id]} onChange={value => setHomepage(previous => ({ ...previous, [item.id]: value }))} />)}
-        <button disabled={busy || !allChosen} onClick={() => void send({ type: "approve", id: job.id, expectedRevision: job.revision, base: job.preview.base, documents, slides, homepage: Object.values(homepage).some(choice => choice === "replace") ? "replace" : "keep", homepageChoices: homepage })}><Check size={17} /> 선택한 변경 반영</button>
+        <AppButton variant="primary" disabled={busy || !allChosen} onClick={() => void send({ type: "approve", id: job.id, expectedRevision: job.revision, base: job.preview.base, documents, slides, homepage: Object.values(homepage).some(choice => choice === "replace") ? "replace" : "keep", homepageChoices: homepage })}><Check size={17} /> 선택한 변경 반영</AppButton>
       </>}
-      {["failed", "queued", "running"].includes(job.status) && <button disabled={busy} onClick={() => void send({ type: "resume", id: job.id, expectedRevision: job.revision, consent: true })}><RefreshCw size={17} /> 같은 작업 이어서 확인</button>}
-      {!["applied", "cancelled"].includes(job.status) && <button disabled={busy} onClick={() => void send({ type: "cancel", id: job.id, expectedRevision: job.revision })}><X size={17} /> 변경안 닫기</button>}
+      {["failed", "queued", "running"].includes(job.status) && <AppButton variant="secondary" disabled={busy} onClick={() => void send({ type: "resume", id: job.id, expectedRevision: job.revision, consent: true })}><RefreshCw size={17} /> 같은 작업 이어서 확인</AppButton>}
+      {!["applied", "cancelled"].includes(job.status) && <AppButton variant="secondary" disabled={busy} onClick={() => void send({ type: "cancel", id: job.id, expectedRevision: job.revision })}><X size={17} /> 변경안 닫기</AppButton>}
     </div>}
   </section>;
 }

@@ -23,7 +23,9 @@ assert.match(fact, /box\.current\?\.focus\(\{ preventScroll: true \}\)/, "고치
 assert.match(fact, /opener\.focus\(\{ preventScroll: true \}\)/, "고치기 창을 닫으면 초점이 사라진다");
 assert.match(fact, /data-fact-chip="\$\{CSS\.escape\(questionId\)\}"/, "사파리(단추에 초점이 안 감)에서 돌아갈 자리가 없다");
 assert.match(fact, /role="dialog" aria-label=\{`\$\{fact\.label\} 바꾸기`\} tabIndex=\{-1\}/);
-assert.match(read("app/plan/document/DocumentWorkspace.module.css"), /@media \(pointer: coarse\) \{ \.factPopover header button, \.factPopover footer \.primary \{ min-width:44px; min-height:44px; \} \}/, "휴대폰 고치기 창 단추가 44px 보다 작다");
+assert.match(read("app/plan/document/DocumentWorkspace.module.css"), /@media \(pointer: coarse\) \{ \.factPopover header button \{ min-width:44px; min-height:44px; \} \.factPopover footer \.primary \{ min-width:44px; \} \}/, "휴대폰 고치기 창 단추가 44px 보다 작다");
+// 고치기 창 저장 단추는 공통 버튼(작은 크기 — 보이는 높이 36px, 누르는 자리 44px)
+assert.match(fact, /<AppButton type="button" variant="primary" size="small" className=\{styles\.primary\}/, "고치기 창 저장 단추가 공통 버튼이 아니다");
 
 assert.match(read("app/plan/workspace/LaunchWorkspace.tsx"), /useStudioDirty\("launch-draft", !sample && drafting,/, "저장 안 한 체크·메모가 새로고침에 말없이 사라진다");
 

@@ -57,42 +57,10 @@
   letter-spacing: 0;
 }
 
-/* 버튼은 세로 스택 — 나란히 두면 좁은 폭에서 겹치거나 어색하게 감겼다 */
-.primary {
-  display: block;
-  max-width: 300px;
-  margin: 0 auto;
-  background: var(--wz-brand, var(--app-primary));
-  color: #fff;
-  font-weight: 700;
-  font-size: .90625rem;
-  padding: 14px 26px;
-  border-radius: 10px;
-  text-decoration: none;
-  transition: 0.2s;
-}
-.primary:hover {
-  filter: brightness(1.06);
-}
+/* 버튼은 세로 스택 — 나란히 두면 좁은 폭에서 겹치거나 어색하게 감겼다. 모양은 공통 버튼, 여기는 폭·간격만(가운데 정렬은 .wrap 의 text-align) */
+.primary { width: 100%; max-width: 300px; }
 
-.secondary {
-  display: block;
-  max-width: 300px;
-  margin: 10px auto 0;
-  background: var(--app-surface);
-  color: var(--wz-muted, var(--app-body));
-  font-weight: 600;
-  font-size: .875rem;
-  padding: 13px 22px;
-  border: 1px solid var(--wz-border, var(--app-line));
-  border-radius: 10px;
-  text-decoration: none;
-  transition: 0.2s;
-}
-.secondary:hover {
-  border-color: var(--wz-brand, var(--app-primary));
-  color: var(--wz-brand, var(--app-accent));
-}
+.secondary { width: 100%; max-width: 300px; margin-top: 10px; }
 
 .note {
   margin: 18px 0 0;

@@ -29,7 +29,7 @@ assert.match(read("app/plan/studio/Studio.tsx"), /<BusinessIntake [^>]*studioSid
 // 숨겨도 작성 중이면 진행 게이지는 남고, 숨기는 것은 단추뿐이다
 const panels = read("app/plan/chat/intake-ui/IntakePanels.tsx");
 assert.match(panels, /if \(reflect === "none" && !jobActive\) return null;/);
-assert.match(panels, /className=\{reflect === "link" \? styles\.textButton : undefined\}/, "PC 다른 탭은 지금처럼 옅은 링크");
+assert.match(panels, /variant=\{reflect === "link" \? "text" : "primary"\}/, "PC 다른 탭은 지금처럼 옅은 링크(글자 버튼)");
 
 // 반영 실패 안내 · [다시 시도]는 NextStepAction 밖 대화 칸 알림에 있다 — 링크를 숨겨도 그대로 보인다
 assert.match(intake, /setPreparing\(true\); setChatSent\(true\);/, "반영하기를 누른 것도 방금 보낸 요청(점검 r42)");
@@ -39,19 +39,20 @@ assert.ok(!intake.slice(notice, notice + 1200).includes("NextStepAction"), "실�
 
 // 계획서 칸의 파란 단추와 그 실패 안내 — 단추가 남아 있어 다시 누를 수 있다
 const workspace = read("app/plan/document/DocumentWorkspace.tsx");
-assert.match(workspace, /<RewriteConfirm snapshot=\{facts\.snapshot\} disabled=\{facts\.busy\} label="계획서에 반영하기" className=\{styles\.noticeAction\} onConfirm=\{\(\) => void reflectFacts\(\)\} \/>/);
+assert.match(workspace, /<RewriteConfirm snapshot=\{facts\.snapshot\} disabled=\{facts\.busy\} label="계획서에 반영하기" size="small" className=\{styles\.noticeAction\} onConfirm=\{\(\) => void reflectFacts\(\)\} \/>/);
 assert.match(workspace, /\{facts\.error && <span className=\{styles\.factError\} role="alert">/, "계획서 칸에서 반영이 실패해도 안내가 보인다");
-assert.match(workspace, /\{factsUnapplied && facts\.snapshot && <RewriteConfirm [^>]*label="계획서에 반영하기" className=\{styles\.primary\}/, "직접 고치는 중에는 칸 위 줄의 파란 단추");
+assert.match(workspace, /\{factsUnapplied && facts\.snapshot && <RewriteConfirm [^>]*label="계획서에 반영하기" size=\{size\} className=\{styles\.primary\}/, "직접 고치는 중에는 칸 위 줄의 파란 단추");
 // 계획서 칸에서 반영이 잠시 실패하면(503 · 연결 끊김) 안내 옆에 [다시 시도] — 대화 칸 알림과 같다. 횟수 모자람(402)·로그인(401)·충돌(409)은 지금처럼 각자의 안내
 const factEdit = read("app/plan/document/FactEdit.tsx");
 assert.equal(factEdit.match(/\.\.\.\(command\.action === "prepare" \? \{ retry: true \} : \{\}\)/g)?.length, 2, "잠시 실패(서버 오류 · 연결 끊김)일 때만 다시 시도");
 assert.doesNotMatch(factEdit, /status === (?:402|401|409)[^\n]*retry: true/);
-assert.match(workspace, /\{facts\.error\.retry && <button type="button" className=\{styles\.factRetry\} disabled=\{facts\.busy\} onClick=\{retryReflect\}><RefreshCw size=\{15\} aria-hidden="true" \/>다시 시도<\/button>\}/, "읽는 화면 안내 줄");
+assert.match(workspace, /\{facts\.error\.retry && <AppButton type="button" variant="secondary" size="small" className=\{styles\.factRetry\} disabled=\{facts\.busy\} onClick=\{retryReflect\}><RefreshCw size=\{15\} aria-hidden="true" \/>다시 시도<\/AppButton>\}/, "읽는 화면 안내 줄");
 assert.ok(workspace.includes("<FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onRetry={retryReflect} />"), "직접 고치는 중의 사실 카드");
 assert.match(workspace, /const retryReflect = \(\) => void reflectFacts\(\);/);
-assert.match(factEdit, /\{edit\.error\.retry && onRetry && <button type="button" className=\{styles\.factRetry\}/);
+assert.match(factEdit, /\{edit\.error\.retry && onRetry && <AppButton type="button" variant="secondary" size="small" className=\{styles\.factRetry\}/);
 const css = read("app/plan/document/DocumentWorkspace.module.css");
-assert.match(css, /\.factRetry \{[^}]*min-height:32px;/, "PC 누르는 자리 32px");
-assert.match(css, /@media \(max-width:1023px\) \{ \.factRetry \{ min-height:44px; \} \}/, "휴대폰·태블릿 44px");
+/* 다시 시도 단추 크기는 공통 버튼(작은 크기 — 보이는 높이 36px, 누르는 자리 44px · PC·휴대폰 같음)이 정한다 — 여기는 자리만 */
+assert.match(css, /\.factRetry \{ margin-left:8px; \}/, "다시 시도 단추 자리");
+assert.doesNotMatch(css, /\.factRetry \{[^}]*min-height/, "다시 시도 단추 높이를 화면 쪽에서 다시 정했다");
 
 console.log("owner-decisions-r42: ok");

@@ -15,6 +15,7 @@ import { newChatHref } from "../lib/plan-builder/studio";
 import styles from "./next-services.module.css";
 import { StatusBadge, type StatusTone } from "./status-badge";
 import { Spinner } from "../app/plan/PlanLoading";
+import { AppButton } from "./app-button";
 
 /*
  * '다음 단계' — 홈페이지 다음으로 맡길 수 있는 일(마케팅).
@@ -175,14 +176,14 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
     {/* '다음 단계'는 여정 단계(개업 준비 등)와 헷갈렸다 — 맡길 수 있는 일 목록이다(여정 점검 2026-10-22). 제목 하나만(군더더기 점검 r37) */}
     <h2 id="next-services-title">맡길 수 있는 일</h2>
     {done ? <p className={styles.done} role="status"><CheckCircle2 size={18} aria-hidden /> {done}</p> : null}
-    {state?.error ? <div className={styles.loadError} role="alert"><p className={styles.error}>{state.error}</p><button type="button" onClick={() => { setState(null); setReload((value) => value + 1); }}>다시 시도</button></div> : null}
+    {state?.error ? <div className={styles.loadError} role="alert"><p className={styles.error}>{state.error}</p><AppButton variant="secondary" type="button" onClick={() => { setState(null); setReload((value) => value + 1); }}>다시 시도</AppButton></div> : null}
 
     {/* 등록·신고 확인은 창업 행정 서비스를 받을 때만 의미가 있다 — 지금은 마케팅만 받는다 */}
     {checkAvailable && adminOffered ? <form className={styles.verify} onSubmit={(event) => void runCheck(event)}>
       <div className={styles.verifyHead}><BadgeCheck size={18} aria-hidden /><strong>이미 등록·신고하셨나요?</strong><small>번호만 넣으면 국세청·공정위에서 바로 확인해요</small></div>
       <div className={styles.verifyRow}>
         <input inputMode="numeric" autoComplete="off" value={bno} onChange={(event) => setBno(event.target.value)} placeholder="사업자등록번호 10자리" aria-label="사업자등록번호" />
-        <button type="submit" disabled={checking}>{checking ? <Spinner /> : null} 확인</button>
+        <AppButton variant="primary" type="submit" disabled={checking}>{checking ? <Spinner /> : null} 확인</AppButton>
       </div>
       {checkError ? <p className={styles.error} role="alert">{checkError}</p> : null}
       {check ? <ul className={styles.verifyResult}>
@@ -237,8 +238,8 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
           <ol className={styles.steps}>{detail.steps.map((line, index) => <li key={line}><b>{index + 1}</b><span>{line}</span></li>)}</ol>
           <p className={styles.prepare}><strong>준비하면 빨라요</strong> {detail.prepare.join(" · ")}</p>
           {pending ? <p className={styles.requestedBox}>이미 신청했어요 · {SERVICE_REQUEST_STATUS_LABELS[pending.status]}</p>
-            : sample ? <><p className={styles.prepare} style={{ marginBottom: 12 }}>예시 사업이라 신청할 수 없어요. 내 사업을 만든 뒤 신청해 주세요.</p><Link className={styles.cta} href={newChatHref()}>대화로 내 사업 시작하기</Link></>
-            : state?.login ? <Link className={styles.cta} href={`/account?next=${encodeURIComponent(loginNext)}`}>로그인하고 신청하기</Link>
+            : sample ? <><p className={styles.prepare} style={{ marginBottom: 12 }}>예시 사업이라 신청할 수 없어요. 내 사업을 만든 뒤 신청해 주세요.</p><AppButton variant="primary" className={styles.cta} href={newChatHref()}>대화로 내 사업 시작하기</AppButton></>
+            : state?.login ? <AppButton variant="primary" className={styles.cta} href={`/account?next=${encodeURIComponent(loginNext)}`}>로그인하고 신청하기</AppButton>
             : <form className={styles.form} onSubmit={(event) => void submit(event, detail)}>
               <label><span>연락받을 휴대폰</span><input inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-1234-5678" /></label>
               <div className={styles.times} role="radiogroup" aria-label="연락 받기 좋은 시간">
@@ -246,7 +247,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
               </div>
               <label><span>남길 말 <small>(선택)</small></span><input value={memo} maxLength={500} onChange={(event) => setMemo(event.target.value)} placeholder="예: 다음 주 안에 하고 싶어요" /></label>
               {formError ? <p className={styles.error} role="alert">{formError}</p> : null}
-              <button type="submit" className={styles.cta} disabled={sending || !state}>{sending ? <Spinner /> : null} 신청하기</button>
+              <AppButton type="submit" variant="primary" className={styles.cta} disabled={sending || !state}>{sending ? <Spinner /> : null} 신청하기</AppButton>
               <small className={styles.note}>신청은 무료예요. 상담 후 진행 여부를 정하시면 돼요.</small>
             </form>}
         </div>

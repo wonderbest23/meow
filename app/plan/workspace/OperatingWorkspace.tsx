@@ -16,6 +16,7 @@ import type { AnalysisTarget } from "../../../lib/plan-builder/operating-analysi
 import { autoInquiriesValue, type HomepageInquiries } from "../../../lib/plan-builder/operating-homepage";
 import { useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import paneHeader from "./PaneHeaderActions.module.css";
+import { AppButton } from "../../../components/app-button";
 
 type Draft = Omit<PeriodInput, "metrics"> & { metrics: Record<typeof METRICS[number]["key"], string> };
 /** 운영 중인 사업 대화에서 말한 실적(기간·실제 매출) — 첫 기록을 채우는 데만 쓴다(저장은 사장님이 누를 때) */
@@ -247,15 +248,15 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
   /* 기록이 하나도 없으면 빈 칸 가운데 '기간 기록 추가' 하나만 — 머리줄 · 제목 옆에 같은 단추를 또 두지 않는다(r37 점검) */
   const addOnTop = canAddPeriod && !!state?.periods.length;
   const headerNode = useMemo(() => studioHeader && addOnTop
-    ? <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}><button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} disabled={addDisabled} onClick={() => editRef.current()}><Plus size={16} aria-hidden="true" />기간 기록 추가</button></div>
+    ? <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}><AppButton type="button" variant="primary" size="small" className={`${paneHeader.btn} ${paneHeader.primary}`} disabled={addDisabled} onClick={() => editRef.current()}><Plus size={16} aria-hidden="true" />기간 기록 추가</AppButton></div>
     : null, [studioHeader, addOnTop, addDisabled]);
   useStudioHeaderActions(headerNode);
 
   return <div className={styles.root}>
-    <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{/* 둘 다 0개면 숫자 줄을 숨긴다(빈 칸이 이미 말한다) · 항목마다 줄바꿈하지 않게(r37 점검) */}{state ? (state.periods.length || state.reports.length ? <p className={styles.counts}><span>운영 기록 {state.periods.length}개</span> <span aria-hidden="true">·</span> <span>개선 리포트 {state.reports.length}개</span></p> : null) : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{addOnTop && <button className={studioHeader ?`${styles.primary} ${paneHeader.narrowOnly}` : styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
+    <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{/* 둘 다 0개면 숫자 줄을 숨긴다(빈 칸이 이미 말한다) · 항목마다 줄바꿈하지 않게(r37 점검) */}{state ? (state.periods.length || state.reports.length ? <p className={styles.counts}><span>운영 기록 {state.periods.length}개</span> <span aria-hidden="true">·</span> <span>개선 리포트 {state.reports.length}개</span></p> : null) : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{addOnTop && <AppButton variant="primary" className={studioHeader ?`${styles.primary} ${paneHeader.narrowOnly}` : styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</AppButton>}</header>
     <div className={styles.tabs} role="group" aria-label="운영 기록 보기"><button aria-pressed={mode === "periods"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("periods")}>기간별 실적</button><button aria-pressed={mode === "reports"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("reports")}>리포트 보관함</button></div>
-    {sample && <p className={styles.note} role="note">예시 사업의 기록이라 보기만 할 수 있어요. 내 사업을 만들면 직접 기록하고 리포트로 보관할 수 있어요. <a className={`${styles.inlineButton} ${studioHeader ? styles.studioNarrowOnly : ""}`} href={newChatHref()}>대화로 내 사업 시작하기<ChevronRight size={18} aria-hidden="true" /></a></p>}
-    {error && !invalid && <div role="alert" className={styles.error}><p>{error}</p>{errorKind !== "input" && <><button type="button" disabled={busy} onClick={() => void reload()}>기록 다시 불러오기</button>{editor && <p>{errorKind === "conflict" ? "다른 곳에서 먼저 고친 기록이 있어요. 입력 중인 내용은 그대로 있으니 복사해 두고, 취소한 뒤 다시 열어 고쳐 주세요." : "입력 중인 내용은 그대로 있어요."}</p>}</>}</div>}
+    {sample && <p className={styles.note} role="note">예시 사업의 기록이라 보기만 할 수 있어요. 내 사업을 만들면 직접 기록하고 리포트로 보관할 수 있어요. <AppButton as="a" variant="secondary" size="small" className={`${styles.inlineButton} ${studioHeader ? styles.studioNarrowOnly : ""}`} href={newChatHref()}>대화로 내 사업 시작하기<ChevronRight size={18} aria-hidden="true" /></AppButton></p>}
+    {error && !invalid && <div role="alert" className={styles.error}><p>{error}</p>{errorKind !== "input" && <><AppButton variant="secondary" type="button" disabled={busy} onClick={() => void reload()}>기록 다시 불러오기</AppButton>{editor && <p>{errorKind === "conflict" ? "다른 곳에서 먼저 고친 기록이 있어요. 입력 중인 내용은 그대로 있으니 복사해 두고, 취소한 뒤 다시 열어 고쳐 주세요." : "입력 중인 내용은 그대로 있어요."}</p>}</>}</div>}
     {notice && <p role="status" className={styles.success}>{notice}</p>}
     {!state && !error && <PlanLoading note="운영 기록을 불러오고 있어요" />}
     {editor && <form ref={formRef} className={styles.editor} onSubmit={event => { event.preventDefault(); void save(); }}>
@@ -268,26 +269,26 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
         }} />{fieldError(m.key) ?? (limit && <small role="status" className={styles.fieldError}>{limit}</small>)}</label>; })}</div>
         {homepage?.linked && <p className={styles.note} role="status">
           홈페이지로 들어온 문의 {homepage.inquiries.toLocaleString("ko-KR")}건(이 기간){draft.metrics.inquiries === String(homepage.inquiries) ? " — 문의 칸에 넣어 두었어요. 전화·방문 문의가 더 있으면 더해서 고쳐 주세요." : ""}
-          {draft.metrics.inquiries !== String(homepage.inquiries) && <> <button type="button" className={styles.inlineButton} onClick={() => { autoInquiries.current = String(homepage.inquiries); setDraft({ ...draft, metrics: { ...draft.metrics, inquiries: String(homepage.inquiries) } }); }}>{homepage.inquiries}건으로 넣기</button></>}
+          {draft.metrics.inquiries !== String(homepage.inquiries) && <> <AppButton type="button" variant="secondary" size="small" className={styles.inlineButton} onClick={() => { autoInquiries.current = String(homepage.inquiries); setDraft({ ...draft, metrics: { ...draft.metrics, inquiries: String(homepage.inquiries) } }); }}>{homepage.inquiries}건으로 넣기</AppButton></>}
           {!homepage.published && " 홈페이지를 공개하면 손님 문의가 여기에 저절로 쌓여요."}
         </p>}</fieldset>
       <fieldset disabled={busy}><legend>돌아보기와 다음 행동</legend>{([
         ["feedback", "고객 반응", 3000], ["keep", "유지할 점", 1500], ["change", "바꿀 점", 1500], ["nextAction", "다음 개선 행동", 1500], ["successCriterion", "확인 기준", 1000],
       ] as const).map(([key, label, max]) => <label key={key}>{label}<textarea {...fieldProps(key)} value={draft[key]} maxLength={max} rows={key === "feedback" ? 3 : 2} onChange={e => { touched(key); setDraft({ ...draft, [key]: e.target.value }); }} />{fieldError(key)}</label>)}</fieldset>
-      <div className={styles.actions}><button type="submit" className={styles.primary} disabled={busy}><Save size={18} />{busy ? "저장 중" : "기록 저장"}</button><button type="button" disabled={busy} onClick={closeEditor}>취소</button></div>
+      <div className={styles.actions}><AppButton type="submit" variant="primary" className={styles.primary} disabled={busy}><Save size={18} />{busy ? "저장 중" : "기록 저장"}</AppButton><AppButton variant="secondary" type="button" disabled={busy} onClick={closeEditor}>취소</AppButton></div>
     </form>}
     {state && !editor && mode === "periods" && (period ? <>
-      <div className={styles.selectRow}><label>기록 기간<select value={selected} disabled={busy || analysisDirty} onChange={e => { setSelected(e.target.value); setNotice(""); }}>{state.periods.map(p => <option key={p.id} value={p.id} title={periodLabel(p)}>{periodShortLabel(p)}</option>)}</select></label>{!sample && <button disabled={busy || analysisDirty} onClick={() => edit(period)}><Pencil size={17} />수정</button>}</div>
+      <div className={styles.selectRow}><label>기록 기간<select value={selected} disabled={busy || analysisDirty} onChange={e => { setSelected(e.target.value); setNotice(""); }}>{state.periods.map(p => <option key={p.id} value={p.id} title={periodLabel(p)}>{periodShortLabel(p)}</option>)}</select></label>{!sample && <AppButton variant="secondary" size="small" disabled={busy || analysisDirty} onClick={() => edit(period)}><Pencil size={17} />수정</AppButton>}</div>
       <p className={styles.meta}>{periodDays(period)}일 기록 · 마지막 저장 {stamp(period.updatedAt)}</p>
       <Comparison period={period} baseline={baseline} /><PeriodNotes period={period} />
-      {!sample && <div className={styles.actions}><button className={styles.primary} disabled={busy || analysisDirty || !period.nextAction || !period.successCriterion || state.reports.some(r => r.source === "user-records" && JSON.stringify(referenceFor(r.period, r.baseline)) === JSON.stringify(referenceFor(period, baseline)))} onClick={requestArchive}><Archive size={18} />리포트 보관</button></div>}
+      {!sample && <div className={styles.actions}><AppButton variant="primary" className={styles.primary} disabled={busy || analysisDirty || !period.nextAction || !period.successCriterion || state.reports.some(r => r.source === "user-records" && JSON.stringify(referenceFor(r.period, r.baseline)) === JSON.stringify(referenceFor(period, baseline)))} onClick={requestArchive}><Archive size={18} />리포트 보관</AppButton></div>}
       {!sample && (!period.nextAction || !period.successCriterion) && <p className={styles.note}>다음 개선 행동과 확인 기준을 적으면 리포트로 보관할 수 있어요.</p>}
       {/* AI 개선안은 운영에서 AI 분석을 켰을 때만(꺼져 있으면 '준비 중'만 보였다) */}
       {analysisTarget && <OperatingAnalysisPanel key={period.id} planId={planId} period={period} baseline={baseline} records={state} target={analysisTarget} onState={acceptState} onArchive={run} onDirtyChange={setAnalysisDirty} />}
     </> : <div className={styles.empty}><FileText size={30} aria-hidden="true" /><h3>아직 기간 기록이 없어요</h3>
       {/* 넓은 화면은 '기간 기록 추가'가 머리줄 오른쪽 끝에만 있어 빈 칸 가운데서 찾기 어려웠다 — 여기에도 둔다 */}
-      {canAddPeriod && !chatRecord && <button type="button" className={styles.primary} disabled={addDisabled} onClick={() => edit()}><Plus size={18} aria-hidden="true" />기간 기록 추가</button>}
-      {canAddPeriod && chatRecord && <><button type="button" className={styles.primary} disabled={busy || analysisDirty} onClick={() => editFromChat(chatRecord)}><FileText size={18} />대화에서 말한 실적으로 첫 기록 만들기</button><small className={styles.note}>{`${chatRecord.start} ~ ${chatRecord.end}`}{chatRecord.revenue !== null ? ` · 실제 매출 ${chatRecord.revenue.toLocaleString("ko-KR")}원` : ""} · 저장 전에 고칠 수 있어요</small></>}
+      {canAddPeriod && !chatRecord && <AppButton type="button" variant="primary" className={styles.primary} disabled={addDisabled} onClick={() => edit()}><Plus size={18} aria-hidden="true" />기간 기록 추가</AppButton>}
+      {canAddPeriod && chatRecord && <><AppButton type="button" variant="primary" className={styles.primary} disabled={busy || analysisDirty} onClick={() => editFromChat(chatRecord)}><FileText size={18} />대화에서 말한 실적으로 첫 기록 만들기</AppButton><small className={styles.note}>{`${chatRecord.start} ~ ${chatRecord.end}`}{chatRecord.revenue !== null ? ` · 실제 매출 ${chatRecord.revenue.toLocaleString("ko-KR")}원` : ""} · 저장 전에 고칠 수 있어요</small></>}
     </div>)}
     {state && !editor && mode === "reports" && (report ? <>
       <label className={styles.reportSelect}>보관한 리포트<select value={reportId} onChange={e => setReportId(e.target.value)}>{state.reports.map(r => <option key={r.id} value={r.id}>{periodLabel(r.period)} · {new Date(r.createdAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 보관</option>)}</select></label>

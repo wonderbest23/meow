@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import styles from "./PlanLoading.module.css";
+import { AppButton } from "../../components/app-button";
 
 export function Spinner() {
   return <span className={styles.spinner} aria-hidden="true" />;
@@ -46,7 +47,7 @@ export default function PlanLoading({ note = "화면을 불러오고 있어요",
       <p>{slow ? "불러오기가 늦어지고 있어요" : note}</p>
       {slow && <>
         <p className={styles.slowNote}>연결이 느리거나 서버가 잠시 바빠요.</p>
-        <button type="button" className={styles.retry} onClick={() => { if (onRetry) { setSlow(false); onRetry(); } else window.location.reload(); }}>다시 시도</button>
+        <AppButton type="button" variant="secondary" className={styles.retry} onClick={() => { if (onRetry) { setSlow(false); onRetry(); } else window.location.reload(); }}>다시 시도</AppButton>
       </>}
     </div>
   </div>;

@@ -27,7 +27,7 @@
 .empty, .placeholder { display: grid; justify-items: center; gap: 8px; padding: 48px 24px; color: #6b7280; text-align: center; }
 .empty strong { color: #161c2d; font-size: .9375rem; text-wrap: balance; }
 .empty p, .placeholder p { margin: 0; font-size: .8125rem; line-height: 1.6; }
-.emptyRefresh { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; height: 44px; padding: 0 16px; border: 1px solid #dfe3ea; border-radius: 22px; background: #fff; color: #4b5161; font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
+.emptyRefresh { margin-top: 16px; }
 .placeholder { align-content: center; height: 100%; }
 /* 문의가 하나도 없으면 — 목록·내용 두 칸을 접고 빈 화면 안내를 칸 가운데(세로·가로)에(대표 규칙 2026-10-24) */
 .wrap[data-empty] { grid-template-columns: minmax(0, 1fr); }
@@ -35,8 +35,6 @@
 .wrap[data-empty] .detail { display: none; }
 /* 빈 화면의 다음 할 일 */
 .emptyActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
-.emptyLink { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; padding: 0 12px 0 16px; border-radius: 22px; background: #161c2d; color: #fff; font-size: .8125rem; font-weight: 600; text-decoration: none; }
-.emptyLink + .emptyLink { border: 1px solid #dfe3ea; background: #fff; color: #161c2d; }
 .detail { min-height: 0; overflow-y: auto; }
 .thread { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 16px; max-width: 720px; margin: 0 auto; padding: 0 24px 32px; }
 .threadHead { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 14px 0; background: #fff; border-bottom: 1px solid #eef0f4; }
@@ -68,9 +66,8 @@
   .thread { padding: 0 16px 24px; }
 }
 
-.retry { margin-left: 6px; padding: 2px 8px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: .75rem; font-weight: 700; cursor: pointer; }
+.retry { margin-left: 6px; }
 .notifyError { display: block; margin-top: 6px; color: #ad343d; font-size: .75rem; }
-a.retry { display: inline-block; text-decoration: none; }
 
 /* 목록의 '처리 완료' 표시 */
 .handledBadge { flex: none; align-self: center; }

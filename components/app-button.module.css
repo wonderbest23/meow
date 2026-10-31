@@ -1,0 +1,30 @@
+/*
+ * 앱 공통 버튼 — 종류 넷(primary·secondary·text·danger) × 크기 둘(기본 44px·작은 36px), 모서리 8px 하나, PC·모바일 같은 규격.
+ * 색은 --app-* 토큰만 쓴다(workspace-theme.module.css). 흰 글자/주 색·위험 색, 본문 글자/흰 바탕 모두 4.5:1 이상.
+ * 쓰는 쪽은 자리(여백·너비·정렬)만 정하고 높이·안쪽 여백·글자·색·모서리는 여기서만 정한다.
+ * 알약형(999px)은 칩·선택지에만 남긴다 — 이 버튼은 쓰지 않는다.
+ * 토큰은 버튼이 직접 들고 다닌다(composes) — 테마 밖(첫 로딩·계정·홈페이지 편집기·창)에서도 같은 색. 테마의 --brand-primary 는 그대로 따른다.
+ * 규칙은 [data-variant] 로 한 단계 높여 화면 쪽 'button'·'a' 같은 넓은 선택자(.page button 등)에 밀리지 않게 한다.
+ */
+.button { composes: tokens from "./workspace-theme.module.css"; }
+.button[data-variant] { box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-width:0; height:auto; min-height:44px; padding:10px 18px; border:1px solid transparent; border-radius:8px; font:inherit; font-size:.9375rem; font-weight:600; line-height:1.4; letter-spacing:0; text-align:center; text-decoration:none; word-break:keep-all; overflow-wrap:anywhere; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:background-color .15s, border-color .15s, color .15s; }
+.button[data-variant][data-size=small] { position:relative; min-height:36px; padding:6px 12px; gap:6px; }
+/* 작은 버튼도 누르는 자리는 위아래로 4px씩 넓혀 44px 로 */
+.button[data-variant][data-size=small]::before { content:""; position:absolute; inset:-4px 0; }
+.button[data-variant] > svg { flex:none; }
+.button[data-variant=primary] { background:var(--app-primary); border-color:var(--app-primary); color:var(--app-surface); }
+.button[data-variant=primary]:hover:not(:disabled) { background:var(--app-primary-hover); border-color:var(--app-primary-hover); }
+.button[data-variant=secondary] { background:var(--app-surface); border-color:var(--app-line-strong); color:var(--app-text); }
+.button[data-variant=secondary]:hover:not(:disabled) { background:var(--app-raised); }
+.button[data-variant=text] { background:transparent; border-color:transparent; color:var(--app-primary); }
+.button[data-variant=text][data-size] { padding-inline:8px; }
+.button[data-variant=text]:hover:not(:disabled) { background:var(--app-soft); }
+.button[data-variant=danger] { background:var(--app-danger); border-color:var(--app-danger); color:var(--app-surface); }
+.button[data-variant=danger]:hover:not(:disabled) { background:var(--app-danger-hover); border-color:var(--app-danger-hover); }
+/* 포커스 표시 하나 — 주 색 70% 선 3px(앱 테마의 2px 선보다 앞서도록 한 단계 높인다) */
+.button[data-variant][data-size]:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
+.button[data-variant]:disabled, .button[data-variant][aria-disabled=true] { opacity:.5; cursor:not-allowed; }
+.button[aria-busy=true] { cursor:progress; }
+.spinner { animation:app-button-spin .9s linear infinite; }
+@keyframes app-button-spin { to { transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .button[data-variant] { transition:none; } .spinner { animation-duration:2.4s; } }

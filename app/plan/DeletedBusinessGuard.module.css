@@ -3,5 +3,3 @@
 .dialog::backdrop { background:rgb(16 24 36 / .45); }
 .dialog h2 { margin:0 0 8px; font-size:1.25rem; font-weight:700; line-height:1.5; }
 .dialog p { margin:0 0 20px; font-size:.9375rem; line-height:1.7; color:var(--app-muted, #5f6d80); word-break:keep-all; }
-.dialog a { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:0 22px; border-radius:10px; background:var(--app-primary, #1b64da); color:#fff; font-size:.9375rem; font-weight:600; text-decoration:none; }
-.dialog a:focus-visible { outline:3px solid #90baff; outline-offset:3px; }

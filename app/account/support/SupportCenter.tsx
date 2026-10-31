@@ -9,6 +9,7 @@ import type { SupportChat } from "../../../lib/support-chat/repository";
 import PlanLoading, { Spinner } from "../../plan/PlanLoading";
 import styles from "./support.module.css";
 import { StatusBadge } from "../../../components/status-badge";
+import { AppButton } from "../../../components/app-button";
 
 type Reply = { ownerScope: string; chat: SupportChat; requestId?: string; receivedMessageId?: string };
 type View = "write" | "history";
@@ -168,7 +169,7 @@ export default function SupportCenter() {
   return <AppFrame title="고객센터" backHref="/plan/me"><div className={`${styles.page} ${styles.inFrame} plan-ui`} data-fill={loggedOut && !loading ? "" : undefined}>
     <h1 className={styles.srTitle}>고객센터</h1>
     <div className={styles.content}>
-      {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <section className={styles.empty}><h2>로그인 후 문의를 남겨 주세요</h2><Link className={styles.primary} href={loginHref}><LogIn size={19} />로그인하기<ChevronRight size={18} aria-hidden="true" /></Link></section> : <>
+      {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <section className={styles.empty}><h2>로그인 후 문의를 남겨 주세요</h2><AppButton variant="primary" className={styles.primary} href={loginHref}><LogIn size={19} />로그인하기<ChevronRight size={18} aria-hidden="true" /></AppButton></section> : <>
         {scope && <>
           <nav className={styles.tabs} aria-label="고객센터 메뉴">
             <button type="button" aria-pressed={view === "write"} onClick={() => setView("write")}>문의하기</button>
@@ -180,10 +181,10 @@ export default function SupportCenter() {
             <label>제목<input value={draft.subject} maxLength={80} required disabled={busy} onChange={event => edit({ subject: event.target.value })} placeholder="어떤 도움이 필요하신가요?" /></label>
             <label>문의 내용<textarea rows={7} maxLength={1800} required disabled={busy} value={draft.message} onChange={event => edit({ message: event.target.value })} placeholder="불편했던 상황이나 궁금한 점을 남겨 주세요." /></label>
             <div className={styles.fieldFooter}><small>비밀번호·인증번호·결제정보는 적지 마세요.</small><span>{draft.message.length.toLocaleString()} / 1,800</span></div>
-            <button className={styles.primary} type="submit" disabled={busy || !draft.subject.trim() || !draft.message.trim()}>{busy ? <Spinner /> : <Send size={18} aria-hidden="true" />}{busy ? "접수 중" : "문의 접수"}</button>
+            <AppButton variant="primary" className={styles.primary} type="submit" disabled={busy || !draft.subject.trim() || !draft.message.trim()}>{busy ? <Spinner /> : <Send size={18} aria-hidden="true" />}{busy ? "접수 중" : "문의 접수"}</AppButton>
           </form> : view === "history" && <section className={styles.history} aria-label="문의와 답변">
             <div className={styles.historyHeading}><h2>내 문의와 답변</h2><button type="button" className={styles.iconButton} aria-label="문의 내역 새로고침" title="문의 내역 새로고침" onClick={() => void load()}><RefreshCw size={20} /></button></div>
-            {chat.messages.length === 0 ? <div className={styles.empty}><p>아직 접수한 문의가 없어요.</p><button className={styles.secondary} onClick={() => setView("write")}>문의 남기기</button></div> : inquiryThreads(chat.messages).map(thread => {
+            {chat.messages.length === 0 ? <div className={styles.empty}><p>아직 접수한 문의가 없어요.</p><AppButton variant="secondary" className={styles.secondary} onClick={() => setView("write")}>문의 남기기</AppButton></div> : inquiryThreads(chat.messages).map(thread => {
               const replies = thread.replies.map(message => <article className={styles.reply} key={message.id}><div><strong>고객센터 답변</strong><time dateTime={message.createdAt}>{dateLabel(message.createdAt)}</time></div><p>{message.body}</p></article>);
               if (!thread.inquiry) return <div className={styles.thread} key={thread.replies[0]?.id}>{replies}</div>;
               const inquiry = inquiryPreview(thread.inquiry.body);
@@ -198,7 +199,7 @@ export default function SupportCenter() {
             })}
           </section>}
         </>}
-        {error && <div className={styles.error} role="alert"><p>{error}</p>{!scope && !loggedOut && <button className={styles.secondary} onClick={() => void load()}><RefreshCw size={18} />다시 불러오기</button>}</div>}
+        {error && <div className={styles.error} role="alert"><p>{error}</p>{!scope && !loggedOut && <AppButton variant="secondary" className={styles.secondary} onClick={() => void load()}><RefreshCw size={18} />다시 불러오기</AppButton>}</div>}
       </>}
     </div>
   </div></AppFrame>;

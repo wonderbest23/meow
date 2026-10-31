@@ -5,8 +5,10 @@ import { useEffect, useMemo, useState } from "react";
 import { SiteHeader } from "../../components/site-header";
 import AccountAuthForm, { type AuthMode } from "../../components/account-auth-form";
 import { prepareAccountSignIn } from "../../lib/plan-builder/plan-store";
-import PlanLoading, { Spinner } from "../plan/PlanLoading";
+import PlanLoading from "../plan/PlanLoading";
 import styles from "./Account.module.css";
+import theme from "../../components/workspace-theme.module.css";
+import { AppButton } from "../../components/app-button";
 import { safeNextPath } from "../../lib/http/safe-next";
 import { apiMessage, userErrorMessage } from "../../lib/client/user-error";
 
@@ -124,7 +126,7 @@ export default function AccountPage() {
   if (!session) return <main className={`${styles.page} plan-ui`}><SiteHeader light showAccount={false} onHome={() => router.push("/")} /><div className={styles.loading}><PlanLoading count={2} note="내 계정을 확인하고 있어요" /></div></main>;
 
   return (
-    <main className={`${styles.page} account-page plan-ui`}>
+    <main className={`${theme.tokens} ${styles.page} account-page plan-ui`}>
       {/* 머리말은 홈과 같은 것을 쓴다. 마이페이지 아이콘은 끈다 — 지금 보고 있는 화면으로 다시 보내는 단추다.
           로그인 폼은 위에 로고(홈 링크)를 직접 두므로, 로그인 전에는 머리말을 빼 로고가 두 번 보이지 않게 한다. */}
       {session.authenticated && <SiteHeader light showAccount={false} onHome={() => router.push("/")} onStart={() => router.push("/plan/chat?new=1")} />}
@@ -138,8 +140,8 @@ export default function AccountPage() {
               <h1 id="link-confirm-title">이 계정으로 로그인할까요?</h1>
               <p className={styles.linkAccount}>{linkSignIn.email ?? (linkSignIn.provider === "kakao" ? "카카오 계정" : "이메일 없는 계정")}{linkSignIn.provider && linkSignIn.provider !== "email" ? <small>{linkSignIn.provider === "kakao" ? "카카오" : linkSignIn.provider === "google" ? "구글" : linkSignIn.provider}로 연결된 계정</small> : null}</p>
               <p className={styles.linkNote}>내 계정이 맞을 때만 로그인하세요. 로그인하면 이 기기에서 작성 중인 기획이 이 계정으로 옮겨져요. 내가 보낸 적 없는 링크라면 취소해 주세요.</p>
-              <button type="button" className="account-submit" disabled={busy} onClick={confirmLinkSignIn}>{busy ? <><Spinner />로그인하고 있어요</> : "이 계정으로 로그인"}</button>
-              <button type="button" className={styles.linkCancel} disabled={busy} onClick={cancelLinkSignIn}>취소</button>
+              <AppButton variant="primary" loading={busy} onClick={confirmLinkSignIn}>{busy ? "로그인하고 있어요" : "이 계정으로 로그인"}</AppButton>
+              <AppButton variant="secondary" disabled={busy} onClick={cancelLinkSignIn}>취소</AppButton>
               {message && <p role={messageError ? "alert" : "status"} className={messageError ? styles.error : styles.message}>{message}</p>}
             </div>
           ) : (

@@ -13,6 +13,8 @@ import styles from "./account-auth-form.module.css";
 import { DocLink } from "./doc-sheet";
 import { Eye, EyeOff } from "lucide-react";
 import { apiMessage, userErrorMessage } from "../lib/client/user-error";
+import { AppButton } from "./app-button";
+import theme from "./workspace-theme.module.css";
 
 /*
  * 로그인·회원가입·비밀번호 찾기 폼 — /account 화면과 로그인 팝업(login-dialog)이 같이 쓴다.
@@ -316,7 +318,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
    */
   return (
     /* plan-ui: 홈처럼 옛 전역 규칙(버튼 속 아이콘 숨김·모서리 강제)이 남은 화면에서 팝업으로 떠도 카카오·구글 아이콘이 보이게 */
-    <div className={`${styles.root} plan-ui`}>
+    <div className={`${theme.tokens} ${styles.root} plan-ui`}>
       <form className={styles.form} onSubmit={submit} noValidate aria-busy={busy} aria-labelledby={titleId}>
         <header className={styles.header}>
           <Link href="/" className={styles.logoLink} aria-label="오늘창업 홈">
@@ -344,11 +346,11 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
         ]} values={{ terms, privacy, aiNotice }} onChange={(next) => { setTerms(Boolean(next.terms)); setPrivacy(Boolean(next.privacy)); setAiNotice(Boolean(next.aiNotice)); }} />}
         {askedProblem && problem ? <p role="alert" className={accountStyles.error}>{problem}</p> : null}
         {message && <p role={messageError ? "alert" : "status"} className={messageError ? accountStyles.error : accountStyles.message}>{message}</p>}
-        <button className={styles.primary} data-incomplete={!valid || undefined} aria-disabled={busy || undefined}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
+        <AppButton type="submit" variant="primary" className={styles.primary} data-incomplete={!valid || undefined} aria-disabled={busy || undefined}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</AppButton>
         <nav className={styles.links} aria-label="계정 메뉴">
           {mode === "login"
-            ? <><button type="button" onClick={() => switchMode("recover")}>비밀번호 재설정</button><button type="button" onClick={() => switchMode("register")}>회원가입</button></>
-            : <button type="button" onClick={() => switchMode("login")}>{mode === "register" ? "이미 계정이 있어요 · 로그인" : "로그인으로 돌아가기"}</button>}
+            ? <><AppButton variant="text" size="small" onClick={() => switchMode("recover")}>비밀번호 재설정</AppButton><AppButton variant="text" size="small" onClick={() => switchMode("register")}>회원가입</AppButton></>
+            : <AppButton variant="text" size="small" onClick={() => switchMode("login")}>{mode === "register" ? "이미 계정이 있어요 · 로그인" : "로그인으로 돌아가기"}</AppButton>}
         </nav>
         {entry && <section className={styles.sns} aria-label="SNS 간편 로그인">
           <p className={styles.snsTitle}>SNS 계정으로 간편 로그인/회원가입</p>

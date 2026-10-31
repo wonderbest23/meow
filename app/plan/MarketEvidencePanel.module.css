@@ -5,9 +5,6 @@
 .title strong { display: block; font-size: .875rem; }
 .title small { display: block; color: var(--app-muted); font-size: .78125rem; line-height: 1.5; }
 .actions { display: flex; gap: 8px; }
-.primary { min-height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: var(--app-primary); color: #fff; font-weight: 700; font-size: .8125rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
-.primary:disabled { opacity: .5; cursor: default; }
-.ghost { min-height: 36px; padding: 0 12px; border: 1px solid var(--app-line); border-radius: 8px; background: var(--app-surface); color: var(--app-text); font-weight: 700; font-size: .8125rem; cursor: pointer; }
 .note { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; font-size: .78125rem; line-height: 1.5; }
 .ok { background: var(--app-success-bg); color: var(--app-success); }
 .hint { background: var(--app-raised); color: var(--app-muted); }
@@ -23,5 +20,3 @@
 .meta em.ok { color: var(--app-success); }
 .meta a { display: inline-flex; align-items: center; gap: 3px; color: var(--app-accent); text-decoration: underline; text-underline-offset: 2px; }
 .why { margin: 6px 0 0; font-size: .75rem; color: var(--app-muted); line-height: 1.5; }
-.spin { animation: mep-spin 1s linear infinite; }
-@keyframes mep-spin { to { transform: rotate(360deg); } }

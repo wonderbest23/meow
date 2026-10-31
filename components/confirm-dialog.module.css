@@ -1,13 +1,13 @@
 /* 확인창 — 가운데 흰 카드 · 아래 단추 두 개(취소 · 확인) */
-.dialog { width: min(360px, calc(100% - 48px)); max-height: 80dvh; margin: auto; padding: 0; border: 0; border-radius: 16px; background: #fff; color: #191f28; box-shadow: 0 16px 60px #191f2833; overflow: auto; }
-.dialog::backdrop { background: #191f2866; }
+.dialog { width: min(360px, calc(100% - 48px)); max-height: 80dvh; margin: auto; padding: 0; border: 0; border-radius: 16px; background: #fff; color: var(--app-text); box-shadow: 0 16px 60px color-mix(in srgb, var(--app-text) 20%, transparent); overflow: auto; }
+.dialog::backdrop { background: color-mix(in srgb, var(--app-text) 40%, transparent); }
 .dialog[open] { animation: confirm-in .16s ease-out; }
 
 .body { display: grid; gap: 8px; padding: 26px 24px 20px; text-align: center; }
 .body h2 { margin: 0; font-size: 1.125rem; font-weight: 700; line-height: 1.4; }
 .body p { margin: 0; color: #4e5968; font-size: .9375rem; line-height: 1.55; white-space: pre-line; word-break: keep-all; text-wrap: pretty; }
-.field { width: 100%; min-height: 48px; margin-top: 8px; padding: 0 14px; border: 1px solid #d1d6db; border-radius: 10px; background: #fff; color: #191f28; font: inherit; font-size: 1rem; text-align: left; }
-.field:focus { outline: none; border-color: #3182f6; box-shadow: 0 0 0 3px #3182f622; }
+.field { width: 100%; min-height: 48px; margin-top: 8px; padding: 0 14px; border: 1px solid #d1d6db; border-radius: 10px; background: #fff; color: var(--app-text); font: inherit; font-size: 1rem; text-align: left; }
+.field:focus { outline: none; border-color: var(--app-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-primary) 13%, transparent); }
 .field[readonly] { background: #f9fafb; color: #4e5968; font-size: .90625rem; }
 .body h2 + p { color: #6b7684; font-size: .90625rem; }
 /* 항목 목록 — 가운데 정렬 문장 대신 왼쪽 정렬로 한 줄에 하나씩 */
@@ -16,20 +16,12 @@
 
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 16px; }
 .actions[data-single] { grid-template-columns: 1fr; }
-.actions button { min-height: 50px; padding: 0 12px; border: 0; border-radius: 12px; font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; }
-.cancel { background: #f2f4f6; color: #4e5968; }
-.cancel:hover { background: #e5e8eb; }
-.confirm { background: #1b64da; color: #fff; }
-.confirm:hover { background: #1957c2; }
-.confirm[data-danger] { background: #f04452; }
-.confirm[data-danger]:hover { background: #d22030; }
-.actions button:focus-visible { outline: 2px solid #3182f6; outline-offset: 2px; }
 /* 넓은 안내창(wide) — 단추 글이 길어 360px 에서 '결제하고 홈페이지 / 고치기'로 두 줄이 됐다(작업실 PC 점검 2026-10-24).
    넓은 화면에서는 창을 넓히고 단추 글을 한 줄로 둔다. 휴대폰은 예전처럼 두 단추를 반씩 */
 @media (min-width: 520px) {
   .dialog[data-wide] { width: min(440px, calc(100% - 48px)); }
   .dialog[data-wide] .actions { grid-template-columns: auto minmax(0, 1fr); }
-  .dialog[data-wide] .actions button { padding: 0 18px; white-space: nowrap; }
+  .dialog[data-wide] .actions > * { white-space: nowrap; }
 }
 
 /* 좁은 화면에서 단추 글이 길면 세로로 — 할 일(확인)을 위에 */

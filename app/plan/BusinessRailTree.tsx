@@ -15,6 +15,7 @@ import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
 import styles from "./BusinessRailTree.module.css";
+import { AppButton } from "../../components/app-button";
 
 /** 문서 화면이 왼쪽 메뉴에 넘겨 주는 자기 목차 — 누르면 그 장으로 넘어간다 */
 export type DocumentToc = { planId: string; chapters: string[]; current: number | "all"; onSelect: (index: number | "all") => void };
@@ -123,8 +124,8 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
   <dialog ref={lockDialog} className={styles.lockDialog} onClose={() => setLocked(null)}>
     <p>{locked?.message}</p>
     <div>
-      <button type="button" onClick={() => lockDialog.current?.close()}>닫기</button>
-      {locked && <Link href={locked.href} onClick={() => { lockDialog.current?.close(); setActivePlan(plan.id); }}>{locked.label}</Link>}
+      <AppButton variant="secondary" type="button" onClick={() => lockDialog.current?.close()}>닫기</AppButton>
+      {locked && <AppButton variant="primary" href={locked.href} onClick={() => { lockDialog.current?.close(); setActivePlan(plan.id); }}>{locked.label}</AppButton>}
     </div>
   </dialog></>;
 }

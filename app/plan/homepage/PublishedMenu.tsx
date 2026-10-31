@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { ChevronDown, Copy, ExternalLink, EyeOff } from "lucide-react";
 import { showCopyText } from "../../../components/confirm-dialog";
 import styles from "./PublishedMenu.module.css";
+import { AppButton } from "../../../components/app-button";
 
 /**
  * 머리줄 '✓ 공개됨' — 누르면 작은 메뉴(주소 복사 · 새 창으로 보기 · 공개 멈추기). 예전엔 공개 뒤 이 단추가 잠겨 아무 일도 하지 않았다.
@@ -69,11 +70,11 @@ export default function PublishedMenu({ className, publicPath, disabled, onUnpub
     else if (event.key === "Tab") { event.preventDefault(); finish(); }
   };
   return <>
-    <button ref={button} type="button" className={`${className} ${styles.trigger}`} data-done="" disabled={disabled}
+    <AppButton ref={button} variant="secondary" size="small" className={className} data-done="" disabled={disabled}
       aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined}
       onClick={() => setOpen(value => !value)} onKeyDown={event => { if (event.key === "ArrowDown" && !open) { event.preventDefault(); setOpen(true); } }}>
       {children}<ChevronDown size={14} aria-hidden="true" />
-    </button>
+    </AppButton>
     {open && createPortal(<div ref={menu} id={menuId} className={`plan-ui ${styles.menu}`} role="menu" aria-label="공개한 홈페이지" onKeyDown={onMenuKey}
       style={place ? { top: place.top, left: place.left } : { top: -9999, left: 0 }}>
       <button type="button" role="menuitem" tabIndex={-1} onClick={() => void copy()}><Copy size={15} aria-hidden="true" />주소 복사</button>

@@ -2,11 +2,9 @@
 .root button, .root a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 10px 14px; border: 1px solid #dbe1e8; border-radius: 6px; background: #fff; color: #344256; font-size: .875rem; font-weight: 600; line-height: 1.5; text-decoration: none; cursor: pointer; }
 .root button:disabled { opacity: .5; cursor: not-allowed; }
 .root button:hover:not(:disabled), .root a:hover { background: #f1f5fb; }
-.root .inlineButton { min-height: 32px; padding: 4px 10px; margin-left: 4px; font-size: .8125rem; vertical-align: baseline; }
+.root .inlineButton { margin-left: 4px; }
 .root .inlineButton > svg { flex: none; margin-left: -4px; }
 .root button:focus-visible, .root a:focus-visible, .root input:focus-visible, .root textarea:focus-visible, .root select:focus-visible { outline: 2px solid #276deb; outline-offset: 3px; }
-.root .primary { color: white; background: #286fe8; border-color: #286fe8; }
-.root .primary:hover:not(:disabled) { background: #1b5dcf; }
 .heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .heading h2 { margin: 0; font-size: 1.375rem; line-height: 1.4; }
 .heading p { font-size: .8125rem; color: #69788a; margin: 8px 0 0; }
@@ -76,7 +74,7 @@
 .empty > svg { display: block; margin: 0 auto 12px; }
 
 /* 대화에서 말한 실적으로 첫 기록 만들기(빈 화면) */
-.empty .primary { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 16px auto 8px; }
+.root .empty .primary { display: flex; width: fit-content; margin: 16px auto 8px; }
 .empty small { display: block; }
 
 /* 휴대폰은 누르는 자리 44px — 기본 42px 이 1~2px 모자랐다(휴대폰 점검 2026-10-24). PC 는 그대로 */

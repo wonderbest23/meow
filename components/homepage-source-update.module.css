@@ -21,5 +21,4 @@
 .conflict { display: block; padding-left: 28px; margin-top: 10px; color: #876126; line-height: 1.6; }
 .error { color: #ad3434; line-height: 1.6; font-size: 14px; overflow-wrap: anywhere; }
 .footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid #e5e9ef; }
-.footer .primary { background: #2e73e8; border-color: #2e73e8; color: white; }
 @media (max-width: 480px) { .header { padding: 18px 16px; }.body { padding: 0 16px; }.comparison { grid-template-columns: 1fr; gap: 12px; }.footer { padding: 14px 16px; }.header h3 { font-size: 18px; } }
