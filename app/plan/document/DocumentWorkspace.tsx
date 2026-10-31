@@ -29,7 +29,7 @@ import { AppButton, type AppButtonSize } from "../../../components/app-button";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { restoreRangeTildes } from "../../../lib/plan-builder/range-tildes";
 import { withTableCellLabels } from "../../../lib/plan-builder/table-cells";
-import { useStudioHeaderActions, useStudioHeaderCenter, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import { useStudioCommand, useStudioHeaderActions, useStudioHeaderCenter, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import paneHeader from "../workspace/PaneHeaderActions.module.css";
 import { paneLinkCapture } from "./pane-link";
 import { planChapterComposeRequest } from "../../../lib/plan-builder/studio-plan-edit";
@@ -420,9 +420,11 @@ export default function DocumentWorkspace(props: Props) {
   const canDownloadDoc = grouped.length > 0;
   const headerNext = showNext && !!planId && !factMode;
   const studioActions = useMemo(() => {
-    if (!studioHeader || isSample || (!canDownloadDoc && !headerNext)) return null;
+    /* 내려받기는 위 막대(lovable 구조 2단계)가 그리면(toolbarTools) 머리줄에 또 올리지 않는다 — 기능은 아래 명령(plan-download)으로 같다 */
+    const headerDownload = canDownloadDoc && !nav?.toolbarTools;
+    if (!studioHeader || isSample || (!headerDownload && !headerNext)) return null;
     return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`} onClickCapture={paneLinkCapture(nav, planId)}>
-      {canDownloadDoc && <AppButton variant="secondary" size="small" className={paneHeader.btn} aria-label="내려받기" onClick={() => setModal("download")}><Download size={15} aria-hidden="true" /><span className={paneHeader.label}>내려받기</span></AppButton>}
+      {headerDownload && <AppButton variant="secondary" size="small" className={paneHeader.btn} aria-label="내려받기" onClick={() => setModal("download")}><Download size={15} aria-hidden="true" /><span className={paneHeader.label}>내려받기</span></AppButton>}
       {headerNext && planId && <NextStepButton planId={planId} homepage={homepage} header />}
     </div>;
   }, [studioHeader, isSample, canDownloadDoc, headerNext, planId, homepage, nav]);
@@ -438,8 +440,19 @@ export default function DocumentWorkspace(props: Props) {
   const picker = useMemo(() => !studioPc || !ready || !chapterNames.length ? null
     : <ChapterPicker chapters={chapterNames} current={pickerCurrent} onSelect={pick => pick === "all" ? readAll() : selectChapter(pick)} />,
   [studioPc, ready, chapterKey, pickerCurrent]); // eslint-disable-line react-hooks/exhaustive-deps
-  const centerInHeader = !!nav?.setHeaderCenter;
+  const centerInHeader = !!nav?.setHeaderCenter && (nav.headerCenterFor?.("plan") ?? true);
   useStudioHeaderCenter(centerInHeader ? picker : null);
+  /*
+   * 위 막대 · 아래 막대(lovable 구조 2단계)의 도구 — 내려받기 창 열기 · 한 장 요약(다시 누르면 상세 계획서). 문서가 준비된 뒤에 받는다.
+   * 예전 단추(문서 머리 칩 · 보기 바꾸기)와 같은 동작이다.
+   */
+  useStudioCommand("plan-download", () => setModal("download"), !!pane && ready && grouped.length > 0);
+  useStudioCommand("plan-summary", () => {
+    if (!props.summary && !grouped.length) return;
+    const next = props.summary ? !summaryMode : false;
+    setSummaryMode(next); setEditing(false); setContinuous(false); setModal(null);
+    scroller()?.scrollTo({ top: 0 });
+  }, !!pane && ready);
 
   /*
    * 대화로 고치는 중 미리보기(PC 새 화면) — 대화 칸의 '이렇게 바꿀게요' 카드가 열려 있으면 본문에서 바뀔 글에 ~~지금~~ 바꿀 값을 겹쳐 보여 준다.

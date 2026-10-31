@@ -13,6 +13,8 @@
   .surface.surface { box-sizing:border-box; margin:8px 8px 8px 0; overflow:hidden; border:1px solid var(--app-line); border-radius:16px; background:var(--app-surface); box-shadow:0 2px 0 color-mix(in srgb, var(--app-text) 3%, transparent), 0 4px 3px -1.5px color-mix(in srgb, var(--app-text) 4%, transparent), 0 7px 6px -3px color-mix(in srgb, var(--app-text) 4%, transparent); }
   /* 왼쪽 메뉴가 없는 화면(작업실 · 제안서 · 예시 계획서) — 판만 사방 8px 띄운다 */
   .surface.surface[data-solo] { margin:8px; }
+  /* 작업 화면(PC) — 판 없이 페이지색 위에(위 막대 · 대화 열 · 미리보기 판이 바로 놓인다). 둥근 판은 미리보기 판이 맡는다 */
+  .surface.surface[data-bare] { margin:0; border:0; border-radius:0; background:transparent; box-shadow:none; }
 }
 
 /* 첫 화면(/plan) — 판 자체가 밝은 그라데이션(시안 .hero) */

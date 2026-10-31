@@ -285,9 +285,10 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
   const studio = read("../app/plan/studio/Studio.tsx");
   const redirect = read("../app/plan/studio/StudioRedirect.tsx");
-  // 휴대폰 넷째 탭 이름은 journey-steps.ts 한 곳에서(예전 '준비'는 유지보수가 든 줄 몰랐다)
-  assert.match(studio, /item === "prep" \? journeyPrepLabel\(operating\)/);
+  // lovable 구조 2단계 — 휴대폰 네 칸 탭 줄은 없다. 페이지는 아래 막대 … 메뉴(휴대폰) · 위 막대 페이지 선택(PC)에서 고른다(예전 '준비' 이름도 쓰지 않는다)
+  assert.ok(!studio.includes("styles.narrowTabs"), "휴대폰 네 칸 탭 줄을 다시 그리지 않는다");
   assert.ok(!studio.includes('prep: "준비"'), "휴대폰 탭 이름 '준비'를 다시 쓰지 않는다");
+  assert.match(studio, /const RIGHT_TABS: RightTab\[\] = \["plan", "homepage", "launch", "operations"\];/);
   // 예전 4개 화면 감싸기는 모두 StudioRedirect 로 — 보낼 때는 본문을 그리지 않는다(홈페이지 자동 생성 · AI 비용 방지)
   for (const page of ["chat", "document", "homepage", "workspace"]) assert.match(read(`../app/plan/${page}/page.tsx`), /<StudioRedirect fallback=/, page);
   assert.match(redirect, /const target = STUDIO_REDIRECT \? studioRedirectHref\(/);
@@ -337,8 +338,8 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.match(planBody, /generation\.restart\(\);\n\s*if \(syncing\.current\) return;\n\s*hydrateFromServer\(false\)/);
   assert.match(planBody, /if \(arrived\.length \|\| finished\) \{/, "작성이 끝나면 새 장이 없어도 한 번 맞춘다");
   assert.match(read("../app/plan/document/DocumentWorkspace.tsx"), /else if \(\(grouped\.length \|\| props\.writing\) && autoSummary\.current\)/, "저절로 띄운 요약은 작성이 시작되면 '쓰는 중'으로 돌아온다");
-  // 사업을 못 찾았거나 아직 못 불러왔으면(칩 없음) 진행 단계 칩을 그리지 않는다
-  assert.match(studio, /const progress = wide && !missing && chips\.length \?/);
+  // 사업을 못 찾았으면 위 막대의 미리보기 도구(페이지 선택 · 진행 점)를 그리지 않는다
+  assert.match(studio, /\{!missing && <div className=\{styles\.toolbar\}>/);
   assert.match(studio, /const chips = useMemo\(\(\) => \(steps \|\| pending \? studioChips\(steps, operating\) : \[\]\)/);
   // 작업실에서는 상담 버튼을 띄우지 않는다(대화 입력칸 · 마무리 단추와 겹쳤다)
   assert.match(read("../components/support-chat-visibility.ts"), /pathname === "\/plan\/studio"/);
@@ -356,7 +357,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.match(studio, /editHandlers\.current\.set\(target, handler\);\n\s*return \(\) => \{ if \(editHandlers\.current\.get\(target\) === handler\) editHandlers\.current\.delete\(target\); \};/);
   assert.match(studio, /const editHandler = useCallback\(\(target: StudioEditTarget\) => editHandlers\.current\.get\(target\) \?\? null, \[\]\);/);
   // 대화 입력창 열기 — 휴대폰은 대화 탭으로, 받는 곳이 아직 없으면 하나만 보관했다가 등록할 때 넘긴다
-  assert.match(studio, /if \(!readWide\(\)\) showTab\("chat"\);\n\s*if \(composeListener\.current\) composeListener\.current\(request\);\n\s*else pendingCompose\.current = request;/);
+  assert.match(studio, /if \(!readWide\(\)\) showTab\("chat"\);\n\s*else setChatCollapsed\(false\);\n\s*if \(composeListener\.current\) composeListener\.current\(request\);\n\s*else pendingCompose\.current = request;/);
   assert.match(studio, /pendingCompose\.current = null;\n\s*if \(waiting\) listener\(waiting\);/);
   for (const name of ["registerEditHandler", "editHandler", "composeInChat", "onComposeRequest"]) assert.match(studio, new RegExp(`\\n\\s*${name},\\n`), `nav 에 ${name}`);
   assert.match(context, /onComposeRequest\?: \(listener: \(request: StudioComposeRequest\) => void\) => \(\) => void;/);
@@ -379,9 +380,11 @@ console.log("studio navigation ok");
 {
   const studio = readFileSync(new URL("../app/plan/studio/Studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /const chatOnly = !isSamplePlan\(planId\) && !chatComplete && RIGHT_TABS\.every\(id => !!locks\[id\]\)/);
-  assert.match(studio, /\{!wide && !chatOnly && <div className=\{styles\.narrowTabs\}/);
-  // PC 는 한 줄 머리줄 — 대화만 할 때는 탭 대신 단계 안내(1 대화 — 2 계획서 …)와 잠김 안내
-  assert.match(studio, /\{missing \? null : chatOnly \? <>\n\s*<ol className=\{styles\.stepper\}/);
+  // 대화만 할 때 휴대폰은 대화 화면만(미리보기로 가는 › 는 꺼 둔다) — lovable 구조 2단계
+  assert.match(studio, /const rightVisible = wide \|\| \(tab !== "chat" && !chatOnly\);/);
+  assert.match(studio, /disabled=\{chatOnly \|\| missing\}/);
+  // PC 는 대화만 할 때 칸 단추 · 가운데 알약을 위 막대에 올리지 않는다(지금까지 정한 내용만)
+  assert.match(studio, /\{!chatOnly && centerSlot\(rightTab\)\}/);
   assert.doesNotMatch(studio, /질문을 마치면 사업계획서부터 차례로 열려요|답할 때마다 저장돼요/, "질문 중 머리줄에 군더더기 안내를 두지 않는다");
 }
 
@@ -391,22 +394,27 @@ console.log("studio navigation ok");
   const studio = read("../app/plan/studio/Studio.tsx");
   const studioCss = read("../app/plan/studio/Studio.module.css");
   const chrome = read("../app/plan/BusinessAppChrome.tsx");
-  // 머리줄은 PC 에서만 대신 그린다(휴대폰은 예전 머리줄) — 서랍은 BusinessAppChrome 이 그대로 연다
-  assert.match(studio, /const topBar = wide \? \(menu: ChromeMenu\) =>/);
+  // lovable 구조 2단계 — 위 막대는 작업실이 그린다: PC 48px(사업명 ▾ · 기록 · 패널 접기 | 미리보기 막대), 휴대폰 대화 화면 56px(✕ · 사업명 · ›)
+  assert.match(studio, /topBar=\{menu => \(wide \? pcBar\(menu\) : mobileHead\)\}/);
+  assert.match(studio, /showRail=\{wide && railOpen\} bare=\{wide\}/, "PC 작업 화면은 왼쪽 메뉴 + 판 없는 본문(둥근 판은 미리보기 판)");
+  assert.match(studio, /\{!railOpen && menu\.button\(styles\.tool, 18\)\}/, "왼쪽 메뉴를 접은 PC 는 대화 열 머리 ☰ 로 같은 메뉴를 연다");
   assert.match(chrome, /\{topBar \? topBar\(\{ button: menuButton, open: \(\) => setOpen\(true\), isOpen: open \}\) : <header className=\{styles\.header\}>/);
   // 예전 넓은 탭 줄 · 머리줄 진행 단계 목록은 없다(머리줄 한 줄의 탭 · 진행 막대로)
   assert.ok(!studio.includes("styles.wideTabs") && !studioCss.includes(".wideTabs"), "예전 넓은 탭 줄을 다시 그리지 않는다");
   // 가운데 알약 — PC 에서만 통로를 준다(휴대폰은 칸이 자기 안에 그린다) · 보이는 칸의 것만 · 같은 것을 다시 주면 무시
   assert.match(studio, /setHeaderCenter: wide \? setHeaderCenter : undefined,/);
   assert.match(studio, /const centerSlot = \(id: StudioTab\) => \{\n\s*const node = centerNodes\[id\];\n\s*if \(!node \|\| !isVisible\(id\)\) return null;/);
-  // 휴대폰 머리줄 단추는 그대로(PC 는 한 줄 머리줄이 맡는다)
-  assert.match(studio, /const headerSide = !wide && side\.length \?/);
-  // 탭의 ✓ 는 진행 칩과 같은 값(유지보수는 끝나는 단계가 아니라 없다)
+  // 휴대폰 미리보기 아래 막대 — ‹ 대화 · 마이크 · … · 파란 주 단추(계획서 내려받기 · 홈페이지 공개하기 · 개업 준비 다음 단계)
+  assert.match(studio, /plan: \{ label: "내려받기", command: "plan-download" \}/);
+  assert.match(studio, /homepage: \{ label: "공개하기", command: "homepage-publish" \}/);
+  assert.match(studio, /launch: \{ label: "다음 단계", command: "launch-next" \}/);
+  // 페이지 선택의 ✓ 는 진행 칩과 같은 값(유지보수는 끝나는 단계가 아니라 없다)
   assert.match(studio, /const tabDone = \(item: RightTab\) => item !== "operations" && chipFor\(/);
-  // 대화 칸 폭과 머리줄 왼쪽 칸이 같은 값 · 오른쪽 칸은 흰 카드
-  assert.match(studioCss, /--studio-chat-w:clamp\(360px,29vw,460px\)/);
-  assert.match(studioCss, /\.topBar \{[^}]*grid-template-columns:var\(--studio-chat-w/);
-  assert.match(studioCss, /\.panes \{ background:#fff; border:1px solid #e3e7ec; border-radius:14px; overflow:hidden;/);
+  // 대화 열 451(시안 실측)과 위 막대 왼쪽 칸이 같은 값 · 미리보기 판은 r16 흰 판 · 위 막대 48
+  assert.match(studioCss, /--studio-chat-w:451px/);
+  assert.match(studioCss, /\.topBar \{ min-height:48px;[^}]*grid-template-columns:var\(--studio-chat-w/);
+  assert.match(studioCss, /\.rightCol \{ grid-column:2; margin:0 8px 8px 0; border-radius:16px; background:var\(--app-surface\);/);
+  assert.match(studioCss, /\.toolCenter > div:has\(> \.pageSelect\) \{ flex:20 1 200px; max-width:260px;/, "페이지 선택은 남는 폭을 먼저 받아 260 까지");
 
   // 지금까지 정한 내용 — 남는 돈은 가격과 한 건 비용을 둘 다 숫자로 답했을 때만 계산한다(지어내지 않는다)
   const summary = read("../app/plan/studio/StudioIntakeSummary.tsx");

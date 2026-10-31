@@ -1,0 +1,26 @@
+/* 작업실 작은 메뉴(PopMenu) — 색은 --app-* 토큰만. 항목 36px(휴대폰 44px) r8 14px */
+.wrap { position:relative; display:inline-flex; min-width:0; }
+.wrap[data-wide] > button { width:100%; }
+.menu { position:absolute; z-index:40; top:calc(100% + 6px); left:0; box-sizing:border-box; min-width:220px; max-width:min(320px, calc(100vw - 24px)); max-height:min(420px, 70vh); overflow-y:auto; overscroll-behavior:contain; padding:6px; border-radius:12px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line), 0 12px 32px -12px color-mix(in srgb, var(--app-text) 30%, transparent); color:var(--app-text); text-align:left; }
+.wrap[data-wide] .menu { width:100%; min-width:200px; }
+.menu[data-align=end] { left:auto; right:0; }
+.menu[data-align=center] { left:50%; transform:translateX(-50%); }
+.menu[data-placement=above] { top:auto; bottom:calc(100% + 8px); }
+.group + .group { margin-top:6px; padding-top:6px; border-top:1px solid var(--app-line); }
+.heading { margin:4px 8px 4px; font-size:.75rem; font-weight:600; color:var(--app-muted); }
+.item { box-sizing:border-box; display:flex; align-items:center; gap:8px; width:100%; min-height:36px; padding:6px 8px; border:0; border-radius:8px; background:transparent; color:var(--app-text); font:inherit; font-size:.875rem; font-weight:400; line-height:1.35; text-align:left; text-decoration:none; cursor:pointer; }
+.item:hover, .item:focus-visible { background:var(--app-raised); }
+.item:focus-visible { outline:2px solid var(--app-focus-ring); outline-offset:-2px; }
+.item[aria-checked=true] { background:var(--app-soft); color:var(--app-selected-text); font-weight:600; }
+.item[aria-disabled=true] { color:var(--app-muted); cursor:default; }
+.item[aria-disabled=true]:hover { background:transparent; }
+.icon { display:inline-grid; place-items:center; flex:none; width:20px; height:20px; color:var(--app-body); }
+.icon svg { width:16px; height:16px; }
+.text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.trail { display:inline-flex; align-items:center; gap:4px; flex:none; color:var(--app-muted); font-size:.75rem; }
+.trail svg { width:14px; height:14px; }
+.extra { padding:4px 4px 8px; margin-bottom:6px; border-bottom:1px solid var(--app-line); }
+@media (max-width:1023px) {
+  .item { min-height:44px; font-size:1rem; }
+  .menu { max-width:calc(100vw - 24px); }
+}

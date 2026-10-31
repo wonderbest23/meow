@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
 import type { StudioTab } from "../../../lib/plan-builder/studio";
 
 /*
@@ -74,7 +74,40 @@ export type StudioNav = {
   setEditChapterList?: (list: StudioComposeRequest[] | null) => void;
   subscribeEditChapterList?: (listener: () => void) => () => void;
   editChapterList?: () => StudioComposeRequest[] | null;
+  /**
+   * lovable 구조 2단계 — 미리보기 판 위 막대(PC)와 휴대폰 아래 막대가 내려받기·한 장 요약 같은 도구를 대신 그린다.
+   * true 면 칸은 같은 도구(계획서 머리줄의 '내려받기')를 머리줄에 또 올리지 않는다. 기능은 칸이 그대로 맡는다(useStudioCommand).
+   */
+  toolbarTools?: boolean;
+  /** 이 칸의 가운데 알약을 위 막대에 올릴지 — false 면 칸이 자기 맨 위 줄에 그린다(계획서 장 고르기). 없으면 올린다 */
+  headerCenterFor?: (tab: StudioTab) => boolean;
 };
+
+/*
+ * 위 막대 · 아래 막대의 도구 단추 → 칸 — 칸의 기능(내려받기 창 · 한 장 요약 · 공개하기 · 다음 단계)은 칸 안에 그대로 있고,
+ * 막대는 명령만 보낸다. 칸이 아직 없으면(처음 여는 칸) 명령을 잠깐(10초) 맡겨 두었다가 칸이 생기는 순간 넘긴다.
+ */
+export type StudioCommand = "plan-download" | "plan-summary" | "homepage-publish" | "launch-next" | "operations-add" | "chat-dictate" | "chat-summary";
+const STUDIO_COMMAND_EVENT = "oneulstart:studio-command";
+const COMMAND_TTL_MS = 10_000;
+let queuedCommand: { command: StudioCommand; at: number } | null = null;
+export function sendStudioCommand(command: StudioCommand) {
+  queuedCommand = { command, at: Date.now() };
+  window.dispatchEvent(new CustomEvent(STUDIO_COMMAND_EVENT, { detail: command }));
+}
+/** 칸이 명령을 받는다 — enabled 가 꺼져 있는 동안 온 명령은 맡겨 두었다가 켜지면 받는다 */
+export function useStudioCommand(command: StudioCommand, handler: () => void, enabled = true) {
+  const ref = useRef(handler);
+  useEffect(() => { ref.current = handler; });
+  useEffect(() => {
+    if (!enabled) return;
+    const take = () => { queuedCommand = null; ref.current(); };
+    if (queuedCommand?.command === command && Date.now() - queuedCommand.at < COMMAND_TTL_MS) take();
+    const listen = (event: Event) => { if ((event as CustomEvent<StudioCommand>).detail === command) take(); };
+    window.addEventListener(STUDIO_COMMAND_EVENT, listen);
+    return () => window.removeEventListener(STUDIO_COMMAND_EVENT, listen);
+  }, [command, enabled]);
+}
 
 /** 채팅 수정 제안(작업 id)이 계획서에서 닿는 장 이름 — 대화 칸은 지금 카드의 작업 id 와 같을 때만 쓴다(앞 제안의 장이 남아 보이지 않게) */
 export type StudioEditPreviewChapters = { jobId: string; chapters: string[] };

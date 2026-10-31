@@ -28,7 +28,10 @@ const strip = homepage.slice(homepage.indexOf("const strip = studioPro"), homepa
 assert.ok(strip.length > 0);
 assert.doesNotMatch(strip, /`결제하고 공개하기 · \$\{price/, "PC 칸 위 줄에 '결제하고 공개하기' 단추가 다시 생겼다");
 assert.doesNotMatch(strip, /함께 결제하기|내 사업으로 만들기|openPayPrompt/, "PC 칸 위 줄에 결제 안내 단추('함께 결제하기'·'내 사업으로 만들기')가 다시 생겼다(r40-2)");
-assert.match(strip, /\{editable && <>/, "PC 칸 위 줄 단추는 결제 뒤(고칠 수 있을 때)만");
+assert.match(strip, /\{editable && !floatTools && <>/, "PC 칸 위 줄 단추는 결제 뒤(고칠 수 있을 때)만");
+// lovable 구조 2단계 — 같은 단추가 아래 떠 있는 도구 알약으로 옮겨 가도 결제 뒤(고칠 수 있을 때)만
+assert.match(homepage, /\{editable && <button type="button" className=\{styles\.floatTool\} disabled=\{busy\} onClick=\{\(\) => setBuilderOpen\(true\)\}/);
+assert.match(homepage, /\{editable && !inApp && <button type="button" className=\{styles\.floatTool\}/);
 assert.match(homepage, /<span>공개하기<\/span><\/AppButton>/, "PC 머리줄 [공개하기]는 남아 있어야 한다");
 assert.match(homepage, /confirmLabel: "내 사업으로 만들기"/, "예시 사업은 머리줄 [공개하기] 확인창에서 '내 사업으로 만들기'");
 
