@@ -34,6 +34,8 @@ import { loadAuthSession } from "../../../lib/client/auth-session";
 import StudioLoading from "./loading";
 import StudioIntakeSummary from "./StudioIntakeSummary";
 import { AppButton } from "../../../components/app-button";
+import { JourneyGuideTurn } from "../chat/intake-ui/JourneyGuideTurn";
+import { GUIDE_PARAM, journeyGuide, journeyGuideContext, readJourneyGuide } from "../../../lib/plan-builder/journey-guides";
 
 /*
  * 사업 작업실 — PC(1024px 이상)는 왼쪽 대화 칸 + 오른쪽 [사업계획서 | 홈페이지 | 개업 준비 | 유지보수] 탭,
@@ -450,6 +452,25 @@ export default function Studio() {
     setTab(next);
     window.dispatchEvent(new Event(WORKSPACE_TAB_EVENT));
   }, [bumpRefresh]);
+  /*
+   * 단계별 대화 세트(guide=, journey-guides.ts) — 말풍선은 대화 칸에 있다. 휴대폰은 한 칸씩 보여서, 바깥에서 guide 주소로 들어오면
+   * 대화 탭부터 연다(주소의 탭은 오른쪽 칸으로 기억해 둔다 — 말풍선의 첫 단추가 그 탭으로 간다). 작업실 안의 링크로 실려 오면 탭은
+   * 링크대로 두고 대화 탭에 새 소식 점만 찍는다. 예시 사업 · 대화 없는 사업은 대화 칸 대신 안내에 같은 말풍선을 보인다(저장 없음).
+   */
+  const urlGuide = readJourneyGuide(searchParams.get(GUIDE_PARAM));
+  const [arrivalGuide] = useState(urlGuide);
+  useEffect(() => {
+    if (arrivalGuide && !readWide()) showTab("chat");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 처음 들어올 때 한 번만
+  }, []);
+  const seenGuide = useRef(urlGuide);
+  useEffect(() => {
+    if (seenGuide.current === urlGuide) return;
+    seenGuide.current = urlGuide;
+    if (urlGuide) markActivity("chat");
+  }, [urlGuide, markActivity]);
+  const [noteGuide, setNoteGuide] = useState(urlGuide);
+  if (urlGuide && urlGuide !== noteGuide) setNoteGuide(urlGuide);
   /* 칸 단추 — 칸마다 하나씩 보관하고 보이는 칸의 것만 머리줄에 그린다. 같은 것을 다시 주면 무시한다(칸이 단추를 memo 한다) */
   const [headerNodes, setHeaderNodes] = useState<Partial<Record<StudioTab, ReactNode>>>({});
   const setHeaderActions = useCallback((target: StudioTab, node: ReactNode | null) => {
@@ -792,6 +813,9 @@ export default function Studio() {
     </div>
   </header> : undefined;
 
+  /* 예시 사업 · 대화 없는 사업의 대화 칸 안내 아래 — 대화 칸(BusinessIntake)이 없어 여기서 같은 말풍선을 그린다 */
+  const noteGuideTurn = noteGuide && plan && plan.id === planId ? <div className={styles.noteGuide}><JourneyGuideTurn guide={journeyGuide(noteGuide, planId, journeyGuideContext(plan))} /></div> : null;
+
   return <StudioNavContext.Provider value={nav}>
     <main className={`${frame.page} ${styles.page}`} onClickCapture={onClickCapture}>
       <BusinessAppChrome title={businessTitle} subtitle={missing ? undefined : statusText} actions={headerSide} showRail={false} backHref="/plan" active={fresh ? "new" : "plans"} topBar={topBar}>
@@ -821,11 +845,11 @@ export default function Studio() {
               ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
                 <h2>예시 사업이에요</h2>
                 <AppButton variant="primary" className={hub.primary} href={newChatHref()}><span className={styles.nowrap}>대화로 내 사업 시작하기</span><ChevronRight size={18} aria-hidden="true" /></AppButton>
-              </section></div></div>
+              </section>{noteGuideTurn}</div></div>
               : noChat
                 ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
                   <h2>대화 기록이 없는 사업이에요</h2>
-                </section></div></div>
+                </section>{noteGuideTurn}</div></div>
                 : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !locks[rightTab] ? rightTab : null} />}
           </Pane>
 

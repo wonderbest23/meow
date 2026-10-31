@@ -10,7 +10,7 @@ import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/pl
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { ksicSectorLabel } from "../../../lib/plan-builder/ksic-hints";
-import { announcePlanTitle, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
+import { announcePlanTitle, loadState, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import { AnswerHistory, BusinessIdentityHero, DesignProgress, DesignResult, DocumentLockedTurn, EditChatTurn, GenerationFinishedTurn, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, currentIdentity, DesignDirection, EntryChoices, ExtractionReview, isDesignReplyText, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
 import { useChatSplit } from "./useChatSplit";
@@ -36,6 +36,8 @@ import { ENTRY_PARAM, isEntryMode, STUDIO_PATH, studioHref, type StudioTab } fro
 import { homepageHref } from "../../../lib/plan-builder/journey";
 import { useStudioEditChapterList, useStudioEditPreviewChapters, useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
 import { QueuedStudioRequests, StudioEditTurns } from "./intake-ui/StudioEditTurns";
+import { JourneyGuideTurn } from "./intake-ui/JourneyGuideTurn";
+import { GUIDE_PARAM, journeyGuide, journeyGuideContext, readJourneyGuide, type JourneyGuideCode } from "../../../lib/plan-builder/journey-guides";
 import { planSectionEditMessage } from "../../../lib/plan-builder/studio-plan-edit";
 import { WorkLog } from "./intake-ui/WorkLog";
 import { designLogItem, planLogItem } from "./intake-ui/work-log";
@@ -1447,6 +1449,51 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   useEffect(() => {
     if (studioTextKey && studioTextLoaded.current === studioTextKey) writeSession(studioTextKey, visibleComposerText(studioText) ? studioText : null);
   }, [studioTextKey, studioText]);
+  /*
+   * 단계별 대화 세트(journey-guides.ts) — 작업실 주소에 guide= 가 있으면 대화 맨 아래에 고정 안내 말풍선과 다음 할 일 단추를 보이고,
+   * 그 단계의 문장을 입력칸에 미리 넣는다(보내지 않는다). 말풍선은 대화 기록에 저장하지 않는다 — 이 화면에만 있고, 무엇이든 보내면 거둔다.
+   * 작업실이 탭을 바꾸면 주소의 guide 는 지워지지만(STUDIO_LINK_PARAMS) 말풍선은 남는다. 다시 guide 가 실려 오면 다시 보인다.
+   * prompt= (개업 준비의 'AI에게 묻기' 등)도 같은 입력칸에 넣는다 — 예전 대화 화면(/plan/chat)처럼 넣은 뒤 주소에서 지운다.
+   */
+  const urlGuide = embedded ? readJourneyGuide(searchParams.get(GUIDE_PARAM)) : null;
+  const urlPrompt = embedded ? searchParams.get("prompt") : null;
+  const [guideShown, setGuideShown] = useState<{ planId: string; code: JourneyGuideCode } | null>(null);
+  const guideSeen = useRef<string | null>(null);
+  const promptSeen = useRef<string | null>(null);
+  const loadedPlanId = loaded && plan ? plan.planId : null;
+  /* 입력칸에 미리 넣는다 — 작업실 입력창이면 그 글, 아니면 메모 칸. 질문에 답하는 중이면 답 칸을 건드리지 않는다. replace 가 아니면 적던 글을 덮지 않는다 */
+  const prefillComposer = (text: string, replace: boolean) => {
+    const value = text.slice(0, 1200);
+    if (!visibleComposerText(value)) return;
+    if (studioRoute) { setStudioText(current => (replace || !visibleComposerText(current) ? value : current)); setInputHint(""); return; }
+    if (questionComposer) return;
+    const field = draftRef.current.mode === "help" ? "help" : "memo";
+    if (replace || !visibleComposerText(draftRef.current[field])) editDraft({ ...draftRef.current, [field]: value });
+  };
+  useEffect(() => {
+    if (!urlGuide) { guideSeen.current = null; return; }
+    if (!loadedPlanId || new URLSearchParams(window.location.search).get("planId") !== loadedPlanId) return;
+    const key = `${loadedPlanId}:${urlGuide}`;
+    if (guideSeen.current === key) return;
+    guideSeen.current = key;
+    setGuideShown({ planId: loadedPlanId, code: urlGuide });
+    const prefill = journeyGuide(urlGuide, loadedPlanId).prefill;
+    if (prefill && !urlPrompt) prefillComposer(prefill, false);
+    follow.current = true;
+  });
+  useEffect(() => {
+    if (!urlPrompt || !loadedPlanId || new URLSearchParams(window.location.search).get("planId") !== loadedPlanId) return;
+    const key = `${loadedPlanId}:${urlPrompt}`;
+    if (promptSeen.current === key) return;
+    promptSeen.current = key;
+    prefillComposer(urlPrompt, true);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("prompt");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  });
+  const shownGuide = guideShown && plan && guideShown.planId === plan.planId
+    ? journeyGuide(guideShown.code, plan.planId, journeyGuideContext(loadState().plans.find(item => item.id === plan.planId)))
+    : null;
   const enterEditTarget = (request: StudioComposeRequest) => {
     /* 적던 글은 지우지 않는다 — 다른 칸에서 넘겨준 글이 있으면 그 아래 줄에 잇는다(이 함수는 한 번 등록돼 상태는 이전 값으로 받는다) */
     const given = request.text ?? "";
@@ -1707,6 +1754,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
               {/* PC 에서는 기다리는 요청을 입력창 바로 위 '다음 요청' 줄로, 홈페이지 고치기 제안은 '추천' 칩 줄로 옮긴다 */}
               {!dockQueue && <QueuedStudioRequests items={queuedRequests} generating={generating} onCancel={cancelQueued} />}
               {homepageSuggest && !pro && <div className={styles.studioSuggest} data-studio-item><button type="button" className={styles.chip} onClick={() => enterEditTarget({ target: "homepage", label: "홈페이지" })}>홈페이지를 대화로 고치기</button></div>}
+              {/* 단계별 대화 세트 — 화면에만 있는 고정 안내(저장하지 않는다) */}
+              {shownGuide && <JourneyGuideTurn guide={shownGuide} />}
             </div>}
           </>}
           {!showReview && !locked && shouldShowIdeaExploration(plan, question) && <IdeaExploration snapshot={plan!} selectedDraftId={questionDraft.selected[0]} disabled={blocked || aiBusy} rejected={ideaRejectIds} onReject={setIdeaRejectIds} onRequest={() => { writeDraft({ ...draftRef.current, mode: "ideas" }); void send({ action: "ideas", message: "현재 입력한 관심과 조건을 반영해 목록에 없는 사업 방향도 제안해 주세요" }); }} onCompose={() => { editDraft({ ...draftRef.current, mode: "ideas" }); requestAnimationFrame(() => composerInput.current?.focus()); }} error={ideaError} onSelect={id => {
@@ -1724,7 +1773,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
           {/* 작업실 PC: 입력창 바로 위 — 기다리는 요청('다음 요청' 줄)과 '추천' 칩 줄(누르면 입력창에 글만 채운다) */}
           {dockQueue && <QueuedStudioRequests dock items={queuedRequests} generating={generating} onCancel={cancelQueued} onEdit={editQueued} />}
           {suggestionChips.length > 0 && <SuggestRow chips={suggestionChips} onPick={pickSuggestion} />}
-          <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); if (studioRoute) submitStudio(); else submitComposer(); }}>
+          <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); setGuideShown(null); if (studioRoute) submitStudio(); else submitComposer(); }}>
             {questionTarget && <div className={styles.composerTarget} data-question-target><span title={questionTarget}><Target size={13} aria-hidden="true" /><span className={styles.composerTargetLabel}>{questionTarget}</span></span></div>}
             {/* 작업실: 무엇을 고치는지 칩으로 — ✕ 로 그만두면 예전 입력창으로 돌아간다. 쓰는 중이면 다 쓴 뒤 반영한다고 알린다 */}
             {studioRoute && studioRoute !== "chat" && <div className={styles.composerTarget} data-studio-target={editTarget?.target ?? "queue"}>

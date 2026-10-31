@@ -50,10 +50,14 @@ export function actionStatus(plan: Plan, action: string) {
 
 export function workspaceHref(id: string) { return `/plan/workspace?planId=${encodeURIComponent(id)}`; }
 export function documentHref(id: string) { return `/plan/document?planId=${encodeURIComponent(id)}`; }
-/** 내 사업에서 누르면 — 완성된 계획서가 있으면 문서부터, 아니면 대화로. 대화 없이 쓴 예전 사업은 쓴 문서가 있으면 문서, 없으면 예전 작업 공간 */
+/**
+ * 내 사업에서 누르면 — 완성된 계획서가 있으면 문서부터, 아니면 대화로. 대화 없이 쓴 예전 사업은 쓴 문서가 있으면 문서, 없으면 예전 작업 공간.
+ * 사업안만 만들고 계획서를 아직 안 썼으면 '사업 시작' 대화 세트(guide=design-ready, journey-guides.ts)를 싣는다.
+ */
 export function businessEntryHref(plan: Plan) {
   const hub = businessHubState(plan);
   if (hub.complete) return documentHref(plan.id);
+  if (hub.coach?.design && !hub.documents.length) return `${businessChatHref(plan.id)}&guide=design-ready`;
   if (readCoach(plan.answers) || readCoachJob(plan.answers)) return businessChatHref(plan.id);
   return hub.documents.length ? documentHref(plan.id) : workspaceHref(plan.id);
 }
@@ -69,7 +73,9 @@ export function shouldResumeBusinessChat(plan: Plan): boolean {
 export function businessNextStep(plan: Plan) {
   const state = readLaunch(plan);
   const step = launchSteps(plan, state).find(item => ["pending", "review"].includes(launchStatus(state, item)));
-  return { title: !state.configured ? "내 사업의 시작 순서 정하기" : step?.title ?? "준비 기록 확인하기", href: `${workspaceHref(plan.id)}&tab=launch` };
+  /* 다음 할 일이 사업자등록이면 그 단계를 펼치고 '사업자등록' 대화 세트를 싣는다(journey-guides.ts — 서로 부르지 않게 주소만 같게 쓴다) */
+  const guide = state.configured && step?.id === "registration" ? "&step=registration&guide=registration" : "";
+  return { title: !state.configured ? "내 사업의 시작 순서 정하기" : step?.title ?? "준비 기록 확인하기", href: `${workspaceHref(plan.id)}&tab=launch${guide}`, step: state.configured ? step?.id ?? null : null };
 }
 export function businessChatHref(id: string, prompt?: string) {
   const query = new URLSearchParams({ planId: id });

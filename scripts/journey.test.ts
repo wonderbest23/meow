@@ -20,10 +20,11 @@ assert.deepEqual(states(complete, "draft"), ["chat:done", "document:done", "home
 assert.deepEqual(states(complete, "published"), ["chat:done", "document:done", "homepage:done", "launch:todo", "care:active"], "공개하면 유지보수가 이어진다");
 assert.deepEqual(states(complete, null), ["chat:done", "document:done", "homepage:todo", "launch:todo", "care:todo"], "홈페이지 확인 전에는 '아직'");
 
-assert.equal(journeyNext(complete, "none").href, "/plan/homepage?planId=p");
+// 다음 할 일에는 그 단계의 대화 세트(guide=)가 실린다 — journey-guides.test.ts
+assert.equal(journeyNext(complete, "none").href, "/plan/homepage?planId=p&guide=plan-complete");
 assert.equal(journeyNext(complete, "draft").title, "홈페이지 다듬고 공개하기");
 // 공개한 뒤에는 순서대로 4단계(사업 시작하기)부터 — 예전엔 4단계를 건너뛰고 유지보수로 갔다(여정 점검 2026-10-22)
-assert.equal(journeyNext(complete, "published").href, "/plan/workspace?planId=p&tab=launch");
+assert.equal(journeyNext(complete, "published").href, "/plan/workspace?planId=p&tab=launch&guide=homepage-published");
 assert.equal(journeyNext(complete, "published").secondary?.href, "/plan/workspace?planId=p&tab=operations");
 // 홈페이지 결제 없이도 사업 시작 준비로 넘어갈 수 있다
 assert.equal(journeyNext(complete, "none").secondary?.href, "/plan/workspace?planId=p&tab=launch");
@@ -33,7 +34,7 @@ assert.equal(journeyNext(complete, "none").secondary?.title, "개업 준비 먼�
   const records = Object.fromEntries(launchSteps(complete, configured).map(step => [step.id, { status: "done", signature: step.signature, note: "", material: "", at }]));
   const launched: Plan = { ...complete, answers: { ...complete.answers, [LAUNCH_KEY]: { ...configured, records } } };
   assert.deepEqual(states(launched, "published"), ["chat:done", "document:done", "homepage:done", "launch:done", "care:active"]);
-  assert.equal(journeyNext(launched, "published").href, "/plan/workspace?planId=p&tab=operations", "개업 준비까지 마치면 유지보수");
+  assert.equal(journeyNext(launched, "published").href, "/plan/workspace?planId=p&tab=operations&guide=launch-done", "개업 준비까지 마치면 유지보수");
   assert.equal(journeyNext(launched, "none").secondary, undefined);
 }
 assert.equal(journeyStepsText(), "① 대화로 사업안 정리 → ② 사업계획서 작성 → ③ 홈페이지 만들기 → ④ 개업 준비(운영 중이면 운영 개선) → ⑤ 유지보수");
