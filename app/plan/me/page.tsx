@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FolderOpen, Receipt } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { hydrateFromServer, lastHydrationFailed, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
@@ -13,6 +13,7 @@ import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
 import { StatusBadge } from "../../../components/status-badge";
 import PlanLoading from "../PlanLoading";
+import { EmptyState } from "../BusinessEmptyState";
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
@@ -252,7 +253,7 @@ export default function PlanMePage() {
             <dd>{account.usage === "all" ? "모든 사업계획서 이용 중" : account.usage === "some" ? "결제한 사업계획서 이용 중" : account.usage === "free" ? "결제한 사업계획서 없음" : "확인하지 못했어요"}</dd>
           </div>
         </dl>
-        {logoutMessage && <p className={styles.empty} role="alert">{logoutMessage}</p>}
+        {logoutMessage && <p className={styles.notice} role="alert">{logoutMessage}</p>}
       </section>
 
       <section className={styles.card}>
@@ -271,7 +272,7 @@ export default function PlanMePage() {
             ))}
           </dl>
         ) : (
-          plansStale ? <p className={styles.empty} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <div className={styles.emptyPlans}><p className={styles.empty}>아직 시작한 사업이 없어요.</p><AppButton href="/plan/chat?new=1" variant="secondary" className={`${styles.cardAction} ${styles.emptyAction}`}>새 대화로 시작하기<ChevronRight size={18} aria-hidden="true" /></AppButton></div>
+          plansStale ? <p className={styles.notice} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <EmptyState icon={FolderOpen} heading="p" title="아직 시작한 사업이 없어요." actions={<AppButton href="/plan/chat?new=1" variant="secondary">새 대화로 시작하기<ChevronRight size={18} aria-hidden="true" /></AppButton>} />
         )}
       </section>
 
@@ -280,7 +281,7 @@ export default function PlanMePage() {
           <h2 className={styles.cardTitle}>결제 내역</h2>
         </div>
         {payments === null ? null : payments.length === 0 ? (
-          <p className={styles.empty}>{paymentsFailed ? "결제 내역을 불러오지 못했어요. 새로고침해 주세요." : "아직 결제 내역이 없어요."}</p>
+          paymentsFailed ? <p className={styles.notice}>결제 내역을 불러오지 못했어요. 새로고침해 주세요.</p> : <EmptyState icon={Receipt} heading="p" title="아직 결제 내역이 없어요." />
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>

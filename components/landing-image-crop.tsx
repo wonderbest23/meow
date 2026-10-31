@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent } from "react";
 import { Check, Crop, RotateCcw, X } from "lucide-react";
+import { Spinner } from "../app/plan/PlanLoading";
 import { IMAGE_CROP_ASPECTS, clampCropValue, cropImageFile, drawImageCrop, imageCropOutputSize, imageCropRect, loadCropImage, type ImageCropAspect, type ImageCropPosition } from "../lib/landing/image-crop";
 import styles from "./landing-image-crop.module.css";
 import { AppButton } from "./app-button";
@@ -117,7 +118,7 @@ export default function LandingImageCrop({ file, onApply, onCancel, initialAspec
     <div className={styles.body}>
       <p id={infoId} className={styles.fileName}>{file?.name}</p>
       <div ref={stage} className={styles.stage} aria-busy={!image && !error}>
-        {image ? <canvas ref={canvas} className={styles.canvas} style={previewWidth && rect ? { width: previewWidth, height: previewWidth * rect.height / rect.width } : undefined} role="img" aria-label="자른 이미지 미리보기" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} onLostPointerCapture={() => { drag.current = null; }} /> : <p role="status">{error ? "미리보기 없음" : "이미지를 불러오는 중"}</p>}
+        {image ? <canvas ref={canvas} className={styles.canvas} style={previewWidth && rect ? { width: previewWidth, height: previewWidth * rect.height / rect.width } : undefined} role="img" aria-label="자른 이미지 미리보기" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={() => { drag.current = null; }} onPointerCancel={() => { drag.current = null; }} onLostPointerCapture={() => { drag.current = null; }} /> : <p role="status">{error ? "미리보기 없음" : <><Spinner /> 이미지를 불러오는 중</>}</p>}
       </div>
       <div className={styles.metadata}><span>{dimensions ? `원본 ${dimensions.width} × ${dimensions.height}` : ""}</span><output aria-label="자르기 출력 크기">{output ? `${output.width} × ${output.height}px` : ""}</output></div>
       <fieldset className={styles.controls} disabled={!image || busy}>

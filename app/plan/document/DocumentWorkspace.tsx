@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, C
 import BusinessAppChrome from "../BusinessAppChrome";
 import InlineDocEditor, { withBodyHeadingLevels } from "../InlineDocEditor";
 import PlanLoading from "../PlanLoading";
+import { EmptyState } from "../BusinessEmptyState";
 import frame from "../chat/page.module.css";
 import styles from "./DocumentWorkspace.module.css";
 import { StatusBadge } from "../../../components/status-badge";
@@ -548,7 +549,9 @@ export default function DocumentWorkspace(props: Props) {
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
             {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong>{planId && !studioHeader && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
-            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty} data-pane={pane ? "" : undefined}>{pane ? <h2>아직 만든 문서가 없어요</h2> : <h1>아직 만든 문서가 없어요</h1>}{/* 작업실 안은 대화 칸에 있는 '사업계획서 만들기'로 — 예전 '사업안으로 돌아가기'는 어디로 가는지 몰랐다(r37 점검) */}{pane ? <AppButton variant="primary" className={styles.emptyPrimary} href={coachHref ?? back}>사업계획서 만들기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <><p>사업 이야기를 이어서 계획서를 만들어 보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></>}</div> : <article className={styles.article}>
+            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <EmptyState className={styles.empty} data-pane={pane ? "" : undefined} icon={FileText} heading={pane ? "h2" : "h1"} title="아직 만든 문서가 없어요" description={pane ? undefined : "사업 이야기를 이어서 계획서를 만들어 보세요."}
+              /* 작업실 안은 대화 칸에 있는 '사업계획서 만들기'로 — 예전 '사업안으로 돌아가기'는 어디로 가는지 몰랐다(r37 점검) */
+              actions={pane ? <AppButton variant="primary" href={coachHref ?? back}>사업계획서 만들기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <AppButton variant="secondary" href={coachHref ?? back}>사업안으로 돌아가기</AppButton>} /> : <article className={styles.article}>
               {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} pc={studioPc} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}

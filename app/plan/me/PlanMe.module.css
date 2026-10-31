@@ -63,7 +63,7 @@
   width: 84px;
   font-size: .8125rem;
   font-weight: 600;
-  color: var(--text-muted, var(--app-muted));
+  color: var(--app-muted);
 }
 
 .row dd {
@@ -97,7 +97,7 @@
 .table th {
   padding: 0 10px 9px;
   border-bottom: 1px solid var(--border-soft, var(--app-line));
-  color: var(--text-muted, var(--app-muted));
+  color: var(--app-muted);
   font-size: .8125rem;
   font-weight: 700;
   text-align: left;
@@ -122,19 +122,13 @@
   color: var(--text-strong, var(--app-text));
 }
 
-.empty {
+/* 불러오지 못함·로그아웃 안내 한 줄 — 빈 화면은 공통 EmptyState(BusinessEmptyState) */
+.notice {
   margin: 0;
   padding: 4px 0 2px;
   text-align: left;
-  color: var(--text-muted, var(--app-muted));
+  color: var(--app-muted);
   font-size: .84375rem;
-}
-/* '새 대화로 시작하기' — 글 속 링크라도 누르는 자리 44px(감사 2026-10-23) */
-.empty a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 2px;
 }
 
 .logout { margin-left: auto; }
@@ -172,7 +166,7 @@
 
 /* 환불 요청 */
 .refundNa {
-  color: var(--text-muted, var(--app-muted));
+  color: var(--app-muted);
 }
 .refundBtn { white-space: nowrap; }
 .refundForm {
@@ -195,7 +189,7 @@
 /* 회원 탈퇴 — 안내 글은 왼쪽 정렬로 단추 바로 위에(가운데 정렬 + 큰 위아래 여백으로 칸이 비어 보였다) */
 .deleteNote {
   margin: 0 0 24px;
-  color: var(--text-muted, var(--app-muted));
+  color: var(--app-muted);
   font-size: .8125rem;
   line-height: 1.65;
 }
@@ -233,7 +227,7 @@
   .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
   .table tr { padding: 10px 0; border-bottom: 1px solid var(--border-soft, var(--app-line)); }
   .table td { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 0; white-space: normal; }
-  .table td[data-label]::before { content: attr(data-label); color: var(--text-muted, var(--app-muted)); font-size: .8125rem; flex: none; }
+  .table td[data-label]::before { content: attr(data-label); color: var(--app-muted); font-size: .8125rem; flex: none; }
   .table td[colspan] { display: block; }
 }
 
@@ -243,9 +237,7 @@
 .cardHead > .cardAction, .cardHead > .logout { margin-block: -6px; }
 
 /*
- * 사업이 없을 때 — 단추 없는 머리는 제목 아래 8px 로 글(예전엔 숨은 44px 단추 높이 때문에 제목→글 40px).
- * '새 대화로 시작하기'는 글 속 링크 대신 눌리는 모양의 단추로, 글 아래 24px(PC 점검 2026-10-24).
+ * 사업이 없을 때 — 단추 없는 머리는 제목 아래 8px(예전엔 숨은 44px 단추 높이 때문에 제목→글 40px).
  */
 .cardHead:not(:has(.cardAction)) { margin-bottom: 8px; }
-.emptyPlans .empty { padding: 0; }
-.emptyPlans > .emptyAction { margin: 24px 0 0; width: fit-content; }
+

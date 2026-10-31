@@ -182,7 +182,7 @@ export function GenerationDialog({ planId, open, state, onClose }: { planId: str
     <div className={styles.meter}><span>{done} / {total || "–"}</span><progress value={done} max={total || 1} aria-label="작성한 항목" /></div>
     <ol className={styles.list}>
       {(state?.sections ?? []).map(section => <li key={section.key} data-state={section.done ? "done" : section.key === firstPending && !failed ? "current" : "todo"}>
-        <span className={styles.mark} aria-hidden="true">{section.done ? <Check size={14} /> : section.key === firstPending && !failed ? <i /> : null}</span>
+        <span className={styles.mark} aria-hidden="true">{section.done ? <Check size={14} /> : section.key === firstPending && !failed ? <i className={styles.spin} /> : null}</span>
         {section.title}<small>{section.done ? "완료" : section.key === firstPending && !failed ? "작성 중" : "대기"}</small>
       </li>)}
     </ol>
@@ -222,7 +222,7 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
   const [eta, setEta] = useState<string | null>(null);
   useEffect(() => { setEta(generationEta(state, Date.now())); }, [state]);
   if (compact && !stalled) return <section className={`${styles.card} ${styles.cardLine}`} aria-label="사업계획서 작성 진행" data-generation-card data-state="running">
-    <p className={styles.cardCurrent} role="status"><i aria-hidden="true" />사업계획서 만드는 중<span className={styles.cardCount}>{done}/{total || "–"} 항목</span></p>
+    <p className={styles.cardCurrent} role="status"><i className={styles.spin} aria-hidden="true" />사업계획서 만드는 중<span className={styles.cardCount}>{done}/{total || "–"} 항목</span></p>
   </section>;
   return <section className={styles.card} aria-label="사업계획서 작성 진행" data-generation-card data-state={stalled ? "stalled" : "running"}>
     <header>
@@ -233,7 +233,7 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
     <progress value={done} max={total || 1} aria-label={`작성한 항목 ${done}/${total}`} />
     {finished.length > 0 && <p className={styles.cardDone}><Check size={14} aria-hidden="true" />{finished.map(section => section.title).join(" · ")}</p>}
     {/* 쓰는 장이 바뀔 때만 읽힌다(몇 초마다 오는 확인에는 글이 그대로라 다시 읽지 않는다) */}
-    {current && <p className={styles.cardCurrent} role="status" aria-live="polite"><i aria-hidden="true" />{current.title} 쓰는 중</p>}
+    {current && <p className={styles.cardCurrent} role="status" aria-live="polite"><i className={styles.spin} aria-hidden="true" />{current.title} 쓰는 중</p>}
     {/* 장 이름이 줄 끝에서 둘로 쪼개지지 않게 이름마다 한 덩어리로(r37 휴대폰 점검) */}
     {waiting.length > 0 && <p className={styles.cardWaiting}>{stalled ? "남은 항목" : "대기"}: {/* 항목 이름과 뒤 구분점을 한 덩어리로 묶는다 — 줄 끝에서 '요약' 하나만 다음 줄로 떨어지지 않게(PC 점검 2026-10-24) */}{waiting.map((section, index) => <Fragment key={section.title + index}>{index > 0 && " "}<span>{section.title}{index < waiting.length - 1 && " ·"}</span></Fragment>)}</p>}
     {(stalled || note !== null) && <p className={styles.cardNote}>{stalled ? done ? "다 쓴 장은 저장돼 있어요." : "한 장도 쓰지 못했어요. 계속 안 되면 고객센터로 알려 주세요." : note ?? "창을 닫아도 계속 써요."}</p>}

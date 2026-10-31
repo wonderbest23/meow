@@ -25,6 +25,6 @@
 .button[data-variant][data-size]:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 .button[data-variant]:disabled, .button[data-variant][aria-disabled=true] { opacity:.5; cursor:not-allowed; }
 .button[aria-busy=true] { cursor:progress; }
-.spinner { animation:app-button-spin .9s linear infinite; }
-@keyframes app-button-spin { to { transform:rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .button[data-variant] { transition:none; } .spinner { animation-duration:2.4s; } }
+/* 로딩 표시는 PlanLoading 의 키프레임 하나로 돈다(움직임 줄이기도 거기서) */
+.spinner { composes: spin from "../app/plan/PlanLoading.module.css"; }
+@media (prefers-reduced-motion: reduce) { .button[data-variant] { transition:none; } }

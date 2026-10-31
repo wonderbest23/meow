@@ -1,12 +1,12 @@
 .page {
-  --intake-ink: #20252d;
-  --intake-muted: #626b77;
-  --intake-line: #e2e6eb;
-  --intake-surface: #ffffff;
-  --intake-soft: #f5f7f9;
-  --intake-blue: #236be5;
-  --intake-green: #28725a;
-  --intake-danger: #ad343d;
+  --intake-ink: var(--app-text);
+  --intake-muted: var(--app-muted);
+  --intake-line: var(--app-line);
+  --intake-surface: var(--app-surface);
+  --intake-soft: var(--app-raised);
+  --intake-blue: var(--app-primary);
+  --intake-green: var(--app-success);
+  --intake-danger: var(--app-danger);
   display: flex;
   height: 100dvh;
   min-height: 0;
@@ -29,15 +29,15 @@
 .page h2 { font-size: 1.4375rem; line-height: 1.55; margin: 0 0 24px; word-break: keep-all; }
 .page h3 { font-size: .9375rem; line-height: 1.5; margin: 0 0 12px; }
 .page p { margin: 0; }
-.progressLine { height: 3px; flex-shrink: 0; background: #eef1f4; }
+.progressLine { height: 3px; flex-shrink: 0; background: var(--app-raised); }
 .progressLine > span { display: block; height: 100%; background: var(--intake-blue); transition: width .3s ease; }
 .statusLine { display: flex; align-items: center; gap: 7px; flex-shrink: 0; padding: 8px 28px; font-size: .75rem; color: var(--intake-muted); border-bottom: 1px solid var(--intake-line); }
 .statusLine[data-status="failed"], .statusLine[data-status="conflict"] { color: var(--intake-danger); }
 .summaryToggle { position: relative; display: none; align-items: center; gap: 6px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--app-line); border-radius: 8px; background: white; color: var(--app-primary); font-size: .8125rem; font-weight: 600; white-space: nowrap; }
-.summaryToggle[aria-expanded="true"] { background: #edf4ff; border-color: #7daaf0; }
+.summaryToggle[aria-expanded="true"] { background: var(--app-soft); border-color: color-mix(in srgb, var(--app-bg) 45%, var(--app-primary)); }
 /* 보이는 단추는 40px 그대로, 누르는 자리만 44px로 */
 .summaryToggle::after { content: ""; position: absolute; inset: -3px; }
-.summaryToggle b { min-width: 20px; padding: 0 6px; border-radius: 10px; background: #edf4ff; font-size: .75rem; line-height: 1.25rem; text-align: center; }
+.summaryToggle b { min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--app-soft); font-size: .75rem; line-height: 1.25rem; text-align: center; }
 .summarySheetHeader { display: none; }
 .intentPrompt { padding: 20px 0; border-top: 1px solid var(--intake-line); }
 .intentPrompt > p, .noteReceipt > p { margin: 12px 0; line-height: 1.6; word-break: keep-all; text-wrap: pretty; }
@@ -48,19 +48,19 @@
 .saveStatus[data-status="saved"] { color: var(--intake-green); }
 .saveStatus[data-status="failed"], .saveStatus[data-status="conflict"] { color: var(--intake-danger); }
 .progressLabel { color: var(--intake-muted); font-size: .75rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.progress { display: block; appearance: none; width: 100%; height: 3px; flex-shrink: 0; border: 0; background: #eef1f4; accent-color: var(--intake-blue); }
-.progress::-webkit-progress-bar { background: #eef1f4; }
+.progress { display: block; appearance: none; width: 100%; height: 3px; flex-shrink: 0; border: 0; background: var(--app-raised); accent-color: var(--intake-blue); }
+.progress::-webkit-progress-bar { background: var(--app-raised); }
 .progress::-webkit-progress-value { background: var(--intake-blue); }
 .progress::-moz-progress-bar { background: var(--intake-blue); }
-.draftDot { width: 6px; height: 6px; border-radius: 50%; background: #929aa5; }
+.draftDot { width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--app-bg) 55%, var(--app-text)); }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1; min-height: 0; min-width: 0; }
 /* Keep the same conversation width throughout the flow; users can still resize it. */
 .withSummary { grid-template-columns: var(--chat-share, 64%) 14px minmax(0, 1fr); transition: grid-template-columns .45s cubic-bezier(.2, .8, .2, 1); }
 .withSummary.resizing { transition: none; }
 .resizing { cursor: col-resize; user-select: none; }
-.splitHandle { display: flex; justify-content: center; align-items: center; cursor: col-resize; touch-action: none; background: #fcfcfd; border-inline: 1px solid var(--intake-line); }
-.splitHandle span { width: 5px; height: 56px; border-radius: 5px; background: #aab4c3; transition: background .15s, height .15s; }
-.splitHandle:hover { background: #eef3fb; }
+.splitHandle { display: flex; justify-content: center; align-items: center; cursor: col-resize; touch-action: none; background: var(--app-surface); border-inline: 1px solid var(--intake-line); }
+.splitHandle span { width: 5px; height: 56px; border-radius: 5px; background: color-mix(in srgb, var(--app-raised) 60%, var(--app-body)); transition: background .15s, height .15s; }
+.splitHandle:hover { background: var(--app-soft); }
 .splitHandle:hover span, .splitHandle:focus-visible span, .resizing .splitHandle span { background: var(--intake-blue); height: 84px; }
 .splitHandle:focus-visible { outline: 2px solid var(--intake-blue); outline-offset: -2px; }
 .inputPane { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -69,14 +69,14 @@
 .inputContent { max-width: 760px; padding: 28px 36px 24px; margin: 0 auto; }
 .workspace[data-loading] .conversation { display: flex; }
 .workspace[data-loading] .inputContent { display: flex; flex: 1; min-width: 0; padding: 0; }
-.summaryPane { padding: 28px 26px 36px; background: #fcfcfd; }
+.summaryPane { padding: 28px 26px 36px; background: var(--app-surface); }
 .entry { max-width: 560px; padding-top: 28px; }
 .page .entry [data-coach-welcome] h2 { font-size: 1.875rem; line-height: 1.5; }
 .eyebrow { color: var(--intake-muted); font-size: .75rem; font-weight: 600; margin-bottom: 9px !important; }
 .entryChoices { display: grid; gap: 10px; margin: 28px 0 16px; }
-.entryChoices button { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 72px; padding: 17px 20px; border: 1px solid var(--app-line); border-radius: 18px; color: var(--intake-ink); background: #f7f9fc; font-size: 1rem; font-weight: 600; text-align: left; }
+.entryChoices button { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 72px; padding: 17px 20px; border: 1px solid var(--app-line); border-radius: 18px; color: var(--intake-ink); background: var(--app-bg); font-size: 1rem; font-weight: 600; text-align: left; }
 .entryChoices button span { flex: 1; min-width: 0; }
-.entryChoices button > svg:first-child { color: #88713d; }
+.entryChoices button > svg:first-child { color: color-mix(in srgb, var(--app-bg) 15%, var(--app-warning)); }
 .entryChoices button:nth-child(2) > svg:first-child { color: var(--intake-blue); }
 .entryChoices button:nth-child(3) > svg:first-child { color: var(--intake-green); }
 .entryChoices button > svg:last-child { color: var(--app-muted); }
@@ -94,20 +94,20 @@
 .textLink { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--intake-muted); font-size: .875rem; text-underline-offset: 3px; }
 .modeSwitch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; padding: 4px; margin-bottom: 28px; border: 1px solid var(--intake-line); border-radius: 7px; background: var(--intake-soft); }
 .modeSwitch button { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 0; min-height: 44px; padding: 8px 5px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--intake-muted); font-size: .8125rem; font-weight: 600; }
-.modeSwitch button[aria-pressed="true"] { background: white; border-color: var(--app-line); color: var(--app-primary); box-shadow: 0 1px 2px #00000006; }
+.modeSwitch button[aria-pressed="true"] { background: white; border-color: var(--app-line); color: var(--app-primary); box-shadow: 0 1px 2px color-mix(in srgb, var(--app-text) 2%, transparent); }
 .questionMeta { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 10px; color: var(--intake-muted); font-size: .75rem; }
 .questionMeta > .textButton { margin-left: auto; }
 .iconButton { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 5px; background: transparent; color: var(--intake-muted); }
 .options { display: grid; gap: 10px; padding: 0; margin: 0; border: 0; min-width: 0; }
 .option { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; min-height: 54px; min-width: 0; border: 1px solid var(--intake-line); border-radius: 7px; background: white; cursor: pointer; }
-.option[data-selected="true"] { border-color: var(--intake-blue); background: #f3f7fe; }
+.option[data-selected="true"] { border-color: var(--intake-blue); background: var(--app-bg); }
 .option > span { flex: 1; min-width: 0; }
 .option strong { display: block; font-size: .9375rem; line-height: 1.6; font-weight: 600; }
 .page input:is([type="radio"], [type="checkbox"]) { accent-color: var(--intake-blue); width: 18px; height: 18px; flex: 0 0 18px; margin: 3px 0 0; cursor: pointer; }
 .optionDescription, .optionReason, .optionCaution { display: block; color: var(--intake-muted); font-size: .8125rem; margin-top: 6px; white-space: pre-wrap; }
 .optionCaution { color: var(--app-warning); }
 .ideaOption { min-width: 0; border: 1px solid var(--intake-line); border-radius: 7px; overflow: hidden; }
-.ideaOption[data-selected="true"] { border-color: var(--intake-blue); background: #f3f7fe; }
+.ideaOption[data-selected="true"] { border-color: var(--intake-blue); background: var(--app-bg); }
 .ideaOption .option { border: 0; border-radius: 0; background: transparent; }
 .ideaOption > .disclosure { padding: 0 16px 8px; }
 .disclosure { margin-top: 8px; min-width: 0; }
@@ -225,11 +225,12 @@
 .error p + p { margin-top: 6px; }
 .success { color: var(--intake-green); font-size: .75rem; }
 .notices { max-height: 30dvh; overflow-y: auto; flex-shrink: 0; border-bottom: 1px solid var(--intake-line); }
-.notice { padding: 12px 28px; background: #fff5f3; color: var(--app-danger); font-size: .8125rem; line-height: 1.65; text-wrap: balance; }
+.notice { padding: 12px 28px; background: var(--app-danger-bg); color: var(--app-danger); font-size: .8125rem; line-height: 1.65; text-wrap: balance; }
 .noticeActions { display: flex; flex-wrap: wrap; gap: 8px 18px; }
 .notice button, .notice a { display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 6px 0; border: 0; background: transparent; color: inherit; font-size: .8125rem; font-weight: 600; text-underline-offset: 3px; }
 .loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 200px; padding: 24px; color: var(--app-muted); font-size: .875rem; }
-.spinner { animation: intake-spin 1s linear infinite; }
+/* 도는 표시는 PlanLoading 의 키프레임 하나로(움직임 줄이기도 거기서) */
+.spinner { composes: spin from "../PlanLoading.module.css"; }
 .srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .chatSpeaker { display: inline-flex; align-items: center; gap: 9px; color: var(--app-muted); font-size: .75rem; font-weight: 600; margin-bottom: 13px; }
 .chatSpeaker img { width: 28px; height: 28px; border-radius: 50%; }
@@ -237,18 +238,18 @@
 .assistantMessage > p, .userMessage > p { white-space: pre-wrap; }
 .assistantMessage > p + p { margin-top: 6px; }
 /* Messenger bubbles: the coach's short lines sit in a soft grey bubble, the user's in solid blue. */
-.assistantMessage > p, .assistantMessage > .conversationText { width: fit-content; max-width: 88%; margin: 0; padding: 10px 16px; border-radius: 20px; background: #f2f5fa; color: var(--intake-ink); line-height: 1.7; word-break: keep-all; overflow-wrap: anywhere; text-wrap: pretty; }
+.assistantMessage > p, .assistantMessage > .conversationText { width: fit-content; max-width: 88%; margin: 0; padding: 10px 16px; border-radius: 20px; background: var(--app-raised); color: var(--intake-ink); line-height: 1.7; word-break: keep-all; overflow-wrap: anywhere; text-wrap: pretty; }
 .userMessage { position: relative; width: fit-content; max-width: 88%; margin: 0 0 32px auto; padding: 10px 16px; border-radius: 20px; background: var(--intake-blue); color: var(--app-surface); font-size: 1rem; line-height: 1.7; transform-origin: 100% 100%; word-break: keep-all; overflow-wrap: anywhere; text-wrap: pretty; }
-.messageEdit { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 40px; height: 40px; margin: -10px -14px -10px -4px; border: 0; border-radius: 50%; background: transparent; color: #ffffffd9; }
+.messageEdit { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 40px; height: 40px; margin: -10px -14px -10px -4px; border: 0; border-radius: 50%; background: transparent; color: color-mix(in srgb, var(--app-surface) 85%, transparent); }
 .userMessage:has(.messageEdit) { display: flex; align-items: center; gap: 4px; }
 /* 연필 누르는 자리 44px(보이는 원은 40px) — r37 휴대폰 점검 */
 .messageEdit { position: relative; }
 .messageEdit::after { content: ""; position: absolute; inset: -2px; }
 .messageStatus { margin: -26px 0 28px auto !important; max-width: 88%; text-align: right; font-size: .6875rem; color: var(--intake-muted); transform-origin: 100% 0; animation: intake-receipt .4s ease; }
-.speakerStatus { color: transparent; background: linear-gradient(90deg, #8a96a8 0 35%, #2b3340 50%, #8a96a8 65% 100%) 0 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; font-weight: 500; animation: intake-status-shimmer 2s ease infinite; }
+.speakerStatus { color: transparent; background: linear-gradient(90deg, color-mix(in srgb, var(--app-bg) 40%, var(--app-body)) 0 35%, color-mix(in srgb, var(--app-bg) 5%, var(--app-text)) 50%, color-mix(in srgb, var(--app-bg) 40%, var(--app-body)) 65% 100%) 0 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; font-weight: 500; animation: intake-status-shimmer 2s ease infinite; }
 .speakerStatus::before { content: "·"; margin-right: 7px; color: var(--app-muted); }
-.typingBubble { display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: 56px; height: 38px; border-radius: 20px; background: #f2f5fa; transform-origin: 0 50%; animation: intake-bubble-in .18s cubic-bezier(.2, .8, .2, 1); }
-.typingBubble i { width: 7px; height: 7px; border-radius: 50%; background: #2b3340; opacity: .2; animation: intake-typing-glow 1.2s ease-in-out infinite; }
+.typingBubble { display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: 56px; height: 38px; border-radius: 20px; background: var(--app-raised); transform-origin: 0 50%; animation: intake-bubble-in .18s cubic-bezier(.2, .8, .2, 1); }
+.typingBubble i { width: 7px; height: 7px; border-radius: 50%; background: color-mix(in srgb, var(--app-bg) 5%, var(--app-text)); opacity: .2; animation: intake-typing-glow 1.2s ease-in-out infinite; }
 .typingBubble i:nth-child(2) { animation-delay: .3s; }
 .typingBubble i:nth-child(3) { animation-delay: .6s; }
 .jobChat { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 4px 0 8px; }
@@ -262,13 +263,13 @@
 .resultName { margin: 0; color: var(--app-text); font-size: 1.5rem; font-weight: 700; line-height: 1.3; word-break: keep-all; }
 .resultNames { display: flex; flex-wrap: wrap; gap: 8px; }
 .resultHeadline { margin: 0; color: var(--app-text); font-size: 1.0625rem; font-weight: 600; line-height: 1.5; word-break: keep-all; }
-.resultSummary { display: grid; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--app-line); border-radius: 16px; background: #fff; }
+.resultSummary { display: grid; gap: 12px; margin: 0; padding: 16px; border: 1px solid var(--app-line); border-radius: 16px; background: var(--app-surface); }
 .resultSummary > div { display: grid; gap: 4px; }
 .resultSummary dt { color: var(--app-muted); font-size: .8125rem; font-weight: 600; }
 .resultSummary dd { margin: 0; color: var(--app-text); font-size: .9375rem; line-height: 1.65; }
 .resultAction { display: grid; justify-items: start; gap: 8px; margin-top: 18px; }
 /* 사업 방향 정리 진행(DesignProgress): 막대 + 단계 체크 */
-.designProgress { display: grid; gap: 12px; width: min(100%, 360px); margin-top: 10px; padding: 14px 16px; border: 1px solid var(--app-line); border-radius: 16px; background: #fff; }
+.designProgress { display: grid; gap: 12px; width: min(100%, 360px); margin-top: 10px; padding: 14px 16px; border: 1px solid var(--app-line); border-radius: 16px; background: var(--app-surface); }
 .designSteps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .designSteps li { display: flex; align-items: center; gap: 8px; color: var(--app-muted); font-size: .8125rem; line-height: 1.4; transition: color .3s ease; }
 .designSteps li > span { width: 14px; height: 14px; border: 1.5px solid var(--app-line); border-radius: 999px; }
@@ -277,13 +278,13 @@
 .designSteps li[data-state="done"] svg { color: var(--intake-blue); }
 /* 빈 새 대화의 첫 인사 — 입력 중 점이 먼저, 인사는 글자 단위로 나타난다(단어 안에서는 줄이 끊기지 않게 단어마다 한 덩어리) */
 .greeting { display: flex; flex-direction: column; align-items: flex-start; min-height: 40px; margin-bottom: 14px; }
-.greeting p { position: relative; width: fit-content; max-width: 88%; margin: 0; padding: 10px 16px; border-radius: 20px; background: #f2f5fa; color: var(--intake-ink); font-size: 1rem; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; animation: intake-bubble-in .2s cubic-bezier(.2, .8, .2, 1); transform-origin: 0 50%; }
+.greeting p { position: relative; width: fit-content; max-width: 88%; margin: 0; padding: 10px 16px; border-radius: 20px; background: var(--app-raised); color: var(--intake-ink); font-size: 1rem; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; animation: intake-bubble-in .2s cubic-bezier(.2, .8, .2, 1); transform-origin: 0 50%; }
 .greeting p [data-word] { display: inline-block; }
 .greeting p [data-char] { display: inline-block; opacity: 0; animation: intake-char-in .24s ease-out both; }
 @keyframes intake-char-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .chatQuestion { display: flex; flex-direction: column; }
 /* The question arrives as a coach bubble first; its choices follow a beat later, like a reply in a messenger. */
-.chatQuestion h2 { align-self: flex-start; width: fit-content; max-width: 88%; margin-bottom: 14px; padding: 10px 16px; border-radius: 20px; background: #f2f5fa; font-size: 1rem; font-weight: 500; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; text-wrap: pretty; animation: intake-bubble-in .2s cubic-bezier(.2, .8, .2, 1); transform-origin: 0 50%; }
+.chatQuestion h2 { align-self: flex-start; width: fit-content; max-width: 88%; margin-bottom: 14px; padding: 10px 16px; border-radius: 20px; background: var(--app-raised); font-size: 1rem; font-weight: 500; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; text-wrap: pretty; animation: intake-bubble-in .2s cubic-bezier(.2, .8, .2, 1); transform-origin: 0 50%; }
 .chatQuestion > :not(h2):not(.chatSpeaker) { animation: intake-message .3s ease-out .35s both; }
 .chatQuestion .questionHint { margin: -6px 0 14px 4px !important; }
 .chatQuestion .chatSpeaker { align-self: flex-start; }
@@ -293,17 +294,17 @@
 .chatQuestion .questionMeta .iconButton { height: 36px; width: 32px; }
 .chatQuestion .options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .chatQuestion .options:has(.optionDescription) { grid-template-columns: minmax(0, 1fr); }
-.chatQuestion .option { position: relative; align-items: center; min-height: 46px; padding: 10px 13px; border-radius: 8px; border-color: var(--app-line); background: #f8fafc; }
+.chatQuestion .option { position: relative; align-items: center; min-height: 46px; padding: 10px 13px; border-radius: 8px; border-color: var(--app-line); background: var(--app-bg); }
 .chatQuestion .option strong { font-size: .875rem; font-weight: 500; }
-.chatQuestion .option[data-selected="true"] { border-color: #7daaf0; background: #edf4ff; }
+.chatQuestion .option[data-selected="true"] { border-color: color-mix(in srgb, var(--app-bg) 45%, var(--app-primary)); background: var(--app-soft); }
 .chatQuestion .option:focus-within { outline: 3px solid var(--app-focus-ring); outline-offset: 2px; }
 .chatQuestion .option:has(input:disabled) { cursor: not-allowed; opacity: .55; }
 .chatQuestion .option input[type="radio"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .chatQuestion .formActions { margin-top: 10px; justify-content: flex-start; }
-.unknownChoice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 54px; margin-top: 8px; padding: 10px 13px; border: 1px solid var(--app-line); border-radius: 8px; background: #f8fafc; color: var(--app-body); text-align: left; }
+.unknownChoice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 54px; margin-top: 8px; padding: 10px 13px; border: 1px solid var(--app-line); border-radius: 8px; background: var(--app-bg); color: var(--app-body); text-align: left; }
 .unknownChoice strong { font-size: .875rem; font-weight: 600; }
 .unknownChoice small { color: var(--intake-muted); font-size: .75rem; }
-.unknownChoice[aria-pressed="true"], .ksicChip[aria-pressed="true"] { border-color: #7daaf0; background: #edf4ff; }
+.unknownChoice[aria-pressed="true"], .ksicChip[aria-pressed="true"] { border-color: color-mix(in srgb, var(--app-bg) 45%, var(--app-primary)); background: var(--app-soft); }
 .suggestionReason { margin-bottom: 4px !important; color: var(--app-muted); font-size: .8125rem; line-height: 1.6; }
 .industrySuggestion { margin: 2px 0 8px; }
 .suggestedIndustry { display: flex; align-items: center; gap: 10px; min-height: 52px; padding-block: 8px 16px; color: var(--app-primary); }
@@ -312,8 +313,8 @@
 .suggestionActions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
 .currentTurn { padding-top: 4px; }
 .replyTyping { display: flex; flex-direction: column; align-items: flex-start; min-height: 114px; padding-bottom: 20px; }
-.typingDots { display: flex; align-items: center; gap: 5px; min-width: 64px; height: 38px; padding: 0 17px; border-radius: 8px; background: #f2f5fa; }
-.typingDots i { width: 6px; height: 6px; border-radius: 50%; background: #7f95b3; animation: intake-typing .9s ease-in-out infinite; }
+.typingDots { display: flex; align-items: center; gap: 5px; min-width: 64px; height: 38px; padding: 0 17px; border-radius: 8px; background: var(--app-raised); }
+.typingDots i { width: 6px; height: 6px; border-radius: 50%; background: color-mix(in srgb, var(--app-surface) 40%, var(--app-selected-text)); animation: intake-typing .9s ease-in-out infinite; }
 .typingDots i:nth-child(2) { animation-delay: .12s; }
 .typingDots i:nth-child(3) { animation-delay: .24s; }
 .chatHistory + .job { margin-bottom: 24px; }
@@ -321,16 +322,16 @@
 .composerModes { display: flex; gap: 14px; margin-bottom: 8px; }
 .composerModes button { display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 5px 0; border: 0; color: var(--app-muted); background: transparent; font-size: .75rem; }
 .composerModes button[aria-pressed="true"] { color: var(--app-primary); font-weight: 600; }
-.composerShell { padding: 8px 10px; border: 1px solid var(--app-line); border-radius: 8px; background: white; box-shadow: 0 3px 16px #24354b04; transition: border-color .18s, box-shadow .18s; }
+.composerShell { padding: 8px 10px; border: 1px solid var(--app-line); border-radius: 8px; background: white; box-shadow: 0 3px 16px color-mix(in srgb, var(--app-text) 2%, transparent); transition: border-color .18s, box-shadow .18s; }
 /* 대화 칸은 말풍선 모양 그대로 두고, 포커스는 입력칸과 같은 3px 링을 바깥 상자에 그린다 — 안쪽 textarea 의 선은 색만 지운다 */
 .composerShell:focus-within { border-color: var(--app-primary); outline: 3px solid var(--app-focus-ring); outline-offset: 2px; }
 .composerContext { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 4px 5px 2px; color: var(--app-accent); font-size: .75rem; font-weight: 600; }
 .composerContext span { color: var(--app-muted); }
-.composerSelection { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border-left: 3px solid var(--intake-blue); background: #edf4ff; color: var(--app-selected-text); }
+.composerSelection { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border-left: 3px solid var(--intake-blue); background: var(--app-soft); color: var(--app-selected-text); }
 .composerSelection > span { min-width: 0; overflow-wrap: anywhere; font-size: .9375rem; font-weight: 600; }
 .composerSelection .iconButton { flex-shrink: 0; }
 .mention { margin: 18px 0; }
-.mention blockquote { margin: 0 0 12px; padding: 12px 16px; border-left: 3px solid var(--app-muted); color: var(--app-body); background: #f1f7f3; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mention blockquote { margin: 0 0 12px; padding: 12px 16px; border-left: 3px solid var(--app-muted); color: var(--app-body); background: var(--app-success-bg); white-space: pre-wrap; overflow-wrap: anywhere; }
 .mention > p { margin: 12px 0; font-size: 1rem; line-height: 1.6; }
 .undecidedHelp { margin-top: 14px; color: var(--app-body); }
 .undecidedHelp summary { cursor: pointer; font-size: .875rem; font-weight: 600; padding: 8px 0; }
@@ -338,7 +339,7 @@
 .resumeNotice { display: flex; align-items: flex-start; gap: 12px; margin: 20px 0; padding: 12px 0; border-block: 1px solid var(--app-line); color: var(--app-body); }
 .resumeNotice p { flex: 1; margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
 .resumeNotice button { flex-shrink: 0; }
-.updateNotice { margin: 20px 0; padding: 14px 0 14px 14px; border-left: 3px solid #cc9c37; }
+.updateNotice { margin: 20px 0; padding: 14px 0 14px 14px; border-left: 3px solid color-mix(in srgb, var(--app-bg) 30%, var(--app-warning)); }
 .updateNotice > p { margin: 8px 0; font-size: .9375rem; line-height: 1.7; }
 .updateNotice > small { color: var(--app-muted); line-height: 1.6; }
 .direction { padding: 16px 0; border-block: 1px solid var(--intake-line); margin: 16px 0; }
@@ -354,8 +355,8 @@
 /* 좁은 화면·글자 확대에서 안내 글이 두 줄로 접혀 한 줄 높이 입력칸 밖으로 잘렸다 — 한 줄로 두고 넘치면 말줄임 */
 .composerRow textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sendButton { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--intake-blue); color: white; }
-.sendButton:disabled { opacity: 1 !important; background: #f3f5f8; color: var(--app-muted); }
-.newMessage { position: absolute; right: 24px; bottom: 150px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--intake-line); border-radius: 8px; color: var(--app-accent); background: white; box-shadow: 0 3px 16px #24354b10; font-size: .75rem !important; }
+.sendButton:disabled { opacity: 1 !important; background: var(--app-raised); color: var(--app-muted); }
+.newMessage { position: absolute; right: 24px; bottom: 150px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--intake-line); border-radius: 8px; color: var(--app-accent); background: white; box-shadow: 0 3px 16px color-mix(in srgb, var(--app-text) 6%, transparent); font-size: .75rem !important; }
 .introMessage { margin-top: 24px; }
 .chatQuestion, .replyTyping { animation: intake-message .24s ease-out; }
 /* The newest answer rises from the composer with a small spring (about 5% overshoot), like a sent message. */
@@ -368,10 +369,9 @@
 @keyframes intake-receipt { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
 @keyframes intake-status-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
 @keyframes intake-typing { 0%, 60%, 100% { opacity: .4; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
-@keyframes intake-spin { to { transform: rotate(360deg); } }
 @media (hover: hover) {
-  .entryChoices button:hover:not(:disabled), .option:hover { border-color: var(--app-line-strong); background: #fafcff; }
-  .iconButton:hover { background: #f0f3f7; }
+  .entryChoices button:hover:not(:disabled), .option:hover { border-color: var(--app-line-strong); background: var(--app-bg); }
+  .iconButton:hover { background: var(--app-raised); }
   .artifactLinks a:hover { text-decoration: underline; text-underline-offset: 3px; }
 }
 @media (max-width: 1100px) and (min-width: 901px) {
@@ -433,9 +433,9 @@
 
 .periodPicker { display: grid; gap: 12px; margin-bottom: 6px; }
 .presetChips { display: flex; flex-wrap: wrap; gap: 8px; }
-.presetChip { min-height: 44px; padding: 10px 16px; border: 1px solid var(--app-line); border-radius: 22px; background: #f7f9fc; color: var(--app-text); font-size: .875rem; font-weight: 500; cursor: pointer; transition: background .16s, border-color .16s; }
-.presetChip:hover:not(:disabled) { background: #edf3fc; border-color: var(--app-line-strong); }
-.presetChip[data-selected="true"] { border-color: #7daaf0; background: #edf4ff; color: var(--app-primary); }
+.presetChip { min-height: 44px; padding: 10px 16px; border: 1px solid var(--app-line); border-radius: 22px; background: var(--app-bg); color: var(--app-text); font-size: .875rem; font-weight: 500; cursor: pointer; transition: background .16s, border-color .16s; }
+.presetChip:hover:not(:disabled) { background: var(--app-soft); border-color: var(--app-line-strong); }
+.presetChip[data-selected="true"] { border-color: color-mix(in srgb, var(--app-bg) 45%, var(--app-primary)); background: var(--app-soft); color: var(--app-primary); }
 .presetChip:disabled { opacity: .55; cursor: not-allowed; }
 .dateRange { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: end; }
 .dateRange .primaryButton { grid-column: 1 / -1; }
@@ -443,16 +443,16 @@
 
 /* Select-first controls (docs/intake-select-first-spec-2026-09-16.md §2): horizontal chips, stepper, amount keypad. */
 .questionHint { margin: -10px 0 16px !important; color: var(--intake-muted); font-size: .8125rem; line-height: 1.6; word-break: keep-all; text-wrap: pretty; }
-.draftHint { margin: -6px 0 14px !important; padding: 8px 12px; border-radius: 8px; background: #fff8e8; color: var(--app-warning); font-size: .75rem; line-height: 1.6; white-space: pre-wrap; }
+.draftHint { margin: -6px 0 14px !important; padding: 8px 12px; border-radius: 8px; background: var(--app-warning-bg); color: var(--app-warning); font-size: .75rem; line-height: 1.6; white-space: pre-wrap; }
 .chipSteps, .numberQuick, .amountLadder { display: grid; gap: 14px; margin-bottom: 6px; }
 .chipStep { display: grid; gap: 8px; min-width: 0; }
 .stepLegend { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 0; margin: 0 0 2px !important; color: var(--intake-muted); font-size: .75rem; font-weight: 600; }
 .stepLegend > span { font-weight: 400; font-variant-numeric: tabular-nums; }
 .stepLegend > .textButton { margin-left: auto; }
 .chipRow { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
-.chip { display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; max-width: 100%; min-height: 44px; padding: 9px 15px; border: 1px solid var(--app-line); border-radius: 22px; background: #f7f9fc; color: var(--app-text); font-size: .875rem; font-weight: 500; line-height: 1.45; text-align: left; cursor: pointer; transition: background .16s, border-color .16s; }
-.chip:hover:not(:disabled) { background: #edf3fc; border-color: var(--app-line-strong); }
-.chip[data-selected="true"], .chip[aria-pressed="true"] { border-color: #7daaf0; background: #edf4ff; color: var(--app-primary); }
+.chip { display: inline-flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; max-width: 100%; min-height: 44px; padding: 9px 15px; border: 1px solid var(--app-line); border-radius: 22px; background: var(--app-bg); color: var(--app-text); font-size: .875rem; font-weight: 500; line-height: 1.45; text-align: left; cursor: pointer; transition: background .16s, border-color .16s; }
+.chip:hover:not(:disabled) { background: var(--app-soft); border-color: var(--app-line-strong); }
+.chip[data-selected="true"], .chip[aria-pressed="true"] { border-color: color-mix(in srgb, var(--app-bg) 45%, var(--app-primary)); background: var(--app-soft); color: var(--app-primary); }
 .chip:disabled { opacity: .5; cursor: not-allowed; }
 .chipHint { display: block; color: var(--intake-muted); font-size: .6875rem; font-weight: 400; line-height: 1.4; }
 .chipHelp { color: var(--intake-muted); font-size: .75rem; line-height: 1.6; }
@@ -461,12 +461,12 @@
 .chatQuestion .options .stepLegend { grid-column: 1 / -1; }
 .stepper { display: flex; align-items: stretch; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .stepButton { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; min-height: 44px; padding: 0; border: 1px solid var(--app-line); border-radius: 8px; background: white; color: var(--app-text); font-size: 1.375rem; line-height: 1; }
-.stepButton:hover:not(:disabled) { background: #f0f3f7; }
+.stepButton:hover:not(:disabled) { background: var(--app-raised); }
 .stepValue { flex: 1 1 120px; width: auto; }
 .stepValue input { font-variant-numeric: tabular-nums; }
 .stepValue > span:last-child { flex-shrink: 0; color: var(--intake-muted); font-size: .8125rem; white-space: nowrap; }
 .stepper .primaryButton { flex: 1 1 100%; }
-.keypad { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--intake-line); border-radius: 12px; background: #fbfcfe; }
+.keypad { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--intake-line); border-radius: 12px; background: var(--app-surface); }
 .keypadRow { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .keypadRow input { flex: 1 1 140px; width: auto; font-variant-numeric: tabular-nums; }
 .unitToggle { display: inline-flex; flex: 0 0 auto; padding: 3px; border: 1px solid var(--intake-line); border-radius: 8px; background: var(--intake-soft); }
@@ -485,8 +485,8 @@
 .ksicCandidates { display: grid; gap: 10px; margin-bottom: 16px; }
 .ksicLead { margin: 0; font-size: .8125rem; color: var(--intake-muted); }
 .ksicChips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.ksicChip { display: grid; gap: 3px; min-width: 0; min-height: 56px; padding: 10px 13px; border: 1px solid var(--app-line); border-radius: 8px; background: #f8fafc; text-align: left; cursor: pointer; transition: background .16s, border-color .16s; }
-.ksicChip:hover:not(:disabled) { background: #edf3fc; border-color: var(--app-line-strong); }
+.ksicChip { display: grid; gap: 3px; min-width: 0; min-height: 56px; padding: 10px 13px; border: 1px solid var(--app-line); border-radius: 8px; background: var(--app-bg); text-align: left; cursor: pointer; transition: background .16s, border-color .16s; }
+.ksicChip:hover:not(:disabled) { background: var(--app-soft); border-color: var(--app-line-strong); }
 .ksicHint { color: var(--app-muted); font-size: .75rem; font-weight: 500; white-space: nowrap; }
 .ksicChip:disabled { opacity: .55; cursor: not-allowed; }
 .ksicChip strong { font-size: .875rem; font-weight: 600; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -503,7 +503,7 @@
 /* 다음 단계 강조: 지금 눌러야 할 버튼을 테두리·배지·안내로 묶는다. 기본 질문이 끝나면 요약 맨 위로 올라온다. */
 .summaryHeading + .summaryActions { margin: 18px 0 26px; }
 .nextStep { display: grid; gap: 8px; }
-.nextStep[data-active] { padding: 14px; border: 2px solid var(--intake-blue); border-radius: 14px; background: #f3f7ff; box-shadow: 0 0 0 4px rgba(45, 108, 223, .1); animation: intake-next-pulse 2.4s ease-in-out 3; }
+.nextStep[data-active] { padding: 14px; border: 2px solid var(--intake-blue); border-radius: 14px; background: var(--app-bg); box-shadow: 0 0 0 4px rgba(45, 108, 223, .1); animation: intake-next-pulse 2.4s ease-in-out 3; }
 .nextStep button, .nextStep a { width: 100%; margin-bottom: 0; }
 /* 마무리 선택지는 넓은 화면에서 나란히, 좁은 화면에서는 세로로 둔다. */
 .nextStepRow { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 10px; }
@@ -516,18 +516,18 @@
 /* 답변 수정하기: 요약이 따로 열리는 모바일에서만 보인다(PC는 요약이 옆에 있다). 감싸는 칸이 보이기·자리만 정하고 단추 모양은 공통 버튼 */
 .editLink { display: none; }
 .nextStepLabel { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 4px 10px; border-radius: 999px; background: var(--intake-blue); color: var(--app-surface); font-size: .75rem; font-weight: 700; }
-.rewriteCost { margin: 0; padding: 10px 12px; border-radius: 8px; background: #f2f6fd; color: var(--app-body); font-size: .8125rem; line-height: 1.6; word-break: keep-all; }
+.rewriteCost { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--app-raised); color: var(--app-body); font-size: .8125rem; line-height: 1.6; word-break: keep-all; }
 .rewriteCost b { color: var(--app-selected-text); font-weight: 700; }
-.rewriteCost[data-short] { background: #fff4e5; color: var(--app-warning); }
+.rewriteCost[data-short] { background: var(--app-warning-bg); color: var(--app-warning); }
 .rewriteCost a { color: var(--app-selected-text); font-weight: 700; text-decoration: underline; }
 .nextStepHint { display: block; color: var(--intake-muted); font-size: .75rem; line-height: 1.6; }
 @keyframes intake-next-pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(45, 108, 223, .1); } 50% { box-shadow: 0 0 0 9px rgba(45, 108, 223, .04); } }
 
 /* AI 작업 예상 진행률 게이지 */
-.jobProgress { display: grid; gap: 14px; padding: 20px 0; border-block: 1px solid var(--intake-line); background: #fff; }
+.jobProgress { display: grid; gap: 14px; padding: 20px 0; border-block: 1px solid var(--intake-line); background: var(--app-surface); }
 .jobProgressTitle { display: flex; align-items: center; gap: 8px; color: var(--app-text); font-size: .8125rem; font-weight: 600; }
 .jobProgressTitle b { margin-left: auto; flex-shrink: 0; min-width: 3ch; color: var(--intake-blue); font-size: 1.125rem; font-variant-numeric: tabular-nums; }
-.jobProgressBar { height: 8px; border-radius: 999px; background: #e6ebf2; overflow: hidden; }
+.jobProgressBar { height: 8px; border-radius: 999px; background: var(--app-hover); overflow: hidden; }
 .jobProgressBar span { display: block; height: 100%; border-radius: inherit; background: var(--intake-blue); transition: width .5s linear; }
 .jobProgressBar .indeterminateProgress { width: 35%; animation: intakePending 1.7s ease-in-out infinite alternate; }
 @keyframes intakePending { from { transform: translateX(0); } to { transform: translateX(180%); } }
@@ -536,16 +536,16 @@
 @media (prefers-reduced-motion: reduce) { .withSummary { transition: none; } .nextStep[data-active] { animation: none; } .jobProgressBar span { transition: none; } }
 /* PC: 대화(흰 바탕)와 요약(회색 바탕 + 흰 카드)을 한눈에 구분되게 하고, 작은 글씨를 한 단계 키운다. */
 @media (min-width: 901px) {
-  .splitHandle { background: #eef1f5; border-inline: 1px solid var(--app-line); }
-  .summaryPane { background: #f3f5f8; }
+  .splitHandle { background: var(--app-raised); border-inline: 1px solid var(--app-line); }
+  .summaryPane { background: var(--app-raised); }
   .summaryHeading { padding-bottom: 16px; border-bottom: 1px solid var(--app-line); }
   .summaryHeading > p:last-child { font-size: .875rem; }
   .summaryPane .eyebrow { font-size: .8125rem; }
-  .summaryPane .original { margin-top: 16px; padding: 16px 18px; border: 1px solid var(--app-line); border-radius: 12px; background: #ffffff; }
+  .summaryPane .original { margin-top: 16px; padding: 16px 18px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface); }
   .summaryPane .original h3 { font-size: .8125rem; }
   .summaryPane .original p { font-size: .9375rem; }
   .summaryPane .summaryFields { display: grid; gap: 8px; }
-  .summaryPane .summaryFields > div { padding: 12px 16px; border: 1px solid var(--app-line); border-radius: 12px; background: #ffffff; }
+  .summaryPane .summaryFields > div { padding: 12px 16px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface); }
   .summaryPane .summaryFields dt { font-size: .875rem; }
   .summaryPane .summaryFields dt small { font-size: .75rem; }
   .summaryPane .summaryFields dd { font-size: 1rem; }
@@ -553,7 +553,7 @@
   .summaryPane .summaryDetails > summary { font-size: .9375rem; }
 }
 /* AI 참고 의견(시험 기능): 질문 흐름과 구분되는 옅은 카드. 스트리밍 중에는 끝에 깜빡이는 커서. */
-.liveComment { margin: -8px 0 28px; padding: 12px 16px 14px; border: 1px solid var(--app-line); border-left: 3px solid var(--intake-blue); border-radius: 12px; background: #f7faff; }
+.liveComment { margin: -8px 0 28px; padding: 12px 16px 14px; border: 1px solid var(--app-line); border-left: 3px solid var(--intake-blue); border-radius: 12px; background: var(--app-bg); }
 .liveCommentHead { display: flex; align-items: center; gap: 6px; min-height: 28px; color: var(--app-primary); }
 .liveCommentHead strong { font-size: .8125rem; }
 .liveCommentHead small { color: var(--intake-muted); font-size: .75rem; }
@@ -566,26 +566,26 @@
 /* 이 사업에 맞춘 AI 추천(시험 기능): 업종 칩과 구분되도록 점선 테두리와 보라 계열로 표시한다. */
 /* 맞춤 추천 칩 — 일반 선택지와 같은 모양에 ✨ 표시만 다르다(따로 상자에 두면 두 목록이 겹쳐 보여 헷갈렸다) */
 .suggestionLabel { display: inline-flex; align-items: center; gap: 6px; }
-.suggestionChip svg { color: #6b5bd2; flex-shrink: 0; }
+.suggestionChip svg { color: color-mix(in srgb, var(--app-bg) 15%, var(--app-accent)); flex-shrink: 0; }
 .suggestionChip[aria-pressed="true"] svg { color: currentColor; }
-.suggestionNote { display: inline-flex; align-items: center; gap: 4px; color: #5b4fc4; }
-.suggestionSkeleton { display: block; max-width: 100%; height: 44px; border-radius: 22px; background: linear-gradient(90deg, #f0eefc 0%, #faf9ff 50%, #f0eefc 100%); background-size: 200% 100%; animation: suggestionShimmer 1.4s ease-in-out infinite; }
+.suggestionNote { display: inline-flex; align-items: center; gap: 4px; color: color-mix(in srgb, var(--app-danger) 20%, var(--app-primary)); }
+.suggestionSkeleton { display: block; max-width: 100%; height: 44px; border-radius: 22px; background: linear-gradient(90deg, var(--app-soft) 0%, var(--app-bg) 50%, var(--app-soft) 100%); background-size: 200% 100%; animation: suggestionShimmer 1.4s ease-in-out infinite; }
 @keyframes suggestionShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .suggestionSkeleton { animation: none; } }
 
 /* ── '아, 이 사업!' 첫 화면 문구 ─────────────────────────────── */
 /* 사업 한 줄 정리 — 흰 바탕·옅은 테두리만(대표 요청 2026-10-15: 파란 그라데이션·반짝이가 AI 같다) */
-.identity { display: grid; gap: 10px; margin: 4px 0 8px; padding: 22px 22px 20px; border-radius: 16px; background: var(--intake-surface, #fff); border: 1px solid var(--app-line); }
+.identity { display: grid; gap: 10px; margin: 4px 0 8px; padding: 22px 22px 20px; border-radius: 16px; background: var(--intake-surface, var(--app-surface)); border: 1px solid var(--app-line); }
 .identityKicker { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: .8125rem; font-weight: 700; color: var(--app-body); }
 .complete .identityHeadline, .identityHeadline { margin: 0; font-size: clamp(1.375rem, 5.6vw, 1.875rem); line-height: 1.3; font-weight: 800; color: var(--intake-ink); word-break: keep-all; }
 .complete .identityPitch, .identityPitch { margin: 0; font-size: .96875rem; line-height: 1.6; color: var(--intake-ink); opacity: .82; word-break: keep-all; }
 .identityNames { display: grid; gap: 10px; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--app-line); }
 .identityNames h3 { margin: 0; font-size: .9375rem; }
 .identityChoices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
-.identityChoices button { display: grid; gap: 4px; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--intake-line); background: var(--intake-surface, #fff); color: var(--intake-ink); cursor: pointer; transition: border-color .15s ease, transform .1s ease; }
+.identityChoices button { display: grid; gap: 4px; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--intake-line); background: var(--intake-surface, var(--app-surface)); color: var(--intake-ink); cursor: pointer; transition: border-color .15s ease, transform .1s ease; }
 .identityChoices button:hover:not(:disabled) { border-color: var(--intake-blue); }
 .identityChoices button:active:not(:disabled) { transform: scale(.98); }
-.identityChoices button[aria-pressed="true"] { border-color: var(--intake-blue); background: color-mix(in srgb, var(--intake-blue) 8%, var(--intake-surface, #fff)); cursor: default; opacity: 1; }
+.identityChoices button[aria-pressed="true"] { border-color: var(--intake-blue); background: color-mix(in srgb, var(--intake-blue) 8%, var(--intake-surface, var(--app-surface))); cursor: default; opacity: 1; }
 .identityChoices strong { display: inline-flex; align-items: center; gap: 4px; font-size: 1.0625rem; font-weight: 800; }
 .identityChoices small { font-size: .78125rem; line-height: 1.45; color: var(--intake-muted); }
 .identityCustom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -620,13 +620,13 @@
 .empty > p { max-width: 400px; margin: 0; color: var(--intake-muted); line-height: 1.7; word-break: keep-all; }
 
 /* 계획서를 만들기 전 숫자 점검 — 팔수록 손해이거나 다 팔아도 본전이 안 될 때 */
-.financialWarning { display: grid; gap: 10px; margin: 0 0 16px; padding: 14px 16px; border: 1px solid #f3d19e; border-radius: 10px; background: #fff8ec; color: var(--app-warning); }
+.financialWarning { display: grid; gap: 10px; margin: 0 0 16px; padding: 14px 16px; border: 1px solid color-mix(in srgb, var(--app-danger) 25%, var(--app-warning-bg)); border-radius: 10px; background: var(--app-warning-bg); color: var(--app-warning); }
 .financialWarning p { margin: 0; font-size: .875rem; line-height: 1.65; }
 .financialWarning > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .financialWarning button { display: inline-flex; align-items: center; gap: 6px; }
 
 /* 원가로 판매가 계산 */
-.costHelper { margin: 4px 0 12px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 10px; background: #f9fafb; }
+.costHelper { margin: 4px 0 12px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 10px; background: var(--app-bg); }
 /* 누르는 줄 44px(r37 휴대폰 점검) — 기본 펼침 표시(▶)를 지키려고 flex 대신 줄 높이로 맞춘다 */
 .costHelper > summary { min-height: 44px; padding: 11px 0; line-height: 1.375rem; cursor: pointer; font-size: .875rem; font-weight: 600; color: var(--app-primary); }
 .costHelper[open] { display: grid; gap: 12px; padding-bottom: 12px; }
@@ -640,39 +640,39 @@
 .page[data-coach] .inputContent { max-width: 720px; }
 .page[data-coach] .chatSpeaker { display: none; }
 .page[data-coach] .assistantMessage { margin: 0 0 14px; }
-.page[data-coach] .assistantMessage > p, .page[data-coach] .assistantMessage > .conversationText, .page[data-coach] .chatQuestion h2 { max-width: 84%; padding: 9px 16px; border-radius: 22px; background: #f1f3f5; color: var(--app-text); font-size: 1rem; font-weight: 400; line-height: 1.375rem; }
+.page[data-coach] .assistantMessage > p, .page[data-coach] .assistantMessage > .conversationText, .page[data-coach] .chatQuestion h2 { max-width: 84%; padding: 9px 16px; border-radius: 22px; background: var(--app-raised); color: var(--app-text); font-size: 1rem; font-weight: 400; line-height: 1.375rem; }
 .page[data-coach] .chatQuestion h2 { margin-bottom: 0; }
 .page[data-coach] .chatQuestion .questionHint { margin: 6px 0 0 6px !important; color: var(--app-muted); font-size: .8125rem; line-height: 1.125rem; }
 .page[data-coach] .userMessage { padding: 9px 16px; border-radius: 22px; font-size: 1rem; line-height: 1.375rem; margin-bottom: 18px; }
 .page[data-coach] .messageStatus { margin-top: -14px !important; color: var(--app-muted); }
 .page[data-coach] .replyTyping { min-height: 0; padding-bottom: 12px; }
-.page[data-coach] .typingBubble { width: 58px; height: 40px; border-radius: 22px; background: #f1f3f5; }
-.page[data-coach] .typingBubble i { background: #111418; }
+.page[data-coach] .typingBubble { width: 58px; height: 40px; border-radius: 22px; background: var(--app-raised); }
+.page[data-coach] .typingBubble i { background: var(--app-text); }
 .page[data-coach] .chatQuestion form { margin-top: 10px; }
 /* Choices: small pills under the coach's question, visibly lighter than the chat bubbles. */
 .page[data-coach] .chatQuestion .options, .page[data-coach] .ksicChips, .page[data-coach] .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
-.page[data-coach] .chatQuestion .option, .page[data-coach] .chip, .page[data-coach] .ksicChip, .page[data-coach] .unknownChoice, .page[data-coach] .sendPartial, .page[data-coach] .presetChip { display: inline-flex; flex-direction: row; align-items: center; width: auto; min-width: 44px; min-height: 44px; padding: 7px 13px; border: 1px solid var(--app-line); border-radius: 17px; background: #fff; color: var(--app-text); font-size: .8125rem; font-weight: 400; line-height: 1.125rem; cursor: pointer; }
+.page[data-coach] .chatQuestion .option, .page[data-coach] .chip, .page[data-coach] .ksicChip, .page[data-coach] .unknownChoice, .page[data-coach] .sendPartial, .page[data-coach] .presetChip { display: inline-flex; flex-direction: row; align-items: center; width: auto; min-width: 44px; min-height: 44px; padding: 7px 13px; border: 1px solid var(--app-line); border-radius: 17px; background: var(--app-surface); color: var(--app-text); font-size: .8125rem; font-weight: 400; line-height: 1.125rem; cursor: pointer; }
 .page[data-coach] .chatQuestion .option strong, .page[data-coach] .chip, .page[data-coach] .ksicChip strong, .page[data-coach] .unknownChoice strong { font-size: .8125rem; font-weight: 400; line-height: 1.125rem; color: inherit; white-space: normal; }
-.page[data-coach] .chatQuestion .option:hover, .page[data-coach] .chip:hover:not(:disabled), .page[data-coach] .ksicChip:hover { background: #f5f6f8; border-color: var(--app-line-strong); }
-.page[data-coach] .chatQuestion .option[data-selected="true"], .page[data-coach] .chip[aria-pressed="true"], .page[data-coach] .chip[data-selected="true"], .page[data-coach] .ksicChip[aria-pressed="true"] { border-color: var(--app-line-strong); background: #111418; color: var(--app-surface); }
+.page[data-coach] .chatQuestion .option:hover, .page[data-coach] .chip:hover:not(:disabled), .page[data-coach] .ksicChip:hover { background: var(--app-raised); border-color: var(--app-line-strong); }
+.page[data-coach] .chatQuestion .option[data-selected="true"], .page[data-coach] .chip[aria-pressed="true"], .page[data-coach] .chip[data-selected="true"], .page[data-coach] .ksicChip[aria-pressed="true"] { border-color: var(--app-line-strong); background: var(--app-text); color: var(--app-surface); }
 /* 고른 칩에 마우스가 올라가 있어도(휴대폰은 누른 뒤 계속) 고른 모양을 지킨다 — 위 :hover 가 더 구체적이라 연한 배경이 흰 글자를 가렸다 */
-.page[data-coach] .chatQuestion .option[data-selected="true"]:hover, .page[data-coach] .chip[aria-pressed="true"]:hover:not(:disabled), .page[data-coach] .chip[data-selected="true"]:hover:not(:disabled), .page[data-coach] .ksicChip[aria-pressed="true"]:hover { border-color: var(--app-line-strong); background: #2b2f36; color: var(--app-surface); }
+.page[data-coach] .chatQuestion .option[data-selected="true"]:hover, .page[data-coach] .chip[aria-pressed="true"]:hover:not(:disabled), .page[data-coach] .chip[data-selected="true"]:hover:not(:disabled), .page[data-coach] .ksicChip[aria-pressed="true"]:hover { border-color: var(--app-line-strong); background: color-mix(in srgb, var(--app-bg) 5%, var(--app-text)); color: var(--app-surface); }
 .page[data-coach] .chatQuestion .optionHint, .page[data-coach] .chipHint, .page[data-coach] .ksicChip > span, .page[data-coach] .chipHelp { display: none; }
 .page[data-coach] .unknownChoice, .page[data-coach] .sendPartial { margin-top: 6px; border-color: var(--app-line); color: var(--app-muted); }
-.page[data-coach] .unknownChoice[aria-pressed="true"] { border-color: var(--app-line-strong); background: #111418; color: var(--app-surface); }
+.page[data-coach] .unknownChoice[aria-pressed="true"] { border-color: var(--app-line-strong); background: var(--app-text); color: var(--app-surface); }
 .page[data-coach] .chipSteps { gap: 10px; }
 .page[data-coach] .stepLegend, .page[data-coach] .ksicLead { color: var(--app-muted); font-size: .75rem; font-weight: 500; }
 .page[data-coach] .ksicCandidates { display: grid; gap: 8px; margin-bottom: 8px; }
 /* Composer: one grey pill, round grey send button. */
 .page[data-coach] .composer { padding: 8px max(16px, calc((100% - 688px) / 2)) max(16px, env(safe-area-inset-bottom)); }
 .page[data-coach] .composerModes { display: none; }
-.page[data-coach] .composerShell { padding: 4px 6px 4px 18px; border: 0; border-radius: 26px; background: #f1f3f5; box-shadow: none; transition: background .15s, box-shadow .15s; }
-.page[data-coach] .composerShell:focus-within { background: #fff; box-shadow: none; }
+.page[data-coach] .composerShell { padding: 4px 6px 4px 18px; border: 0; border-radius: 26px; background: var(--app-raised); box-shadow: none; transition: background .15s, box-shadow .15s; }
+.page[data-coach] .composerShell:focus-within { background: var(--app-surface); box-shadow: none; }
 .page[data-coach] .composerRow { align-items: center; gap: 6px; }
 .page[data-coach] .composerRow textarea { min-height: 44px; padding: 11px 0; color: var(--app-text); }
 .page[data-coach] .composerRow textarea::placeholder { color: var(--app-muted); }
-.page[data-coach] .sendButton { flex-basis: 44px; width: 44px; height: 44px; background: #4b5563; }
-.page[data-coach] .sendButton:disabled { background: #d1d5db; color: var(--app-surface); }
+.page[data-coach] .sendButton { flex-basis: 44px; width: 44px; height: 44px; background: var(--app-body); }
+.page[data-coach] .sendButton:disabled { background: color-mix(in srgb, var(--app-bg) 75%, var(--app-muted)); color: var(--app-surface); }
 /* PC: chat alone while answering; the summary slides in when asked for or when the result is ready. */
 @media (min-width: 901px) {
   .page[data-coach] .summaryToggle { display: inline-flex; }
@@ -688,24 +688,24 @@
 .page[data-coach] .sendPartial { justify-self: start; }
 /* 대화 안 선택지: 마우스·터치 포커스는 브라우저가 선을 그리지 않고(:focus-visible), 키보드 포커스는 진한 선 */
 .page[data-coach] .chatQuestion .option:has(input:focus-visible), .page[data-coach] .chip:focus-visible, .page[data-coach] .ksicChip:focus-visible, .page[data-coach] .unknownChoice:focus-visible, .page[data-coach] .sendPartial:focus-visible, .page[data-coach] .sendButton:focus-visible { outline: 2px solid var(--app-line-strong); outline-offset: 2px; }
-.page[data-coach] .composerShell:focus-within { background: #f1f3f5; box-shadow: none; outline: 3px solid var(--app-focus-ring); outline-offset: 2px; }
+.page[data-coach] .composerShell:focus-within { background: var(--app-raised); box-shadow: none; outline: 3px solid var(--app-focus-ring); outline-offset: 2px; }
 .page[data-coach] .composerRow textarea:focus-visible { outline-color: transparent !important; box-shadow: none !important; }
 /* One input per turn: the stepper duplicates the composer, and helper links stay grey instead of blue. */
 .page[data-coach] .stepper { display: none; }
 .page[data-coach] .chatQuestion summary { color: var(--app-body); }
 /* Problems as a coach message: a grey bubble with its actions as small pills, no red banner. */
 .page[data-coach] [data-coach-notices] { max-height: none; overflow: visible; border: 0; display: grid; gap: 8px; margin: 14px 0 6px; }
-.page[data-coach] [data-coach-notices] .notice { justify-self: start; max-width: 84%; padding: 9px 16px; border-radius: 22px; background: #f1f3f5; color: var(--app-text); font-size: .9375rem; line-height: 1.375rem; }
+.page[data-coach] [data-coach-notices] .notice { justify-self: start; max-width: 84%; padding: 9px 16px; border-radius: 22px; background: var(--app-raised); color: var(--app-text); font-size: .9375rem; line-height: 1.375rem; }
 .page[data-coach] [data-coach-notices] .notice > p { margin: 0; }
 .page[data-coach] [data-coach-notices] .noticeActions { gap: 6px; margin-top: 8px; }
-.page[data-coach] [data-coach-notices] .notice button, .page[data-coach] [data-coach-notices] .notice a { min-height: 44px; padding: 6px 14px; border: 1px solid var(--app-line); border-radius: 22px; background: #fff; color: var(--app-text); font-size: .8125rem; font-weight: 400; text-decoration: none; }
+.page[data-coach] [data-coach-notices] .notice button, .page[data-coach] [data-coach-notices] .notice a { min-height: 44px; padding: 6px 14px; border: 1px solid var(--app-line); border-radius: 22px; background: var(--app-surface); color: var(--app-text); font-size: .8125rem; font-weight: 400; text-decoration: none; }
 .page[data-coach] [data-coach-notices] .notice > button { margin-top: 8px; }
 /* PC split: the chat already shows the full result card, so the summary drops its compact copy of it. */
 @media (min-width: 901px) {
   .page[data-coach] .summaryPane .identityCompact { display: none; }
 }
 /* "여기서부터 이어갈게요" reads as the coach talking, not a banner. */
-.page[data-coach] .resumeNotice { width: fit-content; max-width: 84%; margin: 14px 0 4px; padding: 9px 10px 9px 16px; border: 0; border-radius: 22px; background: #f1f3f5; color: var(--app-text); align-items: center; }
+.page[data-coach] .resumeNotice { width: fit-content; max-width: 84%; margin: 14px 0 4px; padding: 9px 10px 9px 16px; border: 0; border-radius: 22px; background: var(--app-raised); color: var(--app-text); align-items: center; }
 .page[data-coach] .resumeNotice p { margin: 0; font-size: .9375rem; line-height: 1.375rem; }
 .page[data-coach] .resumeNotice button { color: var(--app-muted); }
 .page[data-coach] .chatQuestion .option input[type="checkbox"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
@@ -731,20 +731,20 @@
 /* Plan edit chat: intro, examples, and the proposed changes to confirm. */
 .editTurn { display: grid; gap: 10px; margin-top: 8px; }
 .editTurn .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
-.changeCard { display: grid; gap: 6px; width: min(100%, 520px); padding: 14px 16px; border: 1px solid var(--app-line); border-radius: 18px; background: #fff; }
+.changeCard { display: grid; gap: 6px; width: min(100%, 520px); padding: 14px 16px; border: 1px solid var(--app-line); border-radius: 18px; background: var(--app-surface); }
 .changeCard b { font-size: .875rem; }
 .changeCard p { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0; font-size: .875rem; line-height: 1.6; }
 .changeCard p span { color: var(--app-muted); font-size: .8125rem; }
 .changeCard p s { color: var(--app-muted); }
 .changeCard p strong { color: var(--app-text); }
 .changeCard small { color: var(--app-muted); font-size: .75rem; line-height: 1.6; }
-.page[data-coach] .chip.chipStrong { background: #111418; border-color: var(--app-line-strong); color: var(--app-surface); }
+.page[data-coach] .chip.chipStrong { background: var(--app-text); border-color: var(--app-line-strong); color: var(--app-surface); }
 
 /* 계획서가 있을 때 다시 쓰기는 버튼 하나, 안내는 확인창에서 */
 .rewriteAction { display: grid; margin-top: 12px; }
 .rewriteAction > button { width: 100%; margin-bottom: 0; }
 .confirmBackdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(15, 23, 42, .32); animation: intake-confirm-fade .16s ease-out; }
-.confirmBox { width: min(400px, 100%); display: grid; gap: 10px; padding: 22px; border-radius: 18px; background: #fff; box-shadow: 0 18px 48px rgba(15, 23, 42, .18); animation: intake-confirm-pop .2s cubic-bezier(.2, .8, .2, 1); }
+.confirmBox { width: min(400px, 100%); display: grid; gap: 10px; padding: 22px; border-radius: 18px; background: var(--app-surface); box-shadow: 0 18px 48px rgba(15, 23, 42, .18); animation: intake-confirm-pop .2s cubic-bezier(.2, .8, .2, 1); }
 .confirmBox h3 { margin: 0; font-size: 1.0625rem; }
 .confirmBox p { margin: 0; color: var(--intake-muted); font-size: .875rem; line-height: 1.6; }
 .confirmActions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
@@ -770,7 +770,7 @@
 /* 예산·시간 안내는 사업 카드 목록 위에 한 번만 */
 .fitNote { margin: 0 0 8px 6px; color: var(--app-muted); font-size: .78125rem; line-height: 1.5; }
 /* 입력창 위 한 줄: 보내기가 흐린 이유(○○ 자리), 글자 수 */
-.composerHint { margin: 2px 0 4px; padding: 0 2px; color: #b45309; font-size: .78125rem; line-height: 1.5; }
+.composerHint { margin: 2px 0 4px; padding: 0 2px; color: var(--app-warning); font-size: .78125rem; line-height: 1.5; }
 /* 확인이 떠도 원래 질문이 보이게 */
 .intentQuestion { color: var(--app-body); font-size: .875rem; }
 .chipNote { margin-left: 4px; color: var(--app-muted); font-size: .71875rem; }
@@ -807,12 +807,12 @@
  * 그 아래 막대가 따로 있어 대화 위가 무거웠다. 대화(.workspace)만 스크롤되니 이 줄은 늘 칸 맨 위에 붙어 있다.
  */
 .page[data-embedded] .paneBar { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 12px 0 20px; border-bottom: 1px solid var(--intake-line); background: var(--intake-surface); }
-.page[data-embedded] .paneProgress { flex: 1; height: 3px; border-radius: 3px; background: #eef1f4; overflow: hidden; }
+.page[data-embedded] .paneProgress { flex: 1; height: 3px; border-radius: 3px; background: var(--app-raised); overflow: hidden; }
 .page[data-embedded] .paneProgress > span { display: block; height: 100%; background: var(--intake-blue); transition: width .3s ease; }
 /* 누르는 상자 자체를 44px로(여정 점검 2026-10-23) — 보이는 알약(30px)은 ::before 로 그린다 */
 .page[data-embedded] .paneBar .summaryToggle { min-height: 44px; min-width: 44px; padding: 7px 10px; border: 0; border-radius: 999px; background: transparent; font-size: .78125rem; gap: 4px; isolation: isolate; }
 .page[data-embedded] .paneBar .summaryToggle::before { content: ""; position: absolute; inset: 7px 0; z-index: -1; border: 1px solid var(--app-line); border-radius: 999px; background: white; }
-.page[data-embedded] .paneBar .summaryToggle[aria-expanded="true"]::before { background: #edf4ff; border-color: #7daaf0; }
+.page[data-embedded] .paneBar .summaryToggle[aria-expanded="true"]::before { background: var(--app-soft); border-color: color-mix(in srgb, var(--app-bg) 45%, var(--app-primary)); }
 .page[data-embedded] .paneBar .summaryToggle svg { width: 15px; height: 15px; }
 .page[data-embedded] .paneBar .summaryToggle b { min-width: 18px; padding: 0 5px; font-size: .71875rem; line-height: 1.125rem; }
 .page[data-embedded] .paneBar .summaryToggle::after { inset: 0; }
@@ -822,7 +822,7 @@
  */
 .composerTarget { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; padding: 2px 2px 4px; }
 /* 칩 이름은 한 줄 — 길면 말줄임(예전엔 '1장 사업 개요 고치기'가 두 줄로 꺾였다) */
-.composerTarget > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; min-height: 28px; padding: 2px 4px 2px 12px; border-radius: 999px; background: #eaf1fd; color: var(--app-selected-text); font-size: .78125rem; font-weight: 600; }
+.composerTarget > span { display: inline-flex; align-items: center; gap: 4px; min-width: 0; max-width: 100%; min-height: 28px; padding: 2px 4px 2px 12px; border-radius: 999px; background: var(--app-soft); color: var(--app-selected-text); font-size: .78125rem; font-weight: 600; }
 .composerTargetLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* ✕ 는 누르는 상자 자체가 44px — 바깥 여백을 줄여 알약 높이(28px)는 그대로 */
 .composerTarget button { display: inline-grid; flex-shrink: 0; place-items: center; position: relative; width: 44px; height: 44px; margin: -8px -10px -8px -8px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; }
@@ -842,16 +842,16 @@
 .guideActions .chip { flex-direction: row; align-items: center; gap: 4px; text-decoration: none; }
 .studioQueue { display: grid; gap: 2px; margin-top: 18px; }
 /* 아직 보내지 않은 요청 — 흐리게(투명도) 하면 흰 글자 대비가 3.6으로 떨어졌다(점검 2026-10-23). 연한 파랑 바탕 + 점선으로 구분한다 */
-.studioQueued > .userMessage { margin-bottom: 4px; background: #eaf1fd; color: var(--app-selected-text); outline: 1px dashed var(--app-focus-ring); outline-offset: -1px; }
+.studioQueued > .userMessage { margin-bottom: 4px; background: var(--app-soft); color: var(--app-selected-text); outline: 1px dashed var(--app-focus-ring); outline-offset: -1px; }
 .studioQueuedStatus { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin: 0 0 14px; color: var(--app-muted); font-size: .75rem; }
-.studioQueuedCancel { display: inline-flex; align-items: center; gap: 2px; position: relative; min-height: 28px; padding: 2px 8px; border: 1px solid var(--app-line); border-radius: 999px; background: #fff; color: var(--app-text); font-size: .75rem; cursor: pointer; }
+.studioQueuedCancel { display: inline-flex; align-items: center; gap: 2px; position: relative; min-height: 28px; padding: 2px 8px; border: 1px solid var(--app-line); border-radius: 999px; background: var(--app-surface); color: var(--app-text); font-size: .75rem; cursor: pointer; }
 .studioQueuedCancel::after { content: ""; position: absolute; inset: -8px -2px; }
 
 /* 업종 추천 한 목록 — 첫 후보에 '추천' 표시(큰 분류 카드와 두 갈래로 권하지 않는다) */
-.ksicChip[data-recommended] { border-color: #7daaf0; background: #f3f8ff; }
+.ksicChip[data-recommended] { border-color: color-mix(in srgb, var(--app-bg) 45%, var(--app-primary)); background: var(--app-bg); }
 .ksicBadge { margin-right: 6px; }
 /* 대화로 고치기에서 [바꾸기]로 적용한 답 — 손님 말풍선 대신 가운데 한 줄 */
-.changeNote { width: fit-content; max-width: 92%; margin: 4px auto 22px; padding: 6px 12px; border-radius: 999px; background: #f3f5f8; color: var(--app-body); font-size: .78125rem; line-height: 1.5; text-align: center; }
+.changeNote { width: fit-content; max-width: 92%; margin: 4px auto 22px; padding: 6px 12px; border-radius: 999px; background: var(--app-raised); color: var(--app-body); font-size: .78125rem; line-height: 1.5; text-align: center; }
 
 /* 고치기 카드의 [바꾸기]·[취소]·[그대로 두기]·[되돌리기] — 휴대폰에서 누르는 상자 44px(점검 2026-10-23) */
 .page[data-coach] .changeCard .chip, .page[data-coach] .studioEditTurn .chip { min-height: 44px; }
@@ -862,9 +862,9 @@
  */
 .page[data-coach] .ksicChip, .page[data-coach] .chatQuestion .option, .page[data-coach] .unknownChoice { min-height: 44px; padding: 10px 15px; border-radius: 22px; font-size: .875rem; }
 .page[data-coach] .ksicChip strong, .page[data-coach] .chatQuestion .option strong, .page[data-coach] .unknownChoice strong { font-size: .875rem; }
-.page[data-coach] .ksicChip[data-recommended] { min-height: 48px; padding: 11px 18px; border: 1.5px solid var(--app-primary); background: #eef5ff; color: var(--app-primary); box-shadow: 0 2px 10px rgba(49, 130, 246, .16); animation: ksicRecIn .36s cubic-bezier(.2, .9, .3, 1.2) both, ksicRecPulse 1.6s ease-out .4s 2; }
+.page[data-coach] .ksicChip[data-recommended] { min-height: 48px; padding: 11px 18px; border: 1.5px solid var(--app-primary); background: var(--app-soft); color: var(--app-primary); box-shadow: 0 2px 10px rgba(49, 130, 246, .16); animation: ksicRecIn .36s cubic-bezier(.2, .9, .3, 1.2) both, ksicRecPulse 1.6s ease-out .4s 2; }
 .page[data-coach] .ksicChip[data-recommended] strong { font-size: .9375rem; font-weight: 700; color: var(--app-primary); }
-.page[data-coach] .ksicChip[data-recommended]:hover { background: #e3eeff; border-color: var(--app-primary); }
+.page[data-coach] .ksicChip[data-recommended]:hover { background: var(--app-selected); border-color: var(--app-primary); }
 .page[data-coach] .ksicChip[data-recommended] .ksicHint { color: var(--app-accent); }
 .page[data-coach] .ksicChips { width: 100%; }
 .page[data-coach] .ksicChips > .ksicChip[data-recommended] { flex-basis: 100%; justify-content: flex-start; }
@@ -882,7 +882,7 @@
 /* 맨 위 한 줄(질문 중에만) — '사업 방향 정하기 ▬▬ 10 / 14' */
 .page[data-embedded][data-studio-pro] .paneBar { gap: 10px; min-height: 0; padding: 6px 22px 10px 20px; border-bottom: 0; background: transparent; color: var(--app-body); font-size: .78125rem; }
 .page[data-embedded][data-studio-pro] .paneBar > b { color: var(--app-text); font-weight: 650; white-space: nowrap; }
-.page[data-embedded][data-studio-pro] .paneProgress { height: 4px; border-radius: 4px; background: #e1e5ea; }
+.page[data-embedded][data-studio-pro] .paneProgress { height: 4px; border-radius: 4px; background: var(--app-line); }
 .page[data-embedded][data-studio-pro] .paneProgress > span { border-radius: 4px; background: var(--app-primary); }
 .paneCount { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .page[data-embedded][data-studio-pro] .paneBar[data-pro-head]:not(:has(b)) { justify-content: flex-end; padding-block: 2px 0; }
@@ -891,20 +891,20 @@
  * 머리줄과 대화 칸이 같은 회색 바탕이라, 흐림이 머리줄 바로 밑(0px)에서 시작하면 올라가는 글이 머리줄 아래로 파고들며 겹쳐 보였다(점검 2026-10-24).
  * 맨 위 6px 은 비워 두고(글이 머리줄에 닿지 않게) 그 아래 16px 동안 흐리게 한다 — 첫 글은 그 아래(위 여백 22px)라 맨 위에 있어도 흐려지지 않고, 글로 스크롤해 갈 때도(scroll-padding) 흐림 아래에 멈춘다.
  */
-.page[data-embedded][data-studio-pro] .conversation { scrollbar-gutter: auto; scroll-padding-top: 24px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 6px, #000 22px); mask-image: linear-gradient(to bottom, transparent 0, transparent 6px, #000 22px); }
+.page[data-embedded][data-studio-pro] .conversation { scrollbar-gutter: auto; scroll-padding-top: 24px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 6px, var(--app-text) 22px); mask-image: linear-gradient(to bottom, transparent 0, transparent 6px, var(--app-text) 22px); }
 .page[data-embedded][data-studio-pro] .inputContent { max-width: none; padding: 22px 18px 16px 20px; }
 .page[data-embedded][data-studio-pro] .assistantMessage { margin: 0 0 14px; font-size: .90625rem; line-height: 1.65; }
 .page[data-embedded][data-studio-pro] .assistantMessage > p, .page[data-embedded][data-studio-pro] .assistantMessage > .conversationText, .page[data-embedded][data-studio-pro] .chatQuestion h2 { width: auto; max-width: 100%; padding: 0; border-radius: 0; background: none; color: var(--app-text); font-size: .90625rem; font-weight: 400; line-height: 1.65; animation: none; }
-.page[data-embedded][data-studio-pro] .userMessage { max-width: 84%; margin: 0 0 14px auto; padding: 9px 14px; border-radius: 18px 18px 6px 18px; background: #e6effc; color: var(--app-text); font-size: .90625rem; line-height: 1.55; }
-.page[data-embedded][data-studio-pro] .messageEdit { width: 32px; height: 32px; margin: -8px -10px -8px -2px; color: #7d8a9c; }
+.page[data-embedded][data-studio-pro] .userMessage { max-width: 84%; margin: 0 0 14px auto; padding: 9px 14px; border-radius: 18px 18px 6px 18px; background: var(--app-selected); color: var(--app-text); font-size: .90625rem; line-height: 1.55; }
+.page[data-embedded][data-studio-pro] .messageEdit { width: 32px; height: 32px; margin: -8px -10px -8px -2px; color: color-mix(in srgb, var(--app-bg) 35%, var(--app-body)); }
 .page[data-embedded][data-studio-pro] .messageEdit:hover { color: var(--app-primary); }
 /* 작은 안내 글(상태 · 기록 · 힌트 · 추천 · 고칠 곳)은 #5f6b7c — 시안의 #8b95a1 은 흰 바탕 3.0:1 · 회색 바탕 2.8:1 로 읽기 어려웠다(r40 점검). 아이콘 단추 색은 그대로 */
 .page[data-embedded][data-studio-pro] .messageStatus { margin: -8px 0 14px auto !important; color: var(--app-muted); font-size: .71875rem; }
 .page[data-embedded][data-studio-pro] .studioEditTurn > .messageStatus { margin-top: -8px !important; }
-.page[data-embedded][data-studio-pro] .studioQueued > .userMessage { background: #f4f9ff; color: var(--app-primary); }
-.page[data-embedded][data-studio-pro] .changeNote { background: #eceff3; color: var(--app-body); }
+.page[data-embedded][data-studio-pro] .studioQueued > .userMessage { background: var(--app-bg); color: var(--app-primary); }
+.page[data-embedded][data-studio-pro] .changeNote { background: var(--app-hover); color: var(--app-body); }
 .page[data-embedded][data-studio-pro] .lockedTurn, .page[data-embedded][data-studio-pro] .editTurn { gap: 0; margin-top: 0; }
-.page[data-embedded][data-studio-pro] .typingBubble { background: #e9ecf0; }
+.page[data-embedded][data-studio-pro] .typingBubble { background: var(--app-hover); }
 /* AI 답 아래 시각 · 복사 */
 /* position:relative — 안의 낭독기용 글(srOnly, position:absolute)이 대화 칸 밖 기준으로 붙어 바깥 칸을 밀어 올리지 않게(r37 점검) */
 .messageMeta { position: relative; display: flex; align-items: center; gap: 2px; margin: -10px 0 12px; color: var(--app-muted); font-size: .71875rem; }
@@ -912,11 +912,11 @@
 .metaButton { position: relative; display: inline-grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--app-muted); }
 /* 휴대폰은 손가락 자리 44px — 보이는 크기는 그대로, 둘레만 넓힌다 */
 @media (max-width: 1023px) { .metaButton::after { content: ""; position: absolute; inset: -6px; } }
-.metaButton:hover { background: #e9ecf0; color: var(--app-body); }
+.metaButton:hover { background: var(--app-hover); color: var(--app-body); }
 /* 작업 기록 — 파란 체크 + 한 줄, 목록이 있으면 눌러서 2열로 펼친다 */
 .workLog { display: flex; flex-direction: column; gap: 2px; margin: 0 0 12px; }
 .workLogRow { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; min-height: 28px; margin: 0; padding: 0 6px 0 2px; border: 0; border-radius: 7px; background: transparent; color: var(--app-body); font-size: .8125rem; line-height: 1.4; text-align: left; }
-button.workLogRow:hover { background: #e9ecf0; }
+button.workLogRow:hover { background: var(--app-hover); }
 /* 눌러서 펼치는 줄은 PC 누르는 자리 32px(휴대폰 44px) — 28px 이었다(PC 점검 2026-10-24) */
 button.workLogRow { min-height: 32px; }
 @media (max-width: 1023px) { button.workLogRow { min-height: 44px; } }
@@ -925,10 +925,10 @@ button.workLogRow { min-height: 32px; }
 .workLogChevron { color: var(--app-muted); }
 .workLogBody { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 3px 12px; margin: 0 0 4px 9px; padding: 4px 0 4px 16px; border-left: 1.5px solid var(--app-line); color: var(--app-muted); font-size: .78125rem; line-height: 1.5; }
 .workLogBody > span { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.workLogBody > span svg { color: #9fb7da; }
+.workLogBody > span svg { color: color-mix(in srgb, var(--app-bg) 55%, var(--app-accent)); }
 .workLogMore { justify-self: start; grid-column: 1 / -1; min-height: 24px; padding: 0; border: 0; background: none; color: var(--app-primary); font-size: .78125rem; font-weight: 600; }
 /* 지금 질문 — 흰 카드 */
-.page[data-embedded][data-studio-pro] .chatQuestion[data-question-card] { margin-bottom: 4px; padding: 14px 14px 12px; border: 1px solid var(--app-line); border-radius: 14px; background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); animation: intake-message .24s ease-out; }
+.page[data-embedded][data-studio-pro] .chatQuestion[data-question-card] { margin-bottom: 4px; padding: 14px 14px 12px; border: 1px solid var(--app-line); border-radius: 14px; background: var(--app-surface); box-shadow: 0 1px 2px rgba(16, 24, 40, .04); animation: intake-message .24s ease-out; }
 .questionCardLabel { margin: 0 0 4px !important; color: var(--app-primary); font-size: .71875rem; font-weight: 650; line-height: 1.4; }
 .page[data-embedded][data-studio-pro] .chatQuestion[data-question-card] h2 { margin: 0; font-size: .9375rem; font-weight: 650; line-height: 1.45; }
 .page[data-embedded][data-studio-pro] .chatQuestion[data-question-card] .questionHint { margin: 4px 0 0 !important; color: var(--app-muted); font-size: .78125rem; line-height: 1.5; }
@@ -941,39 +941,39 @@ button.workLogRow { min-height: 32px; }
 .questionCardBack:hover:not(:disabled) { color: var(--app-text); text-decoration: underline; text-underline-offset: 3px; }
 /* 보기 칩 — 작고 각진 흰 칩. 고르면 파랑 */
 .page[data-embedded][data-studio-pro] .chatQuestion .options, .page[data-embedded][data-studio-pro] .chatQuestion .ksicChips, .page[data-embedded][data-studio-pro] .chatQuestion .chipRow { gap: 6px; }
-.page[data-embedded][data-studio-pro] .chatQuestion .option, .page[data-embedded][data-studio-pro] .chatQuestion .chip, .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip, .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice, .page[data-embedded][data-studio-pro] .chatQuestion .presetChip { min-height: 34px; padding: 6px 12px; border: 1px solid var(--app-line); border-radius: 9px; background: #fff; color: var(--app-text); font-size: .8125rem; font-weight: 550; line-height: 1.35; box-shadow: none; }
+.page[data-embedded][data-studio-pro] .chatQuestion .option, .page[data-embedded][data-studio-pro] .chatQuestion .chip, .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip, .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice, .page[data-embedded][data-studio-pro] .chatQuestion .presetChip { min-height: 34px; padding: 6px 12px; border: 1px solid var(--app-line); border-radius: 9px; background: var(--app-surface); color: var(--app-text); font-size: .8125rem; font-weight: 550; line-height: 1.35; box-shadow: none; }
 .page[data-embedded][data-studio-pro] .chatQuestion .option strong, .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip strong, .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice strong { color: inherit; font-size: .8125rem; font-weight: 550; line-height: 1.35; }
-.page[data-embedded][data-studio-pro] .chatQuestion .option:hover, .page[data-embedded][data-studio-pro] .chatQuestion .chip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice:hover:not(:disabled) { border-color: var(--app-line); background: #f7f9fb; }
+.page[data-embedded][data-studio-pro] .chatQuestion .option:hover, .page[data-embedded][data-studio-pro] .chatQuestion .chip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice:hover:not(:disabled) { border-color: var(--app-line); background: var(--app-bg); }
 .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice { margin-top: 6px; color: var(--app-body); font-weight: 500; }
 .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice strong { font-weight: 500; }
-.page[data-embedded][data-studio-pro] .chatQuestion .option[data-selected="true"], .page[data-embedded][data-studio-pro] .chatQuestion .option[data-selected="true"]:hover, .page[data-embedded][data-studio-pro] .chatQuestion .chip[aria-pressed="true"], .page[data-embedded][data-studio-pro] .chatQuestion .chip[data-selected="true"], .page[data-embedded][data-studio-pro] .chatQuestion .chip[aria-pressed="true"]:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .chip[data-selected="true"]:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[aria-pressed="true"], .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[aria-pressed="true"]:hover, .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice[aria-pressed="true"] { border-color: var(--app-primary); background: #e8f3ff; color: var(--app-primary); }
+.page[data-embedded][data-studio-pro] .chatQuestion .option[data-selected="true"], .page[data-embedded][data-studio-pro] .chatQuestion .option[data-selected="true"]:hover, .page[data-embedded][data-studio-pro] .chatQuestion .chip[aria-pressed="true"], .page[data-embedded][data-studio-pro] .chatQuestion .chip[data-selected="true"], .page[data-embedded][data-studio-pro] .chatQuestion .chip[aria-pressed="true"]:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .chip[data-selected="true"]:hover:not(:disabled), .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[aria-pressed="true"], .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[aria-pressed="true"]:hover, .page[data-embedded][data-studio-pro] .chatQuestion .unknownChoice[aria-pressed="true"] { border-color: var(--app-primary); background: var(--app-soft); color: var(--app-primary); }
 /* AI 추천(업종 첫 후보 · 맞춤 추천 칩) — 연한 파랑 테두리, 나타날 때의 물결은 그대로 */
-.page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended], .page[data-embedded][data-studio-pro] .chatQuestion .suggestionChip { border-color: var(--app-line-strong); background: #f4f9ff; color: var(--app-text); }
+.page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended], .page[data-embedded][data-studio-pro] .chatQuestion .suggestionChip { border-color: var(--app-line-strong); background: var(--app-bg); color: var(--app-text); }
 .page[data-embedded][data-studio-pro] .chatQuestion .ksicChips > .ksicChip[data-recommended] { flex-basis: auto; min-height: 34px; padding: 6px 12px; }
 .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended] strong { color: var(--app-text); font-size: .8125rem; font-weight: 600; }
-.page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended]:hover { border-color: var(--app-primary); background: #e8f3ff; }
+.page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended]:hover { border-color: var(--app-primary); background: var(--app-soft); }
 .page[data-embedded][data-studio-pro] .chatQuestion .ksicChip[data-recommended] .ksicHint { color: var(--app-body); }
 .page[data-embedded][data-studio-pro] .chatQuestion .suggestionChip svg { color: var(--app-primary); }
 .page[data-embedded][data-studio-pro] .chatQuestion .stepLegend, .page[data-embedded][data-studio-pro] .chatQuestion .ksicLead { color: var(--app-muted); font-size: .75rem; }
 .page[data-embedded][data-studio-pro] .chatQuestion .multiSendHint { margin: 8px 0 0; color: var(--app-muted); font-size: .75rem; }
 /* "이렇게 바꿀게요" — 흰 카드, 줄마다 이름 · 지금(취소선) → 바꿀 글(강조) */
-.page[data-embedded][data-studio-pro] .changeCard { width: 100%; gap: 0; padding: 0; border: 1px solid var(--app-line); border-radius: 14px; background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, .04); overflow: hidden; }
+.page[data-embedded][data-studio-pro] .changeCard { width: 100%; gap: 0; padding: 0; border: 1px solid var(--app-line); border-radius: 14px; background: var(--app-surface); box-shadow: 0 1px 2px rgba(16, 24, 40, .04); overflow: hidden; }
 .page[data-embedded][data-studio-pro] .changeCard > b { display: flex; align-items: center; gap: 8px; padding: 12px 14px 8px; color: var(--app-text); font-size: .84375rem; font-weight: 700; }
 .changeIcon { color: var(--app-primary); }
 .changeCount { margin-left: auto; color: var(--app-muted); font-size: .75rem; font-weight: 500; }
 .changeArrow { color: var(--app-muted); }
-.page[data-embedded][data-studio-pro] .changeCard > p { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin: 0 14px 8px; padding: 9px 11px; border-radius: 10px; background: #f7f8fa; font-size: .84375rem; line-height: 1.5; }
+.page[data-embedded][data-studio-pro] .changeCard > p { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin: 0 14px 8px; padding: 9px 11px; border-radius: 10px; background: var(--app-bg); font-size: .84375rem; line-height: 1.5; }
 .page[data-embedded][data-studio-pro] .changeCard > p > span { flex-basis: 100%; color: var(--app-muted); font-size: .71875rem; }
 .page[data-embedded][data-studio-pro] .changeCard > p > s { color: var(--app-muted); text-decoration-thickness: 1px; }
-.page[data-embedded][data-studio-pro] .changeCard > p > strong { padding: 0 4px; border-radius: 4px; background: #dcebff; color: var(--app-text); font-weight: 700; }
+.page[data-embedded][data-studio-pro] .changeCard > p > strong { padding: 0 4px; border-radius: 4px; background: var(--app-selected); color: var(--app-text); font-weight: 700; }
 .page[data-embedded][data-studio-pro] .changeCard > p.studioEditSummary { display: block; margin: -2px 14px 8px; padding: 0; background: none; color: var(--app-body); font-size: .78125rem; }
 /* 바뀌는 장 칩(계획서 칸이 찾은 장) — 바뀌는 곳 아래 작은 회색 칩, 누르는 것이 아니라 알려 주기만 한다 */
 .page[data-embedded][data-studio-pro] .changeCard > .changeChapters { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 14px 6px; padding: 0; list-style: none; }
-.page[data-embedded][data-studio-pro] .changeChapters > li { padding: 2px 8px; border: 1px solid var(--app-line); border-radius: 6px; background: #f2f4f6; color: var(--app-body); font-size: .71875rem; font-weight: 500; line-height: 1.125rem; white-space: nowrap; }
+.page[data-embedded][data-studio-pro] .changeChapters > li { padding: 2px 8px; border: 1px solid var(--app-line); border-radius: 6px; background: var(--app-raised); color: var(--app-body); font-size: .71875rem; font-weight: 500; line-height: 1.125rem; white-space: nowrap; }
 .page[data-embedded][data-studio-pro] .changeCard > small { display: block; margin: 0 14px 8px; color: var(--app-muted); font-size: .71875rem; }
 .page[data-embedded][data-studio-pro] .changeCard .chipRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; padding: 4px 14px 12px; }
-.page[data-embedded][data-studio-pro] .changeCard .chip, .page[data-embedded][data-studio-pro] .studioEditTurn .chip { min-height: 32px; padding: 0 12px; border: 1px solid var(--app-line); border-radius: 7px; background: #fff; color: var(--app-text); font-size: .78125rem; font-weight: 600; }
-.page[data-embedded][data-studio-pro] .changeCard .chip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip:hover:not(:disabled) { background: #f7f9fb; border-color: var(--app-line); }
+.page[data-embedded][data-studio-pro] .changeCard .chip, .page[data-embedded][data-studio-pro] .studioEditTurn .chip { min-height: 32px; padding: 0 12px; border: 1px solid var(--app-line); border-radius: 7px; background: var(--app-surface); color: var(--app-text); font-size: .78125rem; font-weight: 600; }
+.page[data-embedded][data-studio-pro] .changeCard .chip:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip:hover:not(:disabled) { background: var(--app-bg); border-color: var(--app-line); }
 .page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong, .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong { border-color: var(--app-primary); background: var(--app-primary); color: var(--app-surface); box-shadow: 0 1px 2px rgba(27, 100, 218, .3); }
 .page[data-embedded][data-studio-pro] .changeCard .chip.chipStrong:hover:not(:disabled), .page[data-embedded][data-studio-pro] .studioEditTurn .chip.chipStrong:hover:not(:disabled) { border-color: var(--app-primary-hover); background: var(--app-primary-hover); }
 .changeUndoNote { margin-left: auto; color: var(--app-muted); font-size: .71875rem; }
@@ -982,47 +982,47 @@ button.workLogRow { min-height: 32px; }
 /* 입력창 쪽 — 기다리는 요청 줄 · 추천 칩 줄 · 흰 입력 카드 */
 .page[data-embedded][data-studio-pro] .composer { display: flex; flex-direction: column; gap: 8px; padding: 6px 16px 12px; background: transparent; }
 .queueDock { display: grid; gap: 6px; }
-.queueRow { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 6px 6px 12px; border: 1px solid var(--app-line); border-radius: 12px; background: #fff; font-size: .8125rem; }
+.queueRow { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 6px 6px 12px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface); font-size: .8125rem; }
 .queueBadge { flex: none; }
 .queueText { flex: 1; min-width: 0; overflow: hidden; color: var(--app-text); white-space: nowrap; text-overflow: ellipsis; }
 .page .queueText { overflow-wrap: normal; }
 .queueButton { display: inline-grid; flex: none; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--app-muted); }
-.queueButton:hover { background: #eef1f4; color: var(--app-body); }
+.queueButton:hover { background: var(--app-raised); color: var(--app-body); }
 .queueNote { margin: -2px 0 0 4px !important; color: var(--app-muted); font-size: .71875rem; }
 /* 두 줄까지 감싼다 — 셋째 줄로 넘치는 칩은 SuggestRow 가 통째로 숨긴다(칩 중간에서 글자가 잘리지 않게) */
 .suggestRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .suggestLabel { display: inline-flex; flex: none; align-items: center; gap: 4px; margin-right: 2px; color: var(--app-muted); font-size: .75rem; white-space: nowrap; }
 /* 긴 추천도 끝까지 읽히게 두 줄까지(…20시간으로 바… 처럼 잘렸다 — PC 점검 2026-10-24). PC 누르는 자리 32px */
-.suggestChip { flex: 0 1 auto; max-width: 100%; min-height: 32px; padding: 6px 12px; border: 1px solid var(--app-line); border-radius: 16px; background: #fff; color: var(--app-body); font-size: .78125rem; font-weight: 550; line-height: 1.35; text-align: left; word-break: keep-all; overflow-wrap: anywhere; text-wrap: balance; }
+.suggestChip { flex: 0 1 auto; max-width: 100%; min-height: 32px; padding: 6px 12px; border: 1px solid var(--app-line); border-radius: 16px; background: var(--app-surface); color: var(--app-body); font-size: .78125rem; font-weight: 550; line-height: 1.35; text-align: left; word-break: keep-all; overflow-wrap: anywhere; text-wrap: balance; }
 .suggestChip:hover { border-color: var(--app-line); color: var(--app-text); }
 .suggestRow > [hidden] { display: none; }
 /* 둘째 줄 칩이 첫 칩과 같은 왼쪽 선에서 시작하게 — '추천' 글자 폭만큼 줄 전체를 들이고 글자만 내어 둔다(r37 점검) */
 .suggestRow:has(> .suggestLabel:not([hidden])) { padding-left: 48px; }
 .suggestRow > .suggestLabel:not([hidden]) { width: 42px; margin-left: -48px; margin-right: 0; }
-.page[data-embedded][data-studio-pro] .composerShell { padding: 10px 10px 8px 12px; border: 1px solid var(--app-line); border-radius: 16px; background: #fff; box-shadow: 0 2px 10px rgba(16, 24, 40, .05); }
-.page[data-embedded][data-studio-pro] .composerShell:focus-within { border-color: var(--app-primary); background: #fff; box-shadow: 0 2px 10px rgba(16, 24, 40, .05); outline: 3px solid var(--app-focus-ring); outline-offset: 2px; }
+.page[data-embedded][data-studio-pro] .composerShell { padding: 10px 10px 8px 12px; border: 1px solid var(--app-line); border-radius: 16px; background: var(--app-surface); box-shadow: 0 2px 10px rgba(16, 24, 40, .05); }
+.page[data-embedded][data-studio-pro] .composerShell:focus-within { border-color: var(--app-primary); background: var(--app-surface); box-shadow: 0 2px 10px rgba(16, 24, 40, .05); outline: 3px solid var(--app-focus-ring); outline-offset: 2px; }
 .page[data-embedded][data-studio-pro] .composerRow { display: block; }
 .page[data-embedded][data-studio-pro] .composerRow textarea { width: 100%; min-height: 40px; padding: 8px 2px 10px; color: var(--app-text); font-size: .90625rem; line-height: 1.5; }
 .page[data-embedded][data-studio-pro] .composerRow textarea::placeholder { color: var(--app-muted); }
 .page[data-embedded][data-studio-pro] .composerTarget { padding: 0 0 2px; }
-.page[data-embedded][data-studio-pro] .composerTarget > span { gap: 5px; min-height: 24px; padding: 0 2px 0 8px; border-radius: 6px; background: #e8f3ff; color: var(--app-primary); font-size: .75rem; font-weight: 650; }
+.page[data-embedded][data-studio-pro] .composerTarget > span { gap: 5px; min-height: 24px; padding: 0 2px 0 8px; border-radius: 6px; background: var(--app-soft); color: var(--app-primary); font-size: .75rem; font-weight: 650; }
 .page[data-embedded][data-studio-pro] .composerTarget[data-question-target] > span { padding-right: 8px; }
-.page[data-embedded][data-studio-pro] .composerTarget button { width: 32px; height: 32px; margin: -6px -8px -6px -6px; color: #6b9be6; }
+.page[data-embedded][data-studio-pro] .composerTarget button { width: 32px; height: 32px; margin: -6px -8px -6px -6px; color: color-mix(in srgb, var(--app-bg) 35%, var(--app-primary)); }
 .page[data-embedded][data-studio-pro] .composerTarget button::before { inset: 7px; border-radius: 4px; }
 .page[data-embedded][data-studio-pro] .composerTarget small { color: var(--app-muted); }
 .page[data-embedded][data-studio-pro] .composerContext { padding: 2px 2px 0; }
 /* '고칠 곳 고르기' 장 목록 — 단추 바로 위로 연다(입력창이 칸 맨 아래라 아래로는 자리가 없다) */
 .pickWrap { position: relative; min-width: 0; }
-.pickMenu { position: absolute; left: -4px; bottom: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; min-width: 220px; max-width: min(320px, 80vw); max-height: 320px; overflow-y: auto; padding: 6px; border: 1px solid var(--app-line); border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(16, 24, 40, .14); }
+.pickMenu { position: absolute; left: -4px; bottom: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; min-width: 220px; max-width: min(320px, 80vw); max-height: 320px; overflow-y: auto; padding: 6px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface); box-shadow: 0 8px 24px rgba(16, 24, 40, .14); }
 .pickMenu button { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--app-text); font-size: .84375rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pickMenu button:hover, .pickMenu button:focus-visible { background: var(--app-raised); }
 .pickMenu button:focus-visible { outline: 2px solid var(--app-primary); outline-offset: -2px; }
 .composerBar { display: flex; align-items: center; gap: 4px; min-height: 32px; }
 .composerAction { display: inline-flex; align-items: center; gap: 4px; min-width: 0; height: 32px; margin-left: -4px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--app-muted); font-size: .75rem; white-space: nowrap; }
-.composerAction:hover { background: #f2f4f6; color: var(--app-body); }
-.composerAction[aria-pressed="true"] { background: #e8f3ff; color: var(--app-primary); }
+.composerAction:hover { background: var(--app-raised); color: var(--app-body); }
+.composerAction[aria-pressed="true"] { background: var(--app-soft); color: var(--app-primary); }
 .page[data-embedded][data-studio-pro] .sendButton { flex: 0 0 32px; width: 32px; height: 32px; margin-left: auto; background: var(--app-primary); }
-.page[data-embedded][data-studio-pro] .sendButton:disabled { background: #d1d6dc; color: var(--app-surface); }
+.page[data-embedded][data-studio-pro] .sendButton:disabled { background: color-mix(in srgb, var(--app-bg) 80%, var(--app-body)); color: var(--app-surface); }
 .page[data-embedded][data-studio-pro] .sendButton:hover:not(:disabled) { background: var(--app-primary-hover); }
 .page[data-embedded][data-studio-pro] .sendButton svg { width: 18px; height: 18px; }
 .page[data-embedded][data-studio-pro] .resumeNotice { width: auto; max-width: 100%; margin: 0 0 14px; padding: 0; border-radius: 0; background: none; align-items: flex-start; }

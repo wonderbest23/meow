@@ -1,13 +1,13 @@
 .wrap { width:100%; min-width:0; min-height:320px; margin:0 auto; padding:40px 24px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-sizing:border-box; letter-spacing:0; }
-.status { display:flex; align-items:center; gap:12px; min-width:0; color:var(--app-text,#202b3a); letter-spacing:0; }
+.status { composes: tokens from "../../components/workspace-theme.module.css"; display:flex; align-items:center; gap:12px; min-width:0; color:var(--app-text); letter-spacing:0; }
 .status p { margin:0; font-size:1rem; font-weight:600; line-height:1.65; word-break:keep-all; overflow-wrap:anywhere; }
 .dots { composes: tokens from "../../components/workspace-theme.module.css"; display:flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0; height:24px; }
 .dots i { display:block; width:8px; height:8px; border-radius:50%; background:var(--app-primary); animation:loadingDot 1.4s ease-in-out infinite; }
 .dots i:nth-child(2) { animation-delay:.16s; }
 .dots i:nth-child(3) { animation-delay:.32s; }
 /* 화면 로딩: 얇은 원(트랙 + 돌아가는 호) + 작은 회색 글씨 */
-.loader { display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center; opacity:0; animation:loaderIn .24s ease .15s forwards; }
-.loader p { max-width:24em; margin:0; color:#6b7684; font-size:.875rem; font-weight:500; line-height:1.6; word-break:keep-all; }
+.loader { composes: tokens from "../../components/workspace-theme.module.css"; display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center; opacity:0; animation:loaderIn .24s ease .15s forwards; }
+.loader p { max-width:24em; margin:0; color:var(--app-muted); font-size:.875rem; font-weight:500; line-height:1.6; word-break:keep-all; }
 .ring { composes: tokens from "../../components/workspace-theme.module.css"; display:block; width:32px; height:32px; box-sizing:border-box; border:3px solid var(--app-line); border-top-color:var(--app-primary); border-radius:50%; animation:loadingSpin .75s cubic-bezier(.45,.05,.55,.95) infinite; }
 /* 늦어질 때 — 다시 시도 단추는 눌려야 한다(고정 로딩은 원래 눌리지 않게 둔다) */
 .slow { pointer-events:auto !important; }
@@ -18,8 +18,14 @@
 .pinned .loader { position:fixed; top:50%; left:50%; z-index:30; transform:translate(-50%,-50%); pointer-events:none; }
 /* PC에서 왼쪽 메뉴(208px)가 보이면 본문 가운데로 — 메뉴 폭의 절반만큼 오른쪽 */
 @media (min-width:901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .pinned .loader { left:calc(50% + 104px); } }
-.spinner { display:inline-block; flex-shrink:0; width:1.15em; height:1.15em; vertical-align:-.12em; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:loadingSpin .8s linear infinite; }
+/*
+ * 도는 표시는 이 파일의 loadingSpin 하나로 돈다(.8s). 글 옆 작은 원은 Spinner(.spinner),
+ * 아이콘(LoaderCircle 등)을 돌릴 때는 다른 CSS 에서 'composes: spin from ".../PlanLoading.module.css"' 로 이 규칙을 빌린다 — 키프레임을 따로 두지 않는다.
+ */
+.spin { animation:loadingSpin .8s linear infinite; }
+.spinner { composes: spin; display:inline-block; flex-shrink:0; width:1.15em; height:1.15em; vertical-align:-.12em; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; }
 @keyframes loadingDot { 0%,70%,100% { opacity:.4; transform:translateY(0); } 35% { opacity:1; transform:translateY(-4px); } }
 @keyframes loadingSpin { to { transform:rotate(360deg); } }
 @keyframes loaderIn { to { opacity:1; } }
-@media(prefers-reduced-motion:reduce) { .dots i,.spinner { animation:none; } .ring { animation-duration:1.6s; } .loader { animation:none; opacity:1; } }
+/* 움직임 줄이기 — 튀는 점·나타나기는 멈추고, 도는 표시는 진행 중임을 알 수 있게 천천히(2.4s) 돈다 */
+@media(prefers-reduced-motion:reduce) { .dots i { animation:none; } .spin, .ring { animation-duration:2.4s; } .loader { animation:none; opacity:1; } }

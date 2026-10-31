@@ -1,12 +1,13 @@
 "use client";
 
-import { CheckCircle2, ChevronDown, ChevronRight, LogIn, RefreshCw, Send } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronRight, LogIn, MessageSquareText, RefreshCw, Send } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import AppFrame from "../../plan/AppFrame";
 import { inquiryCategories, inquiryCategory, inquiryDraftSchema, inquiryPreview, inquirySchema, type InquiryDraft } from "../../../lib/support-chat/inquiry";
 import type { SupportChat } from "../../../lib/support-chat/repository";
 import PlanLoading, { Spinner } from "../../plan/PlanLoading";
+import { EmptyState } from "../../plan/BusinessEmptyState";
 import styles from "./support.module.css";
 import { StatusBadge } from "../../../components/status-badge";
 import { AppButton } from "../../../components/app-button";
@@ -170,7 +171,7 @@ export default function SupportCenter() {
   return <AppFrame title="고객센터" backHref="/plan/me"><div className={`${styles.page} ${styles.inFrame} plan-ui`} data-fill={loggedOut && !loading ? "" : undefined}>
     <h1 className={styles.srTitle}>고객센터</h1>
     <div className={styles.content}>
-      {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <section className={styles.empty}><h2>로그인 후 문의를 남겨 주세요</h2><AppButton variant="primary" className={styles.primary} href={loginHref}><LogIn size={19} />로그인하기<ChevronRight size={18} aria-hidden="true" /></AppButton></section> : <>
+      {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <EmptyState as="section" className={styles.empty} icon={LogIn} title="로그인 후 문의를 남겨 주세요" actions={<AppButton variant="primary" href={loginHref}><LogIn size={19} />로그인하기<ChevronRight size={18} aria-hidden="true" /></AppButton>} /> : <>
         {scope && <>
           <nav className={styles.tabs} aria-label="고객센터 메뉴">
             <button type="button" aria-pressed={view === "write"} onClick={() => setView("write")}>문의하기</button>
@@ -185,7 +186,7 @@ export default function SupportCenter() {
             <AppButton variant="primary" className={styles.primary} type="submit" disabled={busy || !draft.subject.trim() || !draft.message.trim()}>{busy ? <Spinner /> : <Send size={18} aria-hidden="true" />}{busy ? "접수 중" : "문의 접수"}</AppButton>
           </form> : view === "history" && <section className={styles.history} aria-label="문의와 답변">
             <div className={styles.historyHeading}><h2>내 문의와 답변</h2><button type="button" className={styles.iconButton} aria-label="문의 내역 새로고침" title="문의 내역 새로고침" onClick={() => void load()}><RefreshCw size={20} /></button></div>
-            {chat.messages.length === 0 ? <div className={styles.empty}><p>아직 접수한 문의가 없어요.</p><AppButton variant="secondary" className={styles.secondary} onClick={() => setView("write")}>문의 남기기</AppButton></div> : inquiryThreads(chat.messages).map(thread => {
+            {chat.messages.length === 0 ? <EmptyState className={styles.empty} icon={MessageSquareText} heading="p" title="아직 접수한 문의가 없어요." actions={<AppButton variant="secondary" onClick={() => setView("write")}>문의 남기기</AppButton>} /> : inquiryThreads(chat.messages).map(thread => {
               const replies = thread.replies.map(message => <article className={styles.reply} key={message.id}><div><strong>고객센터 답변</strong><time dateTime={message.createdAt}>{dateLabel(message.createdAt)}</time></div><p>{message.body}</p></article>);
               if (!thread.inquiry) return <div className={styles.thread} key={thread.replies[0]?.id}>{replies}</div>;
               const inquiry = inquiryPreview(thread.inquiry.body);

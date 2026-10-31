@@ -1,11 +1,11 @@
 /* 사업계획서 만드는 중 팝업 — 가운데 흰 카드, 폰에서는 아래에서 올라온 시트 */
-.dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 24px; border: 0; border-radius: 20px; background: #fff; color: var(--app-text); box-shadow: 0 24px 64px rgba(16, 24, 40, .24); overflow: auto; }
+.dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 24px; border: 0; border-radius: 20px; background: var(--app-surface); color: var(--app-text); box-shadow: 0 24px 64px rgba(16, 24, 40, .24); overflow: auto; }
 .dialog::backdrop { background: rgba(9, 16, 28, .45); }
 .dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .dialog h2 { margin: 0; font-size: 1.25rem; line-height: 1.4; font-weight: 700; }
-.close { display: grid; place-items: center; width: 36px; height: 36px; margin: -6px -8px 0 0; border: 0; border-radius: 10px; background: transparent; color: #6b7684; cursor: pointer; }
-.close:hover { background: #f2f4f6; }
-.lead { margin: 8px 0 18px; color: #6b7684; font-size: .875rem; line-height: 1.6; }
+.close { display: grid; place-items: center; width: 36px; height: 36px; margin: -6px -8px 0 0; border: 0; border-radius: 10px; background: transparent; color: color-mix(in srgb, var(--app-bg) 20%, var(--app-body)); cursor: pointer; }
+.close:hover { background: var(--app-raised); }
+.lead { margin: 8px 0 18px; color: color-mix(in srgb, var(--app-bg) 20%, var(--app-body)); font-size: .875rem; line-height: 1.6; }
 .meter { display: grid; gap: 6px; margin-bottom: 16px; }
 .meter span { font-size: .8125rem; font-weight: 600; color: var(--app-primary); }
 .meter progress { width: 100%; height: 8px; border: 0; border-radius: 8px; overflow: hidden; appearance: none; background: var(--app-line); }
@@ -13,45 +13,44 @@
 .meter progress::-webkit-progress-value { background: var(--app-primary); border-radius: 8px; transition: width .4s ease; }
 .meter progress::-moz-progress-bar { background: var(--app-primary); }
 .list { display: grid; gap: 2px; margin: 0 0 20px; padding: 0; list-style: none; }
-.list li { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 4px; color: #6b7684; font-size: .875rem; }
-.list li small { margin-left: auto; font-size: .75rem; color: #b0b8c1; }
+.list li { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 4px; color: color-mix(in srgb, var(--app-bg) 20%, var(--app-body)); font-size: .875rem; }
+.list li small { margin-left: auto; font-size: .75rem; color: color-mix(in srgb, var(--app-bg) 70%, var(--app-text)); }
 .list li[data-state="done"] { color: var(--app-text); }
 .list li[data-state="done"] small { color: var(--app-primary); }
 .list li[data-state="current"] { color: var(--app-text); font-weight: 600; }
 .list li[data-state="current"] small { color: var(--app-primary); }
-.mark { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #d1d6db; color: #fff; }
+.mark { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--app-bg) 80%, var(--app-body)); color: var(--app-surface); }
 li[data-state="done"] .mark { border-color: var(--app-primary); background: var(--app-primary); }
 li[data-state="current"] .mark { border-color: var(--app-primary); }
-li[data-state="current"] .mark i { width: 10px; height: 10px; border: 2px solid var(--app-primary); border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
+/* 도는 표시는 PlanLoading 의 키프레임 하나로(.8s · 움직임 줄이기도 거기서) */
+.spin { composes: spin from "./PlanLoading.module.css"; }
+li[data-state="current"] .mark i { width: 10px; height: 10px; border: 2px solid var(--app-primary); border-right-color: transparent; border-radius: 50%; }
 .dialog > footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .primary > :global(.lucide-chevron-right) { flex: none; margin-left: 6px; }
 @media (max-width: 640px) {
   .dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); }
 }
-@media (prefers-reduced-motion: reduce) { li[data-state="current"] .mark i { animation-duration: 2s; } }
 
 /* 작업실 대화 칸 안의 진행 카드 — 대화 말풍선 흐름 안에 놓이는 흰 카드(팝업 대신) */
-.card { display: grid; gap: 10px; width: min(100%, 520px); margin: 4px 0 14px; padding: 16px 18px; border: 1px solid #e3e6ea; border-radius: 18px; background: #fff; color: var(--app-text); }
+.card { display: grid; gap: 10px; width: min(100%, 520px); margin: 4px 0 14px; padding: 16px 18px; border: 1px solid var(--app-line); border-radius: 18px; background: var(--app-surface); color: var(--app-text); }
 .card > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .card > header strong { font-size: .9375rem; font-weight: 700; }
-.card > header span { flex-shrink: 0; color: #8b95a1; font-size: .8125rem; }
+.card > header span { flex-shrink: 0; color: color-mix(in srgb, var(--app-bg) 40%, var(--app-body)); font-size: .8125rem; }
 .card progress { width: 100%; height: 6px; border: 0; border-radius: 6px; overflow: hidden; appearance: none; background: var(--app-line); }
 .card progress::-webkit-progress-bar { background: var(--app-line); border-radius: 6px; }
 .card progress::-webkit-progress-value { background: var(--app-primary); border-radius: 6px; transition: width .4s ease; }
 .card progress::-moz-progress-bar { background: var(--app-primary); }
 /* 대화 칸 마무리 묶음(.complete p — 아래 여백 22px)에 들어가도 줄 사이가 벌어지지 않게 한 단계 강하게(r37 휴대폰 점검: 줄 사이 ~130px) */
 .card.card p { margin: 0; font-size: .84375rem; line-height: 1.6; word-break: keep-all; text-wrap: pretty; }
-.cardDone { display: flex; align-items: flex-start; gap: 6px; color: #4e5968; }
+.cardDone { display: flex; align-items: flex-start; gap: 6px; color: var(--app-body); }
 .cardDone svg { margin-top: 3px; color: var(--app-primary); }
 .cardCurrent { display: flex; align-items: center; gap: 8px; color: var(--app-text); font-weight: 700; }
-.cardCurrent i { flex: none; width: 12px; height: 12px; border: 2px solid var(--app-primary); border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
-.cardWaiting { color: #8b95a1; text-wrap: pretty; }
+.cardCurrent i { flex: none; width: 12px; height: 12px; border: 2px solid var(--app-primary); border-right-color: transparent; border-radius: 50%; }
+.cardWaiting { color: color-mix(in srgb, var(--app-bg) 40%, var(--app-body)); text-wrap: pretty; }
 .cardWaiting > span { white-space: nowrap; }
 /* 작업실 PC 대화 칸의 한 줄 상태(compact) */
 .card.cardLine { gap: 0; padding: 12px 16px; border-radius: 14px; }
-.cardCount { margin-left: auto; padding-left: 12px; color: #8b95a1; font-weight: 500; white-space: nowrap; }
-.cardNote { color: #6b7684; font-size: .78125rem !important; }
-.card[data-state="stalled"] > header strong { color: #ad343d; }
+.cardCount { margin-left: auto; padding-left: 12px; color: color-mix(in srgb, var(--app-bg) 40%, var(--app-body)); font-weight: 500; white-space: nowrap; }
+.cardNote { color: color-mix(in srgb, var(--app-bg) 20%, var(--app-body)); font-size: .78125rem !important; }
+.card[data-state="stalled"] > header strong { color: var(--app-danger); }
 .cardActions { display: flex; flex-wrap: wrap; gap: 6px; }
-@media (prefers-reduced-motion: reduce) { .cardCurrent i { animation-duration: 2s; } }
