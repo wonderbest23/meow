@@ -1,7 +1,7 @@
 .root { color: var(--app-text); letter-spacing: 0; min-width: 0; }
-.root button, .root a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 10px 14px; border: 1px solid var(--app-line); border-radius: 6px; background: #fff; color: var(--app-body); font-size: .875rem; font-weight: 600; line-height: 1.5; text-decoration: none; cursor: pointer; }
+.root button, .root a { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 42px; padding: 10px 14px; border: 1px solid var(--app-line); border-radius: 6px; background: var(--app-surface); color: var(--app-body); font-size: .875rem; font-weight: 600; line-height: 1.5; text-decoration: none; cursor: pointer; }
 .root button:disabled { opacity: .5; cursor: not-allowed; }
-.root button:hover:not(:disabled), .root a:hover { background: #f1f5fb; }
+.root button:hover:not(:disabled), .root a:hover { background: var(--app-raised); }
 .root .inlineButton { margin-left: 4px; }
 .root .inlineButton > svg { flex: none; margin-left: -4px; }
 .root button:focus-visible, .root a:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 3px; }
@@ -30,24 +30,20 @@
 .comparison caption { text-align: left; margin-bottom: 12px; font-size: 1rem; font-weight: 700; }
 .comparison th, .comparison td { padding: 14px 10px; border-bottom: 1px solid var(--app-line); text-align: right; white-space: nowrap; }
 .comparison th:first-child { text-align: left; }
-.comparison thead { background: #f4f6f8; color: var(--app-muted); font-size: .75rem; }
+.comparison thead { background: var(--app-raised); color: var(--app-muted); font-size: .75rem; }
 .comparison small { display: block; color: var(--app-muted); font-size: .75rem; margin-top: 3px; }
 .notes { margin: 24px 0; }
 .notes > div { display: grid; grid-template-columns: 120px minmax(0,1fr); gap: 20px; padding: 18px 0; border-bottom: 1px solid var(--app-line); }
 .notes dt { color: var(--app-muted); font-size: .875rem; }
 .notes dd { margin: 0; font-size: .9375rem; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: balance; }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
-.root .warning { color: var(--app-warning); background: #fff7e9; padding: 12px; font-size: .8125rem; line-height: 1.7; border-left: 3px solid #d7a24d; }
-.error { border-left: 3px solid var(--app-danger); padding: 12px; background: #fff3f3; margin: 16px 0; }
+.root .warning { color: var(--app-warning); background: var(--app-warning-bg); padding: 12px; font-size: .8125rem; line-height: 1.7; border-left: 3px solid color-mix(in srgb, var(--app-warning) 60%, var(--app-warning-bg)); }
+.error { border-left: 3px solid var(--app-danger); padding: 12px; background: var(--app-danger-bg); margin: 16px 0; }
 .error p { font-size: .875rem; line-height: 1.6; margin: 0 0 10px; }
 .error p:last-child { margin-bottom: 0; }
 /* 칸 아래 입력 확인 안내 — 고칠 칸 바로 밑에(예전엔 폼 위에 떠 어느 칸인지 몰랐다) */
 .root .fieldError { color: var(--app-danger); font-size: .8125rem; font-weight: 500; line-height: 1.5; }
 .root .success { color: var(--app-success); font-size: .875rem; line-height: 1.6; }
-/* 아래는 다음 묶음(맡길 수 있는 일)이 40px 띄운다 — 빈 칸 아래 여백까지 더해 90px 넘게 벌어지지 않게 */
-.empty { padding: 52px 16px 12px; text-align: center; color: var(--app-muted); }
-.empty h3 { font-size: 1.125rem; color: var(--app-body); }
-.empty p { font-size: .875rem; }
 .report { margin-top: 30px; }
 .report header h3 { font-size: 1.25rem; line-height: 1.5; overflow-wrap: anywhere; margin: 0 0 12px; }
 .report header p { font-size: .875rem; }
@@ -65,16 +61,10 @@
   .notes dd { font-size: .875rem; }
   .actions > button, .actions > a { flex: 1 1 auto; }
 }
-/* 빈 화면 그림만 — 단추 속 + 그림까지 블록·아래 여백이 걸려 글자보다 위로 붙었다(휴대폰 점검 2026-10-24) */
-.empty > svg { display: block; margin: 0 auto 12px; }
-
-/* 대화에서 말한 실적으로 첫 기록 만들기(빈 화면) */
-.root .empty .primary { display: flex; width: fit-content; margin: 16px auto 8px; }
-.empty small { display: block; }
 
 /* 휴대폰은 누르는 자리 44px — 기본 42px 이 1~2px 모자랐다(휴대폰 점검 2026-10-24). PC 는 그대로 */
 @media (max-width: 1023px) { .root button, .root a { min-height: 44px; } }
 /* 오류 문구 · 안내가 끝 몇 글자만 다음 줄로 넘지 않게(휴대폰 점검 2026-10-24) */
-.root :is(.note, .meta, .fieldError, .error p, .empty p, .empty small) { text-wrap: pretty; }
+.root :is(.note, .meta, .fieldError, .error p) { text-wrap: pretty; }
 /* PC 작업실은 대화 칸에 같은 '대화로 내 사업 시작하기'가 있어 칸 안 링크는 휴대폰에서만(같은 단추 두 번 · PC 점검 2026-10-24) */
 @media (min-width:1024px) { .studioNarrowOnly { display:none !important; } }

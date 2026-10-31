@@ -1,0 +1,14 @@
+/*
+ * 앱 공통 빈 화면 — 아이콘(lucide 28px · --app-muted) · 제목(1.0625rem/700 · --app-text) · 설명(.9375rem · --app-muted) · 동작 버튼(AppButton).
+ * 세로·가로 가운데, 여백 하나(48px 24px), PC·모바일 같은 규격(@media 없음). 색은 --app-* 토큰만(workspace-theme.module.css).
+ * 토큰은 부품이 직접 들고 다닌다(composes) — 테마 밖(계정·고객센터)에서도 같은 색.
+ * 쓰는 쪽은 자리(높이·너비·바깥 여백)만 정한다 — 자리는 :where() 로 우선순위 0 에 두어 className 이 언제나 바꿀 수 있게 하고,
+ * 모양은 [data-empty-state] 를 두 번 써서 한 단계 높인다(화면 쪽 '.page h2'·'.root p' 같은 넓은 규칙에 밀리지 않게 — 입력칸과 같은 방법).
+ */
+.root { composes: tokens from "../../components/workspace-theme.module.css"; }
+:where(.root) { width:100%; min-width:0; margin:0; }
+.root[data-empty-state][data-empty-state] { box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:48px 24px; text-align:center; color:var(--app-muted); letter-spacing:0; }
+.icon[data-empty-part][data-empty-part] { flex:none; display:block; margin:0 0 4px; color:var(--app-muted); }
+.title[data-empty-part][data-empty-part] { max-width:28em; margin:0; color:var(--app-text); font-size:1.0625rem; font-weight:700; line-height:1.5; word-break:keep-all; overflow-wrap:anywhere; text-wrap:balance; }
+.description[data-empty-part][data-empty-part] { max-width:28em; margin:0; color:var(--app-muted); font-size:.9375rem; font-weight:400; line-height:1.6; word-break:keep-all; overflow-wrap:anywhere; white-space:pre-line; text-wrap:pretty; }
+.actions[data-empty-part][data-empty-part] { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; margin:16px 0 0; }

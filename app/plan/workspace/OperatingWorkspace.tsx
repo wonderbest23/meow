@@ -11,6 +11,7 @@ import styles from "./OperatingWorkspace.module.css";
 import { askConfirm, showNotice } from "../../../components/confirm-dialog";
 import { saveFile, SAVE_UNSUPPORTED_MESSAGE } from "../../../lib/save-file";
 import PlanLoading from "../PlanLoading";
+import { EmptyState } from "../BusinessEmptyState";
 import OperatingAnalysisPanel, { OperatingAnalysisResult } from "./OperatingAnalysisPanel";
 import type { AnalysisTarget } from "../../../lib/plan-builder/operating-analysis-contract";
 import { autoInquiriesValue, type HomepageInquiries } from "../../../lib/plan-builder/operating-homepage";
@@ -286,11 +287,11 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
       {!sample && (!period.nextAction || !period.successCriterion) && <p className={styles.note}>다음 개선 행동과 확인 기준을 적으면 리포트로 보관할 수 있어요.</p>}
       {/* AI 개선안은 운영에서 AI 분석을 켰을 때만(꺼져 있으면 '준비 중'만 보였다) */}
       {analysisTarget && <OperatingAnalysisPanel key={period.id} planId={planId} period={period} baseline={baseline} records={state} target={analysisTarget} onState={acceptState} onArchive={run} onDirtyChange={setAnalysisDirty} />}
-    </> : <div className={styles.empty}><FileText size={30} aria-hidden="true" /><h3>아직 기간 기록이 없어요</h3>
-      {/* 넓은 화면은 '기간 기록 추가'가 머리줄 오른쪽 끝에만 있어 빈 칸 가운데서 찾기 어려웠다 — 여기에도 둔다 */}
-      {canAddPeriod && !chatRecord && <AppButton type="button" variant="primary" className={styles.primary} disabled={addDisabled} onClick={() => edit()}><Plus size={18} aria-hidden="true" />기간 기록 추가</AppButton>}
-      {canAddPeriod && chatRecord && <><AppButton type="button" variant="primary" className={styles.primary} disabled={busy || analysisDirty} onClick={() => editFromChat(chatRecord)}><FileText size={18} />대화에서 말한 실적으로 첫 기록 만들기</AppButton><small className={styles.note}>{`${chatRecord.start} ~ ${chatRecord.end}`}{chatRecord.revenue !== null ? ` · 실제 매출 ${chatRecord.revenue.toLocaleString("ko-KR")}원` : ""} · 저장 전에 고칠 수 있어요</small></>}
-    </div>)}
+    </> : <EmptyState icon={FileText} heading="h3" title="아직 기간 기록이 없어요"
+      /* 넓은 화면은 '기간 기록 추가'가 머리줄 오른쪽 끝에만 있어 빈 칸 가운데서 찾기 어려웠다 — 여기에도 둔다 */
+      actions={canAddPeriod ? chatRecord ? <AppButton type="button" variant="primary" disabled={busy || analysisDirty} onClick={() => editFromChat(chatRecord)}><FileText size={18} />대화에서 말한 실적으로 첫 기록 만들기</AppButton> : <AppButton type="button" variant="primary" disabled={addDisabled} onClick={() => edit()}><Plus size={18} aria-hidden="true" />기간 기록 추가</AppButton> : undefined}>
+      {canAddPeriod && chatRecord && <small className={styles.note}>{`${chatRecord.start} ~ ${chatRecord.end}`}{chatRecord.revenue !== null ? ` · 실제 매출 ${chatRecord.revenue.toLocaleString("ko-KR")}원` : ""} · 저장 전에 고칠 수 있어요</small>}
+    </EmptyState>)}
     {state && !editor && mode === "reports" && (report ? <>
       <FieldLabel className={styles.reportSelect}>보관한 리포트<Select value={reportId} onChange={e => setReportId(e.target.value)}>{state.reports.map(r => <option key={r.id} value={r.id}>{periodLabel(r.period)} · {new Date(r.createdAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 보관</option>)}</Select></FieldLabel>
       <article className={styles.report} aria-label="보관된 개선 리포트">
@@ -301,6 +302,6 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
         {report.analysis && <OperatingAnalysisResult analysis={report.analysis} chosenAction={report.chosenAction} />}
         <button type="button" className={styles.download} disabled={downloading} onClick={() => void downloadReport(report)}><Download size={18} />{downloading ? "준비 중…" : "리포트 내려받기"}</button>
       </article>
-    </> : <div className={styles.empty}><Archive size={30} /><h3>보관한 리포트가 없어요</h3><p>기간 기록에서 다음 개선 행동을 정한 뒤 보관하세요</p></div>)}
+    </> : <EmptyState icon={Archive} heading="h3" title="보관한 리포트가 없어요" description="기간 기록에서 다음 개선 행동을 정한 뒤 보관하세요" />)}
   </div>;
 }

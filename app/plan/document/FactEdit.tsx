@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { RefreshCw, X } from "lucide-react";
+import { Spinner } from "../PlanLoading";
 import type { IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import { amountCheckPrompt, type IntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { EDITABLE_FACT_IDS, factNeedles, findFactRanges, parseWon, type EditableFact } from "../../../lib/plan-builder/fact-highlight";
@@ -210,7 +211,7 @@ function draftSubmission(question: IntakeQuestion, draft: AnswerDraft): { value:
 export function FactCard({ edit, onPick, onRetry }: { edit: ReturnType<typeof useFactEdit>; onPick: (questionId: string, anchor: DOMRect) => void; onRetry?: () => void }) {
   return <section className={styles.factCard} aria-label="고칠 수 있는 내용" data-fact-card>
     <strong>고칠 수 있는 곳만 표시했어요</strong>
-    {!edit.snapshot && !edit.error && <p role="status">사업 정보를 불러오고 있어요…</p>}
+    {!edit.snapshot && !edit.error && <p role="status"><Spinner /> 사업 정보를 불러오고 있어요…</p>}
     {edit.facts.length > 0 && <div className={styles.factChips}>{edit.facts.map(fact => <button key={fact.questionId} type="button" data-fact-chip={fact.questionId} disabled={edit.busy} onClick={event => onPick(fact.questionId, event.currentTarget.getBoundingClientRect())}><small>{fact.label}</small>{factShown(fact)}</button>)}</div>}
     {edit.error && <p className={styles.factError} role="alert">{edit.error.message} {edit.error.href && <Link href={edit.error.href}>{edit.error.label}</Link>}{edit.error.retry && onRetry && <AppButton type="button" variant="secondary" size="small" className={styles.factRetry} disabled={edit.busy} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />다시 시도</AppButton>}</p>}
   </section>;

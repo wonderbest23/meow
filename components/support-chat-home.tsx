@@ -8,6 +8,7 @@ import { businessEntryHref, businessHubState } from "../lib/plan-builder/busines
 import { planDisplayName } from "../lib/plan-builder/business-name";
 import { openLogin } from "./login-dialog";
 import styles from "./support-chat-home.module.css";
+import { Spinner } from "../app/plan/PlanLoading";
 import { loadAuthSession } from "../lib/client/auth-session";
 import { askConfirm } from "./confirm-dialog";
 
@@ -84,7 +85,7 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
 
     {session?.authenticated && plans !== undefined && <section className={styles.card} aria-label="내 사업 진행">
       <div className={styles.cardHead}><b>내 사업 진행</b><Link href="/plan" onClick={onClose}>전체 보기</Link></div>
-      {plans === null ? <p className={styles.muted} role="status">불러오고 있어요…</p>
+      {plans === null ? <p className={styles.muted} role="status"><Spinner /> 불러오고 있어요…</p>
         : plans.length === 0 ? <div className={styles.emptyPlans}><p className={styles.muted}>아직 시작한 사업이 없어요.</p><Link href="/plan/chat?new=1" onClick={onClose}>새 대화로 시작하기</Link></div>
         : <ul className={styles.plans}>{plans.map(plan => {
           const state = businessHubState(plan);

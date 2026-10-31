@@ -1,4 +1,4 @@
-.page { min-height:100dvh; background:#fff; color:var(--app-text); letter-spacing:0; }
+.page { min-height:100dvh; background:var(--app-surface); color:var(--app-text); letter-spacing:0; }
 .page * { box-sizing:border-box; letter-spacing:0; }
 .page :is(h1,h2,p,button,a,strong,small) { word-break:keep-all; overflow-wrap:anywhere; }
 .page :is(button,a,summary):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:3px; }
@@ -12,24 +12,22 @@
 .tabs { display:flex; border-bottom:1px solid var(--app-line); margin-bottom:28px; }
 .tabs button { display:flex; align-items:center; justify-content:center; gap:8px; flex:1; min-height:52px; padding:10px 12px; border:0; border-bottom:2px solid transparent; background:transparent; color:var(--app-muted); font-size:1rem; font-weight:600; }
 .tabs button[aria-pressed=true] { color:var(--app-primary); border-bottom-color:var(--app-primary); }
-.tabs span { font-size:.75rem; padding:2px 6px; background:#f2f4f6; color:var(--app-body); border-radius:4px; }
+.tabs span { font-size:.75rem; padding:2px 6px; background:var(--app-raised); color:var(--app-body); border-radius:4px; }
 .form { display:grid; gap:22px; margin:0; padding:0; border:0; box-shadow:none; background:transparent; }
 /* 입력칸·라벨 모양은 공통 입력칸(components/app-field)이 정한다 — 여기서는 자리만 */
 .message { max-height:560px; }
 .fieldFooter { display:flex; justify-content:space-between; gap:16px; margin-top:-12px; color:var(--app-muted); font-size:.8125rem; line-height:1.5; }
 .fieldFooter > span { white-space:nowrap; }
 .form > .primary { width:100%; }
-/* 빈 화면 — 남은 칸의 세로 가운데(대표 규칙 2026-10-24). 글→단추 24px */
-.empty { display:grid; justify-items:center; align-content:center; min-height:max(240px, calc(100dvh - 380px)); padding:24px 0; text-align:center; }
-.empty h2 { font-size:1.1875rem; line-height:1.6; margin:0 0 24px; text-wrap:balance; }
-.empty p, .history .empty p { color:var(--app-muted); font-size:1rem; margin:0 0 24px; text-wrap:pretty; }
+/* 빈 화면은 공통 EmptyState(BusinessEmptyState) — 여기서는 자리만: 남은 칸의 세로 가운데(대표 규칙 2026-10-24) */
+.empty { min-height:max(240px, calc(100dvh - 380px)); }
 .success { display:flex; align-items:flex-start; gap:10px; padding:16px 0; margin:0 0 20px; color:var(--app-success); font-size:.9375rem; line-height:1.7; }
 .success svg { flex-shrink:0; margin-top:3px; }
-.error { margin-top:20px; padding:16px; border:1px solid #f4d0cd; background:#fff6f5; border-radius:8px; color:var(--app-danger); line-height:1.7; font-size:.875rem; }
+.error { margin-top:20px; padding:16px; border:1px solid color-mix(in srgb, var(--app-danger) 20%, var(--app-danger-bg)); background:var(--app-danger-bg); border-radius:8px; color:var(--app-danger); line-height:1.7; font-size:.875rem; }
 .error p { margin:0; text-wrap:balance; }.error button { margin-top:12px; }
 .historyHeading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; }
 .historyHeading h2 { font-size:1.125rem; margin:0; }
-.iconButton { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; border:1px solid var(--app-line); border-radius:8px; color:var(--app-body); background:#fff; }
+.iconButton { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; border:1px solid var(--app-line); border-radius:8px; color:var(--app-body); background:var(--app-surface); }
 .inquiry,.reply { border:0; border-radius:0; background:transparent; margin:0; padding:20px 0; }
 /* 문의 하나와 그 답변을 한 묶음으로 — 구분선은 묶음 사이에만 */
 .thread { border-bottom:1px solid var(--app-line); padding-bottom:4px; }
@@ -57,4 +55,4 @@
 /* 로그아웃 안내 하나만 — 머리줄 아래 남은 높이의 한가운데(예전엔 화면 높이 기준 최소 높이라 큰 화면에서 위로 쏠렸다) */
 .inFrame[data-fill] { display: flex; flex-direction: column; }
 .inFrame[data-fill] .content { flex: 1; display: flex; flex-direction: column; justify-content: center; margin-block: 0; }
-.inFrame[data-fill] .empty { min-height: 0; padding-block: 24px; }
+.inFrame[data-fill] .empty { min-height: 0; }

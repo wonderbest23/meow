@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight, Inbox, RefreshCw, X } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
+import { EmptyState } from "../BusinessEmptyState";
 import frame from "../chat/page.module.css";
 import styles from "./page.module.css";
 import { StatusBadge } from "../../../components/status-badge";
@@ -81,16 +82,14 @@ export default function InquiriesPage() {
         </div>}
         {error ? <p className={styles.notice} role="alert">{error} {error === AUTH_ERROR ? <AppButton variant="text" size="small" className={styles.retry} href={`/account?next=${encodeURIComponent("/plan/inquiries")}`}>다시 로그인</AppButton> : <AppButton type="button" variant="text" size="small" className={styles.retry} onClick={() => refresh(true)}>다시 시도</AppButton>}</p> : null}
         {/* 불러오지 못했으면 '문의 없음'이라고 하지 않는다 — 있는 문의를 없다고 믿게 된다 */}
-        {items === null ? null : shown.length === 0 ? <div className={styles.empty}>
-          <Inbox size={28} aria-hidden />
-          <strong>{filter === "open" && items?.length ? "답할 문의가 없어요" : "아직 들어온 문의가 없어요"}</strong>
-          <p>홈페이지를 공개하면 여기로 모여요</p>
-          {items.length === 0 && recentPlanId ? <div className={styles.emptyActions}>
-            <AppButton variant="primary" className={styles.emptyLink} href={homepageHref(recentPlanId)}>홈페이지 보기<ChevronRight size={18} aria-hidden="true" /></AppButton>
-            <AppButton variant="secondary" className={styles.emptyLink} href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정<ChevronRight size={18} aria-hidden="true" /></AppButton>
-          </div> : null}
-          {items.length === 0 ? <AppButton type="button" variant="secondary" className={styles.emptyRefresh} onClick={() => refresh(true)}><RefreshCw size={14} aria-hidden /> 새로 확인</AppButton> : null}
-        </div> : <ul className={styles.rows}>
+        {items === null ? null : shown.length === 0 ? <EmptyState icon={Inbox} heading="p" title={filter === "open" && items?.length ? "답할 문의가 없어요" : "아직 들어온 문의가 없어요"} description="홈페이지를 공개하면 여기로 모여요"
+          actions={items.length === 0 ? <>
+            {recentPlanId ? <>
+              <AppButton variant="primary" href={homepageHref(recentPlanId)}>홈페이지 보기<ChevronRight size={18} aria-hidden="true" /></AppButton>
+              <AppButton variant="secondary" href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정<ChevronRight size={18} aria-hidden="true" /></AppButton>
+            </> : null}
+            <AppButton type="button" variant="secondary" onClick={() => refresh(true)}><RefreshCw size={14} aria-hidden /> 새로 확인</AppButton>
+          </> : undefined} /> : <ul className={styles.rows}>
           {shown.map(item => <li key={item.lead.id}>
             <button type="button" aria-current={item.lead.id === selected?.lead.id ? "true" : undefined} onClick={() => setSelectedId(item.lead.id)}>
               <i aria-hidden>{item.lead.name.slice(0, 1)}</i>
@@ -107,7 +106,7 @@ export default function InquiriesPage() {
       </aside>
       {/* 문의가 하나도 없으면 오른쪽은 비워 둔다 — 왼쪽 빈 화면 안내와 같은 말이었다(군더더기 점검 r37) */}
       <section className={styles.detail} aria-label={items && items.length === 0 ? undefined : "문의 내용"} aria-hidden={items && items.length === 0 ? true : undefined}>
-        {selected ? <InquiryDetail key={selected.lead.id} item={selected} notifications={notifications} /> : items && items.length === 0 ? null : <div className={styles.placeholder}><Inbox size={30} aria-hidden /><p>왼쪽에서 문의를 골라 주세요</p></div>}
+        {selected ? <InquiryDetail key={selected.lead.id} item={selected} notifications={notifications} /> : items && items.length === 0 ? null : <EmptyState className={styles.placeholder} icon={Inbox} heading="p" title="왼쪽에서 문의를 골라 주세요" />}
       </section>
     </div>}
   </BusinessAppChrome></main>;

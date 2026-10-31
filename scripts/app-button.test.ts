@@ -97,7 +97,7 @@ for (const path of users) {
 }
 // 대표 화면 — 감사에서 갈라져 있던 주 버튼 다섯 곳
 assert.match(read("app/account/page.tsx"), /<AppButton variant="primary" loading=\{busy\} onClick=\{confirmLinkSignIn\}>/, "계정 확인 단추");
-assert.match(read("app/plan/BusinessEmptyState.tsx"), /<AppButton variant="primary" className=\{styles\.primary\} href="\/plan\/chat\?new=1">시작하기/, "빈 사업 목록 시작하기");
+assert.match(read("app/plan/BusinessEmptyState.tsx"), /<AppButton variant="primary" href="\/plan\/chat\?new=1">시작하기/, "빈 사업 목록 시작하기");
 assert.match(read("app/plan/proposal/page.tsx"), /<AppButton variant="primary" size="small" className=\{styles\.primary\} aria-label="PPT 내려받기"/, "제안서 내려받기");
 assert.match(read("app/plan/homepage/HomepageScreen.tsx"), /<AppButton type="button" variant="primary" className=\{styles\.cta\}/, "홈페이지 막힘 화면 단추");
 assert.match(read("app/plan/MarketEvidencePanel.tsx"), /<AppButton variant="primary" size="small" loading=\{busy\}/, "시장자료 찾기(목록 안 작은 동작)");
