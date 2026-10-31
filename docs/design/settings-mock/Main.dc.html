@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>내 계정 설정</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#eceff3;font-family:Pretendard,"Pretendard Variable","Apple SD Gothic Neo",-apple-system,system-ui,sans-serif;color:#202632;-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+a{color:inherit;text-decoration:none}
+p,h1,h2{margin:0}
+/* 왼쪽 메뉴: 256px, 항목 240×32, r8, 14px/400, 아이콘 20px·간격 8px */
+.side{flex:0 0 256px;box-sizing:border-box;padding:8px;display:flex;flex-direction:column}
+.back{display:flex;align-items:center;gap:8px;height:36px;padding:0 8px;font-size:14px;color:#202632}
+.search{display:flex;align-items:center;gap:8px;height:32px;margin:4px 0 12px;padding:0 10px;box-sizing:border-box;border-radius:8px;box-shadow:inset 0 0 0 1px #d6dde6;color:#5f6b7c;font-size:14px}
+.search input{border:0;outline:0;background:transparent;font:inherit;color:inherit;width:100%}
+.grp{margin:12px 8px 6px;font-size:14px;color:#6b7686}
+.nav{display:flex;align-items:center;gap:8px;height:32px;padding:4px 6px;box-sizing:border-box;border-radius:8px;font-size:14px;color:#3a4553}
+.nav svg{width:20px;height:20px;flex:0 0 auto;color:#5f6b7c}
+.nav[aria-current]{background:rgba(32,38,50,.08);color:#202632}
+.nav[aria-current] svg{color:#202632}
+/* 본문 패널: 8px 띄운 둥근 판, 안쪽 여백 48px, 내용은 패널 폭 가득 */
+.panel{flex:1 1 560px;min-width:0;margin:8px 8px 8px 0;box-sizing:border-box;padding:48px;background:#f7f9fc;border-radius:16px;box-shadow:inset 0 0 0 1px #e1e7ef}
+.top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+h1{font-size:20px;font-weight:500;line-height:25px;letter-spacing:-.2px}
+.lead{margin-top:4px;font-size:14px;line-height:21px;color:#6b7686}
+.doc{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:#5f6b7c;margin-top:2px}
+h2{margin-top:24px;font-size:16px;font-weight:500;line-height:22px}
+.sub{font-size:14px;line-height:21px;color:#6b7686}
+.sechead{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+/* 카드: r16, 안쪽 20×24, 행은 위아래 20px, 1px 구분선 */
+.card{margin-top:16px;background:#fff;border-radius:16px;padding:20px 24px;box-shadow:0 0 0 1px #e1e7ef,0 2px 0 rgba(16,24,40,.03),0 2px 1px -.5px rgba(16,24,40,.04)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 0}
+.row:first-child{padding-top:0}.row:last-child{padding-bottom:0}
+.row+.row{border-top:1px solid #e6eaf0}
+.t{font-size:14px;font-weight:500;line-height:20px}
+.d{font-size:14px;line-height:21px;color:#6b7686}
+.right{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+/* 버튼: 32px, 6×10, r8, 14px/400 */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:6px 10px;box-sizing:border-box;border:0;border-radius:8px;background:rgba(95,107,124,.14);font:inherit;font-size:14px;font-weight:400;color:#202632;cursor:pointer;white-space:nowrap}
+.btn.outline{background:transparent;box-shadow:inset 0 0 0 1px #d6dde6}
+.btn.primary{background:#1b64da;color:#fff}
+.btn.danger{background:transparent;color:#b23b47;box-shadow:inset 0 0 0 1px #f1c7cc}
+.btn.icon{width:32px;padding:0;color:#5f6b7c}
+.btn.sm{height:28px;padding:4px 8px}
+.input{height:32px;padding:0 12px;box-sizing:border-box;border:0;border-radius:8px;background:#fff;box-shadow:inset 0 0 0 1px #d6dde6;font:inherit;font-size:14px;color:#202632}
+.hint{margin-top:4px;text-align:right;font-size:12px;color:#6b7686}
+.mono{font-family:"Roboto Mono","SF Mono",ui-monospace,monospace;font-size:12px;color:#3a4553}
+.pill{display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600}
+.pill.ok{background:#eef8f2;color:#267959}.pill.info{background:#e3edfc;color:#244e84}
+.ava{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;font-size:14px;font-weight:600;flex:0 0 auto}
+</style>
+</helmet>
+<div style="display: flex; flex-wrap: wrap; min-height: 980px; background: #eceff3;">
+  <nav aria-label="설정 메뉴" class="side">
+    <a href="/plan" class="back"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>뒤로 가기</a>
+    <label class="search"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="search" placeholder="설정 검색" aria-label="설정 검색"></label>
+    <p class="grp">계정</p>
+    <a href="#account" aria-current="page" class="nav"><span class="ava" style="width: 20px; height: 20px; border-radius: 6px; background: #1b64da; color: #fff; font-size: 11px;">아</span>아트앤브릿지</a>
+    <a href="#business" class="nav"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-6 9 6v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21V12h6v9"/></svg>내 사업</a>
+    <a href="#billing" class="nav"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>결제 내역</a>
+    <p class="grp">알림·도움</p>
+    <a href="#alerts" class="nav"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21h4"/></svg>알림 설정</a>
+    <a href="Support.dc.html" class="nav"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5"/><path d="M12 17h.01"/></svg>고객센터</a>
+    <a href="#policy" class="nav"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l5 5v13H6z"/><path d="M14 3v6h6"/></svg>약관·정책</a>
+  </nav>
+
+  <main class="panel">
+    <header class="top">
+      <div>
+        <h1>내 계정</h1>
+        <p class="lead">로그인 정보와 사업, 결제 내역을 한곳에서 봐요.</p>
+      </div>
+      <a href="#help" class="doc"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v12a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v12a3 3 0 0 1 3-3h7z"/></svg>도움말</a>
+    </header>
+
+    <section id="account" aria-labelledby="h-account">
+      <h2 id="h-account">로그인 정보</h2>
+      <p class="sub">어떤 계정으로 들어와 있는지, 이용 상태는 어떤지 보여요.</p>
+      <div class="card">
+        <div class="row">
+          <div style="min-width: 0;"><p class="t">프로필</p><p class="d">사업 화면과 문의에 함께 보이는 이름이에요.</p></div>
+          <span class="ava" style="background: #1b64da; color: #fff;">아</span>
+        </div>
+        <div class="row">
+          <div style="min-width: 0;"><p class="t">이름</p><p class="d">다른 사람에게 표시되는 이름이에요.</p></div>
+          <div style="flex: 0 0 auto;"><input class="input" type="text" value="아트앤브릿지" aria-label="이름" style="width: 288px;"><p class="hint">6 / 50자</p></div>
+        </div>
+        <div class="row">
+          <div style="min-width: 0;"><p class="t">이메일</p><p class="d">로그인에 쓰는 주소예요. 안내 메일도 여기로 가요.</p></div>
+          <div class="right"><span class="mono">rena35200@gmail.com</span><button type="button" class="btn icon" aria-label="이메일 복사"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></button></div>
+        </div>
+        <div class="row">
+          <div style="min-width: 0;"><p class="t">로그인 수단</p><p class="d">카카오로 들어와 있어요. 애플을 더 연결하면 두 쪽 다 쓸 수 있어요.</p></div>
+          <button type="button" class="btn">애플 연결</button>
+        </div>
+        <div class="row">
+          <div style="min-width: 0;"><p class="t">이용 상태</p><p class="d">결제한 사업계획서는 모두 열어 볼 수 있어요.</p></div>
+          <span class="pill ok"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>모든 사업계획서 이용 중</span>
+        </div>
+        <div class="row">
+          <div style="min-width: 0;"><p class="t">로그아웃</p><p class="d">이 기기에서만 나가요. 사업은 그대로 남아요.</p></div>
+          <button type="button" class="btn outline">로그아웃</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="business" aria-labelledby="h-business">
+      <div class="sechead">
+        <div><h2 id="h-business">내 사업</h2><p class="sub">진행 중인 사업 2개</p></div>
+        <a href="/plan" class="btn outline">전체 보기<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></a>
+      </div>
+      <div class="card">
+        <div class="row">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;"><span class="ava" style="background: #e3edfc; color: #244e84;">성</span><div style="min-width: 0;"><p class="t">성수 쿠키공방</p><p class="d">개업 준비 · 해야 할 일 7개 · 10월 29일 수정</p></div></div>
+          <div class="right"><span class="pill info">개업 준비 중</span><a href="/plan/studio" class="btn">열기</a></div>
+        </div>
+        <div class="row">
+          <div style="display: flex; align-items: center; gap: 12px; min-width: 0;"><span class="ava" style="background: #eef1f5; color: #465365;">새</span><div style="min-width: 0;"><p class="t">새 사업 구상</p><p class="d">대화 중 · 질문 3 / 13 · 10월 30일 수정</p></div></div>
+          <div class="right"><span class="pill info">대화 중</span><a href="/plan/studio" class="btn">열기</a></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="billing" aria-labelledby="h-billing">
+      <h2 id="h-billing">결제 내역</h2>
+      <p class="sub">사업계획서·홈페이지 결제와 환불 상태예요.</p>
+      <div class="card">
+        <div class="row">
+          <div style="min-width: 0;"><p class="t">아직 결제 내역이 없어요</p><p class="d">사업계획서를 만들면 여기에 영수증이 쌓여요.</p></div>
+          <a href="#pricing" class="btn">요금 안내</a>
+        </div>
+      </div>
+    </section>
+
+    <section id="danger" aria-labelledby="h-danger">
+      <h2 id="h-danger">계정 정리</h2>
+      <p class="sub">되돌릴 수 없는 일이라 따로 모아 두었어요.</p>
+      <div class="card">
+        <div class="row">
+          <div style="min-width: 0;"><p class="t">회원 탈퇴</p><p class="d">계정과 사업·문서가 모두 지워져요. 공개한 홈페이지도 닫히고 연결한 도메인도 끊어져요. 결제·환불 기록은 법령상 보존 의무가 있어 사람과 연결되지 않는 형태로만 남아요.</p></div>
+          <button type="button" class="btn danger">탈퇴 진행하기</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
