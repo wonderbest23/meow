@@ -13,15 +13,12 @@
 .button[data-variant][data-size=small]::before { content:""; position:absolute; inset:-4px 0; }
 /*
  * 설정 화면 크기(lovable 구조 3단계 · docs/design/settings-mock) — 글자 14px/400, 안쪽 6×10.
- * adaptive 는 PC 32px · 휴대폰(~900px) 40px(MPref 의 흰 띠 항목 단추). 누르는 자리는 손가락(pointer:coarse)에서 44px 로 넓힌다.
+ * adaptive 는 PC · 휴대폰 모두 32px(lovable 실측 2026-11-01 — 환경설정 단추 32 r8). 누르는 자리는 손가락(pointer:coarse)에서 44px 로 넓힌다.
  */
 .button[data-variant][data-size=compact], .button[data-variant][data-size=adaptive] { position:relative; height:32px; min-height:32px; padding:6px 10px; gap:6px; font-size:.875rem; font-weight:400; line-height:1.4; white-space:nowrap; }
 .button[data-variant][data-size=mini] { position:relative; height:28px; min-height:28px; padding:4px 8px; gap:4px; font-size:.875rem; font-weight:400; line-height:1.4; white-space:nowrap; }
 .button[data-variant][data-size=large] { height:48px; min-height:48px; padding:0 16px; gap:8px; border-radius:12px; font-size:1rem; font-weight:400; line-height:1.4; }
 .button[data-variant][data-size=compact]::before, .button[data-variant][data-size=mini]::before, .button[data-variant][data-size=adaptive]::before { content:""; position:absolute; inset:0; }
-@media (max-width:900px) {
-  .button[data-variant][data-size=adaptive] { height:40px; min-height:40px; padding:0 16px; font-size:.9375rem; }
-}
 @media (pointer:coarse) {
   .button[data-variant][data-size=compact]::before, .button[data-variant][data-size=adaptive]::before { inset:-6px 0; }
   .button[data-variant][data-size=mini]::before { inset:-8px 0; }

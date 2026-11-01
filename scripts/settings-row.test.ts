@@ -47,14 +47,16 @@ assert.match(rule(".row"), /padding:20px 0;/, "행 위아래 20");
 assert.match(rule(".row + .row"), /border-top:1px solid var\(--app-line\);/, "행 사이 1px 구분선");
 assert.match(rule(".t"), /font-size:\.875rem; font-weight:500;/, "행 제목 14/500");
 assert.match(rule(".d"), /color:var\(--app-muted\); font-size:\.875rem;/, "행 설명 14 회색");
-assert.match(rule(".switch"), /width:46px; height:28px;/, "토글 46×28");
+assert.match(rule(".switch"), /width:46px; height:28px;/, "토글 46×28(PC)");
+assert.match(css, /\.switch \{ width:32px; height:20px; border-radius:10px; \}/, "휴대폰 토글 32×20 r10(lovable 실측)");
 assert.match(rule(".seg button"), /height:32px;[^}]*border-radius:999px;/, "알약형 전환 32 r999");
 assert.match(rule(".note"), /border-radius:16px; background:var\(--app-warning-bg\);/, "안내 띠 r16 노란 바탕");
 assert.match(css, /\.card\[data-mobile=card\] \{ margin-top:12px; padding:16px; \}/, "휴대폰 행 카드 안쪽 16(Mobile.dc)");
 assert.match(css, /\.card\[data-mobile=card\] \.row \{ gap:12px; padding:16px 0; \}/, "휴대폰 행 16");
 assert.match(css, /\.card\[data-mobile=band\] \.row \{ flex-direction:column; align-items:flex-start; gap:14px; padding:24px 0; \}/, "흰 띠 항목 위아래 24(MPref)");
-assert.match(css, /\.card\[data-mobile=band\] \.t \{ font-size:1\.0625rem; font-weight:500;/, "흰 띠 항목 제목 17/500");
-assert.match(css, /\.card\[data-mobile=band\] \.d \{ margin-top:4px; font-size:\.9375rem;/, "흰 띠 항목 설명 15");
+assert.match(css, /\.card\[data-mobile=band\] \.t \{ font-size:1rem; font-weight:500;/, "흰 띠 항목 제목 16/500(lovable 실측)");
+assert.match(css, /\.card\[data-mobile=band\] \.d \{ margin-top:4px; font-size:\.875rem;/, "흰 띠 항목 설명 14(lovable 실측)");
+assert.match(css, /\.card\[data-mobile=band\] \{ margin:0 -16px; padding:0 28px;/, "흰 띠 본문 좌우 28(lovable 실측)");
 
 // 3) 색은 토큰만
 for (const path of ["components/settings-row.module.css", "app/plan/SettingsMenu.module.css", "app/plan/settings/settings.module.css", "app/plan/me/PlanMe.module.css", "app/account/support/support.module.css", "app/plan/info/PlanInfo.module.css"]) {
@@ -78,10 +80,10 @@ const chrome = read("app/plan/BusinessAppChrome.tsx");
 assert.match(chrome, /\{settings \? <SettingsMenu \/> : <RailMenu /, "설정 화면에서는 왼쪽 메뉴가 설정 메뉴로 바뀐다");
 const index = read("app/plan/settings/SettingsIndex.tsx");
 assert.deepEqual([...index.matchAll(/\{ href: "[^"]+", label: "([^"]+)"/g)].map(match => match[1]), ["내 계정", "환경설정", "보안", "기기 및 앱"], "휴대폰 계정 설정 목록");
-assert.match(index, /variant="secondary" size="large"[^>]*>[\s\S]*?사업 설정<\/AppButton>/, "맨 아래 48px 테두리 단추 '사업 설정'");
+assert.match(index, /variant="secondary" size="compact"[^>]*>[\s\S]*?사업 설정<\/AppButton>/, "맨 아래 32px r8 테두리 단추(lovable 실측) '사업 설정'");
 const listCss = uncomment(read("app/plan/settings/settings.module.css"));
-assert.match(listCss, /\.item \{[^}]*height:56px;[^}]*font-size:1\.0625rem;/, "목록 56px · 17px");
-assert.match(listCss, /\.item > svg:first-child \{[^}]*width:24px; height:24px;/, "목록 아이콘 24");
+assert.match(listCss, /\.item \{[^}]*height:48px; padding:0 12px; border-radius:8px;[^}]*font-size:1rem;/, "목록 48px r8 안쪽 12 · 16px(lovable 실측)");
+assert.match(listCss, /\.item > svg:first-child \{[^}]*width:20px; height:20px;/, "목록 아이콘 20(lovable 실측)");
 assert.match(read("app/plan/ProfileMenu.tsx"), /row\(anchor === "sheet" \? "\/plan\/settings" : "\/plan\/me#me-info", <Settings aria-hidden="true" \/>, "계정 설정"/, "휴대폰 프로필 시트의 계정 설정 → 전체 화면 목록");
 assert.match(read("app/plan/PlanShell.tsx"), /pathname\.startsWith\("\/plan\/settings"\)/, "계정 설정 화면이 예전 문서 셸(머리말)을 덧그리지 않는다");
 
@@ -96,6 +98,6 @@ assert.match(prefs, /`\$\{homepageHref\(plan\.id\)\}#hk-leads`/, "문의 알림 
 for (const path of ["/plan/me", "/plan/info", "/account/support", "/plan/settings", "/plan/settings/preferences", "/plan/settings/security", "/plan/settings/devices"]) {
   assert.match(chrome, new RegExp(`TABBAR_PATHS = \\[[^\\]]*"${path.replace(/\//g, "\\/")}"`), `${path}: 휴대폰 아래 탭 막대가 없다`);
 }
-assert.match(read("app/plan/AppChrome.module.css"), /\.surface\[data-tabbar\] \{ padding-bottom:calc\(56px \+ 28px \+ 12px \+ env\(safe-area-inset-bottom\)\); \}/, "탭 막대 자리를 비워 마지막 행이 가리지 않게");
+assert.match(read("app/plan/AppChrome.module.css"), /\.surface\[data-tabbar\] \{ padding-bottom:calc\(57px \+ 24px \+ 12px \+ env\(safe-area-inset-bottom\)\); \}/, "탭 막대 자리를 비워 마지막 행이 가리지 않게");
 
 console.log("settings row: ok");

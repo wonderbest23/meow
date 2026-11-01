@@ -11,9 +11,9 @@
 .chatCol, .rightCol { grid-row:1; grid-column:1; min-width:0; min-height:0; position:relative; display:flex; flex-direction:column; }
 .rightCol { background:var(--app-surface); }
 .chatCol:not([data-visible]), .rightCol:not([data-visible]) { visibility:hidden; pointer-events:none; }
-/* 미리보기 화면은 아래 100px 막대 자리를 비운다(막대가 마지막 내용·단추를 가리지 않게) */
+/* 미리보기 화면은 아래 68px 막대 자리를 비운다(막대가 마지막 내용·단추를 가리지 않게) */
 @media (max-width:1023px) {
-  .rightCol { padding:env(safe-area-inset-top) 0 calc(100px + env(safe-area-inset-bottom)); }
+  .rightCol { padding:env(safe-area-inset-top) 0 calc(68px + env(safe-area-inset-bottom)); }
   .chatCol { background:var(--app-bg); }
 }
 
@@ -137,35 +137,39 @@
 @media (max-width:1200px) { .previewPill { width:28px; padding:0; justify-content:center; font-size:0; } .previewPill svg { width:16px; height:16px; } }
 
 /*
- * 휴대폰 대화 화면 머리(56px, 시안 MChat) — ✕ 44 원 · 사업명 알약 44 ▾ · › 44 원. 흰 바탕 + 1px 선.
+ * 휴대폰 대화 화면 머리(68px = 안쪽 12 + 44, 시안 MChat · lovable 실측 2026-11-01) — ✕ 44 원(왼쪽 10) · 사업명 알약 44(안쪽 10 14, 18px) ▾ · › 44 원(오른쪽 10).
  */
-.mHead { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-shrink:0; box-sizing:content-box; min-height:56px; padding:env(safe-area-inset-top) 10px 0; background:var(--app-bg); }
+.mHead { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-shrink:0; box-sizing:content-box; min-height:44px; padding:calc(12px + env(safe-area-inset-top)) 10px 12px; background:var(--app-bg); }
 .round44 { position:relative; display:inline-grid; place-items:center; flex:none; box-sizing:border-box; width:44px; height:44px; padding:0; border:0; border-radius:50%; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); text-decoration:none; cursor:pointer; }
 .round44 svg { width:20px; height:20px; }
 .round44:disabled { color:var(--app-line-strong); cursor:default; }
 .round44 .dot { top:4px; right:4px; }
 .mHead > div { flex:0 1 auto; min-width:0; justify-content:center; }
-.namePill { display:inline-flex; align-items:center; gap:6px; box-sizing:border-box; min-width:0; max-width:100%; min-height:44px; padding:0 18px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); font:inherit; font-size:1rem; font-weight:600; cursor:pointer; }
+.namePill { display:inline-flex; align-items:center; gap:6px; box-sizing:border-box; min-width:0; max-width:100%; min-height:44px; padding:10px 14px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); font:inherit; font-size:1.125rem; font-weight:600; cursor:pointer; }
 .namePill svg { flex:none; width:16px; height:16px; color:var(--app-muted); }
 .reloginRow { display:flex; justify-content:center; padding:4px 16px 8px; }
 .mHead :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 
 /*
- * 휴대폰 미리보기 아래 막대(100px, 시안 MPreview) — ‹ 대화 알약 48 · 마이크 48 원 · … 48 원 · 파랑 주 단추 48.
+ * 휴대폰 미리보기 아래 막대(68px = 위아래 16 + 단추 36, 시안 MPreview · lovable 실측 2026-11-01) — ‹ 대화 알약 36(안쪽 8 16 8 8, 16px) · 마이크 36 원 · … 36 원
+ * · 파랑 주 단추 36(안쪽 8 12, 16px), 왼쪽 9 · 오른쪽 8. 누르는 자리는 ::after 로 44.
  * 화면 맨 아래에 붙고, 미리보기 칸은 그만큼 아래를 비운다(.rightCol). 안전 영역(홈바) 위에 단추가 온다.
  */
-.bottomBar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:10px; box-sizing:border-box; min-height:calc(100px + env(safe-area-inset-bottom)); padding:0 12px calc(16px + env(safe-area-inset-bottom)); background:var(--app-bg); box-shadow:0 -1px 0 var(--app-line); }
+.bottomBar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:10px; box-sizing:border-box; min-height:calc(68px + env(safe-area-inset-bottom)); padding:16px 8px calc(16px + env(safe-area-inset-bottom)) 9px; background:var(--app-bg); box-shadow:0 -1px 0 var(--app-line); }
 .bottomBar :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
-.backPill { position:relative; display:inline-flex; align-items:center; gap:4px; flex:none; box-sizing:border-box; min-height:48px; padding:0 20px 0 14px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); font:inherit; font-size:1.0625rem; font-weight:500; cursor:pointer; }
+.backPill { position:relative; display:inline-flex; align-items:center; gap:4px; flex:none; box-sizing:border-box; min-height:36px; padding:8px 16px 8px 8px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); font:inherit; font-size:1rem; font-weight:500; cursor:pointer; }
 .backPill svg { width:20px; height:20px; }
-.backPill .dot { top:6px; right:8px; }
-.round48 { position:relative; display:inline-grid; place-items:center; flex:none; box-sizing:border-box; width:48px; height:48px; padding:0; border:0; border-radius:50%; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); cursor:pointer; }
+.backPill .dot { top:2px; right:6px; }
+.round48 { position:relative; display:inline-grid; place-items:center; flex:none; box-sizing:border-box; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); cursor:pointer; }
 .round48 svg { width:20px; height:20px; }
-.round48 .dot { top:6px; right:6px; }
-.primary48 { display:inline-flex; align-items:center; justify-content:center; flex:none; box-sizing:border-box; min-height:48px; padding:0 22px; border:0; border-radius:999px; background:var(--app-primary); color:var(--app-surface); font:inherit; font-size:1.0625rem; font-weight:600; white-space:nowrap; cursor:pointer; }
+.round48 .dot { top:0; right:0; }
+.primary48 { position:relative; display:inline-flex; align-items:center; justify-content:center; flex:none; box-sizing:border-box; min-height:36px; padding:8px 12px; border:0; border-radius:999px; background:var(--app-primary); color:var(--app-surface); font:inherit; font-size:1rem; font-weight:600; white-space:nowrap; cursor:pointer; }
 .primary48:hover:not(:disabled) { background:var(--app-primary-hover); }
 .primary48:disabled { background:var(--app-line-strong); cursor:default; }
-@media (max-width:359px) { .backPill { padding:0 14px 0 10px; } .primary48 { padding:0 16px; } .bottomBar { gap:8px; } }
+/* 누르는 자리 44px — 보이는 단추는 36 */
+.backPill::after, .round48::after, .primary48::after { content:""; position:absolute; inset:-4px; }
+.round48 svg { width:18px; height:18px; }
+@media (max-width:359px) { .backPill { padding:8px 12px 8px 6px; } .primary48 { padding:8px 10px; } .bottomBar { gap:8px; } }
 /* 앱(키보드가 뜨면 화면이 줄어듦) — 낮은 화면에서 입력 중이면 아래 막대를 접는다 */
 @media (max-height:520px) { .studio:has(textarea:focus, input:focus) .bottomBar { display:none; } }
 

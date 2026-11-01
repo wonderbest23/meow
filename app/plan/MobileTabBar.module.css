@@ -1,13 +1,13 @@
-/* 휴대폰 아래 3탭 막대 — 300×56 r999, 화면 아래 28px(+안전 영역) 위에 가운데. PC 폭에서는 그리지 않는다 */
+/* 휴대폰 아래 3탭 막대(lovable 실측 2026-11-01) — 296×57 r999 안쪽 4, 칸 48 r999, 화면 아래 24px(+안전 영역) 위에 가운데. PC 폭에서는 그리지 않는다 */
 .bar { display:none; }
 @media (max-width:900px) {
-  .bar { position:fixed; left:50%; bottom:calc(28px + env(safe-area-inset-bottom)); z-index:60; display:flex; box-sizing:border-box; width:300px; max-width:calc(100% - 32px); height:56px; padding:4px; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line), 0 12px 32px -12px color-mix(in srgb, var(--app-text) 25%, transparent); transform:translateX(-50%); }
-  .tab { flex:1; display:flex; align-items:center; justify-content:center; min-width:44px; border-radius:999px; color:var(--app-body); text-decoration:none; -webkit-tap-highlight-color:transparent; }
+  .bar { position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); z-index:60; display:flex; align-items:center; box-sizing:border-box; width:296px; max-width:calc(100% - 32px); height:57px; padding:4px; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line), 0 12px 32px -12px color-mix(in srgb, var(--app-text) 25%, transparent); transform:translateX(-50%); }
+  .tab { flex:1; display:flex; align-items:center; justify-content:center; min-width:44px; height:48px; border-radius:999px; color:var(--app-body); text-decoration:none; -webkit-tap-highlight-color:transparent; }
   .tab svg { width:24px; height:24px; stroke-width:1.8; }
   .tab[aria-current=page] { background:color-mix(in srgb, var(--app-text) 8%, transparent); color:var(--app-text); }
   .tab:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:-3px; }
 }
 /* 상담 단추(오른쪽 아래 떠 있는 원)를 막대 위로 올린다 — 막대 오른쪽 끝과 겹쳤다. 펼친 상담 창(.open)은 그대로 */
 @media (max-width:900px) {
-  :global(body:has([data-mobile-tabbar]) .support-chat-widget:not(.open)) { bottom:calc(28px + 56px + 16px + env(safe-area-inset-bottom)); }
+  :global(body:has([data-mobile-tabbar]) .support-chat-widget:not(.open)) { bottom:calc(24px + 57px + 16px + env(safe-area-inset-bottom)); }
 }
