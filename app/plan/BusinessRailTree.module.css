@@ -85,7 +85,8 @@ button.step[aria-disabled="true"]:hover { background:var(--app-fill); }
 .groupCaret { flex:none; width:14px; height:14px; transition:transform .15s ease; }
 .groupCaret:not([data-open]) { transform:rotate(-90deg); }
 .groupTitle { display:flex; align-items:center; height:32px; margin:12px 0 0; padding:0 8px; color:var(--app-muted); font-size:.875rem; line-height:1.43; }
-.grouped .list { display:flex; gap:0; padding:0; overflow:visible; }
+/* 목록은 줄어들지 않는다 — 줄어들면(min-height:0) 넘친 사업 줄이 '최근 대화' 위에 겹쳐 보였다(운영 PC 높이 671 점검 2026-11-02). 대신 바깥 .tree 가 스크롤한다(lovable 사이드바와 같음) */
+.grouped .list { flex:none; display:flex; gap:0; padding:0; overflow:visible; }
 .grouped .planRow { gap:8px; min-height:32px; height:32px; padding:0 8px 0 6px; color:var(--app-body); font-size:.875rem; font-weight:400; line-height:1.5; }
 .grouped .planRow[data-current] { background:var(--app-nav-selected); color:var(--app-text); }
 .grouped .planRow:hover { background:color-mix(in srgb, var(--app-text) 4%, transparent); }
