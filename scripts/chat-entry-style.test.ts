@@ -25,7 +25,7 @@ assert.match(entryButton, /aria-hidden="true"><Icon size=\{28\}/);
 
 const css = readFileSync("app/plan/chat/page.module.css", "utf8");
 assert.doesNotMatch(css, /--choice-bg|--choice-border/);
-assert.match(css, /\.entryOptions button \{[^}]*border-radius:18px;[^}]*background:#f7f9fc/);
+assert.match(css, /\.entryOptions button \{[^}]*border-radius:18px;[^}]*background:var\(--app-surface\)/);
 assert.match(css, /\.choiceIcon \{[^}]*flex:0 0 32px;[^}]*background:transparent/);
 assert.match(css, /\.entryOptions \.choiceIcon svg \{[^}]*fill:var\(--choice-fill\)/);
 assert.match(css, /\.entryOptions button:focus-visible \{[^}]*border-color:#3182f6/);

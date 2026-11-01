@@ -29,12 +29,12 @@
 @media(max-width:760px) { .launch { padding-bottom:calc(84px + env(safe-area-inset-bottom)); } }
 
 /* 홍보 키트 · SNS 4주 운영표 */
-.kit { display: grid; gap: 12px; margin: 8px 0 16px; padding: 16px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface, #fff); }
+.kit { display: grid; gap: 12px; margin: 8px 0 16px; padding: 16px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface); }
 .kitHead { display: flex; gap: 10px; align-items: flex-start; }
 .kitHead strong { font-size: .9375rem; }
-.kit .kitHead p { margin: 4px 0 0; font-size: .8125rem; line-height: 1.6; color: var(--app-muted, #6b7684); }
+.kit .kitHead p { margin: 4px 0 0; font-size: .8125rem; line-height: 1.6; color: var(--app-muted); }
 .kit > p { margin: 0; font-size: .875rem; line-height: 1.7; }
-.kitBlock { display: grid; gap: 6px; padding: 12px; border-radius: 10px; background: var(--app-raised, #f7f8fa); }
+.kitBlock { display: grid; gap: 6px; padding: 12px; border-radius: 10px; background: var(--app-raised); }
 /* 바깥 사업 화면 규칙(.content h3 의 위 여백, .section details 의 24px 여백·summary 18px 안쪽 여백)이
    CSS 순서에 따라 이겨서 제목과 '복사'가 어긋나고 접힌 2~4주차 밑에 큰 빈칸이 생겼다 — .kit 을 붙여 확실히 이긴다 */
 .kit .kitBlock header { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }

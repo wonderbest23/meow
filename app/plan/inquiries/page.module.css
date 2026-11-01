@@ -8,7 +8,7 @@
 .listHead { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 14px 10px; background: var(--app-bg); border-bottom: 1px solid var(--app-hover); }
 .filters { display: flex; gap: 6px; }
 .filters button { height: 38px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 16px; background: var(--app-surface); color: var(--app-body); font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
-.filters button[aria-selected="true"] { border-color: var(--app-text); background: var(--app-text); color: var(--app-surface); }
+.filters button[aria-selected="true"] { border-color: var(--app-inverse); background: var(--app-inverse); color: var(--app-on-inverse); }
 .refresh { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--app-line); border-radius: 16px; background: var(--app-surface); color: var(--app-body); cursor: pointer; }
 .notice { margin: 10px 14px; padding: 10px 12px; border-radius: 10px; background: var(--app-danger-bg); color: var(--app-danger); font-size: .8125rem; }
 .rows { margin: 0; padding: 6px; list-style: none; }

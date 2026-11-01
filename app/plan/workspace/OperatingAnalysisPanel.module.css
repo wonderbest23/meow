@@ -1,22 +1,22 @@
-.panel { margin-top: 40px; padding-top: 28px; border-top: 1px solid #dbe1e8; min-width: 0; }
+.panel { margin-top: 40px; padding-top: 28px; border-top: 1px solid var(--app-line); min-width: 0; }
 .panel h3, .result h3 { margin: 0 0 14px; font-size: 1.125rem; line-height: 1.5; }
 .panel header { margin-bottom: 24px; }
 .panel .check { display: flex; align-items: flex-start; gap: 10px; font-weight: 400; line-height: 1.8; }
-.panel .check input, .panel .actionOption input { appearance: auto; width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 4px 0 0; padding: 0; accent-color: #286fe8; }
+.panel .check input, .panel .actionOption input { appearance: auto; width: 18px; height: 18px; min-height: 18px; flex: 0 0 18px; margin: 4px 0 0; padding: 0; accent-color: var(--app-primary); }
 .history { margin: 28px 0; }
 .result { margin: 28px 0; font-size: .875rem; line-height: 1.8; overflow-wrap: anywhere; }
 .result p { white-space: pre-wrap; }
 .result details { margin: 20px 0; }
-.result summary { cursor: pointer; padding: 10px 0; color: #40577a; font-weight: 600; }
+.result summary { cursor: pointer; padding: 10px 0; color: var(--app-body); font-weight: 600; }
 .result ul, .preview ul { padding-left: 20px; }
-.hypothesis { padding: 18px 0; border-bottom: 1px solid #e2e7ed; }
+.hypothesis { padding: 18px 0; border-bottom: 1px solid var(--app-line); }
 .hypothesis h4 { margin: 0; font-size: .9375rem; line-height: 1.6; }
 .evidence { margin: 16px 0; font-size: .8125rem; line-height: 1.8; }
-.evidence > div { display: grid; grid-template-columns: minmax(100px,1fr) minmax(0,2fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid #e2e7ed; }
-.evidence dt { color: #5c6b7f; }
-.evidence small { display: block; font-size: .6875rem; color: #6c7b8e; }
+.evidence > div { display: grid; grid-template-columns: minmax(100px,1fr) minmax(0,2fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--app-line); }
+.evidence dt { color: var(--app-muted); }
+.evidence small { display: block; font-size: .6875rem; color: var(--app-muted); }
 .evidence dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.panel .actionOption { display: flex; align-items: flex-start; gap: 12px; padding: 16px 0; border-bottom: 1px solid #e2e7ed; cursor: pointer; }
+.panel .actionOption { display: flex; align-items: flex-start; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--app-line); cursor: pointer; }
 .actionOption > span { display: grid; gap: 6px; min-width: 0; }
 .actionOption span span { font-weight: 400; font-size: .875rem; line-height: 1.8; }
 .chosen { display: grid; gap: 16px; }

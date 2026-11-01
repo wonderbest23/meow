@@ -1,5 +1,6 @@
 import theme from "../../../components/workspace-theme.module.css";
 import SkipLink from "../../plan/SkipLink";
+import { AppThemeBoot, AppThemeSync } from "../../../components/app-theme";
 
 /*
  * 고객센터도 /plan 화면과 같은 틀(AppFrame)에 담기므로 같은 바탕을 씌운다 — plan-ui 가 없으면
@@ -7,5 +8,5 @@ import SkipLink from "../../plan/SkipLink";
  */
 export default function SupportLayout({ children }: { children: React.ReactNode }) {
   // 본문 바로가기 — /plan 화면들과 같게(접근성 점검 2026-10-22: 고객센터에만 없었다)
-  return <div className={`plan-ui ${theme.theme}`} data-workspace-theme="light"><SkipLink />{children}</div>;
+  return <div className={`plan-ui ${theme.theme}`} data-workspace-theme="light"><AppThemeBoot /><AppThemeSync /><SkipLink />{children}</div>;
 }

@@ -1,5 +1,5 @@
 /* 확인창 — 가운데 흰 카드 · 아래 단추 두 개(취소 · 확인) */
-.dialog { width: min(360px, calc(100% - 48px)); max-height: 80dvh; margin: auto; padding: 0; border: 0; border-radius: 16px; background: #fff; color: var(--app-text); box-shadow: 0 16px 60px color-mix(in srgb, var(--app-text) 20%, transparent); overflow: auto; }
+.dialog { width: min(360px, calc(100% - 48px)); max-height: 80dvh; margin: auto; padding: 0; border: 0; border-radius: 16px; background: var(--app-surface); color: var(--app-text); box-shadow: 0 16px 60px color-mix(in srgb, var(--app-text) 20%, transparent); overflow: auto; }
 .dialog::backdrop { background: color-mix(in srgb, var(--app-text) 40%, transparent); }
 .dialog[open] { animation: confirm-in .16s ease-out; }
 
@@ -10,7 +10,7 @@
 .field { margin-top: 8px; text-align: left; }
 .body h2 + p { color: var(--app-muted); font-size: .90625rem; }
 /* 항목 목록 — 가운데 정렬 문장 대신 왼쪽 정렬로 한 줄에 하나씩 */
-.list { margin: 4px 0 0; padding: 12px 14px 12px 32px; border-radius: 10px; background: #f9fafb; color: var(--app-text); font-size: .90625rem; line-height: 1.6; text-align: left; word-break: keep-all; }
+.list { margin: 4px 0 0; padding: 12px 14px 12px 32px; border-radius: 10px; background: var(--app-raised); color: var(--app-text); font-size: .90625rem; line-height: 1.6; text-align: left; word-break: keep-all; }
 .list li + li { margin-top: 2px; }
 
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 16px; }

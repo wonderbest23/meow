@@ -26,7 +26,7 @@
 /* 불러오기 실패 — 다시 시도 단추 */
 .content div.error { display:grid; justify-items:start; gap:12px; }
 .content div.error p { margin:0; }
-.inlineRetry { margin-left:6px; padding:0; border:0; background:none; color:var(--app-primary); font:inherit; font-weight:600; text-decoration:underline; cursor:pointer; }
+.inlineRetry { margin-left:6px; padding:0; border:0; background:none; color:var(--app-primary-text); font:inherit; font-weight:600; text-decoration:underline; cursor:pointer; }
 .workspaceTitle { margin-bottom:28px; }
 .tabs { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-bottom:32px; }
 .tabs button,.tabs a { min-width:0; min-height:52px; display:flex; align-items:center; justify-content:center; border:1px solid var(--app-line); border-radius:8px; background:var(--app-surface); color:var(--app-body); font-size:.9375rem; font-weight:600; line-height:1.5; padding:12px 8px; text-align:center; transition:background .16s,border-color .16s,box-shadow .16s,transform .16s; -webkit-tap-highlight-color:transparent; }
@@ -89,11 +89,11 @@
 .tabs button { flex: none; min-height: 48px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: var(--app-muted); font-size: .9375rem; font-weight: 600; box-shadow: none; }
 .tabs button:hover { background: transparent; color: var(--app-text); border-color: transparent; }
 .tabs [aria-pressed=true], .tabs [aria-pressed=true]:hover { background: transparent; border-color: transparent; border-bottom-color: var(--app-text); color: var(--app-text); font-weight: 700; box-shadow: none; }
-.tabs a { flex: none; margin-left: auto; min-height: 48px; padding: 0 4px 0 14px; border: 0; background: transparent; color: var(--app-primary); font-size: .875rem; font-weight: 600; }
+.tabs a { flex: none; margin-left: auto; min-height: 48px; padding: 0 4px 0 14px; border: 0; background: transparent; color: var(--app-primary-text); font-size: .875rem; font-weight: 600; }
 .tabs a:hover { background: transparent; border-color: transparent; text-decoration: underline; }
 /* 머리줄 — 상태 배지(components/status-badge) · 이어가기 */
 .workspaceTitleRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.titleAction { border: 0; background: transparent; color: var(--app-primary); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; text-decoration: none; padding: 10px 0; }
+.titleAction { border: 0; background: transparent; color: var(--app-primary-text); font: inherit; font-size: .875rem; font-weight: 600; cursor: pointer; text-decoration: none; padding: 10px 0; }
 .titleAction:hover { text-decoration: underline; }
 .tabLink { margin: -8px 0 8px !important; }
 

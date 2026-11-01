@@ -1,10 +1,10 @@
 /* 머리줄 '공개됨' — 끝난 상태라 보조 단추(공통 버튼 secondary)로 두고, 누르면 메뉴가 열린다 */
 
-.menu { position:fixed; z-index:1000; display:grid; gap:2px; width:max-content; min-width:200px; max-width:calc(100vw - 32px); padding:6px; border:1px solid #e3e7ec; border-radius:12px; background:#fff; box-shadow:0 12px 32px rgba(16,24,40,.14); animation:menuRise .14s ease-out; }
-.menu button { display:flex; align-items:center; gap:10px; width:100%; min-height:36px; padding:0 12px; border:0; border-radius:8px; background:transparent; color:#333d4b; font:inherit; font-size:.875rem; font-weight:600; text-align:left; white-space:nowrap; cursor:pointer; }
-.menu button svg { flex:none; color:#6b7684; }
-.menu button:is(:hover, :focus-visible) { background:#f2f4f6; outline:none; }
-.menu .danger { margin-top:4px; border-top:1px solid #eef0f3; border-radius:0 0 8px 8px; color:#d22030; }
+.menu { position:fixed; z-index:1000; display:grid; gap:2px; width:max-content; min-width:200px; max-width:calc(100vw - 32px); padding:6px; border:1px solid var(--app-line); border-radius:12px; background:var(--app-surface); box-shadow:0 12px 32px rgba(16,24,40,.14); animation:menuRise .14s ease-out; }
+.menu button { display:flex; align-items:center; gap:10px; width:100%; min-height:36px; padding:0 12px; border:0; border-radius:8px; background:transparent; color:var(--app-body); font:inherit; font-size:.875rem; font-weight:600; text-align:left; white-space:nowrap; cursor:pointer; }
+.menu button svg { flex:none; color:var(--app-muted); }
+.menu button:is(:hover, :focus-visible) { background:var(--app-raised); outline:none; }
+.menu .danger { margin-top:4px; border-top:1px solid var(--app-line); border-radius:0 0 8px 8px; color:var(--app-danger); }
 .menu .danger svg { color:currentColor; }
 
 /* 휴대폰은 누르는 자리 44px */

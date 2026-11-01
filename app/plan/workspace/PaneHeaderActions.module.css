@@ -17,7 +17,7 @@
 .segment button { min-height:34px; padding:0 12px; border:0; border-radius:8px; background:transparent; color:var(--app-muted); font:inherit; font-size:.8125rem; font-weight:600; white-space:nowrap; cursor:pointer; }
 .segment button[aria-checked=true] { background:var(--app-surface); color:var(--app-text); font-weight:700; box-shadow:0 1px 3px color-mix(in srgb, var(--app-text) 8%, transparent); }
 
-.segment button:focus-visible { outline:3px solid #8bb9ff; outline-offset:2px; }
+.segment button:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 
 /*
  * 넓은 화면(901px 이상)에서만 머리줄에 — 좁은 화면은 머리줄이 좁아(뒤로 · 사업명 · 메뉴) 단추를 올리면 제목이 사라진다.

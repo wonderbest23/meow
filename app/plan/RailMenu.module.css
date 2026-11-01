@@ -10,20 +10,22 @@
 .brand { flex:none; display:flex; align-items:center; height:32px; padding:0 8px; text-decoration:none; }
 .brand img { display:block; width:auto; height:22px; }
 .brand:hover img { opacity:.85; }
+/* 다크 — 파란 글자 로고가 어두운 바탕에 묻히지 않게 흰색으로 */
+:global(html[data-app-theme="dark"]) .brand img { filter:brightness(0) invert(1); }
 
 /* 계정 단추 — 20px 글자 아바타 + 14px 이름 + ↕ */
-.ws { flex:none; display:flex; align-items:center; gap:8px; box-sizing:border-box; width:100%; height:32px; margin:8px 0 0; padding:6px 8px 6px 6px; border:0; border-radius:10px; background:var(--app-surface); box-shadow:inset 0 0 0 1px var(--app-line-strong); color:var(--app-text); font:inherit; font-size:.875rem; font-weight:400; line-height:1.4; text-align:left; cursor:pointer; }
-.ws:hover { background:var(--app-raised); }
-.ws b { display:inline-grid; place-items:center; flex:none; width:20px; height:20px; border-radius:6px; background:var(--app-primary); color:var(--app-surface); font-size:.6875rem; font-weight:600; }
+.ws { flex:none; display:flex; align-items:center; gap:8px; box-sizing:border-box; width:100%; height:32px; margin:8px 0 0; padding:6px 8px 6px 6px; border:0; border-radius:10px; background:transparent; box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--app-text) 25%, transparent); color:var(--app-body); font:inherit; font-size:.875rem; font-weight:400; line-height:1.4286; text-align:left; cursor:pointer; }
+.ws:hover { background:var(--app-fill); color:var(--app-text); }
+.ws b { display:inline-grid; place-items:center; flex:none; width:20px; height:20px; border-radius:4px; background:var(--app-primary); color:var(--app-on-primary); font-size:.625rem; font-weight:500; }
 .ws span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ws svg { flex:none; width:16px; height:16px; color:var(--app-muted); }
 
 .nav { flex:none; display:flex; flex-direction:column; margin-top:8px; }
-.item { display:flex; align-items:center; gap:8px; box-sizing:border-box; width:100%; height:32px; margin:0; padding:4px 6px; border:0; border-radius:8px; background:transparent; color:var(--app-body); font:inherit; font-size:.875rem; font-weight:400; line-height:1.4; text-align:left; text-decoration:none; cursor:pointer; }
+.item { display:flex; align-items:center; gap:8px; box-sizing:border-box; width:100%; height:32px; margin:0; padding:4px 6px; border:0; border-radius:8px; background:transparent; color:var(--app-body); font:inherit; font-size:.875rem; font-weight:400; line-height:1.5; text-align:left; text-decoration:none; cursor:pointer; }
 .item > span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .item > svg { flex:none; width:20px; height:20px; color:var(--app-muted); stroke-width:1.8; }
-.item:hover { background:color-mix(in srgb, var(--app-text) 5%, transparent); color:var(--app-text); }
-.item[aria-current=page] { background:color-mix(in srgb, var(--app-text) 8%, transparent); color:var(--app-text); }
+.item:hover { background:color-mix(in srgb, var(--app-text) 4%, transparent); color:var(--app-text); }
+.item[aria-current=page] { background:var(--app-nav-selected); color:var(--app-text); }
 .item[aria-current=page] > svg { color:var(--app-text); }
 
 /* 사업이 없을 때의 손님 문의 — 누를 수 없고 왜 막혔는지 */
@@ -33,33 +35,35 @@
 .disabledText small { color:var(--app-muted); font-size:.75rem; }
 
 /* 답할 문의 수 */
-.count { flex:none; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--app-danger); color:var(--app-surface); font-size:.75rem; font-weight:600; line-height:1.25rem; text-align:center; }
+.count { flex:none; min-width:20px; height:20px; padding:0 6px; border-radius:999px; background:var(--app-danger); color:var(--app-on-primary); font-size:.75rem; font-weight:600; line-height:1.25rem; text-align:center; }
 
 .spring { flex:1; min-height:16px; }
 
-/* 안내 카드 240×64 r12 — 고객센터 */
-.promo { position:relative; flex:none; display:flex; align-items:center; box-sizing:border-box; width:100%; height:64px; padding:12px 14px; overflow:hidden; border-radius:12px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); text-decoration:none; }
+/* 안내 카드 240×56 r12 안쪽 8 12 — 고객센터(lovable 캡처: 제목 14/480 · 설명 12/16 회색, 오른쪽 72px 장식) */
+.promo { position:relative; flex:none; display:flex; align-items:center; box-sizing:border-box; width:100%; height:56px; padding:8px 12px; overflow:hidden; border-radius:12px; background:var(--app-panel); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); text-decoration:none; }
 .promo:hover { box-shadow:0 0 0 1px var(--app-line-strong); }
-.promo i { position:absolute; top:-6px; right:-6px; width:76px; height:76px; border-radius:50%; background:radial-gradient(circle at 30% 30%, var(--app-danger-bg), var(--app-selected) 60%, var(--app-warning-bg)); }
-.promoText { position:relative; z-index:1; display:grid; min-width:0; }
-.promoTitle { font-size:.875rem; font-weight:600; line-height:1.4; }
-.promoDesc { overflow:hidden; color:var(--app-muted); font-size:.75rem; line-height:1.4; text-overflow:ellipsis; white-space:nowrap; }
+/* 우리 장식 — 파랑 계열 원(lovable 그림 아님) */
+.promo i { position:absolute; top:-8px; right:-16px; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--app-primary) 38%, transparent), color-mix(in srgb, #5bb4ff 22%, transparent) 55%, transparent 72%); }
+.promoText { position:relative; z-index:1; display:grid; min-width:0; padding-right:56px; }
+.promoTitle { font-size:.875rem; font-weight:480; line-height:1.4286; }
+.promoDesc { overflow:hidden; color:var(--app-muted); font-size:.75rem; line-height:1.3333; text-overflow:ellipsis; white-space:nowrap; }
 
-/* 맨 아래 줄 40px — 아바타 24(빨간 점 알림) · 받은 알림 */
-.foot { flex:none; display:flex; align-items:center; justify-content:space-between; height:40px; margin-top:8px; padding:0 8px; }
-.footAvatar, .footIcon { display:grid; place-items:center; width:32px; height:32px; margin:0 -4px; padding:0; border:0; border-radius:8px; background:transparent; color:var(--app-body); cursor:pointer; }
-.footAvatar:hover, .footIcon:hover { background:color-mix(in srgb, var(--app-text) 5%, transparent); }
+/* 맨 아래 줄 — 아바타 단추 32(r8, 안에 20 원 + 알림 점 12) · 받은 알림 28(r8, 아이콘 20). 카드와 16 띄움, 아래 8 */
+.foot { flex:none; display:flex; align-items:center; justify-content:space-between; height:32px; margin-top:16px; padding:0; }
+.footAvatar { display:grid; place-items:center; width:32px; height:32px; margin:0; padding:0; border:0; border-radius:8px; background:transparent; color:var(--app-body); cursor:pointer; }
+.footIcon { display:grid; place-items:center; width:28px; height:28px; margin:0; padding:0; border:0; border-radius:8px; background:transparent; color:var(--app-text); cursor:pointer; }
+.footAvatar:hover, .footIcon:hover, .footAvatar[aria-expanded=true] { background:var(--app-nav-selected); }
 .footIcon svg { width:20px; height:20px; stroke-width:1.8; }
-.avatar { position:relative; display:inline-grid; place-items:center; width:24px; height:24px; border-radius:50%; background:var(--app-primary); color:var(--app-surface); font-size:.6875rem; font-weight:600; }
-.avatar em { position:absolute; top:-4px; right:-6px; min-width:14px; height:14px; padding:0 3px; border-radius:999px; background:var(--app-danger); color:var(--app-surface); font-size:.5625rem; font-style:normal; font-weight:600; line-height:.875rem; text-align:center; }
+.avatar { position:relative; display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--app-primary); color:var(--app-on-primary); font-size:.625rem; font-weight:500; }
+.avatar em { position:absolute; top:-4px; right:-4px; min-width:12px; height:12px; padding:0 2px; box-sizing:border-box; border-radius:999px; background:#e12429; color:#fff; font-size:.5rem; font-style:normal; font-weight:480; line-height:1.5; text-align:center; }
 
 /* 로그인 전 — 로그인 · 회원가입 두 단추 */
 .auth { flex:none; display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }
 .auth a { display:flex; align-items:center; justify-content:center; gap:2px; min-width:0; height:40px; border-radius:8px; font-size:.875rem; font-weight:600; text-decoration:none; white-space:nowrap; }
 .auth a svg { flex:none; width:16px; height:16px; margin-right:-4px; }
-.login { border:1px solid var(--app-line-strong); background:var(--app-surface); color:var(--app-text); }
+.login { border:1px solid var(--app-line-strong); background:var(--app-panel); color:var(--app-text); }
 .login:hover { background:var(--app-raised); }
-.signup { border:1px solid var(--app-text); background:var(--app-text); color:var(--app-surface); }
+.signup { border:1px solid var(--app-inverse); background:var(--app-inverse); color:var(--app-on-inverse); }
 
 .menu :is(a, button):focus-visible { outline:2px solid var(--app-primary); outline-offset:-2px; }
 

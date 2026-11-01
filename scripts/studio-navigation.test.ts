@@ -396,8 +396,9 @@ console.log("studio navigation ok");
   const chrome = read("../app/plan/BusinessAppChrome.tsx");
   // lovable 구조 2단계 — 위 막대는 작업실이 그린다: PC 48px(사업명 ▾ · 기록 · 패널 접기 | 미리보기 막대), 휴대폰 대화 화면 56px(✕ · 사업명 · ›)
   assert.match(studio, /topBar=\{menu => \(wide \? pcBar\(menu\) : mobileHead\)\}/);
-  assert.match(studio, /showRail=\{wide && railOpen\} bare=\{wide\}/, "PC 작업 화면은 왼쪽 메뉴 + 판 없는 본문(둥근 판은 미리보기 판)");
-  assert.match(studio, /\{!railOpen && menu\.button\(styles\.tool, 18\)\}/, "왼쪽 메뉴를 접은 PC 는 대화 열 머리 ☰ 로 같은 메뉴를 연다");
+  // lovable 구조 5단계(캡처 project-pc) — 작업 화면 PC 는 왼쪽 메뉴를 늘 접고 대화 열 머리 ☰ 로 같은 메뉴(서랍)를 연다
+  assert.match(studio, /showRail=\{false\} bare=\{wide\}/, "PC 작업 화면은 왼쪽 메뉴 없이 판 없는 본문(둥근 판은 미리보기 판)");
+  assert.match(studio, /\{menu\.button\(styles\.tool, 16\)\}/, "대화 열 머리 ☰ 로 같은 메뉴를 연다");
   assert.match(chrome, /\{topBar \? topBar\(\{ button: menuButton, open: \(\) => setOpen\(true\), isOpen: open \}\) : <header className=\{styles\.header\}>/);
   // 예전 넓은 탭 줄 · 머리줄 진행 단계 목록은 없다(머리줄 한 줄의 탭 · 진행 막대로)
   assert.ok(!studio.includes("styles.wideTabs") && !studioCss.includes(".wideTabs"), "예전 넓은 탭 줄을 다시 그리지 않는다");
@@ -416,10 +417,12 @@ console.log("studio navigation ok");
   // 페이지 선택의 ✓ 는 진행 칩과 같은 값(유지보수는 끝나는 단계가 아니라 없다)
   assert.match(studio, /const tabDone = \(item: RightTab\) => item !== "operations" && chipFor\(/);
   // 대화 열 451(시안 실측)과 위 막대 왼쪽 칸이 같은 값 · 미리보기 판은 r16 흰 판 · 위 막대 48
-  assert.match(studioCss, /--studio-chat-w:451px/);
+  assert.match(studioCss, /--studio-chat-w:430px/);
   assert.match(studioCss, /\.topBar \{ min-height:48px;[^}]*grid-template-columns:var\(--studio-chat-w/);
-  assert.match(studioCss, /\.rightCol \{ grid-column:2; margin:0 8px 8px 0; border-radius:16px; background:var\(--app-surface\);/);
-  assert.match(studioCss, /\.toolCenter > div:has\(> \.pageSelect\) \{ flex:20 1 200px; max-width:260px;/, "페이지 선택은 남는 폭을 먼저 받아 260 까지");
+  // 5단계(캡처 project-pc): 미리보기 판 x431 — 오른쪽·아래 8 띄운 r16 판(bg-primary + 판 그림자), 페이지 선택 202 를 새로고침과 함께 256 알약에
+  assert.match(studioCss, /\.rightCol \{ grid-column:2; margin:0 8px 8px 1px; border-radius:16px; background:var\(--app-panel\); box-shadow:var\(--app-ring-shadow\);/);
+  assert.match(studioCss, /\.selectWrap \{ display:flex; align-items:center; flex:none; width:256px;/, "새로고침 + 페이지 선택 256 알약");
+  assert.match(studioCss, /\.selectWrap > div \{ flex:none; width:202px;/, "페이지 선택 202");
 
   // 지금까지 정한 내용 — 남는 돈은 가격과 한 건 비용을 둘 다 숫자로 답했을 때만 계산한다(지어내지 않는다)
   const summary = read("../app/plan/studio/StudioIntakeSummary.tsx");

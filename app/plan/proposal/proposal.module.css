@@ -17,19 +17,19 @@
 .layout { display: grid; grid-template-columns: 190px minmax(0, 1fr) 290px; min-height: calc(100dvh - 76px); }
 .slides { background: var(--app-bg); border-right: 1px solid var(--app-line); padding: 16px 10px; display: flex; flex-direction: column; gap: 5px; }
 .slides button { display: flex; align-items: center; gap: 12px; text-align: left; padding: 14px 10px; min-height: 48px; background: transparent; border: 1px solid transparent; border-radius: 6px; color: var(--app-muted); }
-.slides button[aria-current] { color: var(--app-primary); background: var(--app-soft); border-color: var(--app-line); }
+.slides button[aria-current] { color: var(--app-primary-text); background: var(--app-soft); border-color: var(--app-line); }
 .slides button span { font-size: .6875rem; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .slides button strong { font-size: .75rem; line-height: 1.5; font-weight: 600; overflow-wrap: anywhere; }
 .stage { padding: 22px 28px; min-width: 0; }
 .toolbar { display: flex; align-items: center; gap: 4px; margin-bottom: 22px; color: var(--app-muted); font-size: .75rem; }
 .toolbar > span:first-child { min-width: 50px; }
 .spacer { flex: 1; }
-.canvas { position: relative; width: 100%; aspect-ratio: 13.33 / 7.5; background: white; box-shadow: 0 5px 20px color-mix(in srgb, var(--app-text) 7%, transparent); isolation: isolate; }
+.canvas { position: relative; width: 100%; aspect-ratio: 13.33 / 7.5; background: var(--app-surface); /* 발표 자료 장 — 화면 테마와 무관 */ box-shadow: 0 5px 20px color-mix(in srgb, var(--app-text) 7%, transparent); isolation: isolate; }
 .canvas > svg { width: 100%; height: 100%; display: block; overflow: hidden; }
 .object { position: absolute; background: transparent; border: 1px solid transparent; border-radius: 0; padding: 0; touch-action: none; cursor: move !important; }
 .object:hover { border-color: color-mix(in srgb, var(--app-warning-bg) 50%, var(--app-primary)); }
 .object.selected { border: 1px solid var(--app-primary); }
-.resize { position: absolute; transform: translate(-50%, -50%); width: 13px; height: 13px; border: 2px solid var(--app-primary); border-radius: 2px; background: white; padding: 0; cursor: nwse-resize !important; touch-action: none; z-index: 2; }
+.resize { position: absolute; transform: translate(-50%, -50%); width: 13px; height: 13px; border: 2px solid var(--app-primary); border-radius: 2px; background: var(--app-surface); padding: 0; cursor: nwse-resize !important; touch-action: none; z-index: 2; }
 .sources { display: flex; flex-wrap: wrap; gap: 8px; padding: 18px 0; font-size: .6875rem; line-height: 1.6; color: var(--app-muted); }
 .sources span { color: var(--app-muted); }
 .inspector { padding: 24px 18px; background: var(--app-surface); border-left: 1px solid var(--app-line); max-height: calc(100dvh - 76px); overflow-y: auto; position: sticky; top: 76px; }
@@ -45,10 +45,10 @@
 .geometry > p { font-size: .75rem; color: var(--app-muted); }
 .segmented { display: flex; padding: 3px; background: var(--app-raised); border-radius: 6px; margin-bottom: 18px; }
 .segmented button { flex: 1; min-height: 32px; border: 0; background: transparent; border-radius: 4px; font-size: .75rem; color: var(--app-muted); }
-.segmented button[aria-pressed=true] { background: white; color: var(--app-primary); box-shadow: 0 1px 4px color-mix(in srgb, var(--app-text) 7%, transparent); }
+.segmented button[aria-pressed=true] { background: var(--app-surface); color: var(--app-primary-text); box-shadow: 0 1px 4px color-mix(in srgb, var(--app-text) 7%, transparent); }
 .coordinates { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .versions { border-bottom: 1px solid var(--app-line); padding-bottom: 18px; margin-bottom: 24px; }
-.versions p { font-size: .75rem; color: var(--app-primary); }
+.versions p { font-size: .75rem; color: var(--app-primary-text); }
 .versions button { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: var(--app-bg); padding: 10px; margin-top: 6px; border-radius: 4px; text-align: left; }
 .versions button span { flex: 1; font-size: .75rem; }
 .versions small { display: block; font-size: .625rem; color: var(--app-muted); margin-top: 4px; }
@@ -58,7 +58,7 @@
 /* 도는 표시는 PlanLoading 의 키프레임 하나로(움직임 줄이기도 거기서) */
 .spin { composes: spin from "../PlanLoading.module.css"; }
 .editScope { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.editScope a { font-size: .6875rem; color: var(--app-primary); }
+.editScope a { font-size: .6875rem; color: var(--app-primary-text); }
 .sourceUpdate { background: var(--app-surface); border-bottom: 1px solid var(--app-line); }
 .updateHeading { padding: 16px 24px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .updateHeading > div { flex: 1 1 260px; }
@@ -77,7 +77,7 @@
 .compare > div { min-width: 0; }
 .compare > div + div { border-left: 1px solid var(--app-line); padding-left: 24px; }
 .compare small { color: var(--app-muted); font-size: .6875rem; line-height: 1.7; }
-.compare > div + div > small { color: var(--app-primary); }
+.compare > div + div > small { color: var(--app-primary-text); }
 .reviewPages article { border-bottom: 1px solid var(--app-line); padding: 28px 0; }
 .reviewPages h3 { font-size: 1rem; margin: 0 0 22px; }
 .reviewContent { font-size: .8125rem; line-height: 1.75; overflow-wrap: anywhere; }
@@ -112,7 +112,7 @@
 .documentNext > div { flex: 1 1 320px; min-width: 0; }
 .documentNext strong { font-size: .875rem; }
 .documentNext p { margin: 8px 0 0; }
-.documentNext a { display: inline-flex; align-items: center; gap: 7px; color: var(--app-primary); font-size: .8125rem; text-decoration: none; }
+.documentNext a { display: inline-flex; align-items: center; gap: 7px; color: var(--app-primary-text); font-size: .8125rem; text-decoration: none; }
 .documentNext a[aria-disabled=true] { opacity: .5; cursor: default; }
 .transmission { padding: 22px 0 0; }
 .transmission label { display: flex; gap: 10px; align-items: flex-start; font-size: .8125rem; line-height: 1.7; }

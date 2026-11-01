@@ -7,7 +7,7 @@
 .close:hover { background: var(--app-raised); }
 .lead { margin: 8px 0 18px; color: color-mix(in srgb, var(--app-bg) 20%, var(--app-body)); font-size: .875rem; line-height: 1.6; }
 .meter { display: grid; gap: 6px; margin-bottom: 16px; }
-.meter span { font-size: .8125rem; font-weight: 600; color: var(--app-primary); }
+.meter span { font-size: .8125rem; font-weight: 600; color: var(--app-primary-text); }
 .meter progress { width: 100%; height: 8px; border: 0; border-radius: 8px; overflow: hidden; appearance: none; background: var(--app-line); }
 .meter progress::-webkit-progress-bar { background: var(--app-line); border-radius: 8px; }
 .meter progress::-webkit-progress-value { background: var(--app-primary); border-radius: 8px; transition: width .4s ease; }
@@ -16,10 +16,10 @@
 .list li { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 4px; color: color-mix(in srgb, var(--app-bg) 20%, var(--app-body)); font-size: .875rem; }
 .list li small { margin-left: auto; font-size: .75rem; color: color-mix(in srgb, var(--app-bg) 70%, var(--app-text)); }
 .list li[data-state="done"] { color: var(--app-text); }
-.list li[data-state="done"] small { color: var(--app-primary); }
+.list li[data-state="done"] small { color: var(--app-primary-text); }
 .list li[data-state="current"] { color: var(--app-text); font-weight: 600; }
-.list li[data-state="current"] small { color: var(--app-primary); }
-.mark { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--app-bg) 80%, var(--app-body)); color: var(--app-surface); }
+.list li[data-state="current"] small { color: var(--app-primary-text); }
+.mark { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--app-bg) 80%, var(--app-body)); color: var(--app-on-primary); }
 li[data-state="done"] .mark { border-color: var(--app-primary); background: var(--app-primary); }
 li[data-state="current"] .mark { border-color: var(--app-primary); }
 /* 도는 표시는 PlanLoading 의 키프레임 하나로(.8s · 움직임 줄이기도 거기서) */
@@ -43,7 +43,7 @@ li[data-state="current"] .mark i { width: 10px; height: 10px; border: 2px solid 
 /* 대화 칸 마무리 묶음(.complete p — 아래 여백 22px)에 들어가도 줄 사이가 벌어지지 않게 한 단계 강하게(r37 휴대폰 점검: 줄 사이 ~130px) */
 .card.card p { margin: 0; font-size: .84375rem; line-height: 1.6; word-break: keep-all; text-wrap: pretty; }
 .cardDone { display: flex; align-items: flex-start; gap: 6px; color: var(--app-body); }
-.cardDone svg { margin-top: 3px; color: var(--app-primary); }
+.cardDone svg { margin-top: 3px; color: var(--app-primary-text); }
 .cardCurrent { display: flex; align-items: center; gap: 8px; color: var(--app-text); font-weight: 700; }
 .cardCurrent i { flex: none; width: 12px; height: 12px; border: 2px solid var(--app-primary); border-right-color: transparent; border-radius: 50%; }
 .cardWaiting { color: color-mix(in srgb, var(--app-bg) 40%, var(--app-body)); text-wrap: pretty; }

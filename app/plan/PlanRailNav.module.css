@@ -185,7 +185,7 @@
   flex: none;
   font-size: .8125rem;
   font-variant-numeric: tabular-nums;
-  color: #b4b4c8;
+  color: var(--app-faint);
 }
 
 .sectionName {
@@ -203,12 +203,12 @@
 
 .sectionOn {
   background: var(--blue, var(--app-primary));
-  color: #fff;
+  color: var(--app-on-primary);
 }
 
 .sectionOn .sectionNo,
 .sectionOn .sectionName {
-  color: #fff;
+  color: var(--app-on-primary);
 }
 
 @media (hover: hover) and (pointer: fine) {

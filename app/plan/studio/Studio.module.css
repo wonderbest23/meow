@@ -14,19 +14,20 @@
 /* 미리보기 화면은 아래 68px 막대 자리를 비운다(막대가 마지막 내용·단추를 가리지 않게) */
 @media (max-width:1023px) {
   .rightCol { padding:env(safe-area-inset-top) 0 calc(68px + env(safe-area-inset-bottom)); }
-  .chatCol { background:var(--app-bg); }
+  .chatCol { background:var(--app-base); }
 }
 
 /*
- * PC — lovable 구조 2단계(시안 PcStudio.dc.html): 왼쪽 메뉴(256) 오른쪽 페이지색 위에 위 막대 48 + [대화 열 451 | 미리보기 판].
- * 미리보기 판은 r16 흰 판(오른쪽·아래 8px 띄움, 1px 선 + 옅은 그림자). 대화 열을 접으면 판이 넓어진다.
+ * PC — lovable 구조 5단계(캡처 project-pc-light/dark): 왼쪽 메뉴 없이 페이지색(bg-base) 위에 위 막대 48 + [대화 열 430 | 미리보기 판].
+ * 미리보기 판 x431 y48 = 오른쪽·아래 8px 띄운 r16 판(bg-primary + 판 그림자). 대화 열을 접으면 판이 넓어진다.
  */
 @media (min-width:1024px) {
-  main.page { --studio-chat-w:451px; background:var(--app-raised); }
+  main.page.page { --studio-chat-w:430px; background:var(--app-base); }
+  .chatCol { padding-left:1px; }
   .studio { grid-template-columns:var(--studio-chat-w) minmax(0,1fr); background:transparent; }
   .studio[data-collapsed] { grid-template-columns:0 minmax(0,1fr); }
   .chatCol { grid-column:1; background:transparent; }
-  .rightCol { grid-column:2; margin:0 8px 8px 0; border-radius:16px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line), 0 2px 0 color-mix(in srgb, var(--app-text) 3%, transparent), 0 4px 3px -1.5px color-mix(in srgb, var(--app-text) 4%, transparent), 0 7px 6px -3px color-mix(in srgb, var(--app-text) 4%, transparent); overflow:hidden; }
+  .rightCol { grid-column:2; margin:0 8px 8px 1px; border-radius:16px; background:var(--app-panel); box-shadow:var(--app-ring-shadow); overflow:hidden; }
   .studio[data-collapsed] .rightCol { margin-left:8px; }
 }
 
@@ -68,48 +69,62 @@
 @media (max-width:560px) { .entryLink[data-with-actions] { display:none; } .entryLink[data-with-actions] + div { margin-left:auto; } }
 @media (max-width:300px) { .entryLink { display:none; } .entryLink + div { margin-left:auto; } }
 
-.studio :is(button,a):focus-visible { outline:3px solid #8bb9ff; outline-offset:2px; }
+.studio :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 
 /* 칸 단추 자리 — 휴대폰은 머리줄(BusinessAppChrome)의 단추 자리, PC 는 한 줄 머리줄의 오른쪽 끝 */
 .headerSlot { display:flex; align-items:center; gap:8px; min-width:0; flex-shrink:0; }
 
 /*
- * PC 위 막대(48px, 시안 PcStudio) — 왼쪽은 대화 열 폭(451, 안쪽 16): 사업명 ▾ · 기록 · 패널 접기.
- * 오른쪽은 미리보기 판의 막대: '미리보기' 알약(파랑 연한 바탕) · 도구 28 · 가운데(기기 · 새로고침 · 페이지 선택 260 · 새 창) · 칸 단추 · 공유 원 28.
- * 색은 --app-* 토큰만. 글자 크기 설정을 키우면 높이가 늘어난다(min-height).
+ * PC 위 막대(48px) — lovable 구조 5단계(캡처 project-pc-*): 왼쪽 칸 = 대화 열 폭(430): ☰ 28(11,10) · 사업명 알약 28(16px, 안쪽 0 6 0 10) · 기록 28 · 패널 접기 28(오른쪽 14).
+ * 오른쪽 = 미리보기 판 막대(왼쪽 14 · 오른쪽 12): [미리보기 87 | 아이콘 34~36 ×3] 묶음 28(bg-depth, 안쪽 선) · 가운데(칸 알약 · 기기 28)
+ * · [새로고침 24 + 페이지 선택 202] 256 알약 · 새 창 28 · 오른쪽 공유 48×28 · 칸 주 단추(게시 자리, 같은 알약). 색은 --app-* 토큰만.
  */
-.topBar { min-height:48px; flex-shrink:0; display:grid; grid-template-columns:var(--studio-chat-w, 451px) minmax(0,1fr); align-items:center; background:transparent; color:var(--app-text); position:relative; z-index:20; }
+.topBar { min-height:48px; flex-shrink:0; display:grid; grid-template-columns:var(--studio-chat-w, 430px) minmax(0,1fr); align-items:center; background:transparent; color:var(--app-text); position:relative; z-index:20; }
 .topBar[data-collapsed] { grid-template-columns:max-content minmax(0,1fr); }
 .topBar :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
-.chatHead { display:flex; align-items:center; gap:4px; min-width:0; min-height:48px; padding:0 8px 0 8px; box-sizing:border-box; }
+.chatHead { display:flex; align-items:center; gap:2px; min-width:0; min-height:48px; padding:0 14px 0 11px; box-sizing:border-box; }
+.chatHead > .tool + .tool, .chatHead > div + .tool { margin-left:2px; }
 .topBar[data-collapsed] .chatHead { padding-right:0; }
 .grow { flex:1 1 0; min-width:0; }
-/* 사업명 ▾ — 14px/500 · 글자는 대화 열 안쪽 16 에 맞춘다(머리 안쪽 8 + 단추 안쪽 8), 누르면 사업 메뉴(이름 바꾸기 · 다른 사업 · 모든 사업 · 새 대화) */
-.bizName { display:inline-flex; align-items:center; gap:6px; min-width:0; max-width:100%; min-height:32px; padding:0 8px; border:0; border-radius:8px; background:transparent; color:var(--app-text); font:inherit; font-size:.875rem; font-weight:500; cursor:pointer; }
+/* 사업명 알약 28 — 16px/400, 안쪽 0 6 0 10, ⌄ 16. 누르면 사업 메뉴(이름 바꾸기 · 다른 사업 · 모든 사업 · 새 대화) */
+.bizName { display:inline-flex; align-items:center; gap:6px; min-width:0; max-width:100%; box-sizing:border-box; height:28px; padding:0 6px 0 10px; border:0; border-radius:999px; background:transparent; color:var(--app-text); font:inherit; font-size:1rem; font-weight:400; line-height:1.5; cursor:pointer; }
 .bizName:hover { background:var(--app-hover); }
-.bizName svg { flex:none; width:14px; height:14px; color:var(--app-muted); }
+.bizName svg { flex:none; width:16px; height:16px; color:var(--app-muted); }
 .bizTitle { margin:0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:inherit; }
-.chatHead > div:first-child { min-width:0; flex:0 1 auto; }
-/* 아이콘 단추 28 — 위 막대 도구(시안 .pill 28 · 아이콘 16~18) */
-.tool { position:relative; display:inline-grid; place-items:center; flex:none; box-sizing:border-box; width:28px; height:28px; padding:0; border:0; border-radius:999px; background:transparent; color:var(--app-body); text-decoration:none; cursor:pointer; }
+.chatHead > div:first-of-type { min-width:0; flex:0 1 auto; }
+/* 아이콘 단추 28 원 — 아이콘 16, 글자색 fg-primary */
+.tool { position:relative; display:inline-grid; place-items:center; flex:none; box-sizing:border-box; width:28px; height:28px; padding:0; border:0; border-radius:999px; background:transparent; color:var(--app-text); text-decoration:none; cursor:pointer; }
 .tool svg { width:16px; height:16px; }
-.chatHead .tool svg { width:18px; height:18px; }
 .tool:hover:not(:disabled) { background:var(--app-hover); color:var(--app-text); }
-.tool:disabled { color:var(--app-line-strong); cursor:default; }
+.tool:disabled { color:var(--app-faint); cursor:default; }
 .tool[aria-pressed=true] { background:var(--app-hover); color:var(--app-text); }
-.toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:4px; min-width:0; min-height:48px; padding:0 8px 0 16px; box-sizing:border-box; }
-.previewPill { display:inline-flex; align-items:center; gap:6px; flex:none; min-height:28px; padding:0 12px; border-radius:999px; background:var(--app-selected); color:var(--app-selected-text); font-size:.875rem; font-weight:500; white-space:nowrap; }
-.previewPill svg { width:14px; height:14px; }
-/* 가운데 묶음은 막대의 한 줄에 그대로 녹인다 — 페이지 선택이 남는 폭을 먼저 받아 260 까지 늘어나고(시안), 칸 단추가 길면 줄어든다 */
-.toolCenter { display:contents; }
+.toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:4px; min-width:0; min-height:48px; padding:0 12px 0 14px; box-sizing:border-box; }
+/* [미리보기 | 아이콘 ×3] 묶음 — 28 r999, bg-depth + 안쪽 1px 선(캡처 그림자 그대로) */
+.viewGroup { display:inline-flex; align-items:center; flex:none; height:28px; border-radius:999px; background:var(--app-bg); box-shadow:inset 0 0 0 1px var(--app-line), inset 0 2px 2px -1px rgb(0 0 0 / .02), inset 0 4px 4px -2px rgb(0 0 0 / .02); }
+.previewPill { display:inline-flex; align-items:center; gap:4px; flex:none; box-sizing:border-box; min-width:87px; height:28px; padding:0 8px 0 6px; border-radius:999px; background:var(--app-surface); box-shadow:inset 0 0 0 1px var(--app-line-strong); color:var(--app-accent); font-size:.875rem; font-weight:400; line-height:1.5; white-space:nowrap; }
+.previewPill svg { width:16px; height:16px; }
+.groupTool { position:relative; display:inline-grid; place-items:center; flex:none; box-sizing:border-box; width:36px; height:28px; padding:0 4px 0 10px; border:0; border-radius:999px; background:transparent; color:var(--app-muted); cursor:pointer; }
+.groupTool svg { width:16px; height:16px; }
+.viewGroup > .groupTool:nth-child(2) { width:34px; padding:0 4px 0 8px; }
+.groupTool:hover:not(:disabled) { color:var(--app-text); }
+.groupTool:disabled { color:var(--app-faint); cursor:default; }
+.viewGroup > :not(:first-child):not(:last-child)::after { content:""; position:absolute; right:0; top:8px; width:1px; height:12px; background:var(--app-line); }
+/* 가운데 묶음은 막대의 한 줄에 그대로 녹인다 */
+.toolCenter { display:flex; align-items:center; gap:6px; min-width:0; flex:0 1 auto; }
 .toolbar > .grow { flex:1 1 0; }
-.toolCenter > div:has(> .pageSelect) { flex:20 1 200px; max-width:260px; min-width:0; }
-/* 페이지 선택 알약 260 — 흰 바탕 1px 선, 가운데 글자. 진행은 작은 점(끝남 ✓ 초록 · 지금 파랑 · 잠김 회색)과 작은 글 */
-.pageSelect { display:inline-flex; align-items:center; justify-content:center; gap:6px; box-sizing:border-box; width:100%; min-height:28px; padding:0 10px 0 12px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:inset 0 0 0 1px var(--app-line); color:var(--app-text); font:inherit; font-size:.875rem; cursor:pointer; }
-.pageSelect:hover { box-shadow:inset 0 0 0 1px var(--app-line-strong); }
-.selectName { flex:none; font-weight:500; white-space:nowrap; }
+/* [새로고침 24 + 페이지 선택 202] — 256 알약(흰 .6 바탕 + 1px 선), 안쪽 0 2 0 4 */
+.selectWrap { display:flex; align-items:center; flex:none; width:256px; box-sizing:border-box; height:28px; padding:0 2px 0 4px; border-radius:999px; background:color-mix(in srgb, var(--app-surface) 60%, transparent); box-shadow:inset 0 0 0 1px var(--app-line-strong); }
+.selectWrap > div { flex:none; width:202px; min-width:0; }
+.refresh { display:inline-grid; place-items:center; flex:none; width:24px; height:24px; padding:0; border:0; border-radius:999px; background:transparent; color:var(--app-muted); cursor:pointer; }
+.refresh svg { width:14px; height:14px; }
+.refresh:hover:not(:disabled) { background:var(--app-hover); color:var(--app-text); }
+.refresh:disabled { color:var(--app-faint); cursor:default; }
+/* 페이지 선택 알약 — 가운데 14px 글자, 진행은 작은 점(끝남 ✓ 초록 · 지금 파랑 · 잠김 회색)과 작은 글 */
+.pageSelect { display:inline-flex; align-items:center; justify-content:center; gap:6px; box-sizing:border-box; width:100%; height:28px; padding:0 4px; border:0; border-radius:999px; background:transparent; color:var(--app-text); font:inherit; font-size:.875rem; line-height:1; cursor:pointer; }
+.pageSelect:hover { background:var(--app-hover); }
+.selectName { flex:none; font-weight:400; white-space:nowrap; }
 .selectStatus { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--app-muted); font-size:.75rem; }
-.selectChevron { flex:none; width:14px !important; height:14px !important; color:var(--app-muted); }
+.selectChevron { flex:none; width:14px !important; height:14px !important; margin-left:auto; color:var(--app-muted); }
 .selectDot { flex:none; width:6px; height:6px; border-radius:50%; background:var(--app-primary); }
 .selectDot[data-state=done] { background:var(--app-success); }
 .selectDot[data-state=locked] { background:var(--app-line-strong); }
@@ -118,34 +133,37 @@
 .doneMark { color:var(--app-success); }
 .newsDot { display:inline-block; flex:none; width:7px; height:7px; border-radius:50%; background:var(--app-danger); }
 .menuAvatar { display:inline-grid; place-items:center; width:20px; height:20px; border-radius:6px; background:var(--app-selected); color:var(--app-selected-text); font-size:.6875rem; font-weight:600; font-style:normal; }
-.tbActs { display:flex; align-items:center; gap:8px; flex:none; }
-/* 공유 원 28(시안 .circ.ring 흰 바탕) */
-.shareRound { display:inline-grid; place-items:center; flex:none; width:28px; height:28px; padding:0; border:0; border-radius:50%; background:var(--app-surface); box-shadow:inset 0 0 0 1px var(--app-line-strong); color:var(--app-body); cursor:pointer; }
-.shareRound svg { width:16px; height:16px; }
-.shareRound:disabled { color:var(--app-line-strong); box-shadow:inset 0 0 0 1px var(--app-line); cursor:default; }
-/* 좁은 PC — 페이지 선택 알약은 지키고(최소 180) 칸 단추 이름 · 진행 글부터 줄인다 */
+.tbActs { display:flex; align-items:center; gap:6px; flex:none; }
+/* 공유 · 게시 알약 48×28 — 14px/400, 안쪽 4 8, 흰(다크는 회색 16%) 바탕 + 1px 선. 칸의 주 단추(홈페이지 만들기 · 공개하기 …)도 같은 알약으로 */
+.sharePill, .tbActs .headerSlot :is(button, a, summary) { display:inline-flex; align-items:center; justify-content:center; gap:4px; flex:none; box-sizing:border-box; min-width:48px; height:28px; min-height:28px; padding:4px 8px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:inset 0 0 0 1px var(--app-line-strong); color:var(--app-text); font:inherit; font-size:.875rem; font-weight:400; line-height:1.5; text-decoration:none; white-space:nowrap; cursor:pointer; }
+.sharePill:hover:not(:disabled), .tbActs .headerSlot :is(button, a, summary):hover:not(:disabled) { background:var(--app-raised); color:var(--app-text); }
+.sharePill:disabled { opacity:1; color:var(--app-faint); cursor:default; }
+/* 가운데 칸 알약(계획서 장 고르기) — 기기 단추 자리와 같은 28 높이, 바탕 없이 14px */
+.toolCenter > div:not(.selectWrap) > button { height:28px; min-height:28px; padding:0 8px; border:0; border-radius:999px; background:transparent; box-shadow:none; color:var(--app-text); font-size:.875rem; font-weight:400; }
+.toolCenter > div:not(.selectWrap) > button:hover:not(:disabled) { background:var(--app-hover); }
+.toolCenter > div:not(.selectWrap) { flex:none; }
+.toolCenter > div:not(.selectWrap) > button > b { max-width:180px; font-weight:400; }
+.tbActs .headerSlot :is(b, strong) { font-weight:400; }
+.tbActs .headerSlot :is(button, a) svg { width:14px; height:14px; }
+.tbActs .headerSlot > div { gap:6px; }
+/* 좁은 PC — 페이지 선택 알약은 지키고 칸 단추 이름 · 진행 글부터 줄인다 */
 @media (max-width:1600px) {
-  .tbActs .headerSlot button[aria-label]:has(> svg) > span { position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
   .tbActs .headerSlot :is(button,a) small { display:none; }
 }
 @media (max-width:1360px) { .selectStatus { display:none; } }
-@media (max-width:1359px) {
-  /* 왼쪽 메뉴를 접는 폭(☰ 로 연다) — 대화 열은 36vw(최소 360) */
-  main.page { --studio-chat-w:clamp(360px,36vw,451px); }
-  .toolCenter > div:has(> .pageSelect) { flex-basis:150px; }
-}
-@media (max-width:1200px) { .previewPill { width:28px; padding:0; justify-content:center; font-size:0; } .previewPill svg { width:16px; height:16px; } }
+@media (max-width:1359px) { main.page { --studio-chat-w:clamp(360px,32vw,430px); } }
+@media (max-width:1200px) { .previewPill { min-width:0; width:28px; padding:0; justify-content:center; font-size:0; } .groupTool { width:30px; padding:0; } }
 
 /*
  * 휴대폰 대화 화면 머리(68px = 안쪽 12 + 44, 시안 MChat · lovable 실측 2026-11-01) — ✕ 44 원(왼쪽 10) · 사업명 알약 44(안쪽 10 14, 18px) ▾ · › 44 원(오른쪽 10).
  */
-.mHead { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-shrink:0; box-sizing:content-box; min-height:44px; padding:calc(12px + env(safe-area-inset-top)) 10px 12px; background:var(--app-bg); }
+.mHead { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-shrink:0; box-sizing:content-box; min-height:44px; padding:calc(12px + env(safe-area-inset-top)) 10px 12px; background:var(--app-base); }
 .round44 { position:relative; display:inline-grid; place-items:center; flex:none; box-sizing:border-box; width:44px; height:44px; padding:0; border:0; border-radius:50%; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); text-decoration:none; cursor:pointer; }
 .round44 svg { width:20px; height:20px; }
 .round44:disabled { color:var(--app-line-strong); cursor:default; }
 .round44 .dot { top:4px; right:4px; }
 .mHead > div { flex:0 1 auto; min-width:0; justify-content:center; }
-.namePill { display:inline-flex; align-items:center; gap:6px; box-sizing:border-box; min-width:0; max-width:100%; min-height:44px; padding:10px 14px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); font:inherit; font-size:1.125rem; font-weight:600; cursor:pointer; }
+.namePill { display:inline-flex; align-items:center; gap:6px; box-sizing:border-box; min-width:0; max-width:100%; min-height:44px; padding:10px 14px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); font:inherit; font-size:1.125rem; font-weight:400; cursor:pointer; }
 .namePill svg { flex:none; width:16px; height:16px; color:var(--app-muted); }
 .reloginRow { display:flex; justify-content:center; padding:4px 16px 8px; }
 .mHead :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
@@ -155,7 +173,7 @@
  * · 파랑 주 단추 36(안쪽 8 12, 16px), 왼쪽 9 · 오른쪽 8. 누르는 자리는 ::after 로 44.
  * 화면 맨 아래에 붙고, 미리보기 칸은 그만큼 아래를 비운다(.rightCol). 안전 영역(홈바) 위에 단추가 온다.
  */
-.bottomBar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:8px; box-sizing:border-box; min-height:calc(68px + env(safe-area-inset-bottom)); padding:16px 8px calc(16px + env(safe-area-inset-bottom)) 9px; background:var(--app-bg); box-shadow:0 -1px 0 var(--app-line); }
+.bottomBar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:8px; box-sizing:border-box; min-height:calc(68px + env(safe-area-inset-bottom)); padding:16px 8px calc(16px + env(safe-area-inset-bottom)) 9px; background:var(--app-base); box-shadow:0 -1px 0 var(--app-line); }
 .bottomBar :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 .backPill { position:relative; display:inline-flex; align-items:center; gap:4px; flex:none; box-sizing:border-box; min-height:36px; padding:8px 16px 8px 8px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); font:inherit; font-size:1rem; font-weight:500; cursor:pointer; }
 .backPill svg { width:20px; height:20px; }
@@ -177,7 +195,7 @@
  * 머리줄 부제(지금 하는 일, 12px) — 머리줄 모듈(chat/page.module.css)의 --app-muted 는 흰 바탕에서 4.3:1 이라 작업실에서만 진하게.
  * 그 모듈의 클래스를 덮어쓰지 않고 구조(머리줄 h1 바로 뒤 글자)로 고른다 — 특이도가 더 높아 CSS 순서와 상관없다.
  */
-.page [data-app-surface] > header > div > h1 + span { color:#4e5968; }
+.page [data-app-surface] > header > div > h1 + span { color:var(--app-body); }
 
 /* 로그인이 풀렸을 때 머리줄의 '다시 로그인하기'(작성 진행을 묻다 401) */
 .relogin { flex-shrink:0; white-space:nowrap; }
@@ -193,38 +211,38 @@
  * 카드 위 얇은 줄은 칸이 스크롤해도 위에 붙어 있다. 본문은 가운데 760px.
  */
 .liveSummary { width:100%; display:flex; flex-direction:column; color:var(--app-text); letter-spacing:-0.01em; }
-.sumStrip { position:sticky; top:0; z-index:1; height:42px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid #eef0f3; background:#fff; font-size:.78125rem; color:#4e5968; }
-.sumStrip > svg { flex-shrink:0; color:#8b95a1; }
+.sumStrip { position:sticky; top:0; z-index:1; height:42px; flex-shrink:0; display:flex; align-items:center; gap:8px; padding:0 14px; border-bottom:1px solid var(--app-line); background:var(--app-panel); font-size:.78125rem; color:var(--app-body); }
+.sumStrip > svg { flex-shrink:0; color:var(--app-faint); }
 .sumStrip h3 { margin:0; font-size:.8125rem; font-weight:650; color:var(--app-text); white-space:nowrap; }
-.sumStripNote { margin-left:auto; font-size:.75rem; color:#5f6b7c; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sumStripNote { margin-left:auto; font-size:.75rem; color:var(--app-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .sumBody { width:100%; max-width:760px; margin:0 auto; padding:30px 28px 48px; }
 .sumHead { border-radius:10px; scroll-margin:56px 0 24px; }
 .sumTitle { margin:0; display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:1.375rem; font-weight:750; line-height:1.4; letter-spacing:-0.02em; word-break:keep-all; overflow-wrap:anywhere; }
-.sumLead { margin:6px 0 0; font-size:.875rem; line-height:1.6; color:#4e5968; }
+.sumLead { margin:6px 0 0; font-size:.875rem; line-height:1.6; color:var(--app-body); }
 .sumGroup { margin-top:22px; }
-.sumGroup h4 { margin:0 0 6px; font-size:.75rem; font-weight:700; letter-spacing:.02em; color:#5f6b7c; }
-.liveSummary dl { margin:0; border-top:1px solid #eef0f3; }
+.sumGroup h4 { margin:0 0 6px; font-size:.75rem; font-weight:700; letter-spacing:.02em; color:var(--app-muted); }
+.liveSummary dl { margin:0; border-top:1px solid var(--app-line); }
 .sumStats + dl { margin-top:8px; border-top:0; }
-.liveSummary dl > div { display:grid; grid-template-columns:132px minmax(0,1fr) auto; gap:16px; align-items:baseline; padding:10px 6px; border-bottom:1px solid #eef0f3; scroll-margin:56px 0 24px; }
-.liveSummary dt { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0; font-size:.8125rem; color:#5f6b7c; }
+.liveSummary dl > div { display:grid; grid-template-columns:132px minmax(0,1fr) auto; gap:16px; align-items:baseline; padding:10px 6px; border-bottom:1px solid var(--app-line); scroll-margin:56px 0 24px; }
+.liveSummary dt { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:0; font-size:.8125rem; color:var(--app-muted); }
 .liveSummary dd { margin:0; font-size:.875rem; line-height:1.55; color:var(--app-text); white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }
 /* 방금 대화에서 정한 줄 — 옅은 파랑 바탕 · '방금 정함'(다음 답까지), 처음 반영될 때 잠깐 테두리로 밝힌다 */
-.liveSummary dl > div[data-fresh] { border-radius:8px; border-bottom-color:transparent; background:linear-gradient(90deg,#eef5ff,#f7fbff); animation:studioFresh 1.8s ease-out; }
+.liveSummary dl > div[data-fresh] { border-radius:8px; border-bottom-color:transparent; background:var(--app-soft); animation:studioFresh 1.8s ease-out; }
 .liveSummary dl > div[data-fresh] dd { font-weight:650; }
 .sumHead[data-fresh] { animation:studioFresh 1.8s ease-out; }
-@keyframes studioFresh { from { box-shadow:0 0 0 3px rgba(49,130,246,.28); } to { box-shadow:0 0 0 3px rgba(49,130,246,0); } }
+@keyframes studioFresh { from { box-shadow:0 0 0 3px color-mix(in srgb, var(--app-primary) 28%, transparent); } to { box-shadow:0 0 0 3px transparent; } }
 .sumStats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
-.sumStats > div { min-width:0; padding:10px 12px; border:1px solid #eef0f3; border-radius:10px; background:#fbfcfd; scroll-margin:56px 0 24px; }
-.sumStats > div[data-fresh] { border-color:#b7d3fb; background:#f4f9ff; animation:studioFresh 1.8s ease-out; }
-.sumStatLabel { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:.75rem; color:#5f6b7c; }
+.sumStats > div { min-width:0; padding:10px 12px; border:1px solid var(--app-line); border-radius:10px; background:var(--app-surface); scroll-margin:56px 0 24px; }
+.sumStats > div[data-fresh] { border-color:var(--app-selected); background:var(--app-soft); animation:studioFresh 1.8s ease-out; }
+.sumStatLabel { display:flex; align-items:center; justify-content:space-between; gap:6px; font-size:.75rem; color:var(--app-muted); }
 .sumStats strong { display:block; margin-top:2px; font-size:1.125rem; font-weight:750; letter-spacing:-0.02em; overflow-wrap:anywhere; }
-.sumStats strong small { margin-left:4px; font-size:.71875rem; font-weight:500; color:#5f6b7c; }
+.sumStats strong small { margin-left:4px; font-size:.71875rem; font-weight:500; color:var(--app-muted); }
 .sumTodo { margin:0; padding:0; list-style:none; display:grid; grid-template-columns:repeat(auto-fill,minmax(128px,1fr)); gap:8px; }
-.sumTodo li { padding:9px 10px; border:1px dashed #d5dbe2; border-radius:10px; font-size:.78125rem; line-height:1.35; color:#5f6b7c; word-break:keep-all; text-wrap:balance; }
-.sumTodo li[data-now] { border:1px solid #b7d3fb; background:#f4f9ff; color:var(--app-primary); font-weight:650; }
+.sumTodo li { padding:9px 10px; border:1px dashed var(--app-line-strong); border-radius:10px; font-size:.78125rem; line-height:1.35; color:var(--app-muted); word-break:keep-all; text-wrap:balance; }
+.sumTodo li[data-now] { border:1px solid var(--app-selected); background:var(--app-soft); color:var(--app-primary-text); font-weight:650; }
 .sumTodo li small { display:block; margin-top:2px; font-size:.6875rem; font-weight:500; }
-.sumFoot { margin:18px 0 0; display:flex; align-items:center; gap:6px; font-size:.78125rem; line-height:1.6; color:#5f6b7c; word-break:keep-all; }
-.sumFoot svg { flex-shrink:0; color:#8b95a1; }
+.sumFoot { margin:18px 0 0; display:flex; align-items:center; gap:6px; font-size:.78125rem; line-height:1.6; color:var(--app-muted); word-break:keep-all; }
+.sumFoot svg { flex-shrink:0; color:var(--app-faint); }
 .liveSummaryEmpty { margin:0; padding:24px 18px; border:1px dashed var(--app-line); border-radius:12px; font-size:.9375rem; line-height:1.7; color:var(--app-muted); text-align:center; word-break:keep-all; }
 @media (prefers-reduced-motion:reduce) { .liveSummary dl > div[data-fresh], .sumHead[data-fresh], .sumStats > div[data-fresh] { animation:none; } }
 /* 칸 본문의 작은 것은 가운데에 두지만(.paneBody > :not([data-embedded])) 요약은 위에서부터 읽는다 */
@@ -232,8 +250,8 @@
 
 /* 아직 답이 없을 때 — 안내를 카드 한가운데에 작게(대표 요청 2026-10-24: 위에 붙어 있어 어색했다) */
 .sumBody[data-empty] { flex:1; display:flex; flex-direction:column; justify-content:center; }
-.sumBody[data-empty] .liveSummaryEmpty { border:0; padding:0; display:flex; flex-direction:column; align-items:center; gap:10px; color:#8b95a1; }
-.sumBody[data-empty] .liveSummaryEmpty p { margin:0; font-size:.9375rem; color:#5f6b7c; }
+.sumBody[data-empty] .liveSummaryEmpty { border:0; padding:0; display:flex; flex-direction:column; align-items:center; gap:10px; color:var(--app-faint); }
+.sumBody[data-empty] .liveSummaryEmpty p { margin:0; font-size:.9375rem; color:var(--app-muted); }
 .sumBody[data-empty] > .sumGroup { display:none; }
 .liveSummary:has(.sumBody[data-empty]) { min-height:100%; }
 

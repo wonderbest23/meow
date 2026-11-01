@@ -26,7 +26,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ko">
+    /* 로그인 뒤 화면은 그리기 전에 <html data-app-theme> 를 붙인다(components/app-theme.tsx) — 이 한 단계의 속성 차이만 넘긴다 */
+    <html lang="ko" suppressHydrationWarning>
       <body>{children}<SupportChatLauncher /><LoginDialogHost /></body>
     </html>
   );

@@ -8,7 +8,8 @@
 .list { display:none; }
 .pcOnly { display:block; }
 .spring { display:none; }
-.business { display:none; }
+/* 공통 단추(.button[data-variant] 0,2,0)가 display 를 이기지 않게 한 단계 높인다 — PC 에서 '사업 설정'이 카드 밑에 붙어 보였다 */
+.index .business[data-variant] { display:none; }
 .none { margin:8px; color:var(--app-muted); font-size:.9375rem; line-height:1.5; }
 .chev { flex:none; width:20px; height:20px; margin-left:auto; color:var(--app-muted); }
 
@@ -22,7 +23,7 @@
   .pcOnly { display:none; }
   .spring { display:block; flex:1 1 auto; min-height:24px; }
   /* 판 안쪽 아래 24 를 되돌려 단추 아래가 판 끝(= 탭 막대 위 12)에 닿게 한다 */
-  .business { display:inline-flex; width:calc(100% + 8px); margin:0 -4px -24px; }
+  .index .business[data-variant] { display:inline-flex; width:calc(100% + 8px); margin:0 -4px -24px; }
 }
 
 /* 환경설정 · 보안 · 기기 및 앱 */
