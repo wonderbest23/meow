@@ -3,3 +3,10 @@
 /* 빈 화면 하나만 있는 본문(data-fill) — 남은 높이를 다 채워 그 가운데에 놓게 한다(고객센터 로그아웃 1920 에서 위로 쏠림 · PC 점검 2026-10-24) */
 .inner:has(> [data-fill]) { display: flex; flex-direction: column; }
 .inner > [data-fill] { flex: 1 0 auto; }
+/*
+ * 설정 화면(lovable 구조 3단계) — 판 바탕은 페이지색(행 카드가 흰색), PC 안쪽 48px · 내용은 판 폭 가득.
+ * 휴대폰은 좌우 16 · 위 20 · 아래 24(아래 3탭 막대 자리는 판이 따로 비운다 — AppChrome.module.css)
+ */
+.scroll[data-settings] { background: var(--app-bg); }
+.scroll[data-settings] > .inner { box-sizing: border-box; padding: 48px; }
+@media (max-width: 900px) { .scroll[data-settings] > .inner { padding: 20px 16px 24px; } }

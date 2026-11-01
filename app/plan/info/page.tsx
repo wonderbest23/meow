@@ -6,6 +6,7 @@ import { paymentsEnabled } from "../../../lib/payments/config";
 import { manualTransferPaymentConfigured } from "../../../lib/payments/manual-transfer";
 import { getPlatformLegalSettings } from "../../../lib/platform-legal/repository";
 import styles from "./PlanInfo.module.css";
+import { SettingsCard, SettingsHeader, SettingsHelpLink, SettingsNote, SettingsRow, SettingsSection } from "../../../components/settings-row";
 
 export const metadata: Metadata = { title: "약관·정책 | 오늘창업" };
 
@@ -54,13 +55,11 @@ export default async function PlanInfoPage({
     paymentsConfigured: paymentsEnabled() && manualTransferPaymentConfigured(),
   });
 
+  /* lovable 구조 3단계 — 설정 화면 제목 줄 + 알약 전환(문서 다섯 개) + 행 카드(조항마다 한 행) */
   return (
     <div className={styles.page}>
-      <div className={styles.head}>
-        <h1 className={styles.title}>{document.title}</h1>
-        <p className={styles.summary}>{document.summary}</p>
-        <small className={styles.effective}>시행일 {document.effectiveDate || "입력 예정"}</small>
-      </div>
+      <SettingsHeader title={document.title} description={<>{document.summary} <span className={styles.effective}>시행일 {document.effectiveDate || "입력 예정"}</span></>}
+        aside={<SettingsHelpLink href="/account/support">고객센터</SettingsHelpLink>} />
 
       <nav className={styles.tabs} aria-label="약관·정책 문서">
         {DOCS.map((doc) => (
@@ -76,28 +75,32 @@ export default async function PlanInfoPage({
       </nav>
 
       {!readiness.ready ? (
-        <div className={styles.notice}>
-          <strong>{readiness.siteOpen ? "사이트는 정상 공개 중입니다." : "신고용 공개 정보를 준비하고 있습니다."}</strong>
-          <p>통신판매업 신고번호 또는 면제 근거와 실제 운영 정보를 확인하기 전에는 유료 결제만 제한됩니다.</p>
-        </div>
+        <SettingsNote title={readiness.siteOpen ? "사이트는 정상 공개 중입니다." : "신고용 공개 정보를 준비하고 있습니다."}
+          description="통신판매업 신고번호 또는 면제 근거와 실제 운영 정보를 확인하기 전에는 유료 결제만 제한됩니다." />
       ) : null}
 
-      {document.sections.map((section) => (
-        <section key={section.title} className={styles.section}>
-          <h2>{section.title}</h2>
-          {section.paragraphs?.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-          {section.items ? <ul>{section.items.map((item) => <li key={item}>{item}</li>)}</ul> : null}
-        </section>
-      ))}
-
-      <div className={styles.sources}>
-        <strong>기준 원문</strong>
-        <div className={styles.sourceList}>
-          {SOURCES.map((s) => (
-            <a key={s.href} href={s.href} target="_blank" rel="noreferrer">{s.label}</a>
+      <SettingsSection label={document.title}>
+        <SettingsCard>
+          {document.sections.map((section) => (
+            <SettingsRow key={section.title} stack title={<span className={styles.sectionTitle}>{section.title}</span>}>
+              <div className={styles.section}>
+                {section.paragraphs?.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+                {section.items ? <ul>{section.items.map((item) => <li key={item}>{item}</li>)}</ul> : null}
+              </div>
+            </SettingsRow>
           ))}
-        </div>
-      </div>
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsSection id="info-sources" title="기준 원문" description="안내의 근거가 되는 법령·기관 원문이에요.">
+        <SettingsCard>
+          <div className={styles.sourceList}>
+            {SOURCES.map((s) => (
+              <a key={s.href} href={s.href} target="_blank" rel="noreferrer">{s.label}</a>
+            ))}
+          </div>
+        </SettingsCard>
+      </SettingsSection>
     </div>
   );
 }

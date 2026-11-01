@@ -1,0 +1,147 @@
+/*
+ * 설정 화면 공용 부품의 생김새(components/settings-row.tsx) — 시안 settings-mock(Main · Support · Mobile) · lovable-mock(MPref).
+ * 색은 --app-* 토큰만. 글자 크기·줄 높이는 rem(글자 크기 설정을 따른다 · 기본 16px 에서 시안 값 그대로).
+ * PC(901px~) 규격이 기본이고, 휴대폰(~900px)은 data-mobile="card"(Mobile.dc) · "band"(MPref)로 바꾼다.
+ */
+
+/* 제목 줄 — h1 20/500 행간 25 자간 -0.2, 설명 14 회색 4px 아래, 오른쪽 도움말 */
+.top { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.topText { min-width:0; }
+.title.title { margin:0; color:var(--app-text); font-size:1.25rem; font-weight:500; line-height:1.5625rem; letter-spacing:-.2px !important; word-break:keep-all; }
+/* 전역 'body * { letter-spacing:0 !important }'(globals.css)를 이기려면 !important — 첫 화면 인사말(PlanHome)과 같은 방법 */
+.lead { margin:4px 0 0; color:var(--app-muted); font-size:.875rem; line-height:1.3125rem; word-break:keep-all; }
+.topAside { display:flex; flex:none; align-items:center; gap:16px; }
+.doc { display:inline-flex; align-items:center; gap:6px; margin-top:2px; color:var(--app-muted); font-size:.875rem; line-height:1.3125rem; text-decoration:none; white-space:nowrap; }
+.doc:hover { color:var(--app-text); }
+
+/* 소제목 16/500 — 위 24(첫 묶음) · 카드까지 16 · 카드 뒤 32 */
+.section { margin-top:24px; }
+.section + .section { margin-top:32px; }
+.sechead { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; }
+.secText { min-width:0; }
+.h2.h2 { margin:0; color:var(--app-text); font-size:1rem; font-weight:500; line-height:1.375rem; letter-spacing:0; }
+.sub { margin:0; color:var(--app-muted); font-size:.875rem; line-height:1.3125rem; word-break:keep-all; }
+.secAside { display:flex; flex:none; align-items:center; gap:8px; }
+
+/* 행 카드 r16, 안쪽 20×24, 1px 선 + 옅은 그림자 */
+.card { display:block; margin:16px 0 0; padding:20px 24px; border:0; border-radius:16px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line), 0 2px 0 color-mix(in srgb, var(--app-text) 3%, transparent), 0 2px 1px -.5px color-mix(in srgb, var(--app-text) 4%, transparent); }
+.section > .card:first-child { margin-top:0; }
+
+/* 행 — 위아래 20, 사이 1px 구분선, 제목·설명 왼쪽 / 동작 오른쪽 */
+.row { display:flex; align-items:center; justify-content:space-between; gap:24px; box-sizing:border-box; padding:20px 0; color:inherit; text-decoration:none; }
+.row:first-child { padding-top:0; }
+.row:last-child { padding-bottom:0; }
+.row + .row { border-top:1px solid var(--app-line); }
+.row[data-stack] { flex-direction:column; align-items:stretch; gap:8px; }
+.row[data-link] { cursor:pointer; }
+.row[data-link]:hover .t { text-decoration:underline; text-underline-offset:3px; }
+.row[data-link]:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:4px; border-radius:8px; }
+.text { min-width:0; flex:1 1 auto; }
+.lead2 { display:flex; align-items:center; gap:12px; min-width:0; flex:1 1 auto; }
+.t { display:block; margin:0; color:var(--app-text); font-size:.875rem; font-weight:500; line-height:1.25rem; word-break:keep-all; overflow-wrap:anywhere; }
+.t[data-plain] { font-weight:400; }
+.d { margin:0; color:var(--app-muted); font-size:.875rem; line-height:1.3125rem; word-break:keep-all; overflow-wrap:anywhere; }
+.right { display:flex; flex:0 0 auto; align-items:center; gap:8px; min-width:0; }
+.row[data-stack] > .right { justify-content:flex-end; }
+.chev { flex:none; color:var(--app-muted); }
+
+/* 20px 글자 아바타 r6 */
+.ava { display:inline-grid; flex:none; place-items:center; width:20px; height:20px; border-radius:6px; font-size:.6875rem; font-weight:600; line-height:1; }
+.ava[data-tone=primary] { background:var(--app-primary); color:var(--app-surface); }
+.ava[data-tone=soft] { background:var(--app-selected); color:var(--app-selected-text); }
+
+/* 토글 46×28 — 켜면 주 색, 동그라미 22 */
+.switch { position:relative; flex:none; box-sizing:border-box; width:46px; height:28px; margin:0; padding:0; border:0; border-radius:999px; background:var(--app-line-strong); cursor:pointer; appearance:none; -webkit-appearance:none; transition:background-color .15s; }
+.switch::after { content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:var(--app-surface); box-shadow:0 1px 2px color-mix(in srgb, var(--app-text) 20%, transparent); transition:transform .15s; }
+.switch:checked { background:var(--app-primary); }
+.switch:checked::after { transform:translateX(18px); }
+.switch:disabled { opacity:.5; cursor:not-allowed; }
+.switch:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
+/* 누르는 자리 44px */
+.switch::before { content:""; position:absolute; inset:-8px -2px; }
+
+/* 알약형 전환 — 바깥 r999 1px 선, 항목 32 */
+.seg { display:inline-flex; flex:none; border-radius:999px; background:var(--app-surface); box-shadow:inset 0 0 0 1px var(--app-line-strong); }
+.seg button { display:inline-flex; align-items:center; height:32px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:var(--app-muted); font:inherit; font-size:.875rem; font-weight:400; line-height:1.25rem; white-space:nowrap; cursor:pointer; }
+.seg button[aria-pressed=true] { background:var(--app-fill); color:var(--app-text); }
+.seg button:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
+.segCount { display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; margin-left:4px; padding:0 5px; box-sizing:border-box; border-radius:999px; background:var(--app-selected); color:var(--app-selected-text); font-size:.6875rem; font-weight:600; line-height:1; }
+
+/* 안내 띠 — r16 노란 바탕, 오른쪽 작은 단추 28 */
+.note { display:flex; align-items:center; gap:12px; margin-top:16px; padding:16px 20px; border-radius:16px; background:var(--app-warning-bg); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--app-warning) 22%, var(--app-warning-bg)); color:var(--app-warning); }
+.note > svg { flex:none; }
+.noteText { min-width:0; flex:1 1 0; }
+.noteTitle { margin:0; font-size:.875rem; font-weight:500; line-height:1.25rem; }
+.noteDesc { margin:0; font-size:.875rem; line-height:1.3125rem; opacity:.9; overflow-wrap:anywhere; }
+.noteAction { flex:none; }
+
+/* ── 휴대폰(~900px) ── */
+@media (max-width:900px) {
+  .top { flex-wrap:wrap; gap:12px; }
+  .topAside { flex-wrap:wrap; }
+  /* 행 카드(Mobile.dc): 카드 안쪽 16, 카드까지 12, 행 위아래 16 */
+  .card[data-mobile=card] { margin-top:12px; padding:16px; }
+  .card[data-mobile=card] .row { gap:12px; padding:16px 0; }
+  .card[data-mobile=card] .row:first-child { padding-top:0; }
+  .card[data-mobile=card] .row:last-child { padding-bottom:0; }
+  .card[data-mobile=card] .text { flex:1 1 0; }
+  .card[data-mobile=card] .lead2 { flex:1 1 0; }
+  /* 흰 띠(MPref): 화면 폭 가득, 위아래 1px 선, 항목 위아래 24, 제목 17/500 + 설명 15 회색, 단추·선택칸은 설명 아래 14 */
+  .top[data-mobile=band] { padding:4px 0 20px; }
+  .top[data-mobile=band] .title.title { font-size:1.375rem; font-weight:600; line-height:1.4; letter-spacing:0 !important; }
+  .top[data-mobile=band] .lead { font-size:1rem; line-height:1.5; }
+  .card[data-mobile=band] { margin:0 -16px; padding:0 16px; border-radius:0; box-shadow:0 -1px 0 var(--app-line), 0 1px 0 var(--app-line); }
+  .section:has(> .card[data-mobile=band]) { margin-top:24px; }
+  .section:first-child:has(> .card[data-mobile=band]) { margin-top:0; }
+  .section:has(> .card[data-mobile=band]) > .sechead { padding-bottom:12px; }
+  .card[data-mobile=band] .row { flex-direction:column; align-items:flex-start; gap:14px; padding:24px 0; }
+  .card[data-mobile=band] .row:first-child { padding-top:24px; }
+  .card[data-mobile=band] .row:last-child { padding-bottom:24px; }
+  .card[data-mobile=band] .row[data-inline] { flex-direction:row; align-items:center; gap:16px; }
+  .card[data-mobile=band] .row[data-stack] { align-items:stretch; }
+  .card[data-mobile=band] .t { font-size:1.0625rem; font-weight:500; line-height:1.5; }
+  .card[data-mobile=band] .d { margin-top:4px; font-size:.9375rem; line-height:1.5; }
+  .card[data-mobile=band] .right { flex-wrap:wrap; }
+  .card[data-mobile=band] .row[data-link] { flex-direction:row; align-items:center; }
+  .note { flex-wrap:wrap; padding:16px; }
+  .noteAction { margin-left:auto; }
+}
+
+@media (prefers-reduced-motion:reduce) { .switch, .switch::after { transition:none; } }
+
+/* 휴대폰에서 제목을 위 머리가 대신하는 화면 — 읽기 프로그램에만 남긴다 */
+@media (max-width:900px) {
+  .top[data-mobile=hidden] { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  .top[data-mobile=hidden] + .section { margin-top:0; }
+}
+
+/* 행 전체가 단추 — 단추 기본 모양을 지운다 */
+button.row { width:100%; margin:0; border:0; border-radius:0; background:transparent; font:inherit; text-align:left; }
+button.row .t, button.row .d { display:block; }
+button.row + .row, .row + button.row { border-top:1px solid var(--app-line); }
+
+/* 펼치는 행 — 제목 줄은 .row 와 같은 자리(위아래 20 · 1px 구분선) */
+.disclosure { padding:20px 0; }
+.disclosure:first-child { padding-top:0; }
+.disclosure:last-child { padding-bottom:0; }
+.disclosure + .disclosure, .row + .disclosure, .disclosure + .row { border-top:1px solid var(--app-line); }
+.summary { display:flex; align-items:center; justify-content:space-between; gap:24px; list-style:none; cursor:pointer; }
+.summary::-webkit-details-marker { display:none; }
+.summary:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:4px; border-radius:8px; }
+.summary .d { display:block; }
+.chevDown { flex:none; color:var(--app-muted); transition:transform .15s; }
+.disclosure[open] .chevDown { transform:rotate(180deg); }
+.panel { margin-top:12px; color:var(--app-body); font-size:.875rem; line-height:1.6; overflow-wrap:anywhere; }
+.panel > :first-child { margin-top:0; }
+@media (max-width:900px) {
+  .card[data-mobile=card] .disclosure { padding:16px 0; }
+  .card[data-mobile=card] .disclosure:first-child { padding-top:0; }
+  .card[data-mobile=card] .disclosure:last-child { padding-bottom:0; }
+  .card[data-mobile=card] .summary { gap:12px; }
+}
+@media (prefers-reduced-motion:reduce) { .chevDown { transition:none; } }
+/* 휴대폰 행 카드 — 입력칸·선택칸이 오른쪽에 있는 행은 설명 아래로 내려 폭 가득(Mobile.dc 의 이름 칸) */
+@media (max-width:900px) {
+  .card[data-mobile=card] .row:has(> .right [data-app-field]) { flex-direction:column; align-items:stretch; gap:8px; }
+  .card[data-mobile=card] .row:has(> .right [data-app-field]) > .right > * { flex:1 1 auto; }
+}

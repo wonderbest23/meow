@@ -43,3 +43,18 @@
   /* 아래 3탭 막대(56 + 아래 28) 자리 — 막대가 마지막 내용·단추를 가리지 않게 판 아래를 비운다 */
   .surface[data-tabbar] { padding-bottom:calc(56px + 28px + 12px + env(safe-area-inset-bottom)); }
 }
+
+/*
+ * 설정 화면 휴대폰 머리 56px(시안 MSettings · MPref) — 왼쪽 44 원 단추(✕ 또는 ‹) · 가운데 제목 18/600 · 오른쪽 44 빈칸.
+ * PC(901px~)는 머리 없이 판 안쪽에 제목이 놓인다.
+ */
+.settingsBar { display:none; }
+@media (max-width:900px) {
+  .settingsBar { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-shrink:0; box-sizing:content-box; height:56px; padding:env(safe-area-inset-top) 10px 0; background:var(--app-bg); }
+  .surface[data-settings] { background:var(--app-bg); }
+}
+.circle { display:inline-grid; flex:none; place-items:center; width:44px; height:44px; border-radius:50%; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); text-decoration:none; }
+.circle:hover { background:var(--app-raised); }
+.circle:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
+.circleSpace { flex:none; width:44px; height:44px; }
+.settingsTitle { min-width:0; overflow:hidden; color:var(--app-text); font-size:1.125rem; font-weight:600; line-height:1.4; text-overflow:ellipsis; white-space:nowrap; }

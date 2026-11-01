@@ -25,6 +25,11 @@
   --app-primary-hover: color-mix(in srgb, var(--app-primary) 85%, var(--app-text));
   --app-danger-hover: color-mix(in srgb, var(--app-danger) 85%, var(--app-text));
   --app-focus-ring: color-mix(in srgb, var(--app-primary) 70%, var(--app-surface));
+  /* 설정 화면(lovable 구조 3단계) — 회색 14% 채움 단추, 빨간 테두리 단추의 선, 선택한 메뉴 칸 바탕(글자색 8%) */
+  --app-fill: color-mix(in srgb, var(--app-muted) 14%, transparent);
+  --app-fill-hover: color-mix(in srgb, var(--app-muted) 22%, transparent);
+  --app-danger-line: color-mix(in srgb, var(--app-danger) 28%, var(--app-surface));
+  --app-nav-selected: color-mix(in srgb, var(--app-text) 8%, transparent);
   --surface: var(--app-surface);
   --surface-2: var(--app-raised);
   --surface-soft: var(--app-raised);

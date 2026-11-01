@@ -26,6 +26,7 @@ function backTarget(pathname: string): { href: string; label: string } | null {
   if (pathname.startsWith("/plan/overview/")) return { href: "/plan/overview", label: "계획서 개요" };
   if (pathname.startsWith("/plan/info")) return { href: "/plan", label: "내 사업" };
   if (pathname.startsWith("/plan/me")) return { href: "/plan", label: "내 사업" };
+  if (pathname.startsWith("/plan/settings")) return { href: "/plan", label: "내 사업" };
   if (pathname.startsWith("/plan/document")) return { href: "/plan/overview", label: "계획서 개요" };
   if (pathname.startsWith("/plan/pay")) return { href: "/plan/overview", label: "계획서 개요" };
   return { href: "/plan/overview", label: "계획서 개요" }; // 섹션 위저드 등
@@ -74,7 +75,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (ownerChanged) return <PlanLoading fill note="현재 계정의 사업을 다시 확인하고 있어요" />;
-  if (pathname === "/plan" || pathname === "/plan/" || pathname === "/plan/document" || pathname === "/plan/proposal" || pathname.startsWith("/plan/homepage") || pathname.startsWith("/plan/pay") || pathname.startsWith("/plan/me") || pathname.startsWith("/plan/info") || pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/chat") || pathname.startsWith("/plan/inquiries") || pathname.startsWith("/plan/studio")) return <>{children}</>;
+  if (pathname === "/plan" || pathname === "/plan/" || pathname === "/plan/document" || pathname === "/plan/proposal" || pathname.startsWith("/plan/homepage") || pathname.startsWith("/plan/pay") || pathname.startsWith("/plan/me") || pathname.startsWith("/plan/info") || pathname.startsWith("/plan/settings") || pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/chat") || pathname.startsWith("/plan/inquiries") || pathname.startsWith("/plan/studio")) return <>{children}</>;
 
   return (
     <div className={styles.shell}>

@@ -1,24 +1,24 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import { ChevronRight, FolderOpen, Receipt } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { hydrateFromServer, lastHydrationFailed, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
+import { Fragment, useEffect, useState } from "react";
+import { ChevronRight, Copy, FolderOpen, Receipt } from "lucide-react";
+import { hydrateFromServer, lastHydrationFailed, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
 import { planDisplayName } from "../../../lib/plan-builder/business-name";
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
 import { displayOrderName } from "../../../lib/payments/order-display";
 import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
-import { StatusBadge } from "../../../components/status-badge";
+import { StatusBadge, type StatusTone } from "../../../components/status-badge";
 import PlanLoading from "../PlanLoading";
 import { EmptyState } from "../BusinessEmptyState";
 import { loadAuthSession } from "../../../lib/client/auth-session";
-import { askConfirm } from "../../../components/confirm-dialog";
 import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { AppButton } from "../../../components/app-button";
-import { FieldError, TextArea, TextField } from "../../../components/app-field";
+import { TextArea } from "../../../components/app-field";
+import { SettingsAvatar, SettingsCard, SettingsHeader, SettingsHelpLink, SettingsRow, SettingsSection } from "../../../components/settings-row";
+import { PLAN_VIEW_ALL } from "../MobileTabBar";
+import { DeleteAccountRow, LogoutRow } from "./AccountActions";
 
 /*
  * /plan/me — 마이페이지.
@@ -26,6 +26,8 @@ import { FieldError, TextArea, TextField } from "../../../components/app-field";
  * 예전에는 레일의 계정 버튼이 /account로 나갔다. 그 화면은 옛 진단 퍼널의
  * 것이라 헤더도 흐름도 달라서 앱 밖으로 튕겨 나가는 느낌이었다.
  * 내 정보·내 사업·결제 내역을 셸 안에서 한 화면에 모은다.
+ * lovable 구조 3단계 — 설정 행 카드(components/settings-row)로: 로그인 정보 → 내 사업 → 결제 내역 → 계정 정리.
+ * 로그인 수단(카카오·애플) 표시·연결은 지금 서버가 알려 주지 않아(/api/auth/session 은 이메일만) 행을 두지 않는다 — 시안 문서에 적음.
  */
 
 const STATUS_LABEL: Record<string, string> = {
@@ -44,8 +46,13 @@ const STATUS_LABEL: Record<string, string> = {
 
 const BAD_STATUS = new Set(["canceled", "partial_canceled", "aborted", "expired", "failed"]);
 
-/** 이메일 없는 계정이 탈퇴할 때 적는 확인 문구 — 서버(app/api/auth/delete)와 같은 값 */
-const NO_EMAIL_CONFIRM = "탈퇴";
+/* 이용 상태 — 문서마다 결제하는 사람도 있다(모든 문서 / 결제한 문서 있음 / 없음 / 확인 못 함) */
+const USAGE: Record<"all" | "some" | "free" | "unknown", { label: string; description: string; tone: StatusTone }> = {
+  all: { label: "모든 사업계획서 이용 중", description: "결제한 사업계획서는 모두 열어 볼 수 있어요.", tone: "success" },
+  some: { label: "결제한 사업계획서 이용 중", description: "결제한 사업계획서를 열어 볼 수 있어요.", tone: "success" },
+  free: { label: "결제한 사업계획서 없음", description: "사업계획서는 결제한 뒤에 쓸 수 있어요.", tone: "neutral" },
+  unknown: { label: "확인하지 못했어요", description: "잠시 뒤 새로고침하면 다시 확인해요.", tone: "warning" },
+};
 
 type RefundInfo = { orderId: string; status: "received" | "processing" | "done" | "rejected"; adminNote?: string };
 
@@ -57,7 +64,6 @@ const REFUND_LABEL: Record<RefundInfo["status"], string> = {
 };
 
 export default function PlanMePage() {
-  const router = useRouter();
   /* usage — 모든 문서 / 결제한 문서 있음 / 무료 / 확인 못 함 */
   const [account, setAccount] = useState<{ authenticated: boolean; email: string | null; usage: "all" | "some" | "free" | "unknown" } | null>(null);
   /** 결제 내역을 불러오지 못함 — '결제 내역 없음'으로 보이지 않게 */
@@ -92,17 +98,10 @@ export default function PlanMePage() {
       setRecheckMessage((current) => ({ ...current, [orderId]: "확인하지 못했어요. 잠시 뒤 다시 눌러 주세요." }));
     } finally { setRecheckBusy(null); }
   };
-  /** 회원 탈퇴 — 실수 방지를 위해 이메일을 다시 입력받는다 */
-  const [showDelete, setShowDelete] = useState(false);
-  // 탈퇴 칸을 열면 이메일 칸으로, 취소하면 '탈퇴 진행하기'로 초점을 옮긴다 — 예전엔 누른 단추가 사라져 초점이 body로 떨어졌다
-  const deleteOpener = useRef<HTMLButtonElement>(null);
-  const [deleteEmail, setDeleteEmail] = useState("");
-  const [deleteBusy, setDeleteBusy] = useState(false);
-  const [deleteMessage, setDeleteMessage] = useState("");
   /** 로그인 확인 자체가 실패함 — 로그인 안내 대신 다시 시도 안내를 보인다 */
   const [loadFailed, setLoadFailed] = useState(false);
-  const [logoutBusy, setLogoutBusy] = useState(false);
-  const [logoutMessage, setLogoutMessage] = useState("");
+  /** 이메일 복사 결과 — 읽기 프로그램에도 알린다 */
+  const [copied, setCopied] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -168,63 +167,13 @@ export default function PlanMePage() {
     }
   }
 
-  async function deleteAccount() {
-    if (deleteBusy) return;
-    /* 이메일이 다르면 마지막 확인창을 띄우지 않고 바로 알린다 — 예전엔 확인창까지 간 뒤 서버에서 거절됐다 */
-    if (!account) return;
-    if (account.email ? deleteEmail.trim().toLowerCase() !== account.email.toLowerCase() : deleteEmail.trim() !== NO_EMAIL_CONFIRM) {
-      setDeleteMessage(account.email ? "로그인한 이메일과 달라요. 위에 보이는 이메일을 그대로 적어 주세요." : `확인 칸에 '${NO_EMAIL_CONFIRM}'를 그대로 적어 주세요.`);
-      return;
-    }
-    if (!await askConfirm({ title: "정말 탈퇴할까요?", message: "작성한 사업과 문서, 공개한 홈페이지가 모두 지워지고 되돌릴 수 없어요.", confirmLabel: "탈퇴하기", danger: true })) return;
-    setDeleteBusy(true);
-    setDeleteMessage("");
-    try {
-      const response = await fetch("/api/auth/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(account.email ? { email: deleteEmail.trim() } : { confirm: deleteEmail.trim() }),
-      });
-      const data: unknown = await response.json().catch(() => null);
-      if (!response.ok || data === null) throw new Error(apiMessage(data, "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요."));
-      clearLocalState();
-      router.push("/");
-      router.refresh();
-    } catch (error) {
-      setDeleteMessage(userErrorMessage(error, "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요."));
-    } finally {
-      setDeleteBusy(false);
-    }
-  }
-
-  async function logout() {
-    if (logoutBusy) return;
-    setLogoutMessage(""); setLogoutBusy(true);
-    try { await doLogout(); } finally { setLogoutBusy(false); }
-  }
-  async function doLogout() {
-    /*
-     * 서버 세션이 실제로 끊겼는지 확인한다.
-     * 예전에는 응답을 보지 않고 화면만 정리했다 — 통신이 실패하면
-     * 로그아웃된 것처럼 보이지만 세션은 살아 있다(공용 PC에서 위험하다).
-     */
-    const res = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-    if (!res || !res.ok) {
-      /* 예전엔 탈퇴 칸 안에 적어서(열려 있을 때만 보임) 실패해도 아무 안내가 없었다 */
-      setLogoutMessage("로그아웃하지 못했어요. 연결을 확인하고 다시 시도해 주세요.");
-      return;
-    }
-    // 로컬 플랜 캐시도 함께 비운다 — 로그아웃 후에도 이전 계정 플랜이 보이던 버그
-    clearLocalState();
-    router.push("/plan");
-  }
-
-  if (account === null && loadFailed) return <div className={styles.page}><h1 className={styles.title}>내 계정</h1><p>계정 정보를 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p></div>;
-  if (account === null) return <div className={styles.page}><PlanLoading variant="rows" count={3} note="계정 정보를 불러오는 중…" /></div>;
+  const header = <SettingsHeader title="내 계정" description="로그인 정보와 사업, 결제 내역을 한곳에서 봐요." mobile="hidden" aside={<SettingsHelpLink href="/account/support">도움말</SettingsHelpLink>} />;
+  if (account === null && loadFailed) return <div className={styles.page}>{header}<p className={styles.notice} role="alert">계정 정보를 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p></div>;
+  if (account === null) return <div className={styles.page}>{header}<PlanLoading variant="rows" count={3} note="계정 정보를 불러오는 중…" /></div>;
   if (!account.authenticated) {
     return (
       <div className={styles.page}>
-        <h1 className={styles.title}>내 계정</h1>
+        {header}
         <PlanGate reason="login_required" />
       </div>
     );
@@ -232,189 +181,119 @@ export default function PlanMePage() {
 
   /* 내 사업 — 예시 문서는 빼고, 최근에 손댄 순서로. 예전엔 옛 '사업 정보' 칸만 봐서 사업이 있어도 '없습니다'라고 했다 */
   const myPlans = (state?.plans ?? []).filter((plan) => !isSamplePlan(plan.id)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const usage = USAGE[account.usage];
+  const copyEmail = async (email: string) => {
+    try { await navigator.clipboard.writeText(email); setCopied("이메일을 복사했어요."); }
+    catch { setCopied("복사하지 못했어요. 길게 눌러 직접 복사해 주세요."); }
+  };
 
   return (
     <div className={styles.page}>
-      {/* 큰 제목 '마이페이지'는 위 머리말과 겹쳐 뺐다(대표 요청 2026-10-15) — 읽기 프로그램용 제목만 남긴다 */}
-      <h1 className={styles.srTitle}>내 계정</h1>
+      {header}
 
-      <section className={styles.card} id="me-info">
-        <div className={styles.cardHead}>
-          <h2 className={styles.cardTitle}>내 정보</h2>
-          <AppButton type="button" variant="secondary" className={styles.logout} disabled={logoutBusy} onClick={() => void logout()}>{logoutBusy ? "로그아웃 중…" : "로그아웃"}</AppButton>
-        </div>
-        <dl className={styles.rows}>
-          <div className={styles.row}>
-            <dt>이메일</dt>
-            <dd>{account.email ?? "-"}</dd>
-          </div>
-          <div className={styles.row}>
-            <dt>이용 상태</dt>
-            <dd>{account.usage === "all" ? "모든 사업계획서 이용 중" : account.usage === "some" ? "결제한 사업계획서 이용 중" : account.usage === "free" ? "결제한 사업계획서 없음" : "확인하지 못했어요"}</dd>
-          </div>
-        </dl>
-        {logoutMessage && <p className={styles.notice} role="alert">{logoutMessage}</p>}
-      </section>
+      <SettingsSection id="me-info" title="로그인 정보" description="어떤 계정으로 들어와 있는지, 이용 상태는 어떤지 보여요.">
+        <SettingsCard>
+          <SettingsRow title="이메일" description={account.email ? <><span className={styles.pcOnly}>로그인에 쓰는 주소예요. 안내 메일도 여기로 가요.</span><span className={styles.phoneOnly}>{account.email}</span></> : "이메일 없이 로그인한 계정이에요."}
+            control={account.email ? <>
+              <span className={styles.mono}>{account.email}</span>
+              <AppButton type="button" variant="text" size="compact" className={styles.copy} aria-label="이메일 복사" title="이메일 복사" onClick={() => void copyEmail(account.email ?? "")}><Copy size={16} strokeWidth={1.8} aria-hidden="true" /></AppButton>
+            </> : <span className={styles.mono}>-</span>}>
+            {copied && <p className={styles.rowNotice} role="status">{copied}</p>}
+          </SettingsRow>
+          <SettingsRow title="이용 상태" description={usage.description} control={<StatusBadge tone={usage.tone} done={account.usage === "all"}>{usage.label}</StatusBadge>} />
+          <LogoutRow />
+        </SettingsCard>
+      </SettingsSection>
 
-      <section className={styles.card}>
-        <div className={styles.cardHead}>
-          <h2 className={styles.cardTitle}>내 사업</h2>
-          {/* 사업이 없으면 볼 목록도 없다 — 빈 목록으로 가는 단추를 두지 않는다(PC 점검 2026-10-24) */}
-          {(myPlans.length > 0 || plansStale) && <AppButton href="/plan" variant="secondary" size="small" className={styles.cardAction}>내 사업 보기<ChevronRight size={18} aria-hidden="true" /></AppButton>}
-        </div>
-        {myPlans.length ? (
-          <dl className={styles.rows}>
-            {myPlans.slice(0, 5).map((plan) => (
-              <div className={styles.row} key={plan.id}>
-                <dt>{businessHubState(plan).complete ? "계획서 완성" : "진행 중"}</dt>
-                <dd><Link href={businessEntryHref(plan)}>{planDisplayName(plan)}</Link></dd>
-              </div>
-            ))}
-          </dl>
-        ) : (
-          plansStale ? <p className={styles.notice} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <EmptyState icon={FolderOpen} heading="p" title="아직 시작한 사업이 없어요." actions={<AppButton href="/plan/chat?new=1" variant="secondary">새 대화로 시작하기<ChevronRight size={18} aria-hidden="true" /></AppButton>} />
-        )}
-      </section>
+      <SettingsSection id="me-business" title="내 사업" description={myPlans.length ? `사업 ${myPlans.length}개` : undefined}
+        /* 사업이 없으면 볼 목록도 없다 — 빈 목록으로 가는 단추를 두지 않는다(PC 점검 2026-10-24) */
+        aside={(myPlans.length > 0 || plansStale) && <AppButton href={`/plan?view=${PLAN_VIEW_ALL}`} variant="secondary" size="compact" className={styles.cardAction}>전체 보기<ChevronRight size={14} aria-hidden="true" /></AppButton>}>
+        <SettingsCard>
+          {myPlans.length ? myPlans.slice(0, 5).map((plan) => {
+            const complete = businessHubState(plan).complete;
+            const name = planDisplayName(plan);
+            return <SettingsRow key={plan.id} leading={<SettingsAvatar tone="soft">{name.trim().charAt(0) || "사"}</SettingsAvatar>}
+              title={planDisplayName(plan)} description={`${complete ? "계획서 완성" : "진행 중"} · ${new Date(plan.updatedAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 수정`}
+              control={<>
+                <StatusBadge tone={complete ? "success" : "info"} done={complete}>{complete ? "계획서 완성" : "진행 중"}</StatusBadge>
+                <AppButton href={businessEntryHref(plan)} variant="soft" size="compact" className={styles.open} aria-label={`${name} 열기`}>열기</AppButton>
+              </>} />;
+          }) : (
+            plansStale ? <p className={styles.notice} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <EmptyState icon={FolderOpen} heading="p" title="아직 시작한 사업이 없어요." actions={<AppButton href="/plan/chat?new=1" variant="secondary">새 대화로 시작하기<ChevronRight size={18} aria-hidden="true" /></AppButton>} />
+          )}
+        </SettingsCard>
+      </SettingsSection>
 
-      <section className={styles.card} id="me-payments">
-        <div className={styles.cardHead}>
-          <h2 className={styles.cardTitle}>결제 내역</h2>
-        </div>
-        {payments === null ? null : payments.length === 0 ? (
-          paymentsFailed ? <p className={styles.notice}>결제 내역을 불러오지 못했어요. 새로고침해 주세요.</p> : <EmptyState icon={Receipt} heading="p" title="아직 결제 내역이 없어요." />
-        ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr><th>상품</th><th>금액</th><th>상태</th><th>일시</th><th>환불</th></tr>
-              </thead>
-              <tbody>
-                {payments.map((item) => {
-                  const refund = refunds[item.orderId];
-                  return (
-                  <Fragment key={item.orderId}>
-                  <tr>
-                    <td data-label="상품">{displayOrderName(item.orderName) || "-"}</td>
-                    <td data-label="금액" className={styles.amount}>{item.amount.toLocaleString("ko-KR")}원</td>
-                    <td data-label="상태">
-                      <StatusBadge tone={item.status === "done" ? "success" : BAD_STATUS.has(item.status) ? "danger" : "neutral"}>
-                        {STATUS_LABEL[item.status] ?? item.status}
+      <SettingsSection id="me-payments" title="결제 내역" description="사업계획서·홈페이지 결제와 환불 상태예요.">
+        <SettingsCard>
+          {payments === null ? <PlanLoading variant="compact" note="결제 내역을 불러오는 중…" /> : payments.length === 0 ? (
+            paymentsFailed ? <p className={styles.notice} role="alert">결제 내역을 불러오지 못했어요. 새로고침해 주세요.</p> : <EmptyState icon={Receipt} heading="p" title="아직 결제 내역이 없어요." />
+          ) : payments.map((item) => {
+            const refund = refunds[item.orderId];
+            return (
+              <Fragment key={item.orderId}>
+                <SettingsRow title={displayOrderName(item.orderName) || "-"}
+                  description={`${item.amount.toLocaleString("ko-KR")}원 · ${new Date(item.paidAt ?? item.createdAt).toLocaleDateString("ko-KR")}`}
+                  control={<>
+                    <StatusBadge tone={item.status === "done" ? "success" : BAD_STATUS.has(item.status) ? "danger" : "neutral"}>
+                      {STATUS_LABEL[item.status] ?? item.status}
+                    </StatusBadge>
+                    {/* 환불이 끝나면 주문은 '환불됨'으로 바뀐다 — 그래도 요청 결과는 보여 준다 */}
+                    {refund ? (
+                      <StatusBadge tone={refund.status === "done" ? "success" : refund.status === "rejected" ? "danger" : "neutral"}>
+                        {REFUND_LABEL[refund.status]}
                       </StatusBadge>
-                    </td>
-                    <td data-label="일시">{new Date(item.paidAt ?? item.createdAt).toLocaleDateString("ko-KR")}</td>
-                    <td data-label="환불">
-                      {/* 환불이 끝나면 주문은 '환불됨'으로 바뀐다 — 그래도 요청 결과는 보여 준다 */}
-                      {refund ? (
-                        <>
-                          <StatusBadge tone={refund.status === "done" ? "success" : refund.status === "rejected" ? "danger" : "neutral"}>
-                            {REFUND_LABEL[refund.status]}
-                          </StatusBadge>
-                          {refund.status === "rejected" && refund.adminNote ? <small style={{ display: "block", marginTop: 4, color: "var(--text-soft, #667085)" }}>사유: {refund.adminNote}</small> : null}
-                        </>
-                      ) : item.status === "confirming" ? (
-                        <>
-                          <AppButton type="button" variant="secondary" size="small" className={styles.refundBtn} disabled={recheckBusy === item.orderId} onClick={() => void recheck(item.orderId)}>
-                            {recheckBusy === item.orderId ? "확인 중…" : "결제 다시 확인"}
-                          </AppButton>
-                          {recheckMessage[item.orderId] ? <small style={{ display: "block", marginTop: 4, color: "var(--text-soft, #667085)" }}>{recheckMessage[item.orderId]}</small> : null}
-                        </>
-                      ) : item.status !== "done" ? (
-                        <span className={styles.refundNa}>—</span>
-                      ) : item.method === "APPLE_IAP" || item.method === "GOOGLE_IAP" ? (
-                        /* 앱에서 결제한 주문은 스토어가 환불한다 — 여기서 접수하면 처리할 수 없다 */
-                        <small style={{ color: "var(--text-soft, #667085)" }}>{item.method === "APPLE_IAP" ? "App Store에서 환불 신청" : "Google Play에서 환불 신청"}</small>
-                      ) : refundsFailed ? (
-                        /* 환불 상태를 못 읽었으면 '환불 요청'을 다시 보이지 않는다(이미 접수했을 수 있다) */
-                        <small style={{ color: "var(--text-soft, #667085)" }}>환불 상태를 확인하지 못했어요</small>
-                      ) : (
-                        <AppButton type="button" variant="secondary" size="small" className={styles.refundBtn} onClick={() => { setRefundFor(refundFor === item.orderId ? null : item.orderId); setRefundReason(""); setRefundMessage(""); }}>
-                          환불 요청
+                    ) : item.status === "confirming" ? (
+                      <AppButton type="button" variant="soft" size="compact" className={styles.refundBtn} disabled={recheckBusy === item.orderId} onClick={() => void recheck(item.orderId)}>
+                        {recheckBusy === item.orderId ? "확인 중…" : "결제 다시 확인"}
+                      </AppButton>
+                    ) : item.status !== "done" ? null : item.method === "APPLE_IAP" || item.method === "GOOGLE_IAP" ? (
+                      /* 앱에서 결제한 주문은 스토어가 환불한다 — 여기서 접수하면 처리할 수 없다 */
+                      <small className={styles.rowHint}>{item.method === "APPLE_IAP" ? "App Store에서 환불 신청" : "Google Play에서 환불 신청"}</small>
+                    ) : refundsFailed ? (
+                      /* 환불 상태를 못 읽었으면 '환불 요청'을 다시 보이지 않는다(이미 접수했을 수 있다) */
+                      <small className={styles.rowHint}>환불 상태를 확인하지 못했어요</small>
+                    ) : (
+                      <AppButton type="button" variant="secondary" size="compact" className={styles.refundBtn} aria-expanded={refundFor === item.orderId} onClick={() => { setRefundFor(refundFor === item.orderId ? null : item.orderId); setRefundReason(""); setRefundMessage(""); }}>
+                        환불 요청
+                      </AppButton>
+                    )}
+                  </>}>
+                  {refund?.status === "rejected" && refund.adminNote ? <p className={styles.rowNotice}>사유: {refund.adminNote}</p> : null}
+                  {recheckMessage[item.orderId] ? <p className={styles.rowNotice} role="status">{recheckMessage[item.orderId]}</p> : null}
+                </SettingsRow>
+                {refundFor === item.orderId && (
+                  <SettingsRow stack title="환불 사유" description="5자 이상 적어 주세요. 문서 작성이 시작된 뒤에는 단순 변심 환불이 제한될 수 있어요.">
+                    <div className={styles.refundForm}>
+                      <TextArea
+                        aria-label="환불 사유"
+                        rows={3}
+                        value={refundReason}
+                        onChange={(event) => setRefundReason(event.target.value)}
+                        placeholder="환불 사유를 적어 주세요(5자 이상). 문서 작성이 시작된 뒤에는 단순 변심 환불이 제한될 수 있어요."
+                        maxLength={1000}
+                      />
+                      <div className={styles.refundActions}>
+                        <AppButton type="button" variant="soft" size="compact" className={styles.refundCancel} onClick={() => setRefundFor(null)}>닫기</AppButton>
+                        <AppButton type="button" variant="primary" size="compact" className={styles.refundSubmit} disabled={refundBusy || refundReason.trim().length < 5} onClick={() => void submitRefund(item.orderId)}>
+                          {refundBusy ? "접수 중…" : "환불 요청 접수"}
                         </AppButton>
-                      )}
-                    </td>
-                  </tr>
-                  {refundFor === item.orderId && (
-                    <tr>
-                      <td colSpan={5}>
-                        <div className={styles.refundForm}>
-                          <TextArea
-                            aria-label="환불 사유"
-                            rows={2}
-                            value={refundReason}
-                            onChange={(event) => setRefundReason(event.target.value)}
-                            placeholder="환불 사유를 적어 주세요(5자 이상). 문서 작성이 시작된 뒤에는 단순 변심 환불이 제한될 수 있어요."
-                            maxLength={1000}
-                          />
-                          <div>
-                            <AppButton type="button" variant="primary" size="small" className={styles.refundSubmit} disabled={refundBusy || refundReason.trim().length < 5} onClick={() => void submitRefund(item.orderId)}>
-                              {refundBusy ? "접수 중…" : "환불 요청 접수"}
-                            </AppButton>
-                            <AppButton type="button" variant="secondary" size="small" className={styles.refundCancel} onClick={() => setRefundFor(null)}>닫기</AppButton>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                  </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-            {refundMessage && <p className={styles.refundMessage}>{refundMessage}</p>}
-          </div>
-        )}
-      </section>
+                      </div>
+                    </div>
+                  </SettingsRow>
+                )}
+              </Fragment>
+            );
+          })}
+        </SettingsCard>
+        {refundMessage && <p className={styles.refundMessage} role="status">{refundMessage}</p>}
+      </SettingsSection>
 
-      <section className={styles.card}>
-        <div className={styles.cardHead}>
-          <h2 className={styles.cardTitle}>회원 탈퇴</h2>
-        </div>
-        {!showDelete ? (
-          <>
-            <p className={styles.deleteNote}>
-              계정과 작성한 사업·문서가 모두 지워져요. 공개한 홈페이지도 함께 지워져 그 주소로 더는 열리지 않고,
-              연결한 내 도메인도 끊어져요. 결제·환불 기록은 법령상 보존 의무가 있어 사람과 연결되지 않는 형태로만 남아요.
-            </p>
-            <AppButton ref={deleteOpener} type="button" variant="secondary" className={styles.dangerBtn} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>
-              탈퇴 진행하기
-            </AppButton>
-          </>
-        ) : (
-          <div className={styles.deleteForm}>
-            {/* 이메일 없는 계정(카카오 등)은 다시 적을 이메일이 없어 탈퇴할 수 없었다 — '탈퇴'를 적게 한다(감사 2026-10-23) */}
-            <p id="delete-guide">
-              {account.email
-                ? <>되돌릴 수 없어요. 계속하려면 로그인한 이메일 <b>{account.email}</b> 을 그대로 적어 주세요.</>
-                : <>되돌릴 수 없어요. 계속하려면 아래 칸에 <b>{NO_EMAIL_CONFIRM}</b> 를 그대로 적어 주세요.</>}
-            </p>
-            <TextField
-              className={styles.deleteInput}
-              aria-label={account.email ? "탈퇴 확인용 이메일" : "탈퇴 확인 문구"}
-              type={account.email ? "email" : "text"}
-              autoFocus
-              value={deleteEmail}
-              onChange={(event) => { setDeleteEmail(event.target.value); setDeleteMessage(""); }}
-              placeholder={account.email ? "이메일 입력" : NO_EMAIL_CONFIRM}
-              autoComplete="off"
-              aria-invalid={deleteMessage ? true : undefined}
-              aria-describedby={deleteMessage ? "delete-guide delete-error" : "delete-guide"}
-            />
-            {deleteMessage && <FieldError id="delete-error" className={styles.deleteError} role="alert">{deleteMessage}</FieldError>}
-            <div>
-              <AppButton
-                type="button"
-                variant="danger"
-                className={styles.dangerBtn}
-                disabled={deleteBusy || deleteEmail.trim().length < (account.email ? 5 : NO_EMAIL_CONFIRM.length)}
-                onClick={() => void deleteAccount()}
-              >
-                {deleteBusy ? "처리 중…" : "탈퇴하기"}
-              </AppButton>
-              <AppButton type="button" variant="secondary" className={styles.refundCancel} onClick={() => { setShowDelete(false); window.requestAnimationFrame(() => deleteOpener.current?.focus()); }}>취소</AppButton>
-            </div>
-          </div>
-        )}
-      </section>
+      <SettingsSection id="me-danger" title="계정 정리" description="되돌릴 수 없는 일이라 따로 모아 두었어요.">
+        <SettingsCard>
+          <DeleteAccountRow email={account.email} />
+        </SettingsCard>
+      </SettingsSection>
     </div>
   );
 }

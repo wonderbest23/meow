@@ -1,0 +1,23 @@
+/*
+ * 설정 메뉴(SettingsMenu.tsx) — 시안 settings-mock/Main.dc.html 의 .side 그대로, 색은 --app-* 토큰만.
+ * 자리(256px · 안쪽 8 · 바탕)는 BusinessAppChrome(AppChrome.module.css .side)이 맡는다 — 여기서는 안쪽만.
+ * 뒤로 가기 36 · 검색 32 r8(위 4 아래 12) · 묶음 제목 14 회색(위 12 아래 6, 좌우 8) · 항목 240×32 r8 14px 아이콘 20 간격 8 안쪽 4px 6px.
+ */
+.menu { display:flex; flex-direction:column; flex:1; min-height:0; color:var(--app-text); }
+.back { flex:none; display:flex; align-items:center; gap:8px; height:36px; padding:0 8px; border-radius:8px; color:var(--app-text); font-size:.875rem; line-height:1.3125rem; text-decoration:none; }
+.back:hover { background:color-mix(in srgb, var(--app-text) 5%, transparent); }
+.search { flex:none; margin:4px 0 12px; color:var(--app-muted); }
+.search input { font-size:.875rem; }
+.group { display:flex; flex-direction:column; }
+.grp { margin:12px 8px 6px; color:var(--app-muted); font-size:.875rem; line-height:1.3125rem; }
+.group:first-of-type .grp { margin-top:0; }
+.item { display:flex; align-items:center; gap:8px; box-sizing:border-box; width:100%; height:32px; padding:4px 6px; border-radius:8px; color:var(--app-body); font-size:.875rem; font-weight:400; line-height:1.4; text-decoration:none; }
+.item > span:last-child { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.item > svg { flex:none; width:20px; height:20px; color:var(--app-muted); stroke-width:1.8; }
+.item:hover { background:color-mix(in srgb, var(--app-text) 5%, transparent); color:var(--app-text); }
+.item[aria-current=page] { background:var(--app-nav-selected); color:var(--app-text); }
+.item[aria-current=page] > svg { color:var(--app-text); }
+.ava { display:inline-grid; flex:none; place-items:center; width:20px; height:20px; border-radius:6px; background:var(--app-primary); color:var(--app-surface); font-size:.6875rem; font-weight:600; line-height:1; }
+.none { margin:8px; color:var(--app-muted); font-size:.875rem; line-height:1.5; }
+.menu :is(a, input):focus-visible { outline:2px solid var(--app-primary); outline-offset:-2px; }
+@media (pointer:coarse) { .item, .back { min-height:44px; height:auto; } }
