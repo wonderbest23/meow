@@ -8,7 +8,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEve
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { LoadingStatus, Spinner } from "../../PlanLoading";
-import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, ChevronRight, Copy, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion, type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
@@ -675,21 +675,32 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
       return <div key={message.id} className={styles.chatTurn}>
         {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{questionPromptText(question.prompt)}</p></div>}
         {sectionEdit?.tag && <p className={styles.bubbleTag}><StatusBadge tone="neutral">{sectionEdit.tag}</StatusBadge></p>}
-        <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role}>
+        {/* 내 말풍선 — 누르면(휴대폰) 또는 마우스를 올리면(PC) 아래에 작은 아이콘 줄(복사 · 고치기)이 나타난다(lovable 6단계). 평소엔 숨긴다 */}
+        <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role} tabIndex={message.role === "user" ? 0 : undefined}>
           {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={questionPromptText(text.replace(/(?:아래 )?"계획서 (?:다시 작성하기|에 반영하기)"/, "\"계획서에 반영하기\""))} /></> : <p>{sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)}</p>}
-          {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
+        {message.role === "user" && <div className={styles.userActions} data-user-actions>
+          <CopyButton text={sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)} />
+          {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} aria-hidden="true" /></button>}
+        </div>}
         {pro && message.role === "assistant" && <MessageMeta text={text} at={message.at} />}
         {receipt && message.id === lastUserId && !notes.length ? <p className={styles.messageStatus} data-receipt>{receipt}</p>
           : message.id === industryAnswerId && replacedIndustry.size > 0 ? <p className={styles.messageStatus}>업종을 바꿨어요</p>
           : changedAnswerIds.has(message.id) && <p className={styles.messageStatus}>답을 바꿨어요</p>}
         {/* 질문으로 남긴 글은 아래 'AI 답변 받기'가 따로 안내한다 — 질문 말풍선에 '입력은 저장됨'을 붙이지 않는다 */}
-        {margin?.anchor === message.id && <WorkLog items={[margin]} unit="" />}
+        {margin?.anchor === message.id && <WorkLog card items={[margin]} unit="" />}
         {notes.length > 0 && !notes.every(note => note.intent === "question") && <p className={styles.messageStatus}>{notes.some(note => note.status === "failed") ? "입력은 저장됨 · 자동 정리는 미완료" : notes.some(note => note.status === "queued" || note.status === "processing") ? "입력은 저장됨 · 자동 정리 중" : notes.some(note => note.status === "review") ? "입력은 저장됨 · 정리한 내용 확인 필요" : "입력은 저장됨"}</p>}
       </div>;
     })()))}
     {!logPlaced && log!.node}
   </div>;
+}
+
+/** 말풍선 아이콘 줄의 복사(28 r999) — 복사하면 잠깐 체크로 바뀐다. 클립보드를 못 쓰면 아무 일도 하지 않는다 */
+function CopyButton({ text }: { text: string }) {
+  const [done, setDone] = useState(false);
+  useEffect(() => { if (!done) return; const timer = window.setTimeout(() => setDone(false), 1400); return () => window.clearTimeout(timer); }, [done]);
+  return <button type="button" className={styles.messageEdit} title={done ? "복사했어요" : "복사"} aria-label={done ? "복사했어요" : "이 답변 복사"} onClick={() => { void navigator.clipboard?.writeText(text).then(() => setDone(true), () => {}); }}>{done ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}</button>;
 }
 
 export function AnswerHistory({ snapshot, drafts, onEdit, onKeepAsMemo, readOnly = false }: { snapshot: IntakeSnapshot; drafts: Record<string, AnswerDraft>; onEdit: (id: string) => void; onKeepAsMemo: (id: string) => void; readOnly?: boolean }) {

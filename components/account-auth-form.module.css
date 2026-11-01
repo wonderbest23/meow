@@ -28,6 +28,8 @@
 .root .form .consents a { color: var(--app-primary); text-decoration: underline; }
 
 .root .form > p[role] { margin: 16px 0 0; }
+/* 보낸 뒤 오류 — 박스 없이 입력칸 바로 아래 13px 빨간 글 한 줄(칸 테두리는 aria-invalid 로 빨갛게 — components/app-field) */
+.root .form > p.formError { margin: 8px 0 0; padding: 0; border: 0; background: none; color: var(--app-danger); font-size: .8125rem; font-weight: 400; line-height: 1.5; text-align: left; text-wrap: pretty; }
 
 .root .form .primary { width: 100%; margin: 20px 0 0; }
 
