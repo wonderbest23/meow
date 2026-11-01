@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, History, Mic, Monitor, MoreHorizontal, PanelLeftClose, PanelLeftOpen, RotateCw, Share2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, History, Mic, Monitor, MoreHorizontal, PanelLeftClose, PanelLeftOpen, RotateCw, Save, Share2, X } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -780,6 +780,8 @@ export default function Studio() {
   };
   const shareTitle = publicUrl ? "홈페이지 주소 나누기" : "홈페이지를 공개하면 주소를 나눌 수 있어요";
   const toolItems: PopMenuItem[] = [
+    /* 휴대폰 홈페이지 — 칸 위 '저장 · 공개하기' 줄을 접었으니 저장은 여기서(공개하기는 아래 막대 파란 단추) */
+    ...(!wide && rightTab === "homepage" && !locks.homepage ? [{ key: "save", label: "홈페이지 저장", icon: <Save />, onSelect: () => sendStudioCommand("homepage-save") }] : []),
     { key: "download", label: "사업계획서 내려받기", icon: <Download />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 내려받을 수 있어요", onSelect: () => runPlan("plan-download") },
     { key: "summary", label: "한 장 요약", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => runPlan("plan-summary") },
     { key: "records", label: "실적과 개선 기록", icon: <ClipboardList />, disabled: !!locks.operations, title: locks.operations?.message, onSelect: () => pickPage("operations") },

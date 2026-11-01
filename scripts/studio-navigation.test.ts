@@ -408,6 +408,11 @@ console.log("studio navigation ok");
   assert.match(studio, /plan: \{ label: "내려받기", command: "plan-download" \}/);
   assert.match(studio, /homepage: \{ label: "공개하기", command: "homepage-publish" \}/);
   assert.match(studio, /launch: \{ label: "다음 단계", command: "launch-next" \}/);
+  // 휴대폰 미리보기는 칸 위에 아래 막대와 같은 단추를 두지 않는다 — 계획서 '내려받기' 칩, 홈페이지 '저장 · 공개하기' 줄(저장은 … 메뉴로)
+  assert.match(read("../app/plan/document/DocumentWorkspace.tsx"), /onDownload=\{grouped\.length && !nav\?\.toolbarTools \? \(\) => setModal\("download"\) : undefined\}/);
+  assert.match(read("../app/plan/homepage/HomepageScreen.tsx"), /studioHeader && nav\?\.toolbarTools \? <div className=\{`\$\{styles\.studioNarrowBar\} \$\{paneHeader\.narrowOnly\}`\}>\{previewSwitch\}\{publishedMenu\(styles\.headerPrimary\)\}<\/div>/);
+  assert.match(read("../app/plan/homepage/HomepageScreen.tsx"), /useStudioCommand\("homepage-save",/);
+  assert.match(studio, /label: "홈페이지 저장", icon: <Save \/>, onSelect: \(\) => sendStudioCommand\("homepage-save"\)/);
   // 페이지 선택의 ✓ 는 진행 칩과 같은 값(유지보수는 끝나는 단계가 아니라 없다)
   assert.match(studio, /const tabDone = \(item: RightTab\) => item !== "operations" && chipFor\(/);
   // 대화 열 451(시안 실측)과 위 막대 왼쪽 칸이 같은 값 · 미리보기 판은 r16 흰 판 · 위 막대 48

@@ -768,6 +768,13 @@ export function HomepageScreen() {
     if (busy) return;
     void publishRef.current();
   }, embedded && phase === "ready" && !!draft);
+  /* 휴대폰 아래 막대 … 메뉴의 '홈페이지 저장' — 머리줄 · 도구 알약의 저장과 같다. 고친 게 없으면 알린다 */
+  useStudioCommand("homepage-save", () => {
+    if (!editable || sample) { void payPromptRef.current(); return; }
+    if (busy) return;
+    if (!unsaved) { void askConfirm({ title: "저장됨", message: "저장할 고친 내용이 없어요.", confirmLabel: "확인", cancelLabel: null }); return; }
+    void saveRef.current();
+  }, embedded && phase === "ready" && !!draft);
 
   /* 공개 주소 — 공개했으면 손님이 여는 주소, 아직이면 공개하면 생길 주소(지금 적어 둔 주소 끝부분) */
   const livePublished = site?.status === "published";
@@ -1021,7 +1028,9 @@ export function HomepageScreen() {
     <Root className={`${frame.page} ${styles.page}`} data-embedded={embedded ? "" : undefined} data-studio-pro={studioPro ? "" : undefined} onClickCapture={paneLinkCapture(nav, screenPlanId)}><BusinessAppChrome title="홈페이지" backHref={back} actions={studioHeader ? undefined : headerActions}>
     <div className={studioPro ? styles.proCard : styles.frameScroll}>{strip}{floatingTools}<div className={studioPro ? styles.proScroll : styles.frameInner} id={studioPro ? PRO_SCROLL_ID : undefined}>
       {/* 작업실 좁은 화면 — 머리줄 대신 칸 맨 위에 저장·공개(넓은 화면에서는 머리줄 단추가 같은 일을 한다) */}
-      {studioHeader && headerActions && <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{headerActions}</div>}
+      {/* lovable 구조 2단계 — 아래 100px 막대(공개하기 · … 안의 저장)가 있는 작업실 휴대폰은 같은 단추를 칸 위에 두지 않는다. 막대에 없는 미리보기 크기 · 공개됨 메뉴(주소 복사 · 공개 멈추기)는 그대로 */}
+      {studioHeader && nav?.toolbarTools ? <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{publishedMenu(styles.headerPrimary)}</div>
+        : studioHeader && headerActions && <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{headerActions}</div>}
       {/* 휴대폰의 '대화로 고치기'는 미리보기 위 '홈페이지 고치기' 옆 작은 글 단추로 옮겼다(모바일 점검 r37: 고치는 길이 셋이었다) — chatEdit 참고 */}
       {/* 전체 화면 — 방문자가 보는 그대로 */}
       {fullscreen && draft && (

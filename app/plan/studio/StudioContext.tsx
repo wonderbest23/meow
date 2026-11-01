@@ -87,7 +87,7 @@ export type StudioNav = {
  * 위 막대 · 아래 막대의 도구 단추 → 칸 — 칸의 기능(내려받기 창 · 한 장 요약 · 공개하기 · 다음 단계)은 칸 안에 그대로 있고,
  * 막대는 명령만 보낸다. 칸이 아직 없으면(처음 여는 칸) 명령을 잠깐(10초) 맡겨 두었다가 칸이 생기는 순간 넘긴다.
  */
-export type StudioCommand = "plan-download" | "plan-summary" | "homepage-publish" | "launch-next" | "operations-add" | "chat-dictate" | "chat-summary";
+export type StudioCommand = "plan-download" | "plan-summary" | "homepage-publish" | "launch-next" | "operations-add" | "chat-dictate" | "chat-summary" | "homepage-save";
 const STUDIO_COMMAND_EVENT = "oneulstart:studio-command";
 const COMMAND_TTL_MS = 10_000;
 let queuedCommand: { command: StudioCommand; at: number } | null = null;
