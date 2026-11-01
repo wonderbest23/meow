@@ -43,14 +43,14 @@ const STARTS: Array<{ title: string; body: string; action: string; entry: EntryM
 ];
 
 /*
- * 결과물 그림 — 첫 화면 진열 띠와 같은 예시 사업('성수 쿠키공방', 실제 AI로 만든 화면). 카드 그림 칸은 3:4.
- * 휴대폰 화면(phone)은 390×844로 따로 찍은 화면을 작은 아이폰 틀(iphone-mockup)에 넣고, 나머지는 컴퓨터 화면에서 문서 부분만 잘라 쓴다.
+ * 결과물 그림 — 첫 화면 진열 띠와 같은 예시 사업('퇴근필라', 실제 AI로 만든 화면). 카드 그림 칸은 3:4.
+ * 휴대폰 화면(phone)은 390×790으로 따로 찍은 화면을 작은 아이폰 틀(iphone-mockup)에 넣고, 나머지는 컴퓨터 화면에서 문서 부분만 잘라 쓴다.
  */
 const RESULTS = [
-  { src: "/home-media/showcase/cookie-plan-card.webp", width: 600, height: 800, phone: false, alt: "성수 쿠키공방 사업계획서 첫 장 — 한 줄 소개 '퇴근길에 미리 주문한 쿠키 선물상자를 바로 찾아가요'와 '성수동 직장인에게 쿠키 선물 상자를 예약받아 팝니다' 사업 개요", title: "실행용 사업계획서" },
-  { src: "/home-media/showcase/cookie-plan-m.webp", width: 780, height: 1580, phone: true, alt: "휴대폰으로 본 사업계획서의 숫자 — 상자 18,000원에 한 건 비용 6,500원, 본전 판매량 월 192건, 조심스러운 경우 월 96건이면 3,096,000원 부족", title: "내 조건으로 계산한 숫자" },
-  { src: "/home-media/showcase/cookie-summary-card.webp", width: 600, height: 800, phone: false, alt: "성수 쿠키공방 한 장 요약 — 한 줄 소개와 사업·고객, 제공안과 판매(6개입 선물 상자 18,000원), 수익 구조와 계획 계산", title: "한 장 요약" },
-  { src: "/home-media/showcase/cookie-chat-m.webp", width: 780, height: 1580, phone: true, alt: "휴대폰 대화에서 '선물 상자 가격을 19,000원으로 올려 줘'라고 하자 판매 가격 18,000원을 19,000원으로 바꾸는 확인 카드가 뜬 화면", title: "대화로 고치기" },
+  { src: "/home-media/showcase/pilates-plan-card.webp", width: 600, height: 800, phone: false, alt: "퇴근필라 사업계획서 첫 장 — 제목 '퇴근 후, 붐비지 않는 4인 기구 필라테스'와 '퇴근 후 4인 기구 필라테스 주 2회 정기권' 하나로 시작한다는 사업 개요, 고객·문제·상품·가격(월 220,000원) 표", title: "실행용 사업계획서" },
+  { src: "/home-media/showcase/pilates-plan-m.webp", width: 780, height: 1580, phone: true, alt: "휴대폰으로 본 사업계획서의 숫자 — 정기권 220,000원에서 변동비 15,000원을 뺀 회원 1명당 205,000원, 손익분기 월 정기 회원 22명(매출 4,840,000원), 하루 6타임 × 월 26일 = 156타임", title: "내 조건으로 계산한 숫자" },
+  { src: "/home-media/showcase/pilates-summary-card.webp", width: 600, height: 800, phone: false, alt: "퇴근필라 한 장 요약 — 사업과 고객, 제공안과 판매(4인 소그룹 주 2회 정기권 220,000원), 수익 구조와 계획 계산(손익분기 월 22명 / 매출 4,840,000원)", title: "한 장 요약" },
+  { src: "/home-media/showcase/pilates-chat-m.webp", width: 780, height: 1580, phone: true, alt: "휴대폰 대화에서 '정기권 가격을 240,000원으로 올려 줘'라고 하자 판매 가격 220,000원을 240,000원으로 바꾸는 확인 카드가 뜬 화면", title: "대화로 고치기" },
 ];
 
 /*
