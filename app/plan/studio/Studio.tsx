@@ -839,7 +839,7 @@ export default function Studio() {
     </button>
   </header> : null;
 
-  /* 휴대폰 미리보기 아래 100px 막대 — ‹ 대화 알약 48 · 마이크 48 원 · … 48 원(페이지 바꾸기 · 내려받기 · 요약 등) · 파랑 주 단추 48 */
+  /* 휴대폰 미리보기 아래 68px 막대(lovable 실측) — ‹ 대화 알약 36 · 마이크 36 원 · … 36 원(페이지 바꾸기 · 내려받기 · 요약 등) · 파랑 주 단추 36 */
   const primary = PRIMARY[rightTab];
   const bottomBar = !wide && rightVisible && !missing ? <nav className={styles.bottomBar} aria-label="미리보기 도구">
     <button type="button" className={styles.backPill} onClick={() => selectTab("chat", { focus: "heading" })}><ChevronLeft aria-hidden="true" />대화{unread.includes("chat") && <i className={styles.dot} aria-hidden="true" />}</button>

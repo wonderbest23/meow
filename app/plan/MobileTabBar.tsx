@@ -12,7 +12,7 @@ import { newChatHref, studioHref, STUDIO_REDIRECT } from "../../lib/plan-builder
 import styles from "./MobileTabBar.module.css";
 
 /*
- * 휴대폰 아래 떠 있는 3탭 막대(시안 MHome.dc.html) — 300×56, r999, 아래 28(+안전 영역).
+ * 휴대폰 아래 떠 있는 3탭 막대(시안 MHome.dc.html) — 296×57, r999, 칸 48, 아래 24(+안전 영역) — lovable 실측 2026-11-01.
  * 홈(/plan) · 내 사업(/plan?view=all, 사업 카드만) · 대화(가장 최근에 대화한 사업, 없으면 새 대화).
  * 입력칸이 있는 작업 화면(대화·계획서·홈페이지·작업실)에서는 그리지 않는다 — 입력칸·단추를 가리지 않게(BusinessAppChrome 이 정한다).
  */

@@ -9,4 +9,5 @@
  */
 .scroll[data-settings] { background: var(--app-bg); }
 .scroll[data-settings] > .inner { box-sizing: border-box; padding: 48px; }
-@media (max-width: 900px) { .scroll[data-settings] > .inner { padding: 20px 16px 24px; } }
+/* 휴대폰 — 머리(위 16 + 44) 아래 16(lovable 실측 2026-11-01: 계정 설정 검색칸 y≈76) */
+@media (max-width: 900px) { .scroll[data-settings] > .inner { padding: 16px 16px 24px; } }

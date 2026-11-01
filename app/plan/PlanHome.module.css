@@ -83,19 +83,25 @@
 /* 판이 좁으면(왼쪽 메뉴 + 1100 이하) 카드 칸을 판 폭에 맞춘다 */
 @media (max-width:1180px) { .grid.grid { grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:24px; } }
 
-/* 휴대폰 390 — 알약 40 · 인사말 30px 2줄 · 입력칸 r28 글자 17 · 목록 카드 좌우 16 */
+/*
+ * 휴대폰 390 — lovable 실측(2026-11-01, 375 폭): 안내 알약 36(14px, 안쪽 6 12 6 6, y≈205) · 인사말 24/행간 30 좌우 16(y≈289)
+ * · 입력 상자 폭-32 × 121 r28 안쪽 12(y≈379), 글칸 16/행간 24 최소 60 · 아래 줄 ＋ 36 · 모드 알약 36(안쪽 8 12, 14px) · 마이크 36 · 목록 카드 좌우 16
+ */
 @media (max-width:900px) {
-  .hero { min-height:0; padding:clamp(24px, 14vh, 160px) 16px 32px; }
-  .todo { height:40px; padding:0 16px 0 10px; font-size:.9375rem; }
+  .hero { min-height:0; padding:clamp(24px, 18vh, 160px) 16px 32px; }
+  .todo { height:36px; padding:6px 12px 6px 6px; font-size:.875rem; }
+  .todoIcon { width:24px; height:24px; }
   .todoDetail { display:none; }
-  .hero .greeting { margin:clamp(32px, 8vh, 70px) 20px 0; line-height:1.2667; letter-spacing:-.02em !important; }
-  .composer { margin-top:40px; padding:14px; }
-  /* 글자 17px — 전역 입력칸 규칙(16px 이상 !important, iOS 확대 방지)보다 앞서도록 !important. 16px 이상이고 글자 크기 설정을 따른다 */
-  .composer .composerField[data-app-field][data-app-field][data-app-field] { height:44px; min-height:44px; padding:6px; font-size:max(16px, 1.0625rem) !important; }
-  .composerBar { gap:10px; height:auto; padding:10px 2px 0; }
-  .circle { width:32px; height:32px; }
-  .circle.send { width:32px; height:32px; }
-  .modePill { font-size:1rem; padding:0 8px; }
+  .hero .greeting { margin:clamp(24px, 6vh, 48px) 0 0; font-size:1.5rem; line-height:1.25; letter-spacing:-.02em !important; }
+  .composer { margin-top:30px; padding:12px; }
+  /* 글자 16px — iOS 확대 방지(16px 이상)를 지킨다. 전역 입력칸 규칙(!important)보다 앞서도록 !important */
+  .composer .composerField[data-app-field][data-app-field][data-app-field] { height:60px; min-height:60px; padding:4px 6px; font-size:max(16px, 1rem) !important; line-height:24px; }
+  .composerBar { gap:8px; height:36px; padding:0; }
+  .circle { width:36px; height:36px; }
+  .circle.send { width:36px; height:36px; }
+  /* 비어 있으면 보내기 단추를 숨긴다(lovable 과 같음) — 글을 쓰면 나타난다. Enter 로 보내는 동작은 그대로 */
+  .circle.send:disabled { display:none; }
+  .modePill { height:36px; padding:8px 12px; font-size:.875rem; }
   .listCard { margin:0 16px 24px; padding:16px; }
   .listCard[data-list-only] { margin-top:16px; }
   .filterRow { flex-wrap:wrap; }

@@ -1043,7 +1043,8 @@ button.workLogRow { min-height: 32px; }
  * ── lovable 구조 2단계: 작업 화면 대화 칸(시안 PcStudio · MChat) ──────────────────────
  * PC(data-studio-pro): 대화 열 451(안쪽 16) · 메시지 14px 행간 1.65 · 내 말풍선 오른쪽 r16(흰 바탕 1px 선) · 도구 카드 r12(알약 단추)
  *   · 제안 알약 32 r999(첫 번째 파랑 채움) · 입력 상자 r12(＋ 28 원 · 모드 알약 32 · 마이크 28 · 보내기 28 검정 원).
- * 휴대폰(작업실 안): 메시지 16px · 제안 알약 36 가로 스크롤 · 입력 상자 r24(＋ 40 · 모드 알약 40 · 마이크 40 · 보내기 40).
+ * 휴대폰(작업실 안, lovable 실측 2026-11-01): 메시지 16/행간 25 · 내 말풍선 r24 안쪽 12 16 · 도구 카드 r12(알약 단추 36) · 작업 아이콘 28
+ *   · 제안 알약 32 r999(14px, 안쪽 6 10, 간격 6, 왼쪽 8) 가로 스크롤 · 입력 상자 폭-16 r28 안쪽 12, 좌우 8 아래 16(＋ 36 · 모드 알약 36 · 마이크 36 · 보내기 36).
  * 색은 --app-* 토큰만. 예전 대화 화면(/plan/chat, data-embedded 없음)은 그대로다.
  */
 .composerGrow { flex: 1 1 0; min-width: 0; }
@@ -1089,19 +1090,26 @@ button.workLogRow { min-height: 32px; }
 /* PC 는 두 줄까지 감싼다 — 넘치는 칩은 SuggestRow 가 통째로 숨긴다(칩 중간에서 잘리지 않게) */
 .page[data-embedded][data-studio-pro] .suggestChip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
-/* 휴대폰 작업실 대화 화면 — 메시지 16px(말풍선 없이), 내 말풍선 흰 바탕 r20, 입력 상자 r24 */
-.page[data-embedded]:not([data-studio-pro]) .assistantMessage { margin: 0 0 18px; font-size: 1rem; line-height: 1.6; }
-.page[data-embedded]:not([data-studio-pro]) .assistantMessage > p, .page[data-embedded]:not([data-studio-pro]) .assistantMessage > .conversationText, .page[data-embedded]:not([data-studio-pro]) .chatQuestion h2 { width: auto; max-width: 100%; padding: 0; border-radius: 0; background: none; color: var(--app-text); font-size: 1rem; line-height: 1.6; }
-.page[data-embedded]:not([data-studio-pro]) .userMessage { max-width: 80%; margin: 0 0 18px auto; padding: 12px 18px; border-radius: 20px; background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line); color: var(--app-text); font-size: 1rem; line-height: 1.6; }
-.page[data-embedded]:not([data-studio-pro]) .composer { display: flex; flex-direction: column; gap: 12px; padding: 0 12px max(12px, env(safe-area-inset-bottom)); background: transparent; }
-.page[data-embedded]:not([data-studio-pro]) .composerShell, .page[data-embedded]:not([data-studio-pro]) .composerShell:focus-within { padding: 14px 12px 12px; border: 0; border-radius: 24px; background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line), 0 -8px 32px -16px color-mix(in srgb, var(--app-text) 20%, transparent); }
+/* 휴대폰 작업실 대화 화면 — 메시지 16px(말풍선 없이), 내 말풍선 흰 바탕 r24, 입력 상자 r28 */
+.page[data-embedded]:not([data-studio-pro]) .assistantMessage { margin: 0 0 18px; font-size: 1rem; line-height: 1.5625; }
+.page[data-embedded]:not([data-studio-pro]) .assistantMessage > p, .page[data-embedded]:not([data-studio-pro]) .assistantMessage > .conversationText, .page[data-embedded]:not([data-studio-pro]) .chatQuestion h2 { width: auto; max-width: 100%; padding: 0; border-radius: 0; background: none; color: var(--app-text); font-size: 1rem; line-height: 1.5625; }
+.page[data-embedded]:not([data-studio-pro]) .userMessage { max-width: 80%; margin: 0 0 18px auto; padding: 12px 16px; border-radius: 24px; background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line); color: var(--app-text); font-size: 1rem; line-height: 1.5625; }
+.page[data-embedded]:not([data-studio-pro]) .changeCard { border-radius: 12px; }
+.page[data-embedded]:not([data-studio-pro]) .changeCard .chip, .page[data-embedded]:not([data-studio-pro]) .studioEditTurn .chip { position: relative; min-height: 36px; padding: 0 14px; border-radius: 999px; font-size: 1rem; }
+.page[data-embedded]:not([data-studio-pro]) .changeCard .chip::after, .page[data-embedded]:not([data-studio-pro]) .studioEditTurn .chip::after { content: ""; position: absolute; inset: -4px 0; }
+.page[data-embedded]:not([data-studio-pro]) .metaButton { width: 28px; height: 28px; border-radius: 999px; }
+.page[data-embedded]:not([data-studio-pro]) .metaButton::after { inset: -8px; }
+.page[data-embedded]:not([data-studio-pro]) .composer { display: flex; flex-direction: column; gap: 12px; padding: 0 8px max(16px, env(safe-area-inset-bottom)); background: transparent; }
+.page[data-embedded]:not([data-studio-pro]) .composerShell, .page[data-embedded]:not([data-studio-pro]) .composerShell:focus-within { padding: 12px 12px 10px; border: 0; border-radius: 28px; background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line), 0 -8px 32px -16px color-mix(in srgb, var(--app-text) 20%, transparent); }
 .page[data-embedded]:not([data-studio-pro]) .composerShell:focus-within { box-shadow: 0 0 0 1px var(--app-primary), 0 -8px 32px -16px color-mix(in srgb, var(--app-text) 20%, transparent); }
-.page[data-embedded]:not([data-studio-pro]) .composerRow textarea { min-height: 32px; padding: 0 6px 10px; font-size: 1.0625rem; line-height: 1.45; }
-.page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] { gap: 10px; min-height: 40px; }
-.page[data-embedded]:not([data-studio-pro]) .composerRound, .page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] > .sendButton { flex-basis: 40px; width: 40px; height: 40px; }
+.page[data-embedded]:not([data-studio-pro]) .composerRow textarea { min-height: 40px; padding: 4px 4px 8px; font-size: 1rem; line-height: 1.5; }
+.page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] { gap: 8px; min-height: 36px; }
+.page[data-embedded]:not([data-studio-pro]) .composerRound, .page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] > .sendButton { position: relative; flex-basis: 36px; width: 36px; height: 36px; }
+.page[data-embedded]:not([data-studio-pro]) .composerRound::after, .page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] > .sendButton::after { content: ""; position: absolute; inset: -4px; }
 .page[data-embedded]:not([data-studio-pro]) .composerRound svg, .page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] > .sendButton svg { width: 20px; height: 20px; }
-.page[data-embedded]:not([data-studio-pro]) .modePill { min-height: 40px; padding: 0 14px; font-size: .9375rem; }
-/* 제안 알약 36 — 한 줄 가로 스크롤(넘치는 것은 밀어서 본다) */
-.page[data-embedded]:not([data-studio-pro]) .suggestRow { flex-wrap: nowrap; overflow-x: auto; margin: 0 -12px; padding: 0 16px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.page[data-embedded]:not([data-studio-pro]) .modePill { min-height: 36px; padding: 4px 6px 4px 8px; font-size: .875rem; }
+/* 제안 알약 32 — 한 줄 가로 스크롤(넘치는 것은 밀어서 본다) */
+.page[data-embedded]:not([data-studio-pro]) .suggestRow { flex-wrap: nowrap; gap: 6px; overflow-x: auto; margin: 0 -8px; padding: 0 8px; scrollbar-width: none; overscroll-behavior-x: contain; }
 .page[data-embedded]:not([data-studio-pro]) .suggestRow::-webkit-scrollbar { display: none; }
-.page[data-embedded]:not([data-studio-pro]) .suggestChip { flex: none; min-height: 36px; padding: 0 14px; font-size: .9375rem; }
+.page[data-embedded]:not([data-studio-pro]) .suggestChip { position: relative; flex: none; min-height: 32px; padding: 6px 10px; font-size: .875rem; }
+.page[data-embedded]:not([data-studio-pro]) .suggestChip::after { content: ""; position: absolute; inset: -6px 0; }
