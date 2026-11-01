@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, History, Mic, Monitor, MoreHorizontal, PanelLeftClose, PanelLeftOpen, RotateCw, Save, Share2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, Mic, MoreHorizontal, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, X } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -94,14 +94,7 @@ const subscribeWide = (onChange: () => void) => {
 };
 const readWide = () => window.matchMedia(WIDE_QUERY).matches;
 const serverWide = () => false;
-/* 왼쪽 메뉴(256)를 늘 펴 두는 폭 — 그보다 좁은 PC 는 미리보기 판 자리를 남기려고 접고, 대화 열 머리의 ☰ 로 같은 메뉴를 연다 */
-const RAIL_QUERY = "(min-width: 1360px)";
-const subscribeRail = (onChange: () => void) => {
-  const query = window.matchMedia(RAIL_QUERY);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-};
-const readRail = () => window.matchMedia(RAIL_QUERY).matches;
+/* 5단계: 작업 화면 PC 는 왼쪽 메뉴를 늘 접고(lovable 캡처) 대화 열 머리의 ☰ 로 같은 메뉴를 서랍으로 연다 */
 
 /*
  * 아직 갈 수 없는 단계 — 왼쪽 메뉴(BusinessRailTree)와 같은 문구(lockedGuide). 막힌 탭은 칸을 만들지 않고 안내만 보인다
@@ -167,7 +160,6 @@ export default function Studio() {
   useEffect(() => { if (tab !== "chat") setLastRight(tab); }, [tab]);
   const rightTab: RightTab = tab === "chat" ? lastRight : tab;
   const wide = useSyncExternalStore(subscribeWide, readWide, serverWide);
-  const railOpen = useSyncExternalStore(subscribeRail, readRail, serverWide);
 
   const headings = useRef<Partial<Record<StudioTab, HTMLHeadingElement | null>>>({});
   /* PC 대화 열 접기(머리 '패널 접기') — 미리보기 판이 넓어진다. 대화로 고치기를 부르면 다시 편다 */
@@ -645,7 +637,8 @@ export default function Studio() {
       /* 내려받기 · 한 장 요약은 위 막대(PC) · 아래 막대(휴대폰)가 그린다 — 칸은 같은 단추를 머리줄에 또 올리지 않는다 */
       toolbarTools: true,
       /* 계획서의 장 고르기는 칸 맨 위 줄에 — 위 막대 가운데는 홈페이지 기기 전환 자리다(시안) */
-      headerCenterFor: target => target !== "plan",
+      /* 5단계: 계획서의 장 고르기도 위 막대 가운데 알약으로(칸 위 얇은 줄은 고치는 중일 때만) */
+      headerCenterFor: () => true,
     };
   }, [planId, openTarget, confirmLeave, router, setHeaderActions, wide, setHeaderCenter, markActivity, showTab, setDesignRunning, registerEditHandler, editHandler, composeInChat, onComposeRequest, setEditPreviewChapters, subscribeEditPreviewChapters, editPreviewChapters, setEditChapterList, subscribeEditChapterList, editChapterList]);
 
@@ -791,12 +784,19 @@ export default function Studio() {
   ];
 
   /*
-   * PC 위 막대(48px, 시안 PcStudio) — 왼쪽은 대화 열 폭(451): 사업명 ▾ · 기록 · 패널 접기.
-   * 오른쪽은 미리보기 판의 막대: '미리보기' 알약 · 내려받기/요약/기록 · 가운데 기기 전환(홈페이지) · 새로고침 · 페이지 선택(260) · 새 창 · 칸 단추 · 공유 원.
+   * PC 위 막대(48px) — lovable 구조 5단계(캡처 project-pc-*): 왼쪽 메뉴는 숨기고 대화 열(430) 머리에 ☰(28 원, 메뉴 서랍) · 사업명 알약 ⌄ · 기록 · 패널 접기.
+   * 미리보기 판 막대: [미리보기 | 내려받기 | 한 장 요약 | ⋯] 묶음(28) · 가운데(칸의 알약 — 홈페이지 기기 전환 · 계획서 장 고르기) · [새로고침 + 페이지 선택 202] · 새 창
+   * · 오른쪽 공유 알약 + 그 칸의 주 단추(홈페이지 만들기 · 공개하기 등, 알약 모양). 나머지 도구(기록 · 직접 고치기 · 상세/요약 전환 …)는 ⋯ 메뉴.
    */
+  const moreItems: PopMenuItem[] = [
+    ...(planTools ? [{ key: "edit", label: "사업계획서 직접 고치기", icon: <PenLine />, onSelect: () => runPlan("plan-edit") }] : []),
+    { key: "records", label: "실적과 개선 기록", icon: <ClipboardList />, disabled: !!locks.operations, title: locks.operations?.message, onSelect: () => pickPage("operations") },
+    ...(rightTab === "homepage" && !locks.homepage ? [{ key: "save", label: "홈페이지 저장", icon: <Save />, onSelect: () => sendStudioCommand("homepage-save") }] : []),
+    { key: "chat", label: "지금까지 답한 기록", icon: <History />, disabled: !plan || missing || isSamplePlan(planId) || noChat, onSelect: () => { if (chatCollapsed) setChatCollapsed(false); sendStudioCommand("chat-summary"); } },
+  ];
   const pcBar = (menu: ChromeMenu) => <header className={styles.topBar} data-collapsed={chatCollapsed || undefined} data-missing={missing || undefined}>
     <div className={styles.chatHead}>
-      {!railOpen && menu.button(styles.tool, 18)}
+      {menu.button(styles.tool, 16)}
       <BizMenu planId={planId} title={businessTitle} canRename={!!plan && !isSamplePlan(planId) && !missing} onRenamed={setTitle} className={styles.bizName}
         label={<><h1 className={styles.bizTitle}>{businessTitle}</h1><ChevronDown aria-hidden="true" /></>} />
       <span className={styles.grow} />
@@ -805,23 +805,27 @@ export default function Studio() {
       <ToolButton label={chatCollapsed ? "대화 열 펴기" : "대화 열 접기"} pressed={chatCollapsed} icon={chatCollapsed ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />} onClick={() => setChatCollapsed(value => !value)} />
     </div>
     {!missing && <div className={styles.toolbar}>
-      <span className={styles.previewPill}><Monitor aria-hidden="true" />미리보기</span>
-      <ToolButton label="사업계획서 내려받기" title={planTools ? "사업계획서 내려받기" : "계획서를 쓰면 내려받을 수 있어요"} icon={<Download aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-download")} />
-      <ToolButton label="한 장 요약 보기" title={planTools ? "한 장 요약" : "계획서를 쓰면 볼 수 있어요"} icon={<FileText aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-summary")} />
-      <ToolButton label="실적과 개선 기록 보기" title={locks.operations?.message ?? "실적과 개선 기록"} icon={<ClipboardList aria-hidden="true" />} disabled={!!locks.operations} pressed={rightTab === "operations"} onClick={() => pickPage("operations")} />
+      <div className={styles.viewGroup} role="group" aria-label="미리보기 도구">
+        <span className={styles.previewPill}><Globe aria-hidden="true" />미리보기</span>
+        <ToolButton className={styles.groupTool} label="사업계획서 내려받기" title={planTools ? "사업계획서 내려받기" : "계획서를 쓰면 내려받을 수 있어요"} icon={<Download aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-download")} />
+        <ToolButton className={styles.groupTool} label="한 장 요약 보기 · 상세 계획서로 돌아가기" title={planTools ? "한 장 요약 ↔ 상세 계획서" : "계획서를 쓰면 볼 수 있어요"} icon={<FileText aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-summary")} />
+        <PopMenu buttonClassName={styles.groupTool} buttonLabel="더 보기 — 직접 고치기 · 실적 기록 · 저장" buttonTitle="더 보기" menuLabel="미리보기 더 보기" label={<Layers aria-hidden="true" />} groups={[{ key: "more", items: moreItems }]} />
+      </div>
       <span className={styles.grow} />
       <div className={styles.toolCenter}>
         {!chatOnly && centerSlot(rightTab)}
-        <ToolButton label="새로고침" title="최신 내용 다시 불러오기" icon={<RotateCw aria-hidden="true" />} disabled={!planId} onClick={refreshView} />
-        <PageSelect options={pageOptions} value={rightTab} status={statusText || undefined} live={live} onSelect={pickPage} className={styles.pageSelect} />
+        <div className={styles.selectWrap}>
+          <ToolButton className={styles.refresh} label="새로고침" title="최신 내용 다시 불러오기" icon={<RotateCw aria-hidden="true" />} disabled={!planId} onClick={refreshView} />
+          <PageSelect options={pageOptions} value={rightTab} status={statusText || undefined} live={live} onSelect={pickPage} className={styles.pageSelect} />
+        </div>
         {openHref ? <a className={styles.tool} href={openHref} target="_blank" rel="noreferrer" aria-label="새 창에서 열기" title={rightTab === "homepage" && publicUrl ? "공개한 홈페이지 새 창으로 보기" : "이 화면을 새 창에서 열기"}><ExternalLink aria-hidden="true" /></a>
           : <ToolButton label="새 창에서 열기" title="사업이 생기면 열 수 있어요" icon={<ExternalLink aria-hidden="true" />} disabled onClick={() => {}} />}
       </div>
       <span className={styles.grow} />
       <div className={styles.tbActs}>
         {relogin}
+        <button type="button" className={styles.sharePill} title={shareTitle} aria-label={shareTitle} disabled={!publicUrl} onClick={() => void share()}>공유</button>
         {!chatOnly && headerSlot(rightTab)}
-        <ToolButton className={styles.shareRound} label={shareTitle} icon={<Share2 aria-hidden="true" />} disabled={!publicUrl} onClick={() => void share()} />
       </div>
     </div>}
   </header>;
@@ -859,7 +863,7 @@ export default function Studio() {
 
   return <StudioNavContext.Provider value={nav}>
     <main className={`${frame.page} ${styles.page}`} data-wide={wide || undefined} onClickCapture={onClickCapture}>
-      <BusinessAppChrome title={businessTitle} subtitle={missing ? undefined : statusText} showRail={wide && railOpen} bare={wide} backHref="/plan" active={fresh ? "new" : "plans"} topBar={menu => (wide ? pcBar(menu) : mobileHead)}>
+      <BusinessAppChrome title={businessTitle} subtitle={missing ? undefined : statusText} showRail={false} bare={wide} backHref="/plan" active={fresh ? "new" : "plans"} topBar={menu => (wide ? pcBar(menu) : mobileHead)}>
         {/* 로그인이 풀렸을 때(휴대폰) — 머리 아래 한 줄에 다시 로그인하기 */}
         {!wide && relogin && <div className={styles.reloginRow}>{relogin}</div>}
         {/* 주소의 사업을 찾지 못했으면 칸마다 따로 알리지 않고(왼쪽·오른쪽 두 번 보였다) 작업실에서 한 번만 */}

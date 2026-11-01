@@ -453,6 +453,8 @@ export default function DocumentWorkspace(props: Props) {
     setSummaryMode(next); setEditing(false); setContinuous(false); setModal(null);
     scroller()?.scrollTo({ top: 0 });
   }, !!pane && ready);
+  /* 5단계 — 위 막대 ⋯ 메뉴의 '사업계획서 직접 고치기'(칸 위 얇은 줄의 단추와 같다) */
+  useStudioCommand("plan-edit", () => { if (!grouped.length || (factEditable && props.writing)) return; directEdit(); }, !!pane && ready && grouped.length > 0);
 
   /*
    * 대화로 고치는 중 미리보기(PC 새 화면) — 대화 칸의 '이렇게 바꿀게요' 카드가 열려 있으면 본문에서 바뀔 글에 ~~지금~~ 바꿀 값을 겹쳐 보여 준다.
@@ -531,7 +533,8 @@ export default function DocumentWorkspace(props: Props) {
         <div className={styles.document}>
           {/* One toolbar: view toggle and page count on the left, actions on the right (PC). Phones keep the actions at the bottom. */}
           {/* PC 새 화면: 칸 위 얇은 줄 — 문서 이름 · 계획서 종류 왼쪽, 상세/요약 · 직접 고치기 오른쪽(고치는 중이면 그 단추들) */}
-          {studioPc && <div className={styles.strip}>
+          {/* 5단계(lovable 캡처) — 읽는 중에는 이 줄을 접는다: 장 고르기는 위 막대 가운데 알약, 상세/요약 · 직접 고치기는 위 막대 묶음 · ⋯ 메뉴. 고치는 중 · 예시 · 위 막대가 없으면 그대로 */}
+          {studioPc && (editing || factMode || isSample || !nav?.toolbarTools || !centerInHeader) && <div className={styles.strip}>
             <FileText size={15} aria-hidden="true" className={styles.stripIcon} />
             {/* 사업명은 머리줄에, 계획서 종류 · 항목 수는 읽는 데 필요 없어 이름만(r37 글 점검) — 예시는 머리줄 '예시 · 사업명'에 이미 있어 여기선 '사업계획서'만(대표 결정 r40) */}
             <span className={styles.stripTitle}>사업계획서</span>

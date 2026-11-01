@@ -14,14 +14,14 @@
 :global(html[data-app-theme="dark"]) .brand img { filter:brightness(0) invert(1); }
 
 /* 계정 단추 — 20px 글자 아바타 + 14px 이름 + ↕ */
-.ws { flex:none; display:flex; align-items:center; gap:8px; box-sizing:border-box; width:100%; height:32px; margin:8px 0 0; padding:6px 8px 6px 6px; border:0; border-radius:10px; background:transparent; box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--app-text) 25%, transparent); color:var(--app-body); font:inherit; font-size:.875rem; font-weight:400; line-height:20px; text-align:left; cursor:pointer; }
+.ws { flex:none; display:flex; align-items:center; gap:8px; box-sizing:border-box; width:100%; height:32px; margin:8px 0 0; padding:6px 8px 6px 6px; border:0; border-radius:10px; background:transparent; box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--app-text) 25%, transparent); color:var(--app-body); font:inherit; font-size:.875rem; font-weight:400; line-height:1.4286; text-align:left; cursor:pointer; }
 .ws:hover { background:var(--app-fill); color:var(--app-text); }
 .ws b { display:inline-grid; place-items:center; flex:none; width:20px; height:20px; border-radius:4px; background:var(--app-primary); color:var(--app-on-primary); font-size:.625rem; font-weight:500; }
 .ws span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ws svg { flex:none; width:16px; height:16px; color:var(--app-muted); }
 
 .nav { flex:none; display:flex; flex-direction:column; margin-top:8px; }
-.item { display:flex; align-items:center; gap:8px; box-sizing:border-box; width:100%; height:32px; margin:0; padding:4px 6px; border:0; border-radius:8px; background:transparent; color:var(--app-body); font:inherit; font-size:.875rem; font-weight:400; line-height:21px; text-align:left; text-decoration:none; cursor:pointer; }
+.item { display:flex; align-items:center; gap:8px; box-sizing:border-box; width:100%; height:32px; margin:0; padding:4px 6px; border:0; border-radius:8px; background:transparent; color:var(--app-body); font:inherit; font-size:.875rem; font-weight:400; line-height:1.5; text-align:left; text-decoration:none; cursor:pointer; }
 .item > span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .item > svg { flex:none; width:20px; height:20px; color:var(--app-muted); stroke-width:1.8; }
 .item:hover { background:color-mix(in srgb, var(--app-text) 4%, transparent); color:var(--app-text); }
@@ -45,8 +45,8 @@
 /* 우리 장식 — 파랑 계열 원(lovable 그림 아님) */
 .promo i { position:absolute; top:-8px; right:-16px; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--app-primary) 38%, transparent), color-mix(in srgb, #5bb4ff 22%, transparent) 55%, transparent 72%); }
 .promoText { position:relative; z-index:1; display:grid; min-width:0; padding-right:56px; }
-.promoTitle { font-size:.875rem; font-weight:480; line-height:20px; }
-.promoDesc { overflow:hidden; color:var(--app-muted); font-size:.75rem; line-height:16px; text-overflow:ellipsis; white-space:nowrap; }
+.promoTitle { font-size:.875rem; font-weight:480; line-height:1.4286; }
+.promoDesc { overflow:hidden; color:var(--app-muted); font-size:.75rem; line-height:1.3333; text-overflow:ellipsis; white-space:nowrap; }
 
 /* 맨 아래 줄 — 아바타 단추 32(r8, 안에 20 원 + 알림 점 12) · 받은 알림 28(r8, 아이콘 20). 카드와 16 띄움, 아래 8 */
 .foot { flex:none; display:flex; align-items:center; justify-content:space-between; height:32px; margin-top:16px; padding:0; }
@@ -55,7 +55,7 @@
 .footAvatar:hover, .footIcon:hover, .footAvatar[aria-expanded=true] { background:var(--app-nav-selected); }
 .footIcon svg { width:20px; height:20px; stroke-width:1.8; }
 .avatar { position:relative; display:inline-grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--app-primary); color:var(--app-on-primary); font-size:.625rem; font-weight:500; }
-.avatar em { position:absolute; top:-4px; right:-4px; min-width:12px; height:12px; padding:0 2px; box-sizing:border-box; border-radius:999px; background:#e12429; color:#fff; font-size:.5rem; font-style:normal; font-weight:480; line-height:12px; text-align:center; }
+.avatar em { position:absolute; top:-4px; right:-4px; min-width:12px; height:12px; padding:0 2px; box-sizing:border-box; border-radius:999px; background:#e12429; color:#fff; font-size:.5rem; font-style:normal; font-weight:480; line-height:1.5; text-align:center; }
 
 /* 로그인 전 — 로그인 · 회원가입 두 단추 */
 .auth { flex:none; display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px; }

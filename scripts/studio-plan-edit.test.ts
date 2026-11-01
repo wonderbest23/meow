@@ -53,7 +53,9 @@ import { PLAN_EDIT_MAX_LENGTH, planChapterComposeRequest, planChapterEditLabel, 
   assert.match(workspace, /useStudioHeaderCenter\(centerInHeader \? picker : null\)/, "장 고르기는 머리줄 가운데 알약으로");
   assert.match(workspace, /\(isSample \|\| pane\) && !studioPc && grouped\.length > 0 && <aside/, "새 화면에는 왼쪽 목차 칸이 없다");
   assert.match(workspace, /\{!studioPc && <div className=\{styles\.readingBar\}( data-fact-mode=\{factMode \|\| undefined\})?>/, "새 화면은 예전 도구 줄 대신 칸 위 얇은 줄");
-  assert.match(workspace, /\{studioPc && <div className=\{styles\.strip\}>/);
+  // 5단계(lovable 캡처): 읽는 중에는 얇은 줄을 접는다 — 장 고르기는 위 막대 가운데, 직접 고치기는 위 막대 ⋯(plan-edit), 고치는 중 · 예시면 그대로
+  assert.match(workspace, /\{studioPc && \(editing \|\| factMode \|\| isSample \|\| !nav\?\.toolbarTools \|\| !centerInHeader\) && <div className=\{styles\.strip\}>/);
+  assert.match(workspace, /useStudioCommand\("plan-edit", /, "위 막대 ⋯ 의 '사업계획서 직접 고치기'");
   assert.match(workspace, /className=\{styles\.pager\} aria-label="문서 장 이동"/, "아래 가운데 떠 있는 장 넘기기");
   assert.match(workspace, /!summaryMode && !continuous && !studioPc && <nav className=\{styles\.paging\}/, "예전 이전 장·다음 장 줄은 새 화면에서 뺀다");
   assert.match(workspace, /const directInChapter = directEditable && !studioPc;/, "새 화면의 '직접 고치기'는 얇은 줄에 하나만");

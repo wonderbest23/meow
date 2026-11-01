@@ -84,13 +84,13 @@ button.step[aria-disabled="true"]:hover { background:var(--app-fill); }
 .grouped .group:hover { color:var(--app-text); }
 .groupCaret { flex:none; width:14px; height:14px; transition:transform .15s ease; }
 .groupCaret:not([data-open]) { transform:rotate(-90deg); }
-.groupTitle { display:flex; align-items:center; height:32px; margin:12px 0 0; padding:0 8px; color:var(--app-muted); font-size:.875rem; line-height:20px; }
+.groupTitle { display:flex; align-items:center; height:32px; margin:12px 0 0; padding:0 8px; color:var(--app-muted); font-size:.875rem; line-height:1.43; }
 .grouped .list { display:flex; gap:0; padding:0; overflow:visible; }
-.grouped .planRow { gap:8px; min-height:32px; height:32px; padding:0 8px 0 6px; color:var(--app-body); font-size:.875rem; font-weight:400; line-height:21px; }
+.grouped .planRow { gap:8px; min-height:32px; height:32px; padding:0 8px 0 6px; color:var(--app-body); font-size:.875rem; font-weight:400; line-height:1.5; }
 .grouped .planRow[data-current] { background:var(--app-nav-selected); color:var(--app-text); }
 .grouped .planRow:hover { background:color-mix(in srgb, var(--app-text) 4%, transparent); }
 .letter { display:inline-grid; place-items:center; flex:none; width:20px; height:20px; border-radius:4px; background:var(--app-hover); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--app-text) 6%, transparent); color:var(--app-muted); font-size:.7rem; font-weight:480; }
-.more { display:flex; align-items:center; box-sizing:border-box; height:32px; margin:0; padding:0 8px; border-radius:8px; color:var(--app-muted); font-size:.875rem; line-height:21px; text-decoration:none; }
+.more { display:flex; align-items:center; box-sizing:border-box; height:32px; margin:0; padding:0 8px; border-radius:8px; color:var(--app-muted); font-size:.875rem; line-height:1.5; text-decoration:none; }
 a.more:hover { color:var(--app-text); }
 .recent { display:flex; flex-direction:column; }
 /* 최근 대화가 없을 때 — 안쪽 8 · 14/21 회색(캡처 '아직 채팅이 없어요') */
@@ -102,4 +102,4 @@ a.more:hover { color:var(--app-text); }
 :global([data-rail-open]) .grouped .planRow, :global([data-rail-open]) .recentRow { min-height:44px; font-size:1rem; }
 @media (pointer:coarse) { .recentRow, .grouped .group { min-height:44px; } }
 /* 왼쪽 메뉴 빈 안내('아직 사업이 없어요') — 캡처 '아직 채팅이 없어요'와 같은 14/21 회색, 안쪽 8 */
-.grouped .empty { margin:0; padding:8px; color:var(--app-muted); font-size:.875rem; line-height:21px; }
+.grouped .empty { margin:0; padding:8px; color:var(--app-muted); font-size:.875rem; line-height:1.5; }

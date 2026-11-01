@@ -1,20 +1,20 @@
-.section { margin: 24px 0; padding: 20px 0; border-top: 1px solid #e5e8ed; color: #253044; letter-spacing: 0; }
+.section { margin: 24px 0; padding: 20px 0; border-top: 1px solid var(--app-line); color: var(--app-text); letter-spacing: 0; }
 .section header { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .section h3 { font-size: 1.125rem; line-height: 1.5; margin: 0; }
 .section h4 { font-size: 1.125rem; line-height: 1.5; margin: 8px 0; }
 .section p, .section li { font-size: .875rem; line-height: 1.65; overflow-wrap: anywhere; }
 .list { display: grid; gap: 16px; margin: 16px 0; }
-.list article { border: 1px solid #dde2e9; border-radius: 8px; padding: 16px; min-width: 0; }
-.list article > span { font-size: .75rem; color: #687487; }
+.list article { border: 1px solid var(--app-line); border-radius: 8px; padding: 16px; min-width: 0; }
+.list article > span { font-size: .75rem; color: var(--app-muted); }
 .list dl { margin: 16px 0; font-size: .875rem; }
 .list dl div { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 8px; margin: 8px 0; line-height: 1.65; }
-.list dt { color: #687487; }
+.list dt { color: var(--app-muted); }
 .list dd { margin: 0; overflow-wrap: anywhere; }
 .list ul { padding-left: 20px; }
 .list details { margin: 12px 0; }
-.list summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: #245ac4; font-size: .875rem; font-weight: 600; }
-.list summary:focus-visible { outline: 2px solid #2464d7; outline-offset: 3px; }
+.list summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--app-accent); font-size: .875rem; font-weight: 600; }
+.list summary:focus-visible { outline: 2px solid var(--app-focus-ring); outline-offset: 3px; }
 .actions { display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
 .actions label { font-size: .8125rem; display: inline-flex; align-items: center; gap: 6px; }
-.note { margin: 6px 0 0; color: #5b6676; font-size: .8125rem !important; }
-.error { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: #fff4f2; color: #9a2b1b; font-size: .875rem; line-height: 1.6; }
+.note { margin: 6px 0 0; color: var(--app-muted); font-size: .8125rem !important; }
+.error { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--app-danger-bg); color: var(--app-danger); font-size: .875rem; line-height: 1.6; }
