@@ -839,12 +839,12 @@ export default function Studio() {
     </button>
   </header> : null;
 
-  /* 휴대폰 미리보기 아래 68px 막대(lovable 실측) — ‹ 대화 알약 36 · 마이크 36 원 · … 36 원(페이지 바꾸기 · 내려받기 · 요약 등) · 파랑 주 단추 36 */
+  /* 휴대폰 미리보기 아래 68px 막대(lovable 실측) — 왼쪽 ‹ 대화 알약 36 · 마이크 36 원(간격 8) / 오른쪽 … 36 원(페이지 바꾸기 · 내려받기 · 요약 등) · 파랑 주 단추 36 */
   const primary = PRIMARY[rightTab];
   const bottomBar = !wide && rightVisible && !missing ? <nav className={styles.bottomBar} aria-label="미리보기 도구">
     <button type="button" className={styles.backPill} onClick={() => selectTab("chat", { focus: "heading" })}><ChevronLeft aria-hidden="true" />대화{unread.includes("chat") && <i className={styles.dot} aria-hidden="true" />}</button>
-    <span className={styles.grow} />
     {dictation.supported && <button type="button" className={styles.round48} aria-label="말로 요청하기" title="말로 요청하기" onClick={() => { selectTab("chat"); sendStudioCommand("chat-dictate"); }}><Mic aria-hidden="true" /></button>}
+    <span className={styles.grow} />
     <PopMenu placement="above" align="end" buttonClassName={styles.round48} buttonLabel={`더 보기 — 페이지 바꾸기 · 내려받기 · 요약${anyUnread ? " (새 소식)" : ""}`} buttonTitle="더 보기" menuLabel="미리보기 메뉴"
       label={<><MoreHorizontal aria-hidden="true" />{RIGHT_TABS.some(id => unread.includes(id) && id !== rightTab) && <i className={styles.dot} aria-hidden="true" />}</>}
       groups={[

@@ -87,9 +87,10 @@
   .card[data-mobile=card] .text { flex:1 1 0; }
   .card[data-mobile=card] .lead2 { flex:1 1 0; }
   /* 흰 띠(MPref, lovable 실측 2026-11-01): 화면 폭 가득, 위아래 1px 선, 본문 좌우 28, 항목 위아래 24, 제목 16/500 + 설명 14 회색, 단추·선택칸은 설명 아래 14 */
-  .top[data-mobile=band] { padding:4px 12px 20px; }
-  .top[data-mobile=band] .title.title { font-size:1.375rem; font-weight:600; line-height:1.4; letter-spacing:0 !important; }
-  .top[data-mobile=band] .lead { font-size:1rem; line-height:1.5; }
+  /* 흰 띠 화면의 맨 위 제목 — lovable 실측: 머리 아래 h2 16/450 + 설명 14(왼쪽 28, y≈100). 22px 큰 제목은 없다 */
+  .top[data-mobile=band] { padding:24px 12px 20px; }
+  .top[data-mobile=band] .title.title { font-size:1rem; font-weight:500; line-height:1.5; letter-spacing:0 !important; }
+  .top[data-mobile=band] .lead { font-size:.875rem; line-height:1.5; }
   .card[data-mobile=band] { margin:0 -16px; padding:0 28px; border-radius:0; box-shadow:0 -1px 0 var(--app-line), 0 1px 0 var(--app-line); }
   .section:has(> .card[data-mobile=band]) { margin-top:24px; }
   .section:first-child:has(> .card[data-mobile=band]) { margin-top:0; }

@@ -409,7 +409,7 @@ def m_pref():
     body = f"""
 <div class="screen" style="background:var(--bg)">
   <header class="setbar"><span class="ic44">{ico(I['chevl'],20,2)}</span><span class="t">환경설정</span><span style="width:44px"></span></header>
-  <div style="padding:20px 28px 20px"><h1 style="font-size:22px;font-weight:600">환경설정</h1><p class="muted" style="margin-top:4px;font-size:14px">오늘창업이 일하는 방식을 나에게 맞게 바꿔요.</p></div>
+  <div style="padding:24px 28px 20px"><h2 style="font-size:16px;font-weight:500">환경설정</h2><p class="muted" style="margin-top:4px;font-size:14px">오늘창업이 일하는 방식을 나에게 맞게 바꿔요.</p></div>
   <div style="background:#fff;box-shadow:0 -1px 0 var(--line),0 1px 0 var(--line);padding:0 28px">
     <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:16px;font-weight:500">AI가 먼저 묻지 않고 할 일</p><p class="muted" style="margin-top:4px;font-size:14px;line-height:1.5">계획서 수정·표 추가처럼 묻지 않고 바로 해도 되는 일을 골라요.</p><button class="btn" style="margin-top:14px">관리</button></div>
     <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:16px;font-weight:500">말투</p><p class="muted" style="margin-top:4px;font-size:14px">대화와 계획서에서 쓸 말투예요.</p><div style="{sel}">친근하게(해요체){ico(I['chev'],16)}</div></div>
@@ -434,8 +434,8 @@ def m_preview():
     </div>
   </div>
   <div style="position:absolute;left:0;right:0;bottom:0;height:68px;display:flex;align-items:center;justify-content:space-between;padding:16px 8px 16px 9px;box-sizing:border-box;background:var(--bg);box-shadow:0 -1px 0 var(--line)">
-    <div style="display:flex;gap:10px"><span class="pill" style="height:36px;padding:8px 16px 8px 8px;gap:4px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:500;color:var(--text)">{ico(I['chevl'],20,2)}대화</span></div>
-    <div style="display:flex;gap:10px"><span class="ic44" style="width:36px;height:36px">{ico(I['mic'],18)}</span><span class="ic44" style="width:36px;height:36px">{ico(I['dots'],18)}</span><span class="pill blue" style="height:36px;padding:8px 12px;font-size:16px;font-weight:600">공개하기</span></div>
+    <div style="display:flex;gap:8px"><span class="pill" style="height:36px;padding:8px 16px 8px 8px;gap:4px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:500;color:var(--text)">{ico(I['chevl'],20,2)}대화</span><span class="ic44" style="width:36px;height:36px">{ico(I['mic'],18)}</span></div>
+    <div style="display:flex;gap:8px"><span class="ic44" style="width:36px;height:36px">{ico(I['dots'],18)}</span><span class="pill blue" style="height:36px;padding:8px 12px;font-size:16px;font-weight:600">공개하기</span></div>
   </div>
 </div>"""
     return page("홈페이지 미리보기 · 휴대폰", MOBILE, body, 390, 844)

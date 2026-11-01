@@ -151,11 +151,11 @@
 .mHead :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 
 /*
- * 휴대폰 미리보기 아래 막대(68px = 위아래 16 + 단추 36, 시안 MPreview · lovable 실측 2026-11-01) — ‹ 대화 알약 36(안쪽 8 16 8 8, 16px) · 마이크 36 원 · … 36 원
+ * 휴대폰 미리보기 아래 막대(68px = 위아래 16 + 단추 36, 시안 MPreview · lovable 실측 2026-11-01) — 왼쪽 ‹ 대화 알약 36(안쪽 8 16 8 8, 16px) · 마이크 36 원(간격 8) / 오른쪽 … 36 원
  * · 파랑 주 단추 36(안쪽 8 12, 16px), 왼쪽 9 · 오른쪽 8. 누르는 자리는 ::after 로 44.
  * 화면 맨 아래에 붙고, 미리보기 칸은 그만큼 아래를 비운다(.rightCol). 안전 영역(홈바) 위에 단추가 온다.
  */
-.bottomBar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:10px; box-sizing:border-box; min-height:calc(68px + env(safe-area-inset-bottom)); padding:16px 8px calc(16px + env(safe-area-inset-bottom)) 9px; background:var(--app-bg); box-shadow:0 -1px 0 var(--app-line); }
+.bottomBar { position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; align-items:center; gap:8px; box-sizing:border-box; min-height:calc(68px + env(safe-area-inset-bottom)); padding:16px 8px calc(16px + env(safe-area-inset-bottom)) 9px; background:var(--app-bg); box-shadow:0 -1px 0 var(--app-line); }
 .bottomBar :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 .backPill { position:relative; display:inline-flex; align-items:center; gap:4px; flex:none; box-sizing:border-box; min-height:36px; padding:8px 16px 8px 8px; border:0; border-radius:999px; background:var(--app-surface); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); font:inherit; font-size:1rem; font-weight:500; cursor:pointer; }
 .backPill svg { width:20px; height:20px; }

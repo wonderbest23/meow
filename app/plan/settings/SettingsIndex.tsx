@@ -30,7 +30,8 @@ export default function SettingsIndex() {
   useEffect(() => { if (new URL(window.location.href).searchParams.get("search") === "1") input.current?.focus(); }, []);
   const q = query.trim().toLowerCase();
   const items = ITEMS.filter(item => !q || `${item.label} ${item.description} ${item.words}`.toLowerCase().includes(q));
-  return <div className={styles.index}>
+  /* data-fill — 판 높이를 채워 '사업 설정'을 화면 아래(탭 막대 위 12)에 붙인다 */
+  return <div className={styles.index} data-fill="">
     <SettingsHeader title="계정 설정" description="계정과 이 기기에서 쓰는 설정을 모았어요." mobile="hidden" />
     <FieldGroup as="label" className={styles.search} data-size="compact">
       <Search size={18} strokeWidth={1.8} aria-hidden="true" />
