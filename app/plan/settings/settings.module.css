@@ -1,6 +1,7 @@
 /*
  * 계정 설정 목록 · 환경설정 · 보안 · 기기 및 앱(lovable 구조 3단계) — 자리만. 행 카드 모양은 components/settings-row.
- * 휴대폰 목록(시안 MSettings): 검색 44 r12(위 4) → 목록(위 20) 56px · 아이콘 24 · 17px · 간격 18 · 좌우 8 → 맨 아래 48 테두리 단추.
+ * 휴대폰 목록(시안 MSettings, lovable 실측 2026-11-01): 검색 32 r8(머리 아래 16, 글자 16) → 목록(화면 좌우 12) 48px r8 · 안쪽 12 · 아이콘 20 · 16px
+ * → 맨 아래 32 r8 테두리 단추(14px, 안쪽 6 10) — 화면 맨 아래, 탭 막대 위 12에 붙는다(판 아래 여백 = 막대 57 + 아래 24 + 12).
  */
 .index { display:flex; flex-direction:column; min-height:100%; }
 .search { display:none; }
@@ -12,16 +13,16 @@
 .chev { flex:none; width:20px; height:20px; margin-left:auto; color:var(--app-muted); }
 
 @media (max-width:900px) {
-  .index { min-height:calc(100% - 4px); }
-  .search { display:flex; margin-top:4px; color:var(--app-muted); }
-  .list { display:flex; flex-direction:column; padding-top:20px; }
-  .item { display:flex; align-items:center; gap:18px; box-sizing:border-box; height:56px; padding:0 8px; border-radius:12px; color:var(--app-text); font-size:1.0625rem; line-height:1.4; text-decoration:none; }
-  .item > svg:first-child { flex:none; width:24px; height:24px; stroke-width:1.8; }
+  .search { display:flex; margin-top:0; color:var(--app-muted); }
+  .list { display:flex; flex-direction:column; margin:0 -4px; padding-top:12px; }
+  .item { display:flex; align-items:center; gap:12px; box-sizing:border-box; height:48px; padding:0 12px; border-radius:8px; color:var(--app-text); font-size:1rem; line-height:1.4; text-decoration:none; }
+  .item > svg:first-child { flex:none; width:20px; height:20px; stroke-width:1.8; }
   .item:active { background:var(--app-nav-selected); }
   .item:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:-3px; }
   .pcOnly { display:none; }
   .spring { display:block; flex:1 1 auto; min-height:24px; }
-  .business { display:inline-flex; width:100%; margin-bottom:8px; }
+  /* 판 안쪽 아래 24 를 되돌려 단추 아래가 판 끝(= 탭 막대 위 12)에 닿게 한다 */
+  .business { display:inline-flex; width:calc(100% + 8px); margin:0 -4px -24px; }
 }
 
 /* 환경설정 · 보안 · 기기 및 앱 */

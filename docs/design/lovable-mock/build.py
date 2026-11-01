@@ -62,27 +62,38 @@ PC = BASE + """
 """
 
 MOBILE = BASE + """
-/* ── 휴대폰 390: 캡처 기준 ── */
+/* ── 휴대폰 390: lovable 실측(2026-11-01, 375×812 — 가로로 꽉 찬 요소만 390으로 환산) ── */
 body{background:#fff}
 .screen{width:390px;min-height:844px;position:relative;overflow:hidden;background:var(--bg)}
-.top{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 16px}
-.wsp{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 6px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:15px;font-weight:500}
-.wsp b{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:600}
-.avatar{width:40px;height:40px;border-radius:50%;background:#1b64da;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;position:relative}
+/* 첫 화면 머리: 위 16 · 좌우 16, 계정 알약 44(안쪽 4 14 4 6, 아바타 32, 16/400) · 아바타 44 */
+.top{display:flex;align-items:center;justify-content:space-between;height:44px;padding:16px 16px 0;box-sizing:content-box}
+.wsp{display:inline-flex;align-items:center;gap:8px;height:44px;padding:4px 14px 4px 6px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:400}
+.wsp b{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;font-size:13px;font-weight:600}
+.avatar{width:44px;height:44px;border-radius:50%;background:#1b64da;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;position:relative}
 .avatar em{position:absolute;right:-2px;top:-2px;width:14px;height:14px;border-radius:50%;background:#e5484d;border:2px solid #fff;font-style:normal}
-.tabbar{position:absolute;left:50%;transform:translateX(-50%);bottom:28px;display:flex;width:300px;height:56px;padding:4px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line),0 12px 32px -12px rgba(16,24,40,.25)}
-.tabbar a{flex:1;display:flex;align-items:center;justify-content:center;border-radius:999px;color:var(--body)}
+/* 아래 탭 막대 296×57 r999 안쪽 4, 칸 48, 아래 24 */
+.tabbar{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;align-items:center;width:296px;height:57px;padding:4px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line),0 12px 32px -12px rgba(16,24,40,.25)}
+.tabbar a{flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px;color:var(--body)}
 .tabbar a.on{background:rgba(32,38,50,.08);color:var(--text)}
-.navbar{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 10px}
+/* 대화 머리 68(안쪽 12 10) · 설정 머리(위 16 · 좌우 16, 제목 16/500) */
+.navbar{display:flex;align-items:center;justify-content:space-between;height:44px;padding:12px 10px;box-sizing:content-box}
+.setbar{display:flex;align-items:center;justify-content:space-between;height:44px;padding:16px 16px 0;box-sizing:content-box}
+.setbar .t{font-size:16px;font-weight:500}
 .ic44{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--line);color:var(--text)}
-.titlepill{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 18px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:600}
-.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:24px 24px 0 0;background:#fff;box-shadow:0 -1px 0 var(--line),0 -20px 60px -20px rgba(16,24,40,.25);padding:8px 16px 24px}
-.grab{width:56px;height:5px;border-radius:3px;background:#d6dde6;margin:4px auto 20px}
-.menu{display:flex;align-items:center;gap:14px;height:52px;font-size:17px}
-.menu svg{width:22px;height:22px;color:var(--text)}
+.titlepill{display:inline-flex;align-items:center;gap:6px;height:44px;padding:10px 14px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:18px;font-weight:600}
+/* 프로필 시트: 위 모서리 32, 손잡이 64×6(닫기 80×44), 아바타 40 · 이름 16/500 · 이메일 14, 행 44 r12 안쪽 0 12 · 16px · 행 사이 4 */
+.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:32px 32px 0 0;background:#fff;box-shadow:0 -1px 0 var(--line),0 -20px 60px -20px rgba(16,24,40,.25);padding:0 16px 24px}
+.grab{display:flex;align-items:center;justify-content:center;width:80px;height:44px;margin:0 auto 4px}
+.grab::before{content:"";width:64px;height:6px;border-radius:999px;background:#d6dde6}
+.menu{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;font-size:16px}
+.menu + .menu{margin-top:4px}
+.menu svg{width:20px;height:20px;color:var(--text)}
 .menu .chev{margin-left:auto;color:var(--muted)}
 .menu .n{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e5484d;color:#fff;font-size:12px;font-weight:600}
 .hr{height:1px;background:var(--line);margin:8px 0}
+/* 계정 설정 목록: 행 48 r8 안쪽 12 · 16px · 아이콘 20 */
+.srow{display:flex;align-items:center;gap:12px;height:48px;padding:0 12px;border-radius:8px;font-size:16px}
+.srow svg{width:20px;height:20px}
 """
 
 def page(title, css, body, w, h):
@@ -315,13 +326,13 @@ def m_home():
     body = f"""
 <div class="screen hero">
   <header class="top"><span class="wsp"><b>아</b>아트앤브릿지{ico(I['updown'],14)}</span><span class="avatar">아<em></em></span></header>
-  <div style="display:flex;justify-content:center;margin-top:160px"><a href="#" class="pill" style="height:40px;background:#fff;box-shadow:0 0 0 1px var(--line);gap:10px;padding:0 16px 0 10px;font-weight:500;font-size:15px">{ico(I['clock'],18)}오늘 할 일 1건{ico(I['arrow'],16,2)}</a></div>
-  <h1 style="margin:70px 36px 0;text-align:center;font-size:30px;font-weight:600;line-height:38px;letter-spacing:-.6px">아트앤브릿지님, 어떤 사업을 시작해볼까요?</h1>
-  <div style="margin:40px 16px 0;padding:14px;border-radius:28px;background:#fff;box-shadow:0 0 0 1px var(--line),0 25px 50px -12px rgba(16,24,40,.18)">
-    <div style="min-height:44px;padding:6px 6px;font-size:17px;color:#8a94a3">성수동에 쿠키 공방을…</div>
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 2px 0">
-      <button class="circ" style="width:32px;height:32px">{ico(I['plus'],22,1.8)}</button><span style="flex:1"></span>
-      <button class="pill" style="font-size:16px;padding:0 8px">사업계획서{ico(I['chev'],16)}</button><button class="circ" style="width:32px;height:32px">{ico(I['mic'],22)}</button>
+  <div style="display:flex;justify-content:center;margin-top:145px"><a href="#" class="pill" style="height:36px;background:#fff;box-shadow:0 0 0 1px var(--line);gap:8px;padding:6px 12px 6px 6px;font-weight:500;font-size:14px">{ico(I['clock'],24)}오늘 할 일 1건{ico(I['arrow'],16,2)}</a></div>
+  <h1 style="margin:48px 16px 0;text-align:center;font-size:24px;font-weight:600;line-height:30px;letter-spacing:-.48px">아트앤브릿지님, 어떤 사업을 시작해볼까요?</h1>
+  <div style="margin:30px 16px 0;padding:12px;border-radius:28px;background:#fff;box-shadow:0 0 0 1px var(--line),0 25px 50px -12px rgba(16,24,40,.18)">
+    <div style="min-height:60px;padding:4px 6px;font-size:16px;line-height:24px;color:#8a94a3">성수동에 쿠키 공방을…</div>
+    <div style="display:flex;align-items:center;gap:8px;height:36px">
+      <button class="circ" style="width:36px;height:36px">{ico(I['plus'],20,1.8)}</button><span style="flex:1"></span>
+      <button class="pill" style="height:36px;padding:8px 12px;border:0;background:transparent;font-size:14px">사업계획서{ico(I['chev'],14)}</button><button class="circ" style="width:36px;height:36px">{ico(I['mic'],20)}</button>
     </div>
   </div>
   <nav class="tabbar"><a href="#" class="on">{ico(I['home'],24)}</a><a href="#">{ico(I['grid'],24)}</a><a href="#">{ico(I['chat'],24)}</a></nav>
@@ -332,25 +343,24 @@ def m_chat():
     body = f"""
 <div class="screen" style="background:var(--bg)">
   <header class="navbar"><span class="ic44">{ico(I['x'],20,2)}</span><span class="titlepill">성수 쿠키공방{ico(I['chev'],16)}</span><span class="ic44">{ico(I['chevr'],20,2)}</span></header>
-  <div style="padding:8px 16px 0;display:flex;flex-direction:column;gap:18px;font-size:16px;line-height:1.6">
-    <div style="padding:16px;border-radius:16px;background:#fff;box-shadow:0 0 0 1px var(--line)">
-      <p style="font-size:15px">4장 '시장과 손님'을 채웠어요</p>
-      <div style="display:flex;gap:10px;margin-top:12px"><button class="btn outline" style="flex:1;height:40px;border-radius:999px;font-size:15px">세부 정보</button><button class="btn outline" style="flex:1;height:40px;border-radius:999px;font-size:15px;color:var(--muted)">미리보기</button></div>
+  <div style="padding:0 16px;display:flex;flex-direction:column;gap:18px;font-size:16px;line-height:25px">
+    <div style="border-radius:12px;background:#fff;box-shadow:0 0 0 1px var(--line);overflow:hidden">
+      <p style="padding:12px 12px 4px">4장 '시장과 손님'을 채웠어요</p>
+      <div style="display:flex;gap:8px;padding:8px 12px 12px"><button class="btn outline" style="flex:1;height:36px;border-radius:999px;font-size:16px">세부 정보</button><button class="btn outline" style="flex:1;height:36px;border-radius:999px;font-size:16px;color:var(--muted)">미리보기</button></div>
     </div>
     <p>객단가 8,500원, 하루 60명이면 월 매출 1,500만 원대예요. 임대료가 200만 원을 넘으면 본전이 늦어져요.</p>
-    <div style="display:flex;gap:22px;color:var(--muted)">{ico(I['reply'],18)}{ico(I['thumb'],18)}{ico(I['copy'],18)}{ico(I['dots'],18)}</div>
-    <div style="align-self:flex-end;max-width:80%;padding:12px 18px;border-radius:20px;background:#fff;box-shadow:0 0 0 1px var(--line)">임대료 150이면 몇 달 만에 본전이야?</div>
+    <div style="display:flex;gap:8px;margin:-10px -6px 0;color:var(--muted)"><span class="circ">{ico(I['reply'],18)}</span><span class="circ">{ico(I['thumb'],18)}</span><span class="circ">{ico(I['copy'],18)}</span><span class="circ">{ico(I['dots'],18)}</span></div>
+    <div style="align-self:flex-end;max-width:80%;padding:12px 16px;border-radius:24px;background:#fff;box-shadow:0 0 0 1px var(--line)">임대료 150이면 몇 달 만에 본전이야?</div>
     <p class="muted" style="font-size:15px">손익분기 계산을 안내했어요 {ico(I['chevr'],14)}</p>
     <p>초기 비용 4,200만 원 기준으로 7~8개월째에 본전을 넘겨요. 5장에 표로 넣어 둘게요.</p>
-    <div style="display:flex;gap:22px;color:var(--muted)">{ico(I['reply'],18)}{ico(I['thumb'],18)}{ico(I['copy'],18)}{ico(I['dots'],18)}</div>
   </div>
-  <div style="position:absolute;left:0;right:0;bottom:0;padding:0 0 12px">
-    <div style="display:flex;gap:8px;padding:0 16px 12px;overflow:hidden">
-      <span class="pill blue" style="height:36px;font-size:15px;font-weight:500">{ico(I['shield'],16,2)}5장 표로 넣기</span><span class="pill" style="height:36px;font-size:15px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)">임대료 비교</span><span class="pill" style="height:36px;font-size:15px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)">홈페이지 만들기</span>
+  <div style="position:absolute;left:0;right:0;bottom:0;padding:0 8px 16px">
+    <div style="display:flex;gap:6px;padding:0 0 12px;overflow:hidden">
+      <span class="pill blue" style="height:32px;padding:6px 10px;font-size:14px;font-weight:500">{ico(I['shield'],14,2)}5장 표로 넣기</span><span class="pill" style="height:32px;padding:6px 10px;font-size:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)">임대료 비교</span><span class="pill" style="height:32px;padding:6px 10px;font-size:14px;background:#fff;box-shadow:inset 0 0 0 1px var(--line)">홈페이지 만들기</span>
     </div>
-    <div style="margin:0 12px;padding:14px 12px 12px;border-radius:24px;background:#fff;box-shadow:0 0 0 1px var(--line),0 -8px 32px -16px rgba(16,24,40,.2)">
-      <div style="min-height:32px;padding:0 6px 10px;font-size:17px;color:#8a94a3">오늘창업에게 물어보기…</div>
-      <div style="display:flex;align-items:center;gap:10px"><button class="circ ring" style="width:40px;height:40px">{ico(I['plus'],20,2)}</button><span style="flex:1"></span><button class="pill" style="height:40px;box-shadow:inset 0 0 0 1px var(--line);font-size:16px">사업계획서{ico(I['chev'],16)}</button><button class="circ ring" style="width:40px;height:40px">{ico(I['mic'],20)}</button></div>
+    <div style="padding:12px 12px 10px;border-radius:28px;background:#fff;box-shadow:0 0 0 1px var(--line),0 -8px 32px -16px rgba(16,24,40,.2)">
+      <div style="min-height:40px;padding:4px 4px 8px;font-size:16px;line-height:24px;color:#8a94a3">오늘창업에게 물어보기…</div>
+      <div style="display:flex;align-items:center;gap:8px"><button class="circ ring" style="width:36px;height:36px">{ico(I['plus'],20,2)}</button><span style="flex:1"></span><button class="pill" style="height:36px;padding:4px 6px 4px 8px;border:0;background:transparent;box-shadow:inset 0 0 0 1px var(--line);font-size:14px">사업계획서{ico(I['chev'],14)}</button><button class="circ ring" style="width:36px;height:36px">{ico(I['mic'],20)}</button></div>
     </div>
   </div>
 </div>"""
@@ -365,13 +375,13 @@ def m_profile():
     for it in items:
         if it is None: rows+='<div class="hr"></div>'; continue
         icon,label,extra,chev=it
-        rows+=f'<a href="#" class="menu">{ico(I[icon],22)}{label}{extra}{("<span class=chev>"+ico(I["chevr"],18)+"</span>") if chev else ""}</a>'
+        rows+=f'<a href="#" class="menu">{ico(I[icon],20)}{label}{extra}{("<span class=chev>"+ico(I["chevr"],18)+"</span>") if chev else ""}</a>'
     body = f"""
 <div class="screen" style="background:#dfe3e9">
   <header class="top" style="opacity:.6"><span class="wsp"><b>아</b>아트앤브릿지{ico(I['updown'],14)}</span><span class="avatar">아<em></em></span></header>
   <div class="sheet">
     <div class="grab"></div>
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px"><span class="avatar" style="width:48px;height:48px;font-size:18px">아</span><div><p style="font-size:18px;font-weight:600">아트앤브릿지</p><p class="muted" style="font-size:15px">rena35200@gmail.com</p></div></div>
+    <div style="display:flex;align-items:center;gap:12px;margin:0 12px 12px"><span class="avatar" style="width:40px;height:40px;font-size:16px">아</span><div><p style="font-size:16px;font-weight:500">아트앤브릿지</p><p class="muted" style="font-size:14px">rena35200@gmail.com</p></div></div>
     {rows}
   </div>
 </div>"""
@@ -380,31 +390,32 @@ def m_profile():
 def m_settings():
     body = f"""
 <div class="screen" style="background:var(--bg)">
-  <header class="navbar"><span class="ic44">{ico(I['x'],20,2)}</span><span style="font-size:18px;font-weight:600">계정 설정</span><span style="width:44px"></span></header>
-  <div style="margin:4px 16px 0;display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);color:var(--muted);font-size:16px">{ico(I['search'],18)}설정 검색</div>
-  <div style="padding:20px 16px 0;display:flex;flex-direction:column">
-    <a href="#" class="menu" style="height:56px;gap:18px;padding:0 8px">{ico(I['user'],24)}아트앤브릿지</a>
-    <a href="#" class="menu" style="height:56px;gap:18px;padding:0 8px">{ico(I['slider'],24)}환경설정</a>
-    <a href="#" class="menu" style="height:56px;gap:18px;padding:0 8px">{ico(I['shield'],24)}보안</a>
-    <a href="#" class="menu" style="height:56px;gap:18px;padding:0 8px">{ico(I['device'],24)}기기 및 앱</a>
+  <header class="setbar"><span class="ic44">{ico(I['x'],20,2)}</span><span class="t">계정 설정</span><span style="width:44px"></span></header>
+  <div style="margin:16px 16px 0;display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border-radius:8px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);color:var(--muted);font-size:16px">{ico(I['search'],18)}설정 검색</div>
+  <div style="padding:12px 12px 0;display:flex;flex-direction:column">
+    <a href="#" class="srow">{ico(I['user'],20)}아트앤브릿지</a>
+    <a href="#" class="srow">{ico(I['slider'],20)}환경설정</a>
+    <a href="#" class="srow">{ico(I['shield'],20)}보안</a>
+    <a href="#" class="srow">{ico(I['device'],20)}기기 및 앱</a>
   </div>
-  <a href="#" class="btn outline" style="position:absolute;left:16px;right:16px;bottom:32px;height:48px;border-radius:12px;background:#fff;font-size:16px;gap:8px">{ico(I['building'],18)}사업 설정</a>
+  <a href="#" class="btn outline" style="position:absolute;left:12px;right:12px;bottom:12px;height:32px;padding:6px 10px;border-radius:8px;background:#fff;font-size:14px;gap:6px">{ico(I['building'],16)}사업 설정</a>
 </div>"""
     return page("계정 설정 · 휴대폰", MOBILE, body, 390, 844)
 
 def m_pref():
     def toggle(on=True):
-        return f'<span style="display:inline-flex;align-items:center;width:46px;height:28px;padding:3px;border-radius:999px;background:{"var(--primary)" if on else "#d6dde6"};justify-content:{"flex-end" if on else "flex-start"};flex:0 0 auto"><i style="width:22px;height:22px;border-radius:50%;background:#fff"></i></span>'
+        return f'<span style="display:inline-flex;align-items:center;width:32px;height:20px;padding:2px;border-radius:10px;background:{"var(--primary)" if on else "#d6dde6"};justify-content:{"flex-end" if on else "flex-start"};flex:0 0 auto"><i style="width:16px;height:16px;border-radius:50%;background:#fff"></i></span>'
+    sel = 'display:flex;align-items:center;justify-content:space-between;margin-top:14px;height:32px;padding:0 12px;border-radius:8px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);font-size:16px'
     body = f"""
 <div class="screen" style="background:var(--bg)">
-  <header class="navbar"><span class="ic44">{ico(I['chevl'],20,2)}</span><span style="font-size:18px;font-weight:600">환경설정</span><span style="width:44px"></span></header>
-  <div style="padding:24px 16px 20px"><h1 style="font-size:22px;font-weight:600">환경설정</h1><p class="muted" style="margin-top:4px;font-size:16px">오늘창업이 일하는 방식을 나에게 맞게 바꿔요.</p></div>
-  <div style="background:#fff;box-shadow:0 -1px 0 var(--line),0 1px 0 var(--line);padding:0 16px">
-    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:17px;font-weight:500">AI가 먼저 묻지 않고 할 일</p><p class="muted" style="margin-top:4px;font-size:15px;line-height:1.5">계획서 수정·표 추가처럼 묻지 않고 바로 해도 되는 일을 골라요.</p><button class="btn" style="margin-top:14px;height:40px;padding:0 16px;font-size:15px">관리</button></div>
-    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:17px;font-weight:500">말투</p><p class="muted" style="margin-top:4px;font-size:15px">대화와 계획서에서 쓸 말투예요.</p><div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;height:48px;padding:0 16px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);font-size:16px">친근하게(해요체){ico(I['chev'],18)}</div></div>
-    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:17px;font-weight:500">기본 지역</p><p class="muted" style="margin-top:4px;font-size:15px">새 사업의 상권·규정을 볼 기준 지역이에요.</p><div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;height:48px;padding:0 16px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);font-size:16px">서울 성동구{ico(I['chev'],18)}</div></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0;border-bottom:1px solid var(--line)"><div><p style="font-size:17px;font-weight:500">대화 제안</p><p class="muted" style="margin-top:4px;font-size:15px;line-height:1.5">대화 중 다음에 할 만한 일을 알약 버튼으로 보여 줘요.</p></div>{toggle(True)}</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0"><div><p style="font-size:17px;font-weight:500">카카오 알림</p><p class="muted" style="margin-top:4px;font-size:15px;line-height:1.5">단계가 바뀌면 카카오톡으로 다음 할 일을 보내 줘요.</p></div>{toggle(True)}</div>
+  <header class="setbar"><span class="ic44">{ico(I['chevl'],20,2)}</span><span class="t">환경설정</span><span style="width:44px"></span></header>
+  <div style="padding:24px 28px 20px"><h2 style="font-size:16px;font-weight:500">환경설정</h2><p class="muted" style="margin-top:4px;font-size:14px">오늘창업이 일하는 방식을 나에게 맞게 바꿔요.</p></div>
+  <div style="background:#fff;box-shadow:0 -1px 0 var(--line),0 1px 0 var(--line);padding:0 28px">
+    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:16px;font-weight:500">AI가 먼저 묻지 않고 할 일</p><p class="muted" style="margin-top:4px;font-size:14px;line-height:1.5">계획서 수정·표 추가처럼 묻지 않고 바로 해도 되는 일을 골라요.</p><button class="btn" style="margin-top:14px">관리</button></div>
+    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:16px;font-weight:500">말투</p><p class="muted" style="margin-top:4px;font-size:14px">대화와 계획서에서 쓸 말투예요.</p><div style="{sel}">친근하게(해요체){ico(I['chev'],16)}</div></div>
+    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:16px;font-weight:500">기본 지역</p><p class="muted" style="margin-top:4px;font-size:14px">새 사업의 상권·규정을 볼 기준 지역이에요.</p><div style="{sel}">서울 성동구{ico(I['chev'],16)}</div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0;border-bottom:1px solid var(--line)"><div><p style="font-size:16px;font-weight:500">대화 제안</p><p class="muted" style="margin-top:4px;font-size:14px;line-height:1.5">대화 중 다음에 할 만한 일을 알약 버튼으로 보여 줘요.</p></div>{toggle(True)}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0"><div><p style="font-size:16px;font-weight:500">카카오 알림</p><p class="muted" style="margin-top:4px;font-size:14px;line-height:1.5">단계가 바뀌면 카카오톡으로 다음 할 일을 보내 줘요.</p></div>{toggle(True)}</div>
   </div>
 </div>"""
     return page("환경설정 · 휴대폰", MOBILE, body, 390, 844)
@@ -412,7 +423,7 @@ def m_pref():
 def m_preview():
     body = f"""
 <div class="screen" style="background:#fff">
-  <div style="height:744px;overflow:hidden;position:relative;background:#fff">
+  <div style="height:776px;overflow:hidden;position:relative;background:#fff">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 12px;border-bottom:1px solid #202632"><span style="font-size:30px;font-weight:800;letter-spacing:-1px">성수쿠키공방</span>{ico(I['x'],20,2)}</div>
     <div style="margin:24px 24px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #202632;padding-bottom:10px;color:#8a94a3;font-size:18px">검색{ico(I['search'],24,2)}</div>
     <p style="margin:40px 24px 0;font-size:40px;font-weight:800;letter-spacing:-1px">MENU</p>
@@ -422,9 +433,9 @@ def m_preview():
       <div style="padding:20px"><p style="font-size:24px;font-weight:800;line-height:1.2;letter-spacing:-.5px">첫 방문 쿠키<br>1개 더 드려요</p><p class="muted" style="margin-top:12px;font-size:15px;line-height:1.6">오픈 첫 달, 인스타 팔로우하고 오시면 쿠키 1개를 더 드려요.</p><div style="display:flex;gap:12px;margin-top:16px"><button class="btn" style="flex:1;height:48px;border-radius:0;background:#202632;color:#fff;font-weight:600">지금 받기 {ico(I['external'],16,2)}</button><button class="btn ghost" style="height:48px;color:var(--muted)">나중에</button></div></div>
     </div>
   </div>
-  <div style="position:absolute;left:0;right:0;bottom:0;height:100px;display:flex;align-items:center;justify-content:space-between;padding:0 12px 16px;background:var(--bg);box-shadow:0 -1px 0 var(--line)">
-    <div style="display:flex;gap:10px"><span class="pill" style="height:48px;padding:0 20px 0 14px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:17px;font-weight:500">{ico(I['chevl'],18,2)}대화</span><span class="ic44" style="width:48px;height:48px">{ico(I['mic'],20)}</span></div>
-    <div style="display:flex;gap:10px"><span class="ic44" style="width:48px;height:48px">{ico(I['dots'],20)}</span><span class="pill blue" style="height:48px;padding:0 22px;font-size:17px;font-weight:600">공개하기</span></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:68px;display:flex;align-items:center;justify-content:space-between;padding:16px 8px 16px 9px;box-sizing:border-box;background:var(--bg);box-shadow:0 -1px 0 var(--line)">
+    <div style="display:flex;gap:8px"><span class="pill" style="height:36px;padding:8px 16px 8px 8px;gap:4px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:500;color:var(--text)">{ico(I['chevl'],20,2)}대화</span><span class="ic44" style="width:36px;height:36px">{ico(I['mic'],18)}</span></div>
+    <div style="display:flex;gap:8px"><span class="ic44" style="width:36px;height:36px">{ico(I['dots'],18)}</span><span class="pill blue" style="height:36px;padding:8px 12px;font-size:16px;font-weight:600">공개하기</span></div>
   </div>
 </div>"""
     return page("홈페이지 미리보기 · 휴대폰", MOBILE, body, 390, 844)

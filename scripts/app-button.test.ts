@@ -5,8 +5,8 @@ import { readFileSync } from "node:fs";
  * UI 공통 규격 2: 버튼 — 앱 화면의 주·보조·글자·위험 버튼은 components/app-button 하나로 그린다.
  * 1) 규격: 종류 넷(primary·secondary·text·danger) × 크기 둘(기본 44px · 작은 36px, 누르는 자리 44px), 모서리 8px, 글자 .9375rem/600,
  *    --app-* 토큰만, PC·모바일 같은 모양(@media 는 움직임 줄이기만), 포커스 표시 하나, 막힘·로딩 상태, 링크로도 쓴다
- *    + 설정 화면(lovable 구조 3단계): 종류 soft(회색 14% 채움)·dangerOutline(빨간 테두리), 크기 compact 32 · mini 28 · adaptive(PC 32 · 휴대폰 40)
- *    · large 48 r12. @media 는 움직임 줄이기 · 손가락 누르는 자리(pointer:coarse) · adaptive 의 휴대폰 높이(max-width:900px)만
+ *    + 설정 화면(lovable 구조 3단계): 종류 soft(회색 14% 채움)·dangerOutline(빨간 테두리), 크기 compact 32 · mini 28 · adaptive(PC · 휴대폰 32)
+ *    · large 48 r12. @media 는 움직임 줄이기 · 손가락 누르는 자리(pointer:coarse)만
  * 2) 토큰 글자 대비 4.5:1 이상(포커스 선은 3:1 이상)
  * 3) 바꾼 화면은 공통 버튼을 쓰고, 예전 버튼 클래스에는 자리(여백·너비·정렬)만 남는다 — 높이·여백·색·글자·모서리를 다시 정하지 않는다
  * 4) 바꾼 파일에는 예전 파란 hex·글자·선 hex 가 남지 않는다
@@ -41,9 +41,8 @@ for (const [, value] of css.matchAll(/(?:^|[\s;{])(?:color|background|border-col
   assert.match(value.trim(), /^(?:transparent|(?:\d+px solid )?var\(--app-[a-z-]+\))$/, `버튼 색이 --app-* 토큰이 아니다: ${value.trim()}`);
 }
 for (const media of css.match(/@media[^{]*/g) ?? []) assert.match(media, /prefers-reduced-motion|pointer:coarse|max-width:900px/, `PC·모바일 모양이 갈린다 — 버튼은 한 규격: ${media}`);
-/* 휴대폰 폭에서 바뀌는 것은 adaptive 하나뿐(설정 흰 띠 항목 40px) */
-const phone = css.slice(css.indexOf("@media (max-width:900px)"), css.indexOf("}", css.indexOf("@media (max-width:900px)")) + 1);
-assert.match(phone, /^@media \(max-width:900px\) \{\s*\.button\[data-variant\]\[data-size=adaptive\] \{ height:40px;/, "휴대폰 폭 규칙은 adaptive 크기만 바꾼다");
+/* 휴대폰 폭에서도 단추 크기는 같다 — lovable 실측(2026-11-01) 환경설정 단추가 32 r8 이라 adaptive 의 휴대폰 40px 규칙을 없앴다 */
+assert.doesNotMatch(css, /@media \(max-width:900px\)/, "휴대폰 폭에서 단추 크기를 바꾸지 않는다(설정 흰 띠 단추도 32px)");
 assert.match(rule(css, ".button[data-variant][data-size]:focus-visible"), /outline:3px solid var\(--app-focus-ring\); outline-offset:2px;/, "포커스 표시 하나(3px)");
 assert.match(css, /\.button\[data-variant\]:disabled, \.button\[data-variant\]\[aria-disabled=true\] \{ opacity:\.5;/, "막힘 상태");
 assert.match(css, /\.button \{ composes: tokens from "\.\/workspace-theme\.module\.css"; \}/, "버튼이 토큰을 들고 다니지 않는다 — 테마 밖(계정·창·첫 로딩)에서 색이 빠진다");

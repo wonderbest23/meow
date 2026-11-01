@@ -37,39 +37,50 @@ svg{flex:0 0 auto}
 .badge.ok{background:#eef8f2;color:#267959}.badge.info{background:#e3edfc;color:#244e84}.badge.warn{background:#fff8e8;color:#795914}
 .muted{color:var(--muted)}
 
-/* ── 휴대폰 390: 캡처 기준 ── */
+/* ── 휴대폰 390: lovable 실측(2026-11-01, 375×812 — 가로로 꽉 찬 요소만 390으로 환산) ── */
 body{background:#fff}
 .screen{width:390px;min-height:844px;position:relative;overflow:hidden;background:var(--bg)}
-.top{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 16px}
-.wsp{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 6px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:15px;font-weight:500}
-.wsp b{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:600}
-.avatar{width:40px;height:40px;border-radius:50%;background:#1b64da;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;position:relative}
+/* 첫 화면 머리: 위 16 · 좌우 16, 계정 알약 44(안쪽 4 14 4 6, 아바타 32, 16/400) · 아바타 44 */
+.top{display:flex;align-items:center;justify-content:space-between;height:44px;padding:16px 16px 0;box-sizing:content-box}
+.wsp{display:inline-flex;align-items:center;gap:8px;height:44px;padding:4px 14px 4px 6px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:400}
+.wsp b{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;font-size:13px;font-weight:600}
+.avatar{width:44px;height:44px;border-radius:50%;background:#1b64da;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;position:relative}
 .avatar em{position:absolute;right:-2px;top:-2px;width:14px;height:14px;border-radius:50%;background:#e5484d;border:2px solid #fff;font-style:normal}
-.tabbar{position:absolute;left:50%;transform:translateX(-50%);bottom:28px;display:flex;width:300px;height:56px;padding:4px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line),0 12px 32px -12px rgba(16,24,40,.25)}
-.tabbar a{flex:1;display:flex;align-items:center;justify-content:center;border-radius:999px;color:var(--body)}
+/* 아래 탭 막대 296×57 r999 안쪽 4, 칸 48, 아래 24 */
+.tabbar{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;align-items:center;width:296px;height:57px;padding:4px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line),0 12px 32px -12px rgba(16,24,40,.25)}
+.tabbar a{flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px;color:var(--body)}
 .tabbar a.on{background:rgba(32,38,50,.08);color:var(--text)}
-.navbar{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 10px}
+/* 대화 머리 68(안쪽 12 10) · 설정 머리(위 16 · 좌우 16, 제목 16/500) */
+.navbar{display:flex;align-items:center;justify-content:space-between;height:44px;padding:12px 10px;box-sizing:content-box}
+.setbar{display:flex;align-items:center;justify-content:space-between;height:44px;padding:16px 16px 0;box-sizing:content-box}
+.setbar .t{font-size:16px;font-weight:500}
 .ic44{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--line);color:var(--text)}
-.titlepill{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 18px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:600}
-.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:24px 24px 0 0;background:#fff;box-shadow:0 -1px 0 var(--line),0 -20px 60px -20px rgba(16,24,40,.25);padding:8px 16px 24px}
-.grab{width:56px;height:5px;border-radius:3px;background:#d6dde6;margin:4px auto 20px}
-.menu{display:flex;align-items:center;gap:14px;height:52px;font-size:17px}
-.menu svg{width:22px;height:22px;color:var(--text)}
+.titlepill{display:inline-flex;align-items:center;gap:6px;height:44px;padding:10px 14px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:18px;font-weight:600}
+/* 프로필 시트: 위 모서리 32, 손잡이 64×6(닫기 80×44), 아바타 40 · 이름 16/500 · 이메일 14, 행 44 r12 안쪽 0 12 · 16px · 행 사이 4 */
+.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:32px 32px 0 0;background:#fff;box-shadow:0 -1px 0 var(--line),0 -20px 60px -20px rgba(16,24,40,.25);padding:0 16px 24px}
+.grab{display:flex;align-items:center;justify-content:center;width:80px;height:44px;margin:0 auto 4px}
+.grab::before{content:"";width:64px;height:6px;border-radius:999px;background:#d6dde6}
+.menu{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;font-size:16px}
+.menu + .menu{margin-top:4px}
+.menu svg{width:20px;height:20px;color:var(--text)}
 .menu .chev{margin-left:auto;color:var(--muted)}
 .menu .n{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e5484d;color:#fff;font-size:12px;font-weight:600}
 .hr{height:1px;background:var(--line);margin:8px 0}
+/* 계정 설정 목록: 행 48 r8 안쪽 12 · 16px · 아이콘 20 */
+.srow{display:flex;align-items:center;gap:12px;height:48px;padding:0 12px;border-radius:8px;font-size:16px}
+.srow svg{width:20px;height:20px}
 </style>
 </helmet>
 
 <div class="screen" style="background:var(--bg)">
-  <header class="navbar"><span class="ic44"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span style="font-size:18px;font-weight:600">환경설정</span><span style="width:44px"></span></header>
-  <div style="padding:24px 16px 20px"><h1 style="font-size:22px;font-weight:600">환경설정</h1><p class="muted" style="margin-top:4px;font-size:16px">오늘창업이 일하는 방식을 나에게 맞게 바꿔요.</p></div>
-  <div style="background:#fff;box-shadow:0 -1px 0 var(--line),0 1px 0 var(--line);padding:0 16px">
-    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:17px;font-weight:500">AI가 먼저 묻지 않고 할 일</p><p class="muted" style="margin-top:4px;font-size:15px;line-height:1.5">계획서 수정·표 추가처럼 묻지 않고 바로 해도 되는 일을 골라요.</p><button class="btn" style="margin-top:14px;height:40px;padding:0 16px;font-size:15px">관리</button></div>
-    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:17px;font-weight:500">말투</p><p class="muted" style="margin-top:4px;font-size:15px">대화와 계획서에서 쓸 말투예요.</p><div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;height:48px;padding:0 16px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);font-size:16px">친근하게(해요체)<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div></div>
-    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:17px;font-weight:500">기본 지역</p><p class="muted" style="margin-top:4px;font-size:15px">새 사업의 상권·규정을 볼 기준 지역이에요.</p><div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;height:48px;padding:0 16px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);font-size:16px">서울 성동구<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0;border-bottom:1px solid var(--line)"><div><p style="font-size:17px;font-weight:500">대화 제안</p><p class="muted" style="margin-top:4px;font-size:15px;line-height:1.5">대화 중 다음에 할 만한 일을 알약 버튼으로 보여 줘요.</p></div><span style="display:inline-flex;align-items:center;width:46px;height:28px;padding:3px;border-radius:999px;background:var(--primary);justify-content:flex-end;flex:0 0 auto"><i style="width:22px;height:22px;border-radius:50%;background:#fff"></i></span></div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0"><div><p style="font-size:17px;font-weight:500">카카오 알림</p><p class="muted" style="margin-top:4px;font-size:15px;line-height:1.5">단계가 바뀌면 카카오톡으로 다음 할 일을 보내 줘요.</p></div><span style="display:inline-flex;align-items:center;width:46px;height:28px;padding:3px;border-radius:999px;background:var(--primary);justify-content:flex-end;flex:0 0 auto"><i style="width:22px;height:22px;border-radius:50%;background:#fff"></i></span></div>
+  <header class="setbar"><span class="ic44"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span><span class="t">환경설정</span><span style="width:44px"></span></header>
+  <div style="padding:24px 28px 20px"><h2 style="font-size:16px;font-weight:500">환경설정</h2><p class="muted" style="margin-top:4px;font-size:14px">오늘창업이 일하는 방식을 나에게 맞게 바꿔요.</p></div>
+  <div style="background:#fff;box-shadow:0 -1px 0 var(--line),0 1px 0 var(--line);padding:0 28px">
+    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:16px;font-weight:500">AI가 먼저 묻지 않고 할 일</p><p class="muted" style="margin-top:4px;font-size:14px;line-height:1.5">계획서 수정·표 추가처럼 묻지 않고 바로 해도 되는 일을 골라요.</p><button class="btn" style="margin-top:14px">관리</button></div>
+    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:16px;font-weight:500">말투</p><p class="muted" style="margin-top:4px;font-size:14px">대화와 계획서에서 쓸 말투예요.</p><div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;height:32px;padding:0 12px;border-radius:8px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);font-size:16px">친근하게(해요체)<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div></div>
+    <div style="padding:24px 0;border-bottom:1px solid var(--line)"><p style="font-size:16px;font-weight:500">기본 지역</p><p class="muted" style="margin-top:4px;font-size:14px">새 사업의 상권·규정을 볼 기준 지역이에요.</p><div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;height:32px;padding:0 12px;border-radius:8px;background:#fff;box-shadow:inset 0 0 0 1px var(--line);font-size:16px">서울 성동구<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0;border-bottom:1px solid var(--line)"><div><p style="font-size:16px;font-weight:500">대화 제안</p><p class="muted" style="margin-top:4px;font-size:14px;line-height:1.5">대화 중 다음에 할 만한 일을 알약 버튼으로 보여 줘요.</p></div><span style="display:inline-flex;align-items:center;width:32px;height:20px;padding:2px;border-radius:10px;background:var(--primary);justify-content:flex-end;flex:0 0 auto"><i style="width:16px;height:16px;border-radius:50%;background:#fff"></i></span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:24px 0"><div><p style="font-size:16px;font-weight:500">카카오 알림</p><p class="muted" style="margin-top:4px;font-size:14px;line-height:1.5">단계가 바뀌면 카카오톡으로 다음 할 일을 보내 줘요.</p></div><span style="display:inline-flex;align-items:center;width:32px;height:20px;padding:2px;border-radius:10px;background:var(--primary);justify-content:flex-end;flex:0 0 auto"><i style="width:16px;height:16px;border-radius:50%;background:#fff"></i></span></div>
   </div>
 </div>
 </x-dc>

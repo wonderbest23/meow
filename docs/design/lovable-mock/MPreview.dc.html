@@ -37,32 +37,43 @@ svg{flex:0 0 auto}
 .badge.ok{background:#eef8f2;color:#267959}.badge.info{background:#e3edfc;color:#244e84}.badge.warn{background:#fff8e8;color:#795914}
 .muted{color:var(--muted)}
 
-/* ── 휴대폰 390: 캡처 기준 ── */
+/* ── 휴대폰 390: lovable 실측(2026-11-01, 375×812 — 가로로 꽉 찬 요소만 390으로 환산) ── */
 body{background:#fff}
 .screen{width:390px;min-height:844px;position:relative;overflow:hidden;background:var(--bg)}
-.top{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 16px}
-.wsp{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 14px 0 6px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:15px;font-weight:500}
-.wsp b{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:600}
-.avatar{width:40px;height:40px;border-radius:50%;background:#1b64da;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;position:relative}
+/* 첫 화면 머리: 위 16 · 좌우 16, 계정 알약 44(안쪽 4 14 4 6, 아바타 32, 16/400) · 아바타 44 */
+.top{display:flex;align-items:center;justify-content:space-between;height:44px;padding:16px 16px 0;box-sizing:content-box}
+.wsp{display:inline-flex;align-items:center;gap:8px;height:44px;padding:4px 14px 4px 6px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:400}
+.wsp b{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:var(--primary);color:#fff;font-size:13px;font-weight:600}
+.avatar{width:44px;height:44px;border-radius:50%;background:#1b64da;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:600;position:relative}
 .avatar em{position:absolute;right:-2px;top:-2px;width:14px;height:14px;border-radius:50%;background:#e5484d;border:2px solid #fff;font-style:normal}
-.tabbar{position:absolute;left:50%;transform:translateX(-50%);bottom:28px;display:flex;width:300px;height:56px;padding:4px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line),0 12px 32px -12px rgba(16,24,40,.25)}
-.tabbar a{flex:1;display:flex;align-items:center;justify-content:center;border-radius:999px;color:var(--body)}
+/* 아래 탭 막대 296×57 r999 안쪽 4, 칸 48, 아래 24 */
+.tabbar{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;align-items:center;width:296px;height:57px;padding:4px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line),0 12px 32px -12px rgba(16,24,40,.25)}
+.tabbar a{flex:1;display:flex;align-items:center;justify-content:center;height:48px;border-radius:999px;color:var(--body)}
 .tabbar a.on{background:rgba(32,38,50,.08);color:var(--text)}
-.navbar{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 10px}
+/* 대화 머리 68(안쪽 12 10) · 설정 머리(위 16 · 좌우 16, 제목 16/500) */
+.navbar{display:flex;align-items:center;justify-content:space-between;height:44px;padding:12px 10px;box-sizing:content-box}
+.setbar{display:flex;align-items:center;justify-content:space-between;height:44px;padding:16px 16px 0;box-sizing:content-box}
+.setbar .t{font-size:16px;font-weight:500}
 .ic44{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:50%;background:#fff;box-shadow:0 0 0 1px var(--line);color:var(--text)}
-.titlepill{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 18px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:600}
-.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:24px 24px 0 0;background:#fff;box-shadow:0 -1px 0 var(--line),0 -20px 60px -20px rgba(16,24,40,.25);padding:8px 16px 24px}
-.grab{width:56px;height:5px;border-radius:3px;background:#d6dde6;margin:4px auto 20px}
-.menu{display:flex;align-items:center;gap:14px;height:52px;font-size:17px}
-.menu svg{width:22px;height:22px;color:var(--text)}
+.titlepill{display:inline-flex;align-items:center;gap:6px;height:44px;padding:10px 14px;border-radius:999px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:18px;font-weight:600}
+/* 프로필 시트: 위 모서리 32, 손잡이 64×6(닫기 80×44), 아바타 40 · 이름 16/500 · 이메일 14, 행 44 r12 안쪽 0 12 · 16px · 행 사이 4 */
+.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:32px 32px 0 0;background:#fff;box-shadow:0 -1px 0 var(--line),0 -20px 60px -20px rgba(16,24,40,.25);padding:0 16px 24px}
+.grab{display:flex;align-items:center;justify-content:center;width:80px;height:44px;margin:0 auto 4px}
+.grab::before{content:"";width:64px;height:6px;border-radius:999px;background:#d6dde6}
+.menu{display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;font-size:16px}
+.menu + .menu{margin-top:4px}
+.menu svg{width:20px;height:20px;color:var(--text)}
 .menu .chev{margin-left:auto;color:var(--muted)}
 .menu .n{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:#e5484d;color:#fff;font-size:12px;font-weight:600}
 .hr{height:1px;background:var(--line);margin:8px 0}
+/* 계정 설정 목록: 행 48 r8 안쪽 12 · 16px · 아이콘 20 */
+.srow{display:flex;align-items:center;gap:12px;height:48px;padding:0 12px;border-radius:8px;font-size:16px}
+.srow svg{width:20px;height:20px}
 </style>
 </helmet>
 
 <div class="screen" style="background:#fff">
-  <div style="height:744px;overflow:hidden;position:relative;background:#fff">
+  <div style="height:776px;overflow:hidden;position:relative;background:#fff">
     <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 12px;border-bottom:1px solid #202632"><span style="font-size:30px;font-weight:800;letter-spacing:-1px">성수쿠키공방</span><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></div>
     <div style="margin:24px 24px 0;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #202632;padding-bottom:10px;color:#8a94a3;font-size:18px">검색<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>
     <p style="margin:40px 24px 0;font-size:40px;font-weight:800;letter-spacing:-1px">MENU</p>
@@ -72,9 +83,9 @@ body{background:#fff}
       <div style="padding:20px"><p style="font-size:24px;font-weight:800;line-height:1.2;letter-spacing:-.5px">첫 방문 쿠키<br>1개 더 드려요</p><p class="muted" style="margin-top:12px;font-size:15px;line-height:1.6">오픈 첫 달, 인스타 팔로우하고 오시면 쿠키 1개를 더 드려요.</p><div style="display:flex;gap:12px;margin-top:16px"><button class="btn" style="flex:1;height:48px;border-radius:0;background:#202632;color:#fff;font-weight:600">지금 받기 <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></button><button class="btn ghost" style="height:48px;color:var(--muted)">나중에</button></div></div>
     </div>
   </div>
-  <div style="position:absolute;left:0;right:0;bottom:0;height:100px;display:flex;align-items:center;justify-content:space-between;padding:0 12px 16px;background:var(--bg);box-shadow:0 -1px 0 var(--line)">
-    <div style="display:flex;gap:10px"><span class="pill" style="height:48px;padding:0 20px 0 14px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:17px;font-weight:500"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>대화</span><span class="ic44" style="width:48px;height:48px"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></span></div>
-    <div style="display:flex;gap:10px"><span class="ic44" style="width:48px;height:48px"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></span><span class="pill blue" style="height:48px;padding:0 22px;font-size:17px;font-weight:600">공개하기</span></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;height:68px;display:flex;align-items:center;justify-content:space-between;padding:16px 8px 16px 9px;box-sizing:border-box;background:var(--bg);box-shadow:0 -1px 0 var(--line)">
+    <div style="display:flex;gap:8px"><span class="pill" style="height:36px;padding:8px 16px 8px 8px;gap:4px;background:#fff;box-shadow:0 0 0 1px var(--line);font-size:16px;font-weight:500;color:var(--text)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>대화</span><span class="ic44" style="width:36px;height:36px"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></span></div>
+    <div style="display:flex;gap:8px"><span class="ic44" style="width:36px;height:36px"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg></span><span class="pill blue" style="height:36px;padding:8px 12px;font-size:16px;font-weight:600">공개하기</span></div>
   </div>
 </div>
 </x-dc>

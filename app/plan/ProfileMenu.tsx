@@ -36,7 +36,7 @@ export default function ProfileMenu({ open, onClose, account, unanswered, anchor
   return <>
     <div className={styles.scrim} data-anchor={anchor} onClick={onClose} aria-hidden="true" />
     <div ref={ref} className={styles.sheet} data-anchor={anchor} role="dialog" aria-modal="true" aria-label="프로필 메뉴">
-      {anchor === "sheet" && <div className={styles.grab} aria-hidden="true" />}
+      {anchor === "sheet" && <button type="button" className={styles.grab} aria-label="프로필 메뉴 닫기" onClick={onClose} />}
       {signedIn ? <div className={styles.who}>
         <span className={styles.avatar} aria-hidden="true">{accountInitial(account)}</span>
         <div className={styles.whoText}><p className={styles.name}>{name || "내 계정"}</p>{account?.email && <p className={styles.mail}>{account.email}</p>}</div>
