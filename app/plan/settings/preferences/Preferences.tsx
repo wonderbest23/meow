@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { AppButton } from "../../../../components/app-button";
-import { SettingsCard, SettingsHeader, SettingsRow, SettingsSection, SettingsToggle } from "../../../../components/settings-row";
+import { SettingsCard, SettingsHeader, SettingsRow, SettingsSection, SettingsSegment, SettingsToggle } from "../../../../components/settings-row";
+import { useThemePreference } from "../../../../components/app-theme";
+import { THEME_OPTIONS } from "../../../../lib/client/app-theme";
 import { SUPPORT_BADGE_KEY } from "../../../../components/support-chat-visibility";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, type Plan } from "../../../../lib/plan-builder/plan-store";
 import { planDisplayName } from "../../../../lib/plan-builder/business-name";
@@ -13,6 +15,7 @@ import styles from "../settings.module.css";
  * 환경설정 — 지금 있는 설정만 둔다(없는 설정을 만들지 않는다).
  * 1) 상담 단추의 새 답변 숫자 — 상담 창 '설정' 탭과 같은 값(이 기기에 저장, SUPPORT_BADGE_KEY). 상담 단추는 다음에 열 때부터 따른다.
  * 2) 문의 알림 번호 — 홈페이지로 들어온 손님 문의를 문자로 받을 번호. 사업마다 홈페이지 화면의 '알림 번호'(#hk-leads)에서 정한다 — 그 칸으로 보낸다.
+ * 3) 화면 테마 — 시스템/라이트/다크(프로필 메뉴 '화면 설정'과 같은 값, 이 기기에 저장, 기본 라이트).
  * 시안에 있던 'AI가 먼저 묻지 않고 할 일 · 말투 · 기본 지역 · 대화 제안 · 카카오 알림'은 지금 없는 설정이라 넣지 않았다.
  */
 export default function Preferences() {
@@ -30,9 +33,16 @@ export default function Preferences() {
     });
     return () => { alive = false; };
   }, []);
+  const [themePref, setThemePref] = useThemePreference();
   const changeBadge = (value: boolean) => { setBadge(value); try { window.localStorage.setItem(SUPPORT_BADGE_KEY, value ? "1" : "0"); } catch { /* 이 창에서만 적용 */ } };
   return <div className={styles.page}>
-    <SettingsHeader title="환경설정" description="알림을 나에게 맞게 바꿔요." mobile="band" />
+    <SettingsHeader title="환경설정" description="화면과 알림을 나에게 맞게 바꿔요." mobile="band" />
+    <SettingsSection id="pref-display" title="화면" description="밝은 화면과 어두운 화면 중에 골라요.">
+      <SettingsCard mobile="band">
+        <SettingsRow title="화면 테마" descriptionId="pref-theme-desc" description="시스템을 고르면 기기 설정을 따라가요. 이 기기에만 저장돼요."
+          control={<SettingsSegment label="화면 테마" items={THEME_OPTIONS.map(([value, label]) => ({ value, label }))} value={themePref} onChange={setThemePref} />} />
+      </SettingsCard>
+    </SettingsSection>
     <SettingsSection id="pref-alerts" title="알림" description="상담 단추와 손님 문의 알림이에요.">
       <SettingsCard mobile="band">
         <SettingsRow inline title="상담 단추 새 답변 숫자" descriptionId="pref-badge-desc" description="상담 단추에 읽지 않은 답변 수를 띄워요. 이 기기에만 저장돼요."

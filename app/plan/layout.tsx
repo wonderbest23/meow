@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PlanShell from "./PlanShell";
 import SkipLink from "./SkipLink";
 import theme from "../../components/workspace-theme.module.css";
+import { AppThemeBoot, AppThemeSync } from "../../components/app-theme";
 
 /* 로그인한 사람의 작업 화면 — 홈과 다른 제목, 검색에는 올리지 않는다(app/robots.ts 도 /plan 을 막는다) */
 export const metadata: Metadata = { title: "내 사업 | 오늘창업", robots: { index: false, follow: false } };
@@ -16,6 +17,9 @@ export const metadata: Metadata = { title: "내 사업 | 오늘창업", robots: 
 export default function PlanLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={`plan-ui ${theme.theme}`} data-workspace-theme="light">
+      {/* 화면 테마(시스템/라이트/다크) — 그리기 전에 붙이고, 이 화면을 떠나면 뗀다 */}
+      <AppThemeBoot />
+      <AppThemeSync />
       <SkipLink />
       <PlanShell>{children}</PlanShell>
     </div>

@@ -30,6 +30,18 @@
   --app-fill-hover: color-mix(in srgb, var(--app-muted) 22%, transparent);
   --app-danger-line: color-mix(in srgb, var(--app-danger) 28%, var(--app-surface));
   --app-nav-selected: color-mix(in srgb, var(--app-text) 8%, transparent);
+  /* 5단계에서 더한 이름 — 테마 표식이 없는 화면(관리자 등)에서는 예전 색으로 풀린다 */
+  --app-base: var(--app-bg);
+  --app-panel: var(--app-surface);
+  --app-faint: var(--app-muted);
+  --app-on-primary: #ffffff;
+  --app-inverse: var(--app-text);
+  --app-on-inverse: #ffffff;
+  --app-scrim: rgb(15 23 42 / .4);
+  --app-ring-shadow: 0 0 0 1px var(--app-line);
+  --app-pop-shadow: 0 0 0 1px var(--app-line), 0 25px 50px -12px color-mix(in srgb, var(--app-text) 18%, transparent);
+  --app-menu-shadow: 0 0 0 1px var(--app-line), 0 16px 32px -12px color-mix(in srgb, var(--app-text) 22%, transparent);
+  --app-scrollbar: #bcc7d4;
   --surface: var(--app-surface);
   --surface-2: var(--app-raised);
   --surface-soft: var(--app-raised);
@@ -56,6 +68,99 @@
   font-synthesis: none;
   accent-color: var(--app-primary);
 }
+/*
+ * lovable 구조 5단계 — 로그인 뒤 화면 토큰을 lovable 캡처(docs/design/lovable-capture/*.css 의 :root / .dark, oklch)에서 그대로 옮겼다.
+ * <html data-app-theme="light|dark"> 가 붙은 화면(/plan · 고객센터, components/app-theme.tsx)에서만 켜진다 —
+ * 표식이 없는 화면(로그인 · 가입 · 관리자)은 위의 예전 값 그대로다.
+ *   bg-depth #f0f0f0/#171716 · bg-base #f5f5f5/#1d1d1c · bg-primary(판) #fafafa/#212120 · bg-secondary(카드·입력 상자) #fff/#272726
+ *   fg-primary #030303/#fff · fg-secondary #2e2e2d/#e1e1e0 · fg-tertiary #636363/#a6a6a4 · fg-quaternary #9b9b9b/#777775
+ *   bg-accent #1f55f1 · fg-accent #123ec5/#749df7 · 선 rgba(119,119,113,.16/.32)
+ */
+:global(html[data-app-theme]) :is(.tokens, .theme) {
+  --app-bg: #f0f0f0;
+  --app-base: #f5f5f5;
+  --app-panel: #fafafa;
+  --app-surface: #ffffff;
+  --app-raised: #f5f5f5;
+  --app-hover: rgb(119 119 113 / .16);
+  --app-soft: rgb(31 85 241 / .08);
+  --app-line: rgb(119 119 113 / .16);
+  --app-line-strong: rgb(119 119 113 / .32);
+  --app-text: #030303;
+  --app-body: #2e2e2d;
+  --app-muted: #636363;
+  --app-faint: #9b9b9b;
+  --app-accent: #123ec5;
+  --app-primary: #1f55f1;
+  --app-selected: rgb(31 85 241 / .16);
+  --app-selected-text: #123ec5;
+  --app-danger: #b90e19;
+  --app-danger-bg: rgb(225 36 41 / .1);
+  --app-warning: #a53803;
+  --app-warning-bg: rgb(206 71 0 / .1);
+  --app-success: #296807;
+  --app-success-bg: rgb(51 133 0 / .1);
+  --app-panel-fill: var(--app-panel);
+  --app-primary-fill: #1f55f1;
+  --app-on-primary: #ffffff;
+  --app-inverse: rgb(0 0 0 / .88);
+  --app-on-inverse: #fafafa;
+  --app-fill: rgb(119 119 113 / .12);
+  --app-fill-hover: rgb(119 119 113 / .2);
+  --app-nav-selected: rgb(0 0 0 / .08);
+  --app-scrim: rgb(0 0 0 / .4);
+  /* 판(본문 판 · 미리보기 판 · 입력 상자 · 말풍선)의 테두리+그림자 — 캡처의 box-shadow 그대로 */
+  --app-ring-shadow: 0 0 0 1px rgb(255 255 255), 0 0 0 2px rgb(119 119 113 / .16), 0 2px 1px 0 rgb(0 0 0 / .04), 0 2px 1px -.5px rgb(0 0 0 / .04), 0 4px 3px -1.5px rgb(0 0 0 / .04), 0 7px 6px -3px rgb(0 0 0 / .04), 0 13px 12px -6px rgb(0 0 0 / .04), 0 25px 24px -12px rgb(0 0 0 / .04);
+  --app-pop-shadow: 0 0 0 1px rgb(0 0 0 / .08), 0 25px 50px -12px rgb(0 0 0 / .25);
+  --app-menu-shadow: 0 0 0 1px rgb(0 0 0 / .08), 0 16px 32px -12px rgb(0 0 0 / .2);
+  --app-scrollbar: #c4c4c2;
+  --blue-dark: #123ec5;
+  color: var(--app-text);
+}
+:global(html[data-app-theme="dark"]) :is(.tokens, .theme) {
+  --app-bg: #171716;
+  --app-base: #1d1d1c;
+  --app-panel: #212120;
+  --app-surface: #272726;
+  --app-raised: #2e2e2d;
+  --app-hover: rgb(119 119 113 / .16);
+  --app-soft: rgb(31 85 241 / .14);
+  --app-line: rgb(119 119 113 / .32);
+  --app-line-strong: rgb(119 119 113 / .5);
+  --app-text: #ffffff;
+  --app-body: #e1e1e0;
+  --app-muted: #a6a6a4;
+  --app-faint: #777775;
+  --app-accent: #749df7;
+  --app-primary: #1f55f1;
+  --app-selected: rgb(31 85 241 / .24);
+  --app-selected-text: #a9c2fa;
+  --app-danger: #ff867b;
+  --app-danger-bg: rgb(225 36 41 / .2);
+  --app-warning: #ff895e;
+  --app-warning-bg: rgb(206 71 0 / .2);
+  --app-success: #73be59;
+  --app-success-bg: rgb(51 133 0 / .2);
+  --app-primary-fill: #1f55f1;
+  --app-on-primary: #ffffff;
+  --app-inverse: rgb(255 255 255 / .96);
+  --app-on-inverse: #1f1f1d;
+  --app-fill: rgb(119 119 113 / .2);
+  --app-fill-hover: rgb(119 119 113 / .3);
+  --app-nav-selected: rgb(255 255 255 / .08);
+  --app-scrim: rgb(0 0 0 / .6);
+  --app-ring-shadow: 0 0 0 1px rgb(119 119 113 / .32), 0 0 0 2px rgb(0 0 0 / .16), 0 2px 0 0 rgb(0 0 0 / .08), 0 2px 1px -.5px rgb(0 0 0 / .08), 0 4px 3px -1.5px rgb(0 0 0 / .08), 0 7px 6px -3px rgb(0 0 0 / .08), 0 13px 12px -6px rgb(0 0 0 / .08), 0 25px 24px -12px rgb(0 0 0 / .08);
+  --app-pop-shadow: 0 0 0 1px rgb(0 0 0 / .88), 0 25px 50px -12px rgb(0 0 0 / .25);
+  --app-menu-shadow: 0 0 0 1px rgb(119 119 113 / .32), 0 16px 32px -12px rgb(0 0 0 / .6);
+  --app-scrollbar: #4a4a48;
+  --blue-dark: #a9c2fa;
+  color: var(--app-text);
+  color-scheme: dark;
+}
+:global(html[data-app-theme="dark"]) .theme :is(input, textarea, select) { color-scheme: dark; }
+:global(html[data-app-theme]) .theme :is(main, aside, nav, article, section, div) { scrollbar-color: var(--app-scrollbar) transparent; }
+:global(html[data-app-theme]) .theme ::selection { background: var(--app-primary); color: #fff; }
+
 .theme { min-height: 100dvh; background: var(--app-bg); }
 .theme, .theme * { letter-spacing: 0; }
 .theme :is(input, textarea, select) { color-scheme: light; }
