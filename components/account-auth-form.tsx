@@ -267,6 +267,9 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   const valid = !problem;
   /* 한 번 눌러 본 뒤에는 모자란 것을 고칠 때마다 안내가 바로 바뀐다(다 채우면 사라짐) */
   const [askedProblem, setAskedProblem] = useState(false);
+  /* 보낸 뒤 실패(이메일 또는 비밀번호가 맞지 않아요 등) — 입력칸 테두리만 빨갛게, 아래 13px 빨간 글 한 줄(lovable 6단계). 칸을 고치기 시작하면 테두리는 원래대로 */
+  const [fieldsInvalid, setFieldsInvalid] = useState(false);
+  useEffect(() => { setFieldsInvalid(false); }, [email, password, passwordConfirm, mode]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (busy) return;
@@ -303,6 +306,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
       }
     } catch (error) {
       setMessageError(true); setMessage(error instanceof TypeError ? OFFLINE : userErrorMessage(error, FAILED));
+      if (!(error instanceof TypeError)) setFieldsInvalid(true);
       // 실패하면 초점을 이메일 칸으로 — 어디에도 초점이 없으면(body) 키보드·낭독기 사용자가 다시 고칠 곳을 잃는다
       window.requestAnimationFrame(() => { const active = document.activeElement; if (!active || active === document.body) emailInput.current?.focus(); });
     } finally { setBusy(false); }
@@ -313,6 +317,9 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   /* 보내는 동안 칸·로그인 단추는 disabled 대신 readOnly·aria-disabled로 둔다 — disabled면 누른 자리의 초점이 body로 떨어졌다(접근성 점검 2026-10-22). 다시 보내기는 submit의 busy가 막는다 */
   const mismatch = Boolean(passwordConfirm) && password !== passwordConfirm;
   const mismatchId = useId();
+  const formErrorId = `${titleId ?? "account"}-form-error`;
+  const problemShown = askedProblem && problem ? problem : "";
+  const invalid = fieldsInvalid || !!problemShown;
   const passwordField = (label: string, value: string, set: (value: string) => void, autoComplete: string, error?: string) => <PasswordField label={label} value={value} onChange={set} autoComplete={autoComplete} disabled={busy} error={error} />;
 
   /*
@@ -332,13 +339,13 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           {mode === "recover" && <p className={styles.sub}>가입한 이메일로 재설정 링크를 보내드려요.</p>}
           {mode === "reset" && <p className={styles.sub}>8자 이상으로 정해 주세요.</p>}
         </header>
-        <div className={styles.group}>
-          {mode !== "reset" && <label className={styles.cell}><span className={styles.srOnly}>이메일</span><TextField ref={emailInput} type="email" required readOnly={busy} aria-disabled={busy || undefined} placeholder="이메일" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></label>}
+        <div className={styles.group} data-invalid={invalid || undefined}>
+          {mode !== "reset" && <label className={styles.cell}><span className={styles.srOnly}>이메일</span><TextField ref={emailInput} type="email" required readOnly={busy} aria-disabled={busy || undefined} aria-invalid={invalid || undefined} aria-describedby={invalid ? formErrorId : undefined} placeholder="이메일" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></label>}
           {/*
             * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
             * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 된다. 규칙이 필요한 화면에서만 칸 아래 안내로 붙인다.
             */}
-          {mode !== "recover" && passwordField(mode === "reset" ? "새 비밀번호 (8자 이상)" : mode === "register" ? "비밀번호 (8자 이상)" : "비밀번호", password, setPassword, mode === "login" ? "current-password" : "new-password")}
+          {mode !== "recover" && passwordField(mode === "reset" ? "새 비밀번호 (8자 이상)" : mode === "register" ? "비밀번호 (8자 이상)" : "비밀번호", password, setPassword, mode === "login" ? "current-password" : "new-password", invalid ? formErrorId : undefined)}
           {(mode === "register" || mode === "reset") && passwordField("비밀번호 확인", passwordConfirm, setPasswordConfirm, "new-password", mismatch ? mismatchId : undefined)}
         </div>
         {mismatch && <FieldError id={mismatchId} className={styles.fieldError}>비밀번호가 서로 달라요.</FieldError>}
@@ -347,8 +354,9 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           { key: "privacy", label: "개인정보 수집·이용 동의", href: "/privacy" },
           { key: "aiNotice", label: "인공지능·국외 처리 안내 확인", href: "/ai-notice" },
         ]} values={{ terms, privacy, aiNotice }} onChange={(next) => { setTerms(Boolean(next.terms)); setPrivacy(Boolean(next.privacy)); setAiNotice(Boolean(next.aiNotice)); }} />}
-        {askedProblem && problem ? <p role="alert" className={accountStyles.error}>{problem}</p> : null}
-        {message && <p role={messageError ? "alert" : "status"} className={messageError ? accountStyles.error : accountStyles.message}>{message}</p>}
+        {/* 오류는 박스 없이 13px 빨간 글 한 줄(입력칸 테두리가 빨갛게 바뀐다). 안내(메일을 보냈어요 등)는 예전 그대로 */}
+        {problemShown ? <p role="alert" id={formErrorId} className={styles.formError}>{problemShown}</p> : null}
+        {message && (messageError ? <p role="alert" id={problemShown ? undefined : formErrorId} className={styles.formError}>{message}</p> : <p role="status" className={accountStyles.message}>{message}</p>)}
         <AppButton type="submit" variant="primary" className={styles.primary} data-incomplete={!valid || undefined} aria-disabled={busy || undefined}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</AppButton>
         <nav className={styles.links} aria-label="계정 메뉴">
           {mode === "login"

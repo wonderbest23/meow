@@ -34,6 +34,7 @@ import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/dom
 import { LANDING_IDEA_PARAM, clearLandingIdea, readLandingIdea, stashLandingIdea, withoutLandingIdea } from "../../../lib/plan-builder/landing-idea";
 import { ENTRY_PARAM, isEntryMode, STUDIO_PATH, studioHref, type StudioTab } from "../../../lib/plan-builder/studio";
 import { homepageHref } from "../../../lib/plan-builder/journey";
+import { useChipFlight } from "./intake-ui/use-chip-flight";
 import { useStudioCommand, useStudioEditChapterList, useStudioEditPreviewChapters, useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
 import { PopMenu, type PopMenuItem } from "../studio/PopMenu";
 import { useDictation } from "../../../components/use-dictation";
@@ -1649,6 +1650,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const dictation = useDictation(appendToComposer);
   useStudioCommand("chat-dictate", () => { if (dictation.supported && !dictation.listening) dictation.start(); else focusComposer(); }, embedded && !!(plan || newEntry) && showComposer);
   useStudioCommand("chat-summary", () => { if (!plan) return; setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }, embedded && !!plan);
+  /* 고른 선택지 알약이 내 말풍선으로 옮겨 가는 짧은 전환(6단계) — 대화 칸이 그려진 뒤에 붙인다 */
+  useChipFlight(conversation, loaded && !!(plan || newEntry));
   const plusItems: PopMenuItem[] = [
     ...(plan && summaryToggle ? [{ key: "answers", label: view === "summary" ? "대화로 돌아가기" : "지금까지 답 보기", icon: <ListChecks />, onSelect: () => { if (view === "summary") setView("input"); else openSummary(); } }] : []),
     { key: "new", label: "새 대화 시작", icon: <SquarePen />, href: newChatHref() },
@@ -1663,6 +1666,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   ];
   const modePill = studioComposer && modeItems.length > 1
     ? <PopMenu placement="above" align="end" buttonClassName={styles.modePill} buttonLabel={`보낼 곳: ${modeLabel} — 바꾸기`} menuLabel="보낼 곳 고르기" groups={[{ key: "modes", items: modeItems }]} label={<><span>{modeLabel}</span><ChevronDown aria-hidden="true" /></>} />
+    : null;
+  /*
+   * 지금 답하는 질문 — 예전엔 입력칸 위에 따로 뜬 보라 태그였다. lovable 입력 상자처럼 아래 줄의 모드 알약 자리에 둔다(6단계).
+   * 누르면 지금 질문(입력칸으로) · 지금까지 답 보기.
+   */
+  const questionPill = questionTarget && !modePill
+    ? <PopMenu placement="above" align="end" buttonClassName={styles.modePill} buttonLabel={`답하는 중: ${questionTarget} — 더 보기`} menuLabel="지금 답하는 질문" groups={[{ key: "question", items: [{ key: "current", label: questionTarget, icon: <Target />, current: true, onSelect: () => focusComposer() }, ...plusItems.filter(item => item.key !== "new")] }]} label={<><span className={styles.modePillLabel} data-question-target title={questionTarget}><span className={styles.modePillHint}>답하는 중:</span> {questionTarget}</span><ChevronDown aria-hidden="true" /></>} />
     : null;
   const micButton = dictation.supported ? <button type="button" className={styles.composerRound} aria-label={dictation.listening ? "말로 적기 멈추기" : "말로 적기"} aria-pressed={dictation.listening} title={dictation.listening ? "듣고 있어요 · 누르면 멈춰요" : "말로 적기"} disabled={!loaded || loadFailed || ownerChanged || (!studioRoute && !!replyTurn)} onClick={dictation.toggle}><Mic aria-hidden="true" /></button> : null;
   const plusMenu = <PopMenu placement="above" align="start" buttonClassName={styles.composerRound} buttonLabel="더 보기 — 지금까지 답 보기 · 새 대화" buttonTitle="더 보기" menuLabel="대화 더 보기" groups={[{ key: "more", items: plusItems }]} label={<Plus aria-hidden="true" />} />;
@@ -1772,7 +1782,6 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
           {dockQueue && <QueuedStudioRequests dock items={queuedRequests} generating={generating} onCancel={cancelQueued} onEdit={editQueued} />}
           {suggestionChips.length > 0 && <SuggestRow chips={suggestionChips} onPick={pickSuggestion} />}
           <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); setGuideShown(null); if (studioRoute) submitStudio(); else submitComposer(); }}>
-            {questionTarget && <div className={styles.composerTarget} data-question-target><span title={questionTarget}><Target size={13} aria-hidden="true" /><span className={styles.composerTargetLabel}>{questionTarget}</span></span></div>}
             {/* 작업실: 무엇을 고치는지 칩으로 — ✕ 로 그만두면 예전 입력창으로 돌아간다. 쓰는 중이면 다 쓴 뒤 반영한다고 알린다 */}
             {studioRoute && studioRoute !== "chat" && <div className={styles.composerTarget} data-studio-target={editTarget?.target ?? "queue"}>
               {editTarget && <span title={targetChip}>{pro && (editTarget.target === "homepage" ? <Home size={13} aria-hidden="true" /> : <FileText size={13} aria-hidden="true" />)}<span className={styles.composerTargetLabel}>{targetChip}</span><button type="button" aria-label={`${targetChip} 그만두기`} title="그만두기" onClick={() => leaveEditTarget()}><X size={14} aria-hidden="true" /></button></span>}
@@ -1811,7 +1820,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
                 if (composerEnterSends({ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode }, window.matchMedia("(pointer: coarse)").matches)) { event.preventDefault(); if (studioRoute) submitStudio(); else submitComposer(); } }} />
               {!embedded && sendButton}
             </div>
-            {embedded && <div className={styles.composerBar} data-studio-bar>{plusMenu}<span className={styles.composerGrow} />{modePill}{micButton}{sendButton}</div>}
+            {embedded && <div className={styles.composerBar} data-studio-bar>{plusMenu}<span className={styles.composerGrow} />{modePill ?? questionPill}{micButton}{sendButton}</div>}
           </form>
         </footer>}
       </InputPane>

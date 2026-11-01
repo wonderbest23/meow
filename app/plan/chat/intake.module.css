@@ -1180,3 +1180,73 @@ button.workLogRow { min-height: 32px; }
 .page[data-embedded]:not([data-studio-pro]) .composerShell, .page[data-embedded]:not([data-studio-pro]) .composerShell:focus-within { padding-bottom: 8px; }
 .page[data-embedded]:not([data-studio-pro]) .composer { gap: 8px; }
 .page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] { margin-top: 0; }
+
+/*
+ * lovable 구조 6단계 — 어색한 상호작용 다듬기(캡처 docs/design/lovable-capture 의 제안 알약 · 작업 아이콘 · 도구 카드 · 입력 상자 기준).
+ * 1) 질문 선택지(보기 · 업종 후보 · 금액 범위 · '지금 어느 단계세요?' · 잘 모르겠어요)를 제안 알약과 같은 둥근 알약으로: 32 r999 14px 안쪽 6 12,
+ *    회색 채움(--app-fill), 고르면 파랑(--app-primary-fill + 흰 글자). 손가락은 누르는 자리만 44(::before)로 넓힌다.
+ */
+.page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option),
+.page[data-coach] .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option),
+.page[data-embedded][data-studio-pro] .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option) {
+  position: relative; display: inline-flex; flex-direction: row; align-items: center; gap: 6px; width: auto; min-width: 0; min-height: 32px; height: auto;
+  margin-top: 0; padding: 6px 12px; border: 0; border-radius: 999px; background: var(--app-fill); box-shadow: none; color: var(--app-text);
+  font-size: .875rem; font-weight: 400; line-height: 1.43; text-align: left; transition: background-color .15s ease, color .15s ease, transform .15s ease;
+}
+.page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .option) :is(strong, small) { font-size: inherit; font-weight: inherit; line-height: inherit; color: inherit; }
+.page .chatQuestion :is(.ksicChip, .unknownChoice, .option) small { opacity: .75; }
+.page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option):hover:not(:disabled),
+.page[data-coach] .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option):hover:not(:disabled) { background: var(--app-fill-hover); border-color: transparent; color: var(--app-text); }
+.page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .option):is([aria-pressed="true"], [data-selected="true"]),
+.page[data-coach] .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .option):is([aria-pressed="true"], [data-selected="true"]),
+.page[data-coach] .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .option):is([aria-pressed="true"], [data-selected="true"]):hover:not(:disabled),
+.page .chatQuestion .chip.chipStrong { background: var(--app-primary-fill); border-color: transparent; color: var(--app-on-primary); }
+.page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option):active:not(:disabled) { transform: scale(.97); }
+.page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option):focus-visible { outline: 2px solid var(--app-focus-ring); outline-offset: 2px; }
+@media (pointer: coarse) { .page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option)::before { content: ""; position: absolute; inset: -6px 0; } }
+.page .chatQuestion .chipRow { gap: 6px; }
+
+/*
+ * 2) 내 말풍선 아래 작은 아이콘 줄(복사 · 고치기, 28 r999) — 평소엔 숨기고 말풍선에 마우스를 올리거나(PC) 말풍선을 누르면(휴대폰 · 키보드 초점) 나타난다.
+ *    자리는 늘 잡아 두어 나타날 때 대화가 밀리지 않는다.
+ */
+.chatTurn:has(> [data-user-actions]) > .userMessage, .page[data-coach] .chatTurn:has(> [data-user-actions]) > .userMessage, .page[data-embedded][data-studio-pro] .chatTurn:has(> [data-user-actions]) > .userMessage { margin-bottom: 2px; }
+.userMessage[tabindex] { cursor: default; outline-color: transparent; }
+.userMessage[tabindex]:focus-visible { outline: 2px solid var(--app-focus-ring); outline-offset: 2px; }
+.userActions { display: flex; justify-content: flex-end; gap: 2px; height: 28px; margin: 0 0 12px; opacity: 0; pointer-events: none; transition: opacity .15s ease; }
+.chatTurn:hover > .userActions, .chatTurn:focus-within > .userActions { opacity: 1; pointer-events: auto; }
+.userActions .messageEdit, .page[data-embedded][data-studio-pro] .userActions .messageEdit { position: relative; display: inline-grid; place-items: center; width: 28px; height: 28px; margin: 0; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--app-muted); cursor: pointer; }
+.userActions .messageEdit::after { content: none; }
+.userActions .messageEdit:hover { background: var(--app-fill); color: var(--app-text); }
+.userActions .messageEdit:focus-visible { outline: 2px solid var(--app-focus-ring); outline-offset: 1px; }
+@media (pointer: coarse) { .userActions .messageEdit::before { content: ""; position: absolute; inset: -8px -4px; } }
+
+/*
+ * 3) 질문이 바뀌면 새 질문 카드가 아래에서 살짝 올라온다(200ms, 인사 애니메이션과 같은 결). 카드 안 알약은 따로 늦게 뜨지 않고 카드와 함께.
+ *    중간 요약(남는 돈을 계산했어요 · …)은 도구 카드 한 장(r12, 제목 + 설명 + 작은 '자세히' 알약).
+ */
+@keyframes intake-card-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+.page .chatQuestion[data-chat-question], .page[data-embedded][data-studio-pro] .chatQuestion[data-question-card] { animation: intake-card-rise .2s cubic-bezier(.2, .8, .2, 1) backwards; }
+.page .chatQuestion[data-chat-question] > :not(h2):not(.chatSpeaker) { animation: none; }
+.workLogCard { margin: 0 0 12px; padding: 10px 10px 10px 14px; border-radius: 12px; background: var(--app-surface); box-shadow: var(--app-ring-shadow); animation: intake-card-rise .2s cubic-bezier(.2, .8, .2, 1) backwards; }
+.workLogCardHead { display: flex; align-items: flex-start; gap: 10px; }
+.workLogCardHead > svg { flex: none; margin-top: 3px; }
+.workLogCardText { flex: 1; min-width: 0; }
+.workLogCardText p { margin: 0; }
+.workLogCardTitle { color: var(--app-text); font-size: .9375rem; font-weight: 500; line-height: 1.5; }
+.workLogCardSub { color: var(--app-muted); font-size: .875rem; line-height: 1.5; overflow-wrap: anywhere; }
+.workLogCardButton { display: inline-flex; flex: none; align-items: center; gap: 2px; height: 28px; padding: 4px 8px 4px 10px; border: 0; border-radius: 999px; background: var(--app-fill); color: var(--app-text); font: inherit; font-size: .875rem; line-height: 1.43; cursor: pointer; }
+.workLogCardButton:hover { background: var(--app-fill-hover); }
+.workLogCardButton:focus-visible { outline: 2px solid var(--app-focus-ring); outline-offset: 2px; }
+.workLogCard .workLogBody { margin: 8px 0 0 7px; }
+
+/* 4) 지금 답하는 질문 — 입력 상자 아래 줄 모드 알약 자리('답하는 중: 매달 나가는 비용 ▾'). 입력칸 위에 따로 띄우지 않는다 */
+.modePill .modePillLabel { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modePill .modePillHint { color: var(--app-muted); }
+.composerBar .modePill:has([data-question-target]) { max-width: 240px; }
+.composerBar > :has(> .modePill [data-question-target]) { flex: 0 1 auto; min-width: 0; max-width: 62%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .page .chatQuestion[data-chat-question], .page[data-embedded][data-studio-pro] .chatQuestion[data-question-card], .workLogCard { animation: none; }
+  .userActions, .page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option) { transition: none; }
+}
