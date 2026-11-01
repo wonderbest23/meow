@@ -11,6 +11,15 @@
 :where(.control) { display:block; width:100%; min-width:0; margin:0; }
 .control[data-app-field][data-app-field] { box-sizing:border-box; height:44px; padding:0 12px; border:1px solid var(--app-line); border-radius:8px; background:var(--app-surface); color:var(--app-text); font:inherit; font-size:1rem; font-weight:400; line-height:1.5; letter-spacing:0; box-shadow:none; transition:border-color .15s; }
 .control[data-app-field=textarea][data-app-field] { height:auto; min-height:88px; padding:10px 12px; resize:vertical; }
+/*
+ * 설정 화면(lovable 구조 3단계) — data-size="compact" 32px(행 카드 오른쪽 칸), data-size="large" 48px(휴대폰 선택칸),
+ * data-shape="round" 모서리 12px(휴대폰 검색칸 · 선택칸). 글자는 그대로 1rem(iOS 확대 방지)
+ */
+.control[data-app-field][data-app-field][data-size=compact] { height:32px; padding:0 12px; line-height:1.25; }
+.control[data-app-field][data-app-field][data-size=large] { height:48px; padding:0 16px; }
+.control[data-app-field][data-app-field][data-shape=round], .group[data-app-field][data-app-field][data-shape=round] { border-radius:12px; }
+.group[data-app-field][data-app-field][data-size=compact] { min-height:32px; padding:0 10px; }
+.group[data-app-field][data-app-field][data-size=compact] input { height:30px; }
 .control[data-app-field][data-app-field]::placeholder { color:var(--app-muted); opacity:1; }
 .control[data-app-field][data-app-field]:hover:not(:disabled) { border-color:var(--app-line-strong); }
 .control[data-app-field][data-app-field][aria-invalid=true] { border-color:var(--app-danger); }

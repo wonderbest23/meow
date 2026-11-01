@@ -11,6 +11,21 @@
 .button[data-variant][data-size=small] { position:relative; min-height:36px; padding:6px 12px; gap:6px; }
 /* 작은 버튼도 누르는 자리는 위아래로 4px씩 넓혀 44px 로 */
 .button[data-variant][data-size=small]::before { content:""; position:absolute; inset:-4px 0; }
+/*
+ * 설정 화면 크기(lovable 구조 3단계 · docs/design/settings-mock) — 글자 14px/400, 안쪽 6×10.
+ * adaptive 는 PC 32px · 휴대폰(~900px) 40px(MPref 의 흰 띠 항목 단추). 누르는 자리는 손가락(pointer:coarse)에서 44px 로 넓힌다.
+ */
+.button[data-variant][data-size=compact], .button[data-variant][data-size=adaptive] { position:relative; height:32px; min-height:32px; padding:6px 10px; gap:6px; font-size:.875rem; font-weight:400; line-height:1.4; white-space:nowrap; }
+.button[data-variant][data-size=mini] { position:relative; height:28px; min-height:28px; padding:4px 8px; gap:4px; font-size:.875rem; font-weight:400; line-height:1.4; white-space:nowrap; }
+.button[data-variant][data-size=large] { height:48px; min-height:48px; padding:0 16px; gap:8px; border-radius:12px; font-size:1rem; font-weight:400; line-height:1.4; }
+.button[data-variant][data-size=compact]::before, .button[data-variant][data-size=mini]::before, .button[data-variant][data-size=adaptive]::before { content:""; position:absolute; inset:0; }
+@media (max-width:900px) {
+  .button[data-variant][data-size=adaptive] { height:40px; min-height:40px; padding:0 16px; font-size:.9375rem; }
+}
+@media (pointer:coarse) {
+  .button[data-variant][data-size=compact]::before, .button[data-variant][data-size=adaptive]::before { inset:-6px 0; }
+  .button[data-variant][data-size=mini]::before { inset:-8px 0; }
+}
 .button[data-variant] > svg { flex:none; }
 .button[data-variant=primary] { background:var(--app-primary); border-color:var(--app-primary); color:var(--app-surface); }
 .button[data-variant=primary]:hover:not(:disabled) { background:var(--app-primary-hover); border-color:var(--app-primary-hover); }
@@ -21,6 +36,11 @@
 .button[data-variant=text]:hover:not(:disabled) { background:var(--app-soft); }
 .button[data-variant=danger] { background:var(--app-danger); border-color:var(--app-danger); color:var(--app-surface); }
 .button[data-variant=danger]:hover:not(:disabled) { background:var(--app-danger-hover); border-color:var(--app-danger-hover); }
+/* 회색 14% 채움(설정 행 카드의 기본 동작) · 빨간 테두리(되돌릴 수 없는 일로 들어가는 첫 단추 — 마지막 확인은 danger) */
+.button[data-variant=soft] { background:var(--app-fill); border-color:transparent; color:var(--app-text); }
+.button[data-variant=soft]:hover:not(:disabled) { background:var(--app-fill-hover); }
+.button[data-variant=dangerOutline] { background:transparent; border-color:var(--app-danger-line); color:var(--app-danger); }
+.button[data-variant=dangerOutline]:hover:not(:disabled) { background:var(--app-danger-bg); }
 /* 포커스 표시 하나 — 주 색 70% 선 3px(앱 테마의 2px 선보다 앞서도록 한 단계 높인다) */
 .button[data-variant][data-size]:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 .button[data-variant]:disabled, .button[data-variant][aria-disabled=true] { opacity:.5; cursor:not-allowed; }

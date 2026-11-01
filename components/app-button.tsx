@@ -3,10 +3,17 @@ import Link from "next/link";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import styles from "./app-button.module.css";
 
-/** 버튼 종류 — 주 동작·보조 동작·글자만·지우기 같은 위험 동작 네 가지 */
-export type AppButtonVariant = "primary" | "secondary" | "text" | "danger";
-/** 크기 — 기본 44px, 목록 안 작은 동작용 36px(누르는 자리는 44px 로 넓힌다) */
-export type AppButtonSize = "default" | "small";
+/**
+ * 버튼 종류 — 주 동작·보조 동작(1px 테두리)·글자만·지우기 같은 위험 동작 네 가지,
+ * 그리고 설정 행 카드(lovable 구조 3단계)의 회색 14% 채움(soft) · 빨간 테두리(dangerOutline, 탈퇴로 가는 첫 단추)
+ */
+export type AppButtonVariant = "primary" | "secondary" | "text" | "danger" | "soft" | "dangerOutline";
+/**
+ * 크기 — 기본 44px, 목록 안 작은 동작용 36px(누르는 자리는 44px 로 넓힌다).
+ * 설정 화면: compact 32px(행 카드 단추) · mini 28px(안내 띠 단추) · adaptive(PC 32px · 휴대폰 40px — 환경설정·보안의 흰 띠 항목)
+ * · large 48px r12(휴대폰 계정 설정 맨 아래)
+ */
+export type AppButtonSize = "default" | "small" | "compact" | "mini" | "adaptive" | "large";
 
 type Shared = { variant?: AppButtonVariant; size?: AppButtonSize; className?: string; children: ReactNode };
 type AsButton = Shared & ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined; as?: undefined; loading?: boolean; ref?: Ref<HTMLButtonElement> };

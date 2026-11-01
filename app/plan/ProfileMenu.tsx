@@ -53,7 +53,8 @@ export default function ProfileMenu({ open, onClose, account, unanswered, anchor
         <div className={styles.hr} />
         {signedIn && <>
           {row("/plan/me", <User aria-hidden="true" />, "프로필")}
-          {row("/plan/me#me-info", <Settings aria-hidden="true" />, "계정 설정")}
+          {/* 계정 설정 — 휴대폰은 전체 화면 목록(시안 MSettings: 내 계정 · 환경설정 · 보안 · 기기 및 앱), PC 는 설정 메뉴가 있는 내 계정 화면 */}
+          {row(anchor === "sheet" ? "/plan/settings" : "/plan/me#me-info", <Settings aria-hidden="true" />, "계정 설정", null, anchor === "sheet")}
           {row("/plan/me#me-payments", <CreditCard aria-hidden="true" />, "결제 내역")}
         </>}
         {row("/account/support", <CircleHelp aria-hidden="true" />, "고객센터", null, true)}

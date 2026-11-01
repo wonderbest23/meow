@@ -39,7 +39,12 @@ assert.match(rule(".group[data-app-field][data-app-field]:focus-within"), /borde
 assert.match(rule(".label[data-app-field][data-app-field]"), /font-size:\.875rem; font-weight:600;[^}]*color:var\(--app-text\);/, "라벨 .875rem/600 --app-text");
 assert.match(rule(".help[data-app-field][data-app-field]"), /font-size:\.8125rem;[^}]*color:var\(--app-muted\);/, "도움말 .8125rem --app-muted");
 assert.match(rule(".error[data-app-field][data-app-field]"), /color:var\(--app-danger\);/, "오류 줄 --app-danger");
-assert.doesNotMatch(css, /border-radius:\s*(?!8px)\d/, "모서리는 8px 하나(버튼과 같게)");
+/* 설정 화면(lovable 구조 3단계) — data-shape="round" 만 12px(휴대폰 검색칸 · 선택칸), data-size compact 32 · large 48 */
+const round = rule(".control[data-app-field][data-app-field][data-shape=round], .group[data-app-field][data-app-field][data-shape=round]");
+assert.match(round, /\{ border-radius:12px; \}/, "휴대폰 검색칸·선택칸(round)은 r12");
+assert.doesNotMatch(css.replace(round, ""), /border-radius:\s*(?!8px)\d/, "모서리는 8px 하나(버튼과 같게 · round 만 12px)");
+assert.match(rule(`${C}[data-size=compact]`), /height:32px;/, "설정 행 카드 입력칸은 32px");
+assert.match(rule(`${C}[data-size=large]`), /height:48px;/, "휴대폰 선택칸은 48px");
 assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i, "입력칸 색을 하드코딩했다 — --app-* 토큰만 쓴다");
 for (const [, value] of css.matchAll(/(?:^|[\s;{])(?:color|background|border(?:-color)?|outline(?:-color)?)\s*:\s*([^;}]+)/g)) {
   assert.match(value.trim(), /^(?:transparent|inherit|0|(?:\d+px solid )?var\(--app-[a-z-]+\))$/, `입력칸 색이 --app-* 토큰이 아니다: ${value.trim()}`);
@@ -72,6 +77,7 @@ const users = [
   "app/plan/workspace/OperatingAnalysisPanel.tsx", "app/plan/workspace/OperatingWorkspace.tsx", "components/account-auth-form.tsx",
   "components/confirm-dialog.tsx", "components/homepage-alert-settings.tsx", "components/homepage-expert-consult.tsx", "components/homepage-kit-panel.tsx",
   "components/landing-domain-connector.tsx", "components/landing-image-crop.tsx", "components/next-services.tsx",
+  "app/plan/me/AccountActions.tsx", "app/plan/SettingsMenu.tsx", "app/plan/settings/SettingsIndex.tsx",
 ];
 const NOT_TEXT = /\btype=(?:"(?:checkbox|radio|range|file|hidden|color)"|\{[^}]*"(?:checkbox|radio)")/;
 for (const path of users) {
@@ -85,7 +91,7 @@ for (const path of users) {
   }
 }
 // 대표 화면 — 감사에서 갈라져 있던 다섯 곳
-assert.match(read("app/account/support/SupportCenter.tsx"), /<FieldLabel>제목<TextField value=\{draft\.subject\}/, "고객센터 문의 제목 칸");
+assert.match(read("app/account/support/SupportCenter.tsx"), /<SettingsRow title="제목" titleFor="support-subject"[\s\S]*?<TextField id="support-subject" data-size="compact" className=\{styles\.field\} value=\{draft\.subject\}/, "고객센터 문의 제목 칸(행 제목이 칸의 label)");
 assert.match(read("components/confirm-dialog.tsx"), /<TextField ref=\{field\} className=\{styles\.field\}/, "확인창 입력칸");
 assert.match(read("components/account-auth-form.tsx"), /<TextField ref=\{emailInput\} type="email"/, "로그인 이메일 칸");
 assert.match(read("app/plan/proposal/BusinessConditionsPanel.tsx"), /<FieldLabel key=\{key\}>\{label\}<TextField aria-label=\{label\}/, "제안서 사업 조건 칸");
@@ -141,7 +147,7 @@ for (const pattern of [/\.hk-grid input:not\(\[type="checkbox"\]\) \{[^}]*border
 assert.match(read("app/account/support/SupportCenter.tsx"), /aria-describedby="support-message-help"[\s\S]*<FieldHelp id="support-message-help">/, "문의 내용 칸 안내");
 assert.match(read("app/plan/pay/PlanCheckout.tsx"), /aria-invalid=\{phoneInvalid\} aria-describedby="notice-phone-help"[\s\S]*<FieldError id="notice-phone-help">/, "결제 안내 휴대폰 칸 오류");
 assert.match(read("components/account-auth-form.tsx"), /<FieldError id=\{mismatchId\}[\s\S]*aria-invalid=\{error \? true : undefined\} aria-describedby=\{error\}/, "비밀번호 확인 칸 오류");
-assert.match(read("app/plan/me/page.tsx"), /aria-describedby=\{deleteMessage \? "delete-guide delete-error" : "delete-guide"\}[\s\S]*<FieldError id="delete-error"/, "회원 탈퇴 확인 칸 오류");
+assert.match(read("app/plan/me/AccountActions.tsx"), /aria-describedby=\{deleteMessage \? "delete-guide delete-error" : "delete-guide"\}[\s\S]*<FieldError id="delete-error"/, "회원 탈퇴 확인 칸 오류");
 assert.match(read("components/homepage-kit-panel.tsx"), /aria-describedby="hk-slug-help"[\s\S]*<FieldError id="hk-slug-help"[\s\S]*<FieldHelp id="hk-slug-help"/, "홈페이지 주소 칸 오류·안내");
 assert.match(read("app/plan/document/FactEdit.tsx"), /aria-describedby="fact-amount-help"[\s\S]*<FieldHelp id="fact-amount-help" aria-live="polite">/, "금액 고치기 칸 안내");
 

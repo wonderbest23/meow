@@ -5,6 +5,8 @@ import { readFileSync } from "node:fs";
  * UI 공통 규격 2: 버튼 — 앱 화면의 주·보조·글자·위험 버튼은 components/app-button 하나로 그린다.
  * 1) 규격: 종류 넷(primary·secondary·text·danger) × 크기 둘(기본 44px · 작은 36px, 누르는 자리 44px), 모서리 8px, 글자 .9375rem/600,
  *    --app-* 토큰만, PC·모바일 같은 모양(@media 는 움직임 줄이기만), 포커스 표시 하나, 막힘·로딩 상태, 링크로도 쓴다
+ *    + 설정 화면(lovable 구조 3단계): 종류 soft(회색 14% 채움)·dangerOutline(빨간 테두리), 크기 compact 32 · mini 28 · adaptive(PC 32 · 휴대폰 40)
+ *    · large 48 r12. @media 는 움직임 줄이기 · 손가락 누르는 자리(pointer:coarse) · adaptive 의 휴대폰 높이(max-width:900px)만
  * 2) 토큰 글자 대비 4.5:1 이상(포커스 선은 3:1 이상)
  * 3) 바꾼 화면은 공통 버튼을 쓰고, 예전 버튼 클래스에는 자리(여백·너비·정렬)만 남는다 — 높이·여백·색·글자·모서리를 다시 정하지 않는다
  * 4) 바꾼 파일에는 예전 파란 hex·글자·선 hex 가 남지 않는다
@@ -28,20 +30,27 @@ const small = rule(css, ".button[data-variant][data-size=small]");
 assert.match(small, /min-height:36px/, "작은 버튼은 36px");
 assert.match(rule(css, ".button[data-variant][data-size=small]::before"), /inset:-4px 0/, "작은 버튼도 누르는 자리는 44px(위아래 4px씩)");
 const variants = [...new Set([...css.matchAll(/\.button\[data-variant=(\w+)\]/g)].map(match => match[1]))];
-assert.deepEqual(variants.sort(), ["danger", "primary", "secondary", "text"], "버튼 종류는 넷뿐이다");
-assert.doesNotMatch(css, /border-radius:\s*(?!8px)\d/, "모서리는 8px 하나 — 알약형(999px)은 칩·선택지에만");
+assert.deepEqual(variants.sort(), ["danger", "dangerOutline", "primary", "secondary", "soft", "text"], "버튼 종류는 넷 + 설정 화면 둘(soft · dangerOutline)뿐이다");
+const large = rule(css, ".button[data-variant][data-size=large]");
+assert.match(large, /height:48px; min-height:48px;[^}]*border-radius:12px;/, "설정 목록 맨 아래 단추(large)는 48px r12");
+assert.doesNotMatch(css.replace(large, ""), /border-radius:\s*(?!8px)\d/, "모서리는 8px 하나(large 48 만 12px) — 알약형(999px)은 칩·선택지에만");
+assert.match(rule(css, ".button[data-variant][data-size=compact], .button[data-variant][data-size=adaptive]"), /height:32px; min-height:32px; padding:6px 10px;[^}]*font-size:\.875rem; font-weight:400;/, "설정 행 카드 단추는 32px · 14px/400");
+assert.match(rule(css, ".button[data-variant][data-size=mini]"), /height:28px; min-height:28px;/, "작은 안내 띠 단추는 28px");
 assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i, "버튼 색을 하드코딩했다 — --app-* 토큰만 쓴다");
 for (const [, value] of css.matchAll(/(?:^|[\s;{])(?:color|background|border-color|outline)\s*:\s*([^;}]+)/g)) {
   assert.match(value.trim(), /^(?:transparent|(?:\d+px solid )?var\(--app-[a-z-]+\))$/, `버튼 색이 --app-* 토큰이 아니다: ${value.trim()}`);
 }
-for (const media of css.match(/@media[^{]*/g) ?? []) assert.match(media, /prefers-reduced-motion/, `PC·모바일 모양이 갈린다 — 버튼은 한 규격: ${media}`);
+for (const media of css.match(/@media[^{]*/g) ?? []) assert.match(media, /prefers-reduced-motion|pointer:coarse|max-width:900px/, `PC·모바일 모양이 갈린다 — 버튼은 한 규격: ${media}`);
+/* 휴대폰 폭에서 바뀌는 것은 adaptive 하나뿐(설정 흰 띠 항목 40px) */
+const phone = css.slice(css.indexOf("@media (max-width:900px)"), css.indexOf("}", css.indexOf("@media (max-width:900px)")) + 1);
+assert.match(phone, /^@media \(max-width:900px\) \{\s*\.button\[data-variant\]\[data-size=adaptive\] \{ height:40px;/, "휴대폰 폭 규칙은 adaptive 크기만 바꾼다");
 assert.match(rule(css, ".button[data-variant][data-size]:focus-visible"), /outline:3px solid var\(--app-focus-ring\); outline-offset:2px;/, "포커스 표시 하나(3px)");
 assert.match(css, /\.button\[data-variant\]:disabled, \.button\[data-variant\]\[aria-disabled=true\] \{ opacity:\.5;/, "막힘 상태");
 assert.match(css, /\.button \{ composes: tokens from "\.\/workspace-theme\.module\.css"; \}/, "버튼이 토큰을 들고 다니지 않는다 — 테마 밖(계정·창·첫 로딩)에서 색이 빠진다");
 
 const component = read("components/app-button.tsx");
-assert.match(component, /export type AppButtonVariant = "primary" \| "secondary" \| "text" \| "danger";/);
-assert.match(component, /export type AppButtonSize = "default" \| "small";/);
+assert.match(component, /export type AppButtonVariant = "primary" \| "secondary" \| "text" \| "danger" \| "soft" \| "dangerOutline";/);
+assert.match(component, /export type AppButtonSize = "default" \| "small" \| "compact" \| "mini" \| "adaptive" \| "large";/);
 assert.match(component, /<LoaderCircle className=\{styles\.spinner\} size=\{16\} aria-hidden="true" \/>/, "로딩은 도는 LoaderCircle");
 assert.match(component, /disabled=\{disabled \|\| loading\} aria-busy=\{loading \|\| undefined\}/, "로딩 중에는 누르지 못하고 aria-busy");
 assert.match(component, /type = "button"/, "버튼 기본 type 은 button(폼 안에서 뜻밖에 제출하지 않게)");
@@ -89,6 +98,7 @@ const users = [
   "app/plan/workspace/LaunchWorkspace.tsx", "app/plan/workspace/MarketingKit.tsx", "app/plan/workspace/OperatingAnalysisPanel.tsx",
   "app/plan/workspace/OperatingWorkspace.tsx", "app/plan/workspace/WorkspaceContent.tsx", "components/account-auth-form.tsx",
   "components/confirm-dialog.tsx", "components/homepage-source-update.tsx", "components/landing-image-crop.tsx", "components/next-services.tsx",
+  "app/plan/me/AccountActions.tsx", "app/plan/settings/SettingsIndex.tsx", "app/plan/settings/preferences/Preferences.tsx",
 ];
 for (const path of users) {
   const source = read(path);
@@ -102,7 +112,8 @@ assert.match(read("app/plan/proposal/page.tsx"), /<AppButton variant="primary" s
 assert.match(read("app/plan/homepage/HomepageScreen.tsx"), /<AppButton type="button" variant="primary" className=\{styles\.cta\}/, "홈페이지 막힘 화면 단추");
 assert.match(read("app/plan/MarketEvidencePanel.tsx"), /<AppButton variant="primary" size="small" loading=\{busy\}/, "시장자료 찾기(목록 안 작은 동작)");
 assert.match(read("components/confirm-dialog.tsx"), /variant=\{options\.danger \? "danger" : "primary"\}/, "확인창 — 되돌릴 수 없는 일은 위험 버튼");
-assert.match(read("app/plan/me/page.tsx"), /<AppButton\s+type="button"\s+variant="danger"\s+className=\{styles\.dangerBtn\}/, "회원 탈퇴 최종 단추는 위험 버튼");
+assert.match(read("app/plan/me/AccountActions.tsx"), /<AppButton\s+type="button"\s+variant="danger"\s+size=\{size\}\s+className=\{styles\.dangerBtn\}/, "회원 탈퇴 최종 단추는 위험 버튼");
+assert.match(read("app/plan/me/AccountActions.tsx"), /variant="dangerOutline" size=\{size\} className=\{styles\.dangerOpen\}[\s\S]{0,160}?탈퇴 진행하기/, "탈퇴로 들어가는 첫 단추는 빨간 테두리(마지막 확인만 위험 버튼)");
 
 // 3) 예전 버튼 클래스 — 자리만 남는다
 const VISUAL = /(?:^|[\s;{])(?:min-height|height|padding(?:-[a-z]+)?|background(?:-color)?|color|font(?:-size|-weight)?|border(?:-radius|-color)?|box-shadow|filter|line-height)\s*:/;
@@ -119,9 +130,10 @@ const placements: [string, string[]][] = [
   ["app/plan/proposal/proposal.module.css", ["primary"]],
   ["app/plan/homepage/page.module.css", ["cta", "ctaSecondary", "headerPrimary", "troubleLink"]],
   ["app/plan/pay/PlanCheckout.module.css", ["primary", "back", "retry", "payBarButton", "nav", "statusAction"]],
-  ["app/plan/me/PlanMe.module.css", ["logout", "cardAction", "emptyAction", "refundBtn", "refundSubmit", "refundCancel", "dangerBtn"]],
+  ["app/plan/me/PlanMe.module.css", ["logout", "cardAction", "emptyAction", "refundBtn", "refundSubmit", "refundCancel", "dangerBtn", "dangerOpen", "open", "copy"]],
   ["app/plan/inquiries/page.module.css", ["emptyLink", "emptyRefresh", "retry"]],
-  ["app/account/support/support.module.css", ["primary", "secondary"]],
+  ["app/account/support/support.module.css", ["primary", "secondary", "iconButton", "faqLink"]],
+  ["app/plan/settings/settings.module.css", ["business"]],
   ["app/plan/studio/Studio.module.css", ["relogin"]],
   ["components/account-auth-form.module.css", ["primary"]],
   ["components/next-services.module.css", ["cta"]],
