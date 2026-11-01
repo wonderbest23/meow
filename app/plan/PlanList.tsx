@@ -178,7 +178,7 @@ export default function PlanList() {
     {error && plans.length > 0 && <p role="alert" className={styles.error}>{error} <button type="button" className={styles.inlineRetry} onClick={() => retry.current()}>다시 시도</button></p>}
   </div>;
 
-  return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active={listOnly ? "plans" : "new"} backHref="/" home>
+  return <main className={frame.page} data-plan-view="plans" data-list-only={listOnly || undefined}><BusinessAppChrome title="내 사업" active={listOnly ? "plans" : "new"} backHref="/" home>
     <Suspense fallback={null}><ParamsWatcher onChange={onParams} /></Suspense>
     <div className={home.scroll}>
       {!listOnly && <section className={home.hero} aria-labelledby="plan-home-greeting">
@@ -187,16 +187,23 @@ export default function PlanList() {
         <Composer />
       </section>}
       <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">
-        {listOnly && <h1 className={home.listTitle}>내 사업</h1>}
+        {/* 사업 카드만 보는 화면 — 제목(휴대폰은 lovable Projects 탭처럼 30/600 + 오른쪽 44 원 검색 단추) */}
+        {listOnly && <div className={home.listHead}>
+          <h1 className={home.listTitle}>내 사업</h1>
+          <button type="button" className={home.headCircle} aria-label="사업 이름으로 찾기" aria-pressed={filter === "search"} onClick={() => { setFilter("search"); setSearchFocus(n => n + 1); }}><Search size={20} aria-hidden="true" /></button>
+        </div>}
         <div className={home.filterRow}>
           <div className={home.filters} role="group" aria-label="목록 보기">
             {FILTERS.map(([key, label]) => <button key={key} type="button" className={home.filterPill} aria-pressed={filter === key} onClick={() => { setFilter(key); if (key === "search") setSearchFocus(n => n + 1); }}>{key === "search" && <Search size={16} aria-hidden="true" />}{label}</button>)}
+            {/* 검색칸 — lovable 처럼 필터 막대 안에 펼친다 */}
+            {filter === "search" && <input ref={searchInput} type="search" className={home.search} aria-label="사업 이름으로 찾기" placeholder="사업 이름으로 찾기" value={query} onChange={event => setQuery(event.target.value)} />}
           </div>
           {!listOnly && <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={home.browse}>전체 둘러보기<ArrowRight size={16} aria-hidden="true" /></Link>}
         </div>
-        {filter === "search" && <TextField ref={searchInput} type="search" className={home.search} aria-label="사업 이름으로 찾기" placeholder="사업 이름으로 찾기" value={query} onChange={event => setQuery(event.target.value)} />}
         {list}
       </section>
+      {/* 휴대폰 '내 사업' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
+      {listOnly && <Link href="/plan/chat?new=1" className={home.newFloat}><Plus size={20} aria-hidden="true" />새 사업</Link>}
     </div>
   </BusinessAppChrome></main>;
 }

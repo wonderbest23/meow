@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, BookOpen, ChevronRight, CircleHelp, Contrast, CreditCard, Inbox, LayoutGrid, LogIn, Settings, User, UserPlus } from "lucide-react";
+import { Bell, BookOpen, Check, ChevronRight, CircleHelp, Contrast, CreditCard, Inbox, LayoutGrid, LogIn, Monitor, Moon, Settings, Sun, User, UserPlus } from "lucide-react";
+import { useThemePreference } from "../../components/app-theme";
+import { THEME_OPTIONS } from "../../lib/client/app-theme";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import { accountInitial, accountName, type Account } from "./use-account";
 import styles from "./ProfileMenu.module.css";
@@ -25,6 +27,7 @@ export default function ProfileMenu({ open, onClose, account, unanswered, anchor
   const pathname = usePathname() || "/plan";
   const ref = useDialogFocus<HTMLDivElement>(open, { onEscape: onClose });
   const [display, setDisplay] = useState(false);
+  const [themePref, setThemePref] = useThemePreference();
   if (!open) return null;
   const signedIn = account?.authenticated === true;
   const name = accountName(account);
@@ -59,9 +62,14 @@ export default function ProfileMenu({ open, onClose, account, unanswered, anchor
         </>}
         {row("/account/support", <CircleHelp aria-hidden="true" />, "고객센터", null, true)}
         {row("/plan/info", <BookOpen aria-hidden="true" />, "이용 안내", null, true)}
-        {/* 화면 설정 — 지금은 밝은 화면 하나라 바꿀 것이 없다. 무엇이 정해져 있는지만 펼쳐 알려 준다 */}
-        <button type="button" className={styles.row} aria-expanded={display} aria-controls="profile-display-note" onClick={() => setDisplay(value => !value)}><Contrast aria-hidden="true" /><span className={styles.label}>화면 설정</span><ChevronRight className={styles.chev} data-open={display || undefined} aria-hidden="true" /></button>
-        {display && <p id="profile-display-note" className={styles.note}>밝은 화면으로 보여 드려요. 글자 크기는 기기·브라우저의 글자 크기 설정을 따라요.</p>}
+        {/* 화면 설정 — 시스템 / 라이트 / 다크(lovable 과 같은 세 가지). 이 기기에 저장되고 기본은 라이트 */}
+        <button type="button" className={styles.row} aria-expanded={display} aria-controls="profile-display-options" onClick={() => setDisplay(value => !value)}><Contrast aria-hidden="true" /><span className={styles.label}>화면 설정</span><ChevronRight className={styles.chev} data-open={display || undefined} aria-hidden="true" /></button>
+        {display && <div id="profile-display-options" className={styles.themeGroup} role="radiogroup" aria-label="화면 테마">
+          {THEME_OPTIONS.map(([value, label]) => <button key={value} type="button" role="radio" aria-checked={themePref === value} className={`${styles.row} ${styles.themeRow}`} onClick={() => setThemePref(value)}>
+            {value === "system" ? <Monitor aria-hidden="true" /> : value === "light" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
+            <span className={styles.label}>{label}</span>{themePref === value && <Check className={styles.check} aria-hidden="true" />}
+          </button>)}
+        </div>}
       </nav>
     </div>
   </>;

@@ -570,7 +570,7 @@
   color: var(--app-body);
   background: transparent;
 }
-.railBtn svg { color: #8181a5; }
+.railBtn svg { color: var(--app-muted); }
 .railBtn:hover {
   background: var(--app-raised);
   color: var(--app-text);
@@ -579,7 +579,7 @@
   background: color-mix(in srgb, var(--blue, var(--app-primary)) 10%, var(--app-surface));
   color: var(--blue, var(--app-accent));
 }
-.railBtn.on svg { color: var(--blue, #3272db); }
+.railBtn.on svg { color: var(--app-primary); }
 .signIn {
   background: var(--app-raised);
   color: var(--app-text);
@@ -599,7 +599,7 @@
   border-radius: 50%;
   color: var(--app-muted);
   font-size: .75rem;
-  box-shadow: 0 2px 8px rgba(28, 29, 33, 0.1);
+  box-shadow: 0 2px 8px rgb(0 0 0 / .1);
 }
 .railToggleOff {
   border-radius: 0 14px 14px 0;
