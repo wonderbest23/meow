@@ -17,7 +17,7 @@
 .item:hover { background:color-mix(in srgb, var(--app-text) 5%, transparent); color:var(--app-text); }
 .item[aria-current=page] { background:var(--app-nav-selected); color:var(--app-text); }
 .item[aria-current=page] > svg { color:var(--app-text); }
-.ava { display:inline-grid; flex:none; place-items:center; width:20px; height:20px; border-radius:6px; background:var(--app-primary); color:var(--app-surface); font-size:.6875rem; font-weight:600; line-height:1; }
+.ava { display:inline-grid; flex:none; place-items:center; width:20px; height:20px; border-radius:6px; background:var(--app-primary); color:var(--app-on-primary); font-size:.6875rem; font-weight:600; line-height:1; }
 .none { margin:8px; color:var(--app-muted); font-size:.875rem; line-height:1.5; }
 .menu :is(a, input):focus-visible { outline:2px solid var(--app-primary); outline-offset:-2px; }
 @media (pointer:coarse) { .item, .back { min-height:44px; height:auto; } }

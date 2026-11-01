@@ -47,7 +47,7 @@
 
 /* 20px 글자 아바타 r6 */
 .ava { display:inline-grid; flex:none; place-items:center; width:20px; height:20px; border-radius:6px; font-size:.6875rem; font-weight:600; line-height:1; }
-.ava[data-tone=primary] { background:var(--app-primary); color:var(--app-surface); }
+.ava[data-tone=primary] { background:var(--app-primary); color:var(--app-on-primary); }
 .ava[data-tone=soft] { background:var(--app-selected); color:var(--app-selected-text); }
 
 /* 토글 46×28 — 켜면 주 색, 동그라미 22 */

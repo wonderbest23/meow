@@ -70,9 +70,9 @@
 .filterPill[aria-pressed=true] { background:rgb(255 255 255 / .8); box-shadow:inset 0 1px 0 rgb(0 0 0 / .08), inset 0 -1px 0 rgb(0 0 0 / .16), inset 0 0 0 1px rgb(0 0 0 / .16), inset 0 1px 0 #fff, 0 2px 2px -1px rgb(0 0 0 / .04), 0 4px 4px -2px rgb(0 0 0 / .02); color:var(--app-text); }
 :global(html[data-app-theme="dark"]) .filterPill[aria-pressed=true] { background:rgb(119 119 113 / .16); box-shadow:inset 0 1px 0 rgb(255 255 255 / .16), inset 0 -1px 0 rgb(255 255 255 / .04), inset 0 0 0 1px rgb(255 255 255 / .16), 0 2px 2px -1px rgb(0 0 0 / .12), 0 4px 4px -2px rgb(0 0 0 / .12); }
 /* 검색칸 — 막대 안에 펼친다(32, 안쪽 0 12 0 8, 14px) */
-.filters .search { flex:none; width:220px; height:32px; margin:0; padding:0 12px 0 8px; border:0; border-radius:999px; background:transparent; color:var(--app-text); font:inherit; font-size:.875rem; line-height:21px; outline:none; }
-.filters .search::placeholder { color:var(--app-muted); }
-.filters .search:focus-visible { box-shadow:inset 0 0 0 2px var(--app-focus-ring); }
+.filters .search[data-app-field][data-app-field][data-app-field] { flex:none; width:220px; height:32px; margin:0; padding:0 12px 0 8px; border:0; border-radius:999px; background:transparent; color:var(--app-text); font:inherit; font-size:.875rem; line-height:21px; outline:none; }
+.filters .search[data-app-field]::placeholder { color:var(--app-muted); }
+.filters .search[data-app-field]:focus-visible { box-shadow:inset 0 0 0 2px var(--app-focus-ring); }
 /* 전체 둘러보기 32 r8 안쪽 6 10, 14/400 */
 .browse { display:inline-flex; align-items:center; gap:4px; flex:none; height:32px; padding:6px 10px; border-radius:8px; color:var(--app-text); font-size:.875rem; line-height:21px; text-decoration:none; white-space:nowrap; }
 .browse svg { width:16px; height:16px; }
@@ -139,7 +139,7 @@
   .grid.grid { grid-template-columns:minmax(0, 1fr); gap:20px; }
   .filterPill { height:36px; }
   .filters { height:44px; }
-  .filters .search { width:160px; height:36px; font-size:max(16px, 1rem); }
+  .filters .search[data-app-field][data-app-field][data-app-field] { width:160px; height:36px; font-size:max(16px, 1rem); }
 
   /*
    * '내 사업' 목록(?view=all) — lovable Projects 탭(dashboard-mobile-*): 제목 30/600/45(16,16) · 오른쪽 44 원 검색 단추,

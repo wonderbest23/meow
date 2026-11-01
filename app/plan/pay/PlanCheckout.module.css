@@ -82,7 +82,7 @@
   line-height: 1.7;
   color: var(--app-warning);
   background: var(--app-warning-bg);
-  border: 1px solid #f3d9a4;
+  border: 1px solid color-mix(in srgb, var(--app-warning) 30%, transparent);
   border-radius: 11px;
   padding: 13px;
 }
@@ -119,24 +119,24 @@
 
 /* 결제 전 필수 확인: 제공 시점·동의·면책(계좌이체 결제 화면과 같은 항목) */
 .terms { margin: 4px 0 18px; text-align: left; display: grid; gap: 10px; }
-.supply { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--surface-muted, #f5f7fa); color: var(--text-body, #333d4b); font-size: .8125rem; line-height: 1.6; }
+.supply { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--surface-muted, var(--app-raised)); color: var(--text-body, var(--app-body)); font-size: .8125rem; line-height: 1.6; }
 .supply strong { display: block; margin-bottom: 2px; font-size: .75rem; color: var(--text-strong, var(--app-text)); }
-.agreeAll, .agreeList label { display: flex; gap: 10px; align-items: flex-start; font-size: .8125rem; line-height: 1.55; color: var(--text-body, #333d4b); cursor: pointer; }
+.agreeAll, .agreeList label { display: flex; gap: 10px; align-items: flex-start; font-size: .8125rem; line-height: 1.55; color: var(--text-body, var(--app-body)); cursor: pointer; }
 .agreeAll { padding: 12px 14px; border: 1px solid var(--border-soft, var(--app-line)); border-radius: 10px; }
 .agreeAll strong, .noRefund strong { display: block; color: var(--text-strong, var(--app-text)); font-weight: 700; }
-.agreeAll small, .noRefund small { display: block; margin-top: 2px; font-size: .75rem; color: var(--text-muted, #6b7684); }
+.agreeAll small, .noRefund small { display: block; margin-top: 2px; font-size: .75rem; color: var(--text-muted, var(--app-muted)); }
 .agreeList { display: grid; gap: 9px; padding: 0 4px; }
 .agreeList input, .agreeAll input { width: 18px; height: 18px; margin-top: 1px; flex: none; accent-color: var(--blue, var(--app-primary)); }
 .agreeList a, .disclaimer a { color: var(--blue, var(--app-primary)); text-decoration: underline; text-underline-offset: 2px; }
-.noRefund { padding: 10px 12px; border-radius: 10px; background: #fff8ec; }
-.disclaimer { margin: 0; font-size: .75rem; line-height: 1.6; color: var(--text-muted, #6b7684); }
-.help { margin: 8px 0 0; font-size: .75rem; color: var(--text-muted, #6b7684); }
+.noRefund { padding: 10px 12px; border-radius: 10px; background: var(--app-warning-bg); }
+.disclaimer { margin: 0; font-size: .75rem; line-height: 1.6; color: var(--text-muted, var(--app-muted)); }
+.help { margin: 8px 0 0; font-size: .75rem; color: var(--text-muted, var(--app-muted)); }
 
 /* 출시 기념가 표시 — 할인율·종전가 없이 지금 가격이 실제 판매가임을 알린다 */
 .launchTag { margin: 0 0 10px; text-align: center; }
 /* 계획서 결제 화면에서 묶음으로 넘어가는 링크 */
-.upsell { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap; margin-top: 8px; font-size: .875rem; font-weight: 700; color: var(--app-primary, #4a3aff); text-decoration: none; }
-.upsell small { margin-left: 4px; font-weight: 500; color: var(--app-muted, #6b7280); }
+.upsell { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap; margin-top: 8px; font-size: .875rem; font-weight: 700; color: var(--app-primary-text); text-decoration: none; }
+.upsell small { margin-left: 4px; font-weight: 500; color: var(--app-muted); }
 
 /* 결제 안내 받을 휴대폰(선택) */
 .phone { display: grid; gap: 6px; }
@@ -157,7 +157,7 @@
     min-height: calc(100svh - 68px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     place-items: center stretch;
     padding: 24px 20px 140px;
-    background: var(--surface, #fff);
+    background: var(--surface, var(--app-surface));
   }
   .card {
     max-width: none;
@@ -180,11 +180,11 @@
 
 /* ── 아래 고정 결제 줄(네이버페이처럼) — 동의 줄 수·가격이 적힌 결제 단추가 화면 아래에 늘 보인다 ── */
 .page:has(.payBar) { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
-.payBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--app-line); background: #fff; box-shadow: 0 -6px 20px rgba(20, 32, 64, .06); }
+.payBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--app-line); background: var(--app-surface); box-shadow: 0 -6px 20px rgba(20, 32, 64, .06); }
 /* PC 에서 왼쪽 메뉴(208px)가 보이면 본문 쪽에만 */
 @media (min-width: 901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .payBar { left: 208px; } }
 .payBarInner { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 920px; margin: 0 auto; }
-.payBarNote { margin: 0; color: var(--text-muted, #6b7684); font-size: .875rem; line-height: 1.5; }
+.payBarNote { margin: 0; color: var(--text-muted, var(--app-muted)); font-size: .875rem; line-height: 1.5; }
 .payBarButton { flex: 0 1 380px; }
 @media (max-width: 640px) {
   .payBarInner { flex-direction: column; align-items: stretch; gap: 8px; }
@@ -193,10 +193,10 @@
 }
 /* 동의 전에 결제를 누르면 데려가는 곳 */
 .consentAnchor { scroll-margin-top: 96px; }
-.nudge { margin: 0 0 4px; padding: 10px 12px; border-radius: 10px; background: #fff4f4; color: var(--app-danger); font-size: .8125rem; font-weight: 700; }
+.nudge { margin: 0 0 4px; padding: 10px 12px; border-radius: 10px; background: var(--app-danger-bg); color: var(--app-danger); font-size: .8125rem; font-weight: 700; }
 
 /* 결제를 시작하지 못한 이유 — 아래 고정 결제 줄 안, 단추 바로 위 */
-.payBarError { max-width: 920px; margin: 0 auto 8px; color: var(--app-danger, #d22030); font-size: .8125rem; font-weight: 600; line-height: 1.5; text-align: center; }
+.payBarError { max-width: 920px; margin: 0 auto 8px; color: var(--app-danger); font-size: .8125rem; font-weight: 600; line-height: 1.5; text-align: center; }
 /* 결제를 아직 열지 않았을 때 붙는 고객센터 길 */
 .payBarError a,
 .notice a { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }

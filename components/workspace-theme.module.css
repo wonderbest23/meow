@@ -42,6 +42,11 @@
   --app-pop-shadow: 0 0 0 1px var(--app-line), 0 25px 50px -12px color-mix(in srgb, var(--app-text) 18%, transparent);
   --app-menu-shadow: 0 0 0 1px var(--app-line), 0 16px 32px -12px color-mix(in srgb, var(--app-text) 22%, transparent);
   --app-scrollbar: #bcc7d4;
+  /* 위험 단추 채움(흰 글자) — 다크에서 --app-danger 는 밝은 글자색이라 채움을 따로 둔다 */
+  --app-danger-fill: var(--app-danger);
+  /* 주 색으로 쓰는 글자(링크·글자 단추) — 다크에서는 채움 파랑이 어두운 바탕에 묻혀 lovable fg-accent 로 */
+  --app-primary-text: var(--app-primary);
+  --app-danger-fill-hover: var(--app-danger-hover);
   --surface: var(--app-surface);
   --surface-2: var(--app-raised);
   --surface-soft: var(--app-raised);
@@ -114,6 +119,9 @@
   --app-pop-shadow: 0 0 0 1px rgb(0 0 0 / .08), 0 25px 50px -12px rgb(0 0 0 / .25);
   --app-menu-shadow: 0 0 0 1px rgb(0 0 0 / .08), 0 16px 32px -12px rgb(0 0 0 / .2);
   --app-scrollbar: #c4c4c2;
+  --app-danger-fill: #e12429;
+  --app-danger-fill-hover: #c41d22;
+  --app-primary-text: var(--app-accent);
   --blue-dark: #123ec5;
   color: var(--app-text);
 }
@@ -153,6 +161,12 @@
   --app-pop-shadow: 0 0 0 1px rgb(0 0 0 / .88), 0 25px 50px -12px rgb(0 0 0 / .25);
   --app-menu-shadow: 0 0 0 1px rgb(119 119 113 / .32), 0 16px 32px -12px rgb(0 0 0 / .6);
   --app-scrollbar: #4a4a48;
+  --app-danger-fill: #e12429;
+  --app-danger-fill-hover: #c41d22;
+  --app-primary-text: var(--app-accent);
+  /* 다크 — 누를 때 흰 글자와 섞지 않고 어둡게(흰 글자 대비 유지) */
+  --app-primary-hover: color-mix(in srgb, var(--app-primary) 85%, #000);
+  --app-focus-ring: color-mix(in srgb, var(--app-primary) 60%, #fff);
   --blue-dark: #a9c2fa;
   color: var(--app-text);
   color-scheme: dark;

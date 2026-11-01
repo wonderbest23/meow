@@ -37,7 +37,7 @@ button.step[aria-disabled="true"]:hover { background:var(--app-fill); }
 .lockDialog div { display:flex; justify-content:flex-end; gap:8px; }
 .step i { display:grid; place-items:center; flex:none; width:18px; height:18px; border-radius:50%; border:1.5px solid var(--app-line-strong); font-style:normal; font-size:.625rem; font-weight:700; color:var(--app-muted); background:var(--app-surface); }
 .step i[data-state="done"] { border-color:var(--app-primary); background:var(--app-primary); color:var(--app-on-primary); }
-.step i[data-state="active"] { border-color:var(--app-primary); color:var(--app-primary); }
+.step i[data-state="active"] { border-color:var(--app-primary); color:var(--app-primary-text); }
 .step[aria-current="page"] i { border-color:var(--app-primary); background:var(--app-primary); color:var(--app-on-primary); }
 
 .parts { display:flex; flex-direction:column; gap:1px; margin:2px 0 4px 18px; padding:0; list-style:none; }

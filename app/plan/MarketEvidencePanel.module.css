@@ -1,7 +1,7 @@
 .panel { margin: 0 0 18px; padding: 14px 16px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface); }
 .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .title { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
-.title svg { flex: none; margin-top: 3px; color: #3272db; }
+.title svg { flex: none; margin-top: 3px; color: var(--app-primary-text); }
 .title strong { display: block; font-size: .875rem; }
 .title small { display: block; color: var(--app-muted); font-size: .78125rem; line-height: 1.5; }
 .actions { display: flex; gap: 8px; }

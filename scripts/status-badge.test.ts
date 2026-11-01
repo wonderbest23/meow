@@ -16,7 +16,8 @@ const rule = (source: string, selector: string) => {
   return source.slice(at, source.indexOf("}", at) + 1);
 };
 const base = rule(css, ".badge");
-for (const part of ["display:inline-flex", "gap:3px", "padding:3px 8px", "border-radius:999px", "font-size:.75rem", "font-weight:600"]) {
+/* lovable 구조 5단계 — 캡처의 카드 배지 수치(20 · r4 · 안쪽 2 6 · 12px/500) */
+for (const part of ["display:inline-flex", "gap:4px", "height:20px", "padding:2px 6px", "border-radius:4px", "font-size:.75rem", "font-weight:500"]) {
   assert.ok(base.includes(part), `배지 기본 규격에 '${part}' 가 없다`);
 }
 const tones = [...css.matchAll(/\.badge\[data-tone=(\w+)\]/g)].map(match => match[1]);

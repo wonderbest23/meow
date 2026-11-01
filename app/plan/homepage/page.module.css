@@ -252,7 +252,7 @@
   border: 1px solid var(--brand, var(--app-primary));
   border-radius: 14px;
   background: var(--brand, var(--app-primary));
-  color: #fff;
+  color: var(--app-on-primary);
   text-align: left;
   cursor: pointer;
 }
@@ -291,12 +291,12 @@
 @media (max-width: 340px) { .headerActions button:not(.headerPrimary) span { display: none; } }
 
 /* 공개한 뒤 다음 단계 — 계획서 화면의 '다음 단계' 버튼과 같은 자리(본문 끝), 같은 모양 */
-.nextCare { display:grid; gap:2px; margin:24px 0 8px; padding:16px 18px; border-radius:12px; background:var(--app-primary); color:#fff; text-decoration:none; }
+.nextCare { display:grid; gap:2px; margin:24px 0 8px; padding:16px 18px; border-radius:12px; background:var(--app-primary); color:var(--app-on-primary); text-decoration:none; }
 .nextCare span { font-size:.75rem; opacity:.85; }
 .nextCare strong { font-size:1rem; font-weight:700; }
 .nextTitle { display:inline-flex; align-items:center; gap:2px; }
 .nextCare small { font-size:.8125rem; opacity:.9; }
-.nextCare:hover { background:#1b5bb8; }
+.nextCare:hover { background:var(--app-primary-hover); }
 
 /* 다음 단계 두 개를 나란히, 글에 맞는 크기로(소유자 지적 2026-10-07: 띠만 넓고 글씨는 작았다) */
 .nextRow { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; max-width:760px; margin:24px 0 8px; }
@@ -305,7 +305,7 @@
 .nextRow .nextCare small, .nextRow .nextCard small { font-size:.875rem; line-height:1.5; }
 
 /* 처음 AI 채우기가 실패했을 때 한 줄 안내 + 다시 채우기 */
-.aiFillNotice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; padding: 10px 14px; border: 1px solid #f3d9a4; border-radius: 10px; background: #fff8e8; color: #6b4a0f; font-size: .84375rem; line-height: 1.5; }
+.aiFillNotice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; padding: 10px 14px; border: 1px solid color-mix(in srgb, var(--app-warning) 30%, transparent); border-radius: 10px; background: var(--app-warning-bg); color: var(--app-warning); font-size: .84375rem; line-height: 1.5; }
 .aiFillNotice span { flex: 1 1 220px; }
 
 /*
@@ -332,72 +332,72 @@
  * 칸 본문 자리(paneBody)는 내용만큼 늘어나 칸(.pane) 전체가 굴러갔다 — 그러면 주소 줄도 같이 밀려 올라간다.
  * 새 배치는 칸(위치를 가진 .pane) 크기에 그대로 붙이고, 안의 proScroll 만 굴린다.
  */
-.page[data-studio-pro] { position: absolute; inset: 0; height: auto; background: #fff; }
-.proCard { flex: 1; min-height: 0; display: flex; flex-direction: column; background: #fff; }
+.page[data-studio-pro] { position: absolute; inset: 0; height: auto; background: var(--app-surface); }
+.proCard { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--app-surface); }
 .proScroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; position: relative; }
 .proScroll > .aiFillNotice { margin: 12px 16px 0; }
-.proScroll > .nextRow { max-width: none; margin: 0; padding: 24px max(20px, calc((100% - 880px) / 2)) 40px; background: #f7f8fa; }
+.proScroll > .nextRow { max-width: none; margin: 0; padding: 24px max(20px, calc((100% - 880px) / 2)) 40px; background: var(--app-raised); }
 
 /* 공개 주소 줄 — 🌐 주소 · 공개 상태 · (빈칸) · 내 주소 연결 · 직접 고치기 · ↗ */
-.strip { height: 42px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; border-bottom: 1px solid #eef0f3; font-size: .78125rem; color: #4e5968; min-width: 0; }
-.stripUrl { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px; border-radius: 7px; background: #f3f5f7; min-width: 0; white-space: nowrap; overflow: hidden; }
-.stripUrl svg { flex: none; color: #8b95a1; }
+.strip { height: 42px; flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 14px; border-bottom: 1px solid var(--app-line); font-size: .78125rem; color: var(--app-body); min-width: 0; }
+.stripUrl { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px; border-radius: 7px; background: var(--app-raised); min-width: 0; white-space: nowrap; overflow: hidden; }
+.stripUrl svg { flex: none; color: var(--app-muted); }
 .stripUrl b { flex: none; color: var(--app-text); font-weight: 600; }
 .stripUrl span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .stripBadge { flex: none; }
 .stripGap { flex: 1; min-width: 4px; }
-.stripBtn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: #4e5968; font: inherit; font-size: .78125rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
-.stripBtn:hover:not(:disabled) { background: #f3f5f7; color: var(--app-text); }
+.stripBtn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: var(--app-body); font: inherit; font-size: .78125rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.stripBtn:hover:not(:disabled) { background: var(--app-raised); color: var(--app-text); }
 .stripBtn:disabled { opacity: .5; cursor: default; }
-.stripBtn.stripSoft { background: #e8f3ff; color: var(--app-primary); }
-.stripBtn.stripSoft:hover:not(:disabled) { background: #dbeafe; color: var(--app-primary); }
-.stripIcon { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 7px; color: #4e5968; }
-.stripIcon:hover { background: #f3f5f7; color: var(--app-text); }
-.stripBtn:focus-visible, .stripIcon:focus-visible, .pillHome:focus-visible, .device button:focus-visible { outline: 3px solid #8bb9ff; outline-offset: 2px; }
+.stripBtn.stripSoft { background: var(--app-selected); color: var(--app-primary-text); }
+.stripBtn.stripSoft:hover:not(:disabled) { background: var(--app-selected); color: var(--app-primary-text); }
+.stripIcon { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 7px; color: var(--app-body); }
+.stripIcon:hover { background: var(--app-raised); color: var(--app-text); }
+.stripBtn:focus-visible, .stripIcon:focus-visible, .pillHome:focus-visible, .device button:focus-visible { outline: 3px solid var(--app-focus-ring); outline-offset: 2px; }
 /* 좁은 PC(1024~1180px) — 주소 줄이 비좁으면 '직접 고치기' 글자만 남기고 주소는 말줄임 */
 .stripPathShort { display: none; }
 @media (max-width: 1180px) { .strip { gap: 6px; } .stripUrl b { display: none; } .stripUrl .stripPathFull { display: none; } .stripUrl .stripPathShort { display: inline; overflow: visible; } }
 
 /* 머리줄 가운데 알약 — ⟳ 첫 화면 /launch/… | 휴대폰·컴퓨터 */
-.pill { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; min-width: 0; overflow: hidden; height: 38px; padding: 0 2px; border: 1px solid #e3e7ec; border-radius: 999px; background: #fff; box-shadow: 0 1px 1px rgba(16, 24, 40, .03); color: var(--app-text); font-size: .8125rem; font-weight: 600; white-space: nowrap; }
+.pill { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; min-width: 0; overflow: hidden; height: 38px; padding: 0 2px; border: 1px solid var(--app-line); border-radius: 999px; background: var(--app-surface); box-shadow: 0 1px 1px rgba(16, 24, 40, .03); color: var(--app-text); font-size: .8125rem; font-weight: 600; white-space: nowrap; }
 .pillHome { flex: 0 1 auto; display: inline-flex; align-items: center; gap: 7px; min-width: 0; overflow: hidden; height: 32px; padding: 0 8px 0 10px; border: 0; border-radius: 999px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
-.pillHome:hover { background: #f3f5f7; }
-.pillHome svg { flex: none; color: #8b95a1; }
-.pillPath { min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; color: #8b95a1; font-weight: 500; }
-.pillRule { flex: none; width: 1px; height: 16px; margin: 0 2px; background: #e3e7ec; }
+.pillHome:hover { background: var(--app-raised); }
+.pillHome svg { flex: none; color: var(--app-muted); }
+.pillPath { min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; color: var(--app-muted); font-weight: 500; }
+.pillRule { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--app-line); }
 .device { display: inline-flex; flex: none; gap: 2px; }
-.device button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: #8b95a1; cursor: pointer; }
-.device button:hover { color: #4e5968; }
-.device button[aria-checked="true"] { background: #e8f3ff; color: var(--app-primary); }
+.device button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: var(--app-muted); cursor: pointer; }
+.device button:hover { color: var(--app-body); }
+.device button[aria-checked="true"] { background: var(--app-selected); color: var(--app-primary-text); }
 .pillLabel { flex: none; }
 /* 좁은 PC — 머리줄 가운데 자리가 좁으면 주소, 더 좁으면 '첫 화면' 글자를 빼고 ⟳ · 휴대폰/컴퓨터만 */
 @media (max-width: 1240px) { .pillPath { display: none; } }
-.stripDevice { display: none; flex: none; padding: 2px; border-radius: 999px; background: #f3f5f7; }
+.stripDevice { display: none; flex: none; padding: 2px; border-radius: 999px; background: var(--app-raised); }
 .stripDevice[data-always] { display: inline-flex; }
 /* 좁은 PC(1120px 이하) — 머리줄 가운데 자리가 휴대폰/컴퓨터 단추도 담지 못해 알약을 접고 주소 줄로 옮긴다 */
 @media (max-width: 1120px) { .pill { display: none; } .stripDevice { display: inline-flex; } }
 
 /* 킷 패널(전역 hk-*)을 카드 안에 펴기 — 테두리·둥근 모서리·높이 제한을 걷어 사이트가 카드 끝까지 */
 .page[data-studio-pro] :global(.hk) { gap: 0; }
-.page[data-studio-pro] :global(.hk-msg) { margin: 0; padding: 8px 16px; border-bottom: 1px solid #eef0f3; background: #f4f9ff; font-size: .8125rem; }
+.page[data-studio-pro] :global(.hk-msg) { margin: 0; padding: 8px 16px; border-bottom: 1px solid var(--app-line); background: var(--app-soft); font-size: .8125rem; }
 .page[data-studio-pro] :global(.hk-preview) { border: 0; border-radius: 0; box-shadow: none; }
-.page[data-studio-pro] :global(.hk-preview-body) { max-height: none; background: #fff; }
-.page[data-studio-pro] :global(.hk-preview-body.hk-preview-phone) { padding: 28px 16px 36px; background: #f2f4f6; }
+.page[data-studio-pro] :global(.hk-preview-body) { max-height: none; background: var(--app-surface); /* 손님 홈페이지 바탕 — 화면 테마와 무관 */ }
+.page[data-studio-pro] :global(.hk-preview-body.hk-preview-phone) { padding: 28px 16px 36px; background: var(--app-raised); }
 .page[data-studio-pro] :global(.hk-phone) { width: 390px; max-width: 100%; height: min(720px, calc(100dvh - 170px)); border-radius: 28px; }
-.page[data-studio-pro] :global(.hk-studio-settings) { display: grid; gap: 12px; padding: 28px max(20px, calc((100% - 880px) / 2)) 40px; border-top: 1px solid #eef0f3; background: #f7f8fa; }
+.page[data-studio-pro] :global(.hk-studio-settings) { display: grid; gap: 12px; padding: 28px max(20px, calc((100% - 880px) / 2)) 40px; border-top: 1px solid var(--app-line); background: var(--app-raised); }
 .page[data-studio-pro] :global(.hk-studio-settings-head) { margin: 0 0 2px; color: var(--app-text); font-size: .9375rem; font-weight: 700; }
-.page[data-studio-pro] :global(.hk-studio-settings .hk-tools) { border: 1px solid #e6e6ee; border-radius: 14px; background: #fff; }
-.page[data-studio-pro] :global(.hk-studio-settings .hk-top) { padding: 12px 14px; border: 1px solid #e6e6ee; border-radius: 14px; background: #fff; }
+.page[data-studio-pro] :global(.hk-studio-settings .hk-tools) { border: 1px solid var(--app-line); border-radius: 14px; background: var(--app-surface); }
+.page[data-studio-pro] :global(.hk-studio-settings .hk-top) { padding: 12px 14px; border: 1px solid var(--app-line); border-radius: 14px; background: var(--app-surface); }
 .page[data-studio-pro] :global(.hk-studio-settings .hk-url) { flex-wrap: wrap; }
 
 /* 결제 전 보기(새 배치) — 안내 상자 없이 사이트만. 휴대폰 모양이면 옅은 바탕 가운데 휴대폰 틀 */
-.proPreview { background: #fff; }
-.proPreview[data-view="mobile"] { padding: 28px 16px 36px; background: #f2f4f6; }
-.proPhone { width: 390px; max-width: 100%; height: min(720px, calc(100dvh - 170px)); margin: 0 auto; overflow-y: auto; overscroll-behavior: contain; border-radius: 28px; background: #fff; box-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .08); scrollbar-width: thin; }
+.proPreview { background: var(--app-surface); /* 손님 홈페이지 바탕 — 화면 테마와 무관 */ }
+.proPreview[data-view="mobile"] { padding: 28px 16px 36px; background: var(--app-raised); }
+.proPhone { width: 390px; max-width: 100%; height: min(720px, calc(100dvh - 170px)); margin: 0 auto; overflow-y: auto; overscroll-behavior: contain; border-radius: 28px; background: var(--app-surface); box-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .08); scrollbar-width: thin; }
 
 /* 대화로 고칠 곳 — 제안 카드가 떠 있는 동안 바뀔 글을 짚는다(컴퓨터 모양: 겉 테두리 + '◎ 바꿀 곳' 이름표, 휴대폰 틀: 글 테두리만) */
 .page :global(.hk-target) { position: absolute; z-index: 4; border: 2px solid var(--app-primary); border-radius: 9px; box-shadow: 0 0 0 4px rgba(49, 130, 246, .22); pointer-events: none; }
-.page :global(.hk-target-label) { position: absolute; left: -2px; top: -26px; display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 6px 6px 6px 0; background: var(--app-primary); color: #fff; font-size: .71875rem; font-weight: 650; white-space: nowrap; }
+.page :global(.hk-target-label) { position: absolute; left: -2px; top: -26px; display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 6px 6px 6px 0; background: var(--app-primary); color: var(--app-on-primary); font-size: .71875rem; font-weight: 650; white-space: nowrap; }
 .page :global(.hk-preview-phone [data-hk-pick]) { outline: 2px solid var(--app-primary); outline-offset: 3px; border-radius: 6px; }
 /* 휴대폰은 손가락 자리 44px(휴대폰 점검 2026-10-24) */
 

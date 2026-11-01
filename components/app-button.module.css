@@ -24,15 +24,15 @@
   .button[data-variant][data-size=mini]::before { inset:-8px 0; }
 }
 .button[data-variant] > svg { flex:none; }
-.button[data-variant=primary] { background:var(--app-primary); border-color:var(--app-primary); color:var(--app-surface); }
+.button[data-variant=primary] { background:var(--app-primary); border-color:var(--app-primary); color:var(--app-on-primary); }
 .button[data-variant=primary]:hover:not(:disabled) { background:var(--app-primary-hover); border-color:var(--app-primary-hover); }
 .button[data-variant=secondary] { background:var(--app-surface); border-color:var(--app-line-strong); color:var(--app-text); }
 .button[data-variant=secondary]:hover:not(:disabled) { background:var(--app-raised); }
-.button[data-variant=text] { background:transparent; border-color:transparent; color:var(--app-primary); }
+.button[data-variant=text] { background:transparent; border-color:transparent; color:var(--app-primary-text); }
 .button[data-variant=text][data-size] { padding-inline:8px; }
 .button[data-variant=text]:hover:not(:disabled) { background:var(--app-soft); }
-.button[data-variant=danger] { background:var(--app-danger); border-color:var(--app-danger); color:var(--app-surface); }
-.button[data-variant=danger]:hover:not(:disabled) { background:var(--app-danger-hover); border-color:var(--app-danger-hover); }
+.button[data-variant=danger] { background:var(--app-danger-fill); border-color:var(--app-danger-fill); color:var(--app-on-primary); }
+.button[data-variant=danger]:hover:not(:disabled) { background:var(--app-danger-fill-hover); border-color:var(--app-danger-fill-hover); }
 /* 회색 14% 채움(설정 행 카드의 기본 동작) · 빨간 테두리(되돌릴 수 없는 일로 들어가는 첫 단추 — 마지막 확인은 danger) */
 .button[data-variant=soft] { background:var(--app-fill); border-color:transparent; color:var(--app-text); }
 .button[data-variant=soft]:hover:not(:disabled) { background:var(--app-fill-hover); }

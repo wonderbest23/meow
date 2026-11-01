@@ -3,7 +3,8 @@
  * 기준은 개업 준비 목록의 상태 표시(PR #279). 색은 --app-* 토큰만 쓴다 — 글자 대비(흰·연회색 바탕 포함) 모두 4.5:1 이상.
  * 쓰는 쪽은 자리(여백·위치·최대 너비)만 정하고 글자 크기·굵기·안쪽 여백·색은 여기서만 정한다.
  */
-.badge { display:inline-flex; align-items:center; gap:3px; min-width:0; padding:3px 8px; border-radius:999px; font-size:.75rem; font-style:normal; font-weight:600; line-height:1.5; letter-spacing:0; white-space:nowrap; vertical-align:middle; }
+/* lovable 구조 5단계 — 캡처의 카드 배지(dashboard '게시됨'): 높이 20, r4, 안쪽 2 6, 12px/450(Pretendard 500), 1px 투명 테두리 */
+.badge { box-sizing:border-box; display:inline-flex; align-items:center; gap:4px; min-width:0; height:20px; padding:2px 6px; border:1px solid transparent; border-radius:4px; font-size:.75rem; font-style:normal; font-weight:500; line-height:14px; letter-spacing:0; white-space:nowrap; vertical-align:middle; }
 .badge[data-tone=success] { background:var(--app-success-bg); color:var(--app-success); }
 .badge[data-tone=info] { background:var(--app-selected); color:var(--app-selected-text); }
 .badge[data-tone=warning] { background:var(--app-warning-bg); color:var(--app-warning); }

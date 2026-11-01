@@ -45,6 +45,8 @@ import paneHeader from "../workspace/PaneHeaderActions.module.css";
 import { paneLinkCapture } from "../document/pane-link";
 import { closedForLaunch } from "../../../lib/launch-scope";
 import PublishedMenu from "./PublishedMenu";
+/* 홈페이지 도구(.hk-*)의 다크 테마 덮개 — 다크일 때만 켜진다 */
+import "./homepage-kit-dark.css";
 import { AppButton } from "../../../components/app-button";
 
 /* 운영에서는 홈페이지 AI 수정 주소가 아직 닫혀 있다(lib/launch-scope) — 닫혀 있으면 대화로 고치기 권유·단추를 보이지 않는다 */

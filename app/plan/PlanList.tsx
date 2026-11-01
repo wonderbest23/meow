@@ -196,7 +196,7 @@ export default function PlanList() {
           <div className={home.filters} role="group" aria-label="목록 보기">
             {FILTERS.map(([key, label]) => <button key={key} type="button" className={home.filterPill} aria-pressed={filter === key} onClick={() => { setFilter(key); if (key === "search") setSearchFocus(n => n + 1); }}>{key === "search" && <Search size={16} aria-hidden="true" />}{label}</button>)}
             {/* 검색칸 — lovable 처럼 필터 막대 안에 펼친다 */}
-            {filter === "search" && <input ref={searchInput} type="search" className={home.search} aria-label="사업 이름으로 찾기" placeholder="사업 이름으로 찾기" value={query} onChange={event => setQuery(event.target.value)} />}
+            {filter === "search" && <TextField ref={searchInput} type="search" className={home.search} aria-label="사업 이름으로 찾기" placeholder="사업 이름으로 찾기" value={query} onChange={event => setQuery(event.target.value)} />}
           </div>
           {!listOnly && <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={home.browse}>전체 둘러보기<ArrowRight size={16} aria-hidden="true" /></Link>}
         </div>
