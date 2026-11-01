@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useId, useLayoutEffect, useReducer, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
-import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, PencilLine, RefreshCw, Sparkles, Target, Undo2, X, MessageCircle } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, Mic, PencilLine, Plus, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
@@ -34,7 +34,10 @@ import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/dom
 import { LANDING_IDEA_PARAM, clearLandingIdea, readLandingIdea, stashLandingIdea, withoutLandingIdea } from "../../../lib/plan-builder/landing-idea";
 import { ENTRY_PARAM, isEntryMode, STUDIO_PATH, studioHref, type StudioTab } from "../../../lib/plan-builder/studio";
 import { homepageHref } from "../../../lib/plan-builder/journey";
-import { useStudioEditChapterList, useStudioEditPreviewChapters, useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
+import { useStudioCommand, useStudioEditChapterList, useStudioEditPreviewChapters, useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
+import { PopMenu, type PopMenuItem } from "../studio/PopMenu";
+import { useDictation } from "../../../components/use-dictation";
+import { newChatHref } from "../../../lib/plan-builder/studio";
 import { QueuedStudioRequests, StudioEditTurns } from "./intake-ui/StudioEditTurns";
 import { JourneyGuideTurn } from "./intake-ui/JourneyGuideTurn";
 import { GUIDE_PARAM, journeyGuide, journeyGuideContext, readJourneyGuide, type JourneyGuideCode } from "../../../lib/plan-builder/journey-guides";
@@ -154,42 +157,6 @@ function SuggestRow({ chips, onPick }: { chips: SuggestionChip[]; onPick: (chip:
     {chips.map(chip => <button key={chip.label} type="button" className={styles.suggestChip} title={chip.fill ?? chip.label} onClick={() => onPick(chip)}>{chip.label}</button>)}
   </div>;
 }
-/*
- * 작업실 PC: 입력창 왼쪽 아래 '고칠 곳 고르기' — 누르면 계획서의 장 목록이 열리고, 장을 고르면 입력창이 그 장 고치기로 열린다
- * (계획서 칸 장 머리의 '대화로 고치기'와 같은 요청). 예전엔 누르면 '오른쪽 계획서에서 … 누르세요' 안내 글만 떴다(r37 글 점검).
- * 키보드: 열면 첫 장에 초점, ↑↓·Home·End 로 옮기고 Enter 로 고른다. Esc · 바깥 누르기로 닫고 초점은 단추로 돌아온다.
- */
-function PickChapterMenu({ chapters, onPick }: { chapters: StudioComposeRequest[]; onPick: (request: StudioComposeRequest) => void }) {
-  const [open, setOpen] = useState(false);
-  const wrap = useRef<HTMLDivElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
-  const menuId = useId();
-  const items = () => [...(wrap.current?.querySelectorAll<HTMLElement>("[role=menuitem]") ?? [])];
-  useEffect(() => {
-    if (!open) return;
-    items()[0]?.focus({ preventScroll: true });
-    const close = (event: PointerEvent) => { if (!wrap.current?.contains(event.target as Node)) setOpen(false); };
-    document.addEventListener("pointerdown", close, true);
-    return () => document.removeEventListener("pointerdown", close, true);
-  }, [open]);
-  const onKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
-    const list = items();
-    const at = list.indexOf(document.activeElement as HTMLElement);
-    const move = (index: number) => { event.preventDefault(); list[(index + list.length) % list.length]?.focus(); };
-    if (event.key === "ArrowDown") move(at + 1);
-    else if (event.key === "ArrowUp") move(at - 1);
-    else if (event.key === "Home") move(0);
-    else if (event.key === "End") move(list.length - 1);
-    else if (event.key === "Escape" || event.key === "Tab") { event.preventDefault(); event.stopPropagation(); setOpen(false); button.current?.focus(); }
-  };
-  return <div ref={wrap} className={styles.pickWrap}>
-    <button ref={button} type="button" className={styles.composerAction} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined} onClick={() => setOpen(value => !value)}><Target size={14} aria-hidden="true" />고칠 곳 고르기</button>
-    {open && <div id={menuId} className={styles.pickMenu} role="menu" aria-label="고칠 장 고르기" onKeyDown={onKey}>
-      {chapters.map(request => <button key={`${request.label}:${request.sectionId ?? ""}`} type="button" role="menuitem" tabIndex={-1} onClick={() => { setOpen(false); onPick(request); }}>{sectionHint(request.label)}</button>)}
-    </div>}
-  </div>;
-}
-
 function readLastIntake(): { planId: string; signedIn: boolean } | null {
   try {
     const value = JSON.parse(window.localStorage.getItem(LAST_INTAKE_KEY) ?? "null");
@@ -1638,19 +1605,16 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   /* 입력칸 위 칩은 질문 이름만 — 질문 번호는 위 진행 줄이 말한다(r37 글 점검). 지난 답을 고칠 때만 '고치기'를 붙인다 */
   const questionTarget = pro && !studioRoute && questionComposer && question && plan ? draft.editingId ? `${question.label} 고치기` : question.label : "";
   /*
-   * 입력창 왼쪽 아래 작은 단추 — 계획서가 있으면 고칠 곳 고르기(장 목록), 그 밖에는 지금까지 답 보기.
+   * 입력 상자 아래 줄의 ＋(지금까지 답 보기) · 모드 알약(고칠 곳 고르기)이 있으면 대화 안의 '지금까지 답변 보기' 글 단추를 또 두지 않는다.
    * 질문 중에는 두지 않는다 — 오른쪽 칸이 지금까지 정한 내용을, 위 진행 줄이 질문 수를 이미 보여 준다(r37 글 점검).
    */
   const openSummary = () => { setView("summary"); setDeskSummary(true); };
   const pickable = pro && !editTarget && !!plan?.hasDocuments && editChatReady && editChapterList.length > 0 && (studioRoute === "chat" || studioRoute === "section");
   const composerSummary = pro && !!plan && !(questionComposer && !studioRoute && !plan.coreComplete) && !pickable && !!summaryToggle;
-  const composerAction = !pro || !plan ? null
-    : questionComposer && !studioRoute && !plan.coreComplete ? null
-    : pickable ? <PickChapterMenu chapters={editChapterList} onPick={request => { studioNav?.showTab?.("plan"); enterEditTarget(request); focusComposer(); }} />
-    : composerSummary ? <button type="button" className={styles.composerAction} aria-controls="intake-summary-panel" aria-expanded={view === "summary"} onClick={openSummary}><ListChecks size={14} aria-hidden="true" />지금까지 답 보기</button> : null;
   /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로. 이미 보낸 예시는 다시 권하지 않는다(r42) */
   const priceAnswer = plan?.intake.answers.price;
-  const suggestionChips: SuggestionChip[] = !pro || !studioComposer || editWorking ? []
+  /* 휴대폰 작업실도 같은 추천을 입력 상자 위 한 줄(가로로 밀어 보기)로 — lovable 구조 2단계(시안 MChat) */
+  const suggestionChips: SuggestionChip[] = !embedded || !studioComposer || editWorking ? []
     : homepageSuggest ? [{ label: "홈페이지를 대화로 고치기", pick: () => enterEditTarget({ target: "homepage", label: "홈페이지" }) }]
     : visibleComposerText(studioText) ? []
     : editTarget?.target === "homepage" ? HOMEPAGE_SUGGESTIONS
@@ -1668,6 +1632,40 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     focusComposer();
   };
   const dockQueue = pro && showComposer && (plan || newEntry);
+  /*
+   * ── lovable 구조 2단계: 작업실 입력 상자 아래 줄 — ＋(28/40 원) · 모드 알약('사업계획서 ▾') · 마이크 · 보내기(검정 원) ──
+   * ＋ 는 지금까지 답 보기 · 새 대화, 모드 알약은 말을 보낼 곳(대화 · 사업계획서 장 · 홈페이지) — 예전 '고칠 곳 고르기'·'지금까지 답 보기'와 같다.
+   * 마이크는 브라우저 음성 인식으로 들은 말을 입력칸에 잇는다(지원하지 않는 브라우저는 단추가 없다).
+   */
+  const appendToComposer = (text: string) => {
+    const input = composerInput.current;
+    if (!input || input.disabled || input.readOnly) return;
+    const next = `${input.value.trimEnd() ? `${input.value.trimEnd()} ` : ""}${text}`.slice(0, 1200);
+    /* 입력칸의 onChange 를 그대로 거치게(질문 답 · 고치기 글이 저마다 저장된다) */
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(input, next);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  };
+  const dictation = useDictation(appendToComposer);
+  useStudioCommand("chat-dictate", () => { if (dictation.supported && !dictation.listening) dictation.start(); else focusComposer(); }, embedded && !!(plan || newEntry) && showComposer);
+  useStudioCommand("chat-summary", () => { if (!plan) return; setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }, embedded && !!plan);
+  const plusItems: PopMenuItem[] = [
+    ...(plan && summaryToggle ? [{ key: "answers", label: view === "summary" ? "대화로 돌아가기" : "지금까지 답 보기", icon: <ListChecks />, onSelect: () => { if (view === "summary") setView("input"); else openSummary(); } }] : []),
+    { key: "new", label: "새 대화 시작", icon: <SquarePen />, href: newChatHref() },
+  ];
+  const homepageEditable = embedded && !!plan && loaded && !loginGate && !!studioNav?.editHandler?.("homepage") && studioNav?.editHandler?.("homepage")?.available?.() !== false;
+  const chapterModes = pro && !!plan?.hasDocuments && editChatReady && !editWorking ? editChapterList : [];
+  const modeLabel = editTarget ? (editTarget.target === "homepage" ? "홈페이지" : "사업계획서") : "대화";
+  const modeItems: PopMenuItem[] = [
+    { key: "chat", label: "대화로 묻기", current: !editTarget, onSelect: () => { if (editTarget) leaveEditTarget(!!visibleComposerText(studioText)); focusComposer(); } },
+    ...chapterModes.map(request => ({ key: `plan:${request.label}:${request.sectionId ?? ""}`, label: `사업계획서 · ${sectionHint(request.label)}`, current: editTarget?.target === "plan-section" && editTarget.label === request.label, onSelect: () => { studioNav?.showTab?.("plan"); enterEditTarget(request); focusComposer(); } })),
+    ...(homepageEditable && !editWorking ? [{ key: "homepage", label: "홈페이지 고치기", current: editTarget?.target === "homepage", onSelect: () => { studioNav?.showTab?.("homepage"); enterEditTarget({ target: "homepage", label: "홈페이지" }); focusComposer(); } }] : []),
+  ];
+  const modePill = studioComposer && modeItems.length > 1
+    ? <PopMenu placement="above" align="end" buttonClassName={styles.modePill} buttonLabel={`보낼 곳: ${modeLabel} — 바꾸기`} menuLabel="보낼 곳 고르기" groups={[{ key: "modes", items: modeItems }]} label={<><span>{modeLabel}</span><ChevronDown aria-hidden="true" /></>} />
+    : null;
+  const micButton = dictation.supported ? <button type="button" className={styles.composerRound} aria-label={dictation.listening ? "말로 적기 멈추기" : "말로 적기"} aria-pressed={dictation.listening} title={dictation.listening ? "듣고 있어요 · 누르면 멈춰요" : "말로 적기"} disabled={!loaded || loadFailed || ownerChanged || (!studioRoute && !!replyTurn)} onClick={dictation.toggle}><Mic aria-hidden="true" /></button> : null;
+  const plusMenu = <PopMenu placement="above" align="start" buttonClassName={styles.composerRound} buttonLabel="더 보기 — 지금까지 답 보기 · 새 대화" buttonTitle="더 보기" menuLabel="대화 더 보기" groups={[{ key: "more", items: plusItems }]} label={<Plus aria-hidden="true" />} />;
   /* 보내기 단추 — 예전 모양은 입력칸 오른쪽, PC 는 입력 카드 아래 줄 오른쪽 */
   const sendButton = <button type="submit" className={styles.sendButton} aria-label={studioRoute ? studioRoute === "queue" ? "기다리는 요청으로 보내기" : "보내기" : sendLabel} title={studioRoute ? "보내기" : sendLabel} disabled={studioRoute ? studioSendDisabled || !visibleComposerText(studioText) : !loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{!studioRoute && (busy && !answerQueueOpen || replyTurn) ? <LoaderCircle size={20} className={styles.spinner} /> : !studioRoute && askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>;
   return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined} data-studio-pro={pro || undefined} data-keyboard={keyboardOpen || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={embedded ? undefined : summaryToggle}>
@@ -1811,9 +1809,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
                 /* 휴대폰 업종 질문: Enter 는 줄바꿈 대신 찾기 — 자판을 내려 찾은 업종이 보이게 한다(찾기는 적는 동안 이미 돈다 · r37 휴대폰 점검) */
                 if (!studioRoute && question?.id === "industry" && event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229 && window.matchMedia("(pointer: coarse)").matches) { event.preventDefault(); event.currentTarget.blur(); return; }
                 if (composerEnterSends({ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode }, window.matchMedia("(pointer: coarse)").matches)) { event.preventDefault(); if (studioRoute) submitStudio(); else submitComposer(); } }} />
-              {!pro && sendButton}
+              {!embedded && sendButton}
             </div>
-            {pro && <div className={styles.composerBar}>{composerAction}{sendButton}</div>}
+            {embedded && <div className={styles.composerBar} data-studio-bar>{plusMenu}<span className={styles.composerGrow} />{modePill}{micButton}{sendButton}</div>}
           </form>
         </footer>}
       </InputPane>

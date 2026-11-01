@@ -51,7 +51,7 @@ function StudioEntryLink({ withActions }: { withActions: boolean }) {
  */
 export type ChromeMenu = { button: (className: string, size?: number) => ReactNode; open: () => void; isOpen: boolean };
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true, topBar, home = false }: {
+export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true, topBar, home = false, bare = false }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new" | "inquiries"; backHref?: string; showRail?: boolean;
   /** 화면 안에서 한 단계 되돌리기(예: 내 문의 상세 → 목록) — 있으면 머리말 뒤로 단추가 주소 이동 대신 이것을 부른다 */
   onBack?: () => void;
@@ -63,6 +63,8 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
   topBar?: (menu: ChromeMenu) => ReactNode;
   /** 로그인 뒤 첫 화면(/plan) — 머리줄 대신 휴대폰은 계정 알약 · 아바타(56px), PC 는 머리줄 없이 판 전체가 그라데이션 */
   home?: boolean;
+  /** 작업 화면(PC) — 본문 판을 그리지 않고 페이지색 위에 바로 놓는다. 둥근 판(r16)은 화면 안 미리보기 판이 맡는다(시안 PcStudio) */
+  bare?: boolean;
 }) {
   /* 작업실 칸 안이면 머리줄·서랍·왼쪽 메뉴는 작업실이 한 번만 그린다 — 여기서는 칸 단추 줄(actions)과 본문만 */
   const pane = useStudioPane();
@@ -127,7 +129,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
       {/* 서랍에서 장을 고르면 서랍을 닫고 그 장을 보여 준다 */}
       <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
     </aside>}
-    <div className={`${styles.appSurface} ${chrome.surface} ${home ? chrome.hero : ""}`} data-app-surface="" data-solo={showRail ? undefined : ""} data-tabbar={tabBar ? "" : undefined} inert={open || profile}>
+    <div className={`${styles.appSurface} ${chrome.surface} ${home ? chrome.hero : ""}`} data-app-surface="" data-solo={showRail ? undefined : ""} data-bare={bare || undefined} data-tabbar={tabBar ? "" : undefined} inert={open || profile}>
       {/* 휴대폰 첫 화면 머리 56px — 계정 알약(누르면 내 사업 메뉴 서랍) · 아바타(프로필 시트) */}
       {home && <header className={chrome.homeBar}>
         <button type="button" className={chrome.pill} aria-haspopup="dialog" aria-expanded={open} aria-label="내 사업 메뉴 열기" onClick={() => setOpen(true)}>
