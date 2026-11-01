@@ -29,7 +29,6 @@ import { askConfirm } from "../../components/confirm-dialog";
 import { useHomepageStatus } from "./use-homepage";
 import { AppButton } from "../../components/app-button";
 import { TextArea, TextField } from "../../components/app-field";
-import { accountName, useAccount } from "./use-account";
 import { loadAuthSession } from "../../lib/client/auth-session";
 import { PLAN_VIEW_ALL } from "./MobileTabBar";
 
@@ -90,7 +89,6 @@ export default function PlanList() {
   const [authChecked, setAuthChecked] = useState(false);
   useEffect(() => { let alive = true; loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}).finally(() => { if (alive) setAuthChecked(true); }); return () => { alive = false; }; }, []);
   /* 인사말의 이름 — 이메일 앞부분 */
-  const account = useAccount();
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
   const plans = allPlans;
   const samples = state?.plans.filter(p => isSamplePlan(p.id) && LISTED_SAMPLE_IDS.has(p.id)) ?? [];
@@ -183,7 +181,8 @@ export default function PlanList() {
     <div className={home.scroll}>
       {!listOnly && <section className={home.hero} aria-labelledby="plan-home-greeting">
         {state && <TodoPill plans={plans} />}
-        <h1 id="plan-home-greeting" className={home.greeting}>{accountName(account) ? `${accountName(account)}님, ` : ""}오늘은 어떤 사업을 시작해볼까요?</h1>
+        {/* 인사말에 이름을 붙이지 않는다 — 계정에 이름이 없어 이메일 앞부분(rena35200+review님)이 그대로 보였다(운영 점검 2026-11-02). 동그라미 머리글자는 그대로 */}
+        <h1 id="plan-home-greeting" className={home.greeting}>오늘은 어떤 사업을 시작해볼까요?</h1>
         <Composer />
       </section>}
       <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">
