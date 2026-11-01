@@ -32,12 +32,12 @@ import { homepageHref, journeyLabel, journeyNext, launchHref } from "../../../li
 import { readCoach } from "../../../lib/plan-builder/coach";
 import { NextServicesCard } from "../../../components/next-services";
 import frame from "../chat/page.module.css";
-import { Check, ExternalLink, Globe, Link2, Monitor, Pencil, Rocket, RotateCw, Save, Smartphone } from "lucide-react";
+import { ArrowUpToLine, Check, ExternalLink, Globe, Link2, MessageSquare, Monitor, Pencil, Rocket, RotateCw, Save, Smartphone } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { withRo } from "../../../lib/josa";
 import { useDialogFocus } from "../../../components/use-dialog-focus";
-import { useStudioDirty, useStudioHeaderActions, useStudioHeaderCenter, useStudioNav, useStudioPane, type StudioEditHandler } from "../studio/StudioContext";
+import { useStudioCommand, useStudioDirty, useStudioHeaderActions, useStudioHeaderCenter, useStudioNav, useStudioPane, type StudioEditHandler } from "../studio/StudioContext";
 import { nativePlatform } from "../../../lib/native-app";
 import { loadBrainwavePage } from "../../../components/brainwave-page";
 import { aiEditChanges, aiEditCostLine, aiEditErrorMessage, aiEditSummary, applyAiEditPatch, undoAiEditPatch } from "../../../lib/landing/ai-edit-proposal";
@@ -744,7 +744,8 @@ export function HomepageScreen() {
       </div>;
       const label = liveUpToDate ? "공개됨" : siteStatus === "published" ? "새 버전 공개" : siteStatus === "unpublished" ? "다시 공개" : "공개하기";
       return <div className={paneHeader.group}>
-        <AppButton type="button" variant="secondary" size="small" className={paneHeader.btn} aria-label={saveLabel} disabled={busy || !unsaved} data-done={!unsaved && action !== "saving" || undefined} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : unsaved ? <Save size={15} /> : <Check size={15} />}<span className={paneHeader.label}>{saveLabel}</span></AppButton>
+        {/* lovable 구조 2단계 — 저장은 미리보기 판 아래 떠 있는 도구 알약으로(위 막대 자리가 좁다). 예전 머리줄이면 여기 그대로 */}
+        {!nav?.toolbarTools && <AppButton type="button" variant="secondary" size="small" className={paneHeader.btn} aria-label={saveLabel} disabled={busy || !unsaved} data-done={!unsaved && action !== "saving" || undefined} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : unsaved ? <Save size={15} /> : <Check size={15} />}<span className={paneHeader.label}>{saveLabel}</span></AppButton>}
         {publishedMenu(paneHeader.btn) ?? <AppButton type="button" variant="primary" size="small" className={`${paneHeader.btn} ${paneHeader.primary}`} disabled={busy} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : <Globe size={15} aria-hidden />}<span>{label}</span></AppButton>}
       </div>;
     }
@@ -758,6 +759,22 @@ export function HomepageScreen() {
     </div>;
   }, [studioHeader, studioPro, editable, kitEditing, liveUpToDate, siteStatus, publishedPath, previewView, busy, action, unsaved, saveLabel]); // eslint-disable-line react-hooks/exhaustive-deps -- previewSwitch 는 previewView 로, publishedMenu 는 liveUpToDate·publishedPath·busy 로만 바뀐다
   useStudioHeaderActions(studioActions);
+  /*
+   * 휴대폰 아래 막대의 파란 '공개하기'(lovable 구조 2단계) — 위 머리줄 [공개하기]와 같다: 결제 전·예시면 결제 안내, 고친 게 없으면 알림, 아니면 공개.
+   */
+  useStudioCommand("homepage-publish", () => {
+    if (sample || !editable) { void payPromptRef.current(); return; }
+    if (liveUpToDate && siteStatus === "published") { void askConfirm({ title: "이미 공개했어요", message: "공개한 홈페이지가 지금 내용과 같아요.", confirmLabel: "확인", cancelLabel: null }); return; }
+    if (busy) return;
+    void publishRef.current();
+  }, embedded && phase === "ready" && !!draft);
+  /* 휴대폰 아래 막대 … 메뉴의 '홈페이지 저장' — 머리줄 · 도구 알약의 저장과 같다. 고친 게 없으면 알린다 */
+  useStudioCommand("homepage-save", () => {
+    if (!editable || sample) { void payPromptRef.current(); return; }
+    if (busy) return;
+    if (!unsaved) { void askConfirm({ title: "저장됨", message: "저장할 고친 내용이 없어요.", confirmLabel: "확인", cancelLabel: null }); return; }
+    void saveRef.current();
+  }, embedded && phase === "ready" && !!draft);
 
   /* 공개 주소 — 공개했으면 손님이 여는 주소, 아직이면 공개하면 생길 주소(지금 적어 둔 주소 끝부분) */
   const livePublished = site?.status === "published";
@@ -778,6 +795,8 @@ export function HomepageScreen() {
    */
   const centerNode = useMemo(() => {
     if (!studioPro || !hasCenter) return null;
+    /* lovable 구조 2단계 — 위 막대 가운데는 기기 전환만(새로고침은 위 막대, '첫 화면'은 아래 떠 있는 도구 알약) */
+    if (nav?.toolbarTools) return <span className={styles.pill}>{deviceSwitch}</span>;
     const fullUrl = stripPath ? `${stripHost}${stripPath}` : "";
     return <span className={styles.pill}>
       <button type="button" className={styles.pillHome} onClick={scrollPreviewTop} title={fullUrl ? `첫 화면 맨 위부터 보기 — ${fullUrl}` : "첫 화면 맨 위부터 보기"} aria-label={`첫 화면 맨 위부터 보기${fullUrl ? ` (${fullUrl})` : ""}`}>
@@ -797,6 +816,19 @@ export function HomepageScreen() {
     if (fold instanceof HTMLDetailsElement) fold.open = true;
     fold?.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
   };
+  /*
+   * lovable 구조 2단계 — 미리보기 판 아래 가운데 떠 있는 도구 알약(시안 PcStudio: 커서/글자/펜/댓글 자리). 홈페이지일 때만.
+   * 기존 기능 그대로: 직접 고치기(빌더 열기) · 대화로 고치기 · 첫 화면 맨 위로 · 내 주소 연결. 위 주소 줄의 같은 단추는 접는다.
+   */
+  const floatTools = studioPro && !!nav?.toolbarTools;
+  const chatEditOpen = embedded && HOMEPAGE_CHAT_EDIT_OPEN && !!nav?.composeInChat && editable;
+  const floatingTools = floatTools ? <div className={styles.floatTools} role="toolbar" aria-label="홈페이지 도구">
+    {editable && <button type="button" className={styles.floatTool} disabled={busy} onClick={() => setBuilderOpen(true)} title="글과 사진 직접 고치기"><Pencil size={15} aria-hidden /><span>직접 고치기</span></button>}
+    {editable && <button type="button" className={styles.floatTool} aria-label={saveLabel} title={saveLabel} disabled={busy || !unsaved} data-done={!unsaved && action !== "saving" || undefined} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : unsaved ? <Save size={15} aria-hidden /> : <Check size={15} aria-hidden />}<span>{saveLabel}</span></button>}
+    {chatEditOpen && <button type="button" className={styles.floatTool} onClick={() => nav?.composeInChat?.({ target: "homepage", label: "홈페이지" })} title="대화로 고치기"><MessageSquare size={15} aria-hidden /><span>대화로 고치기</span></button>}
+    <button type="button" className={styles.floatTool} data-icon-only="" onClick={scrollPreviewTop} aria-label="첫 화면 맨 위부터 보기" title="첫 화면 맨 위부터 보기"><ArrowUpToLine size={15} aria-hidden /></button>
+    {editable && !inApp && <button type="button" className={styles.floatTool} data-icon-only="" onClick={openDomain} aria-label={site?.customDomain ? `내 주소 ${site.customDomain}` : "내 주소 연결"} title={site?.customDomain ? site.customDomain : "내 주소 연결"}><Link2 size={15} aria-hidden /></button>}
+  </div> : null;
   const strip = studioPro ? <div className={styles.strip}>
     {/* 좁은 PC(1180px 이하)는 주소 가운데를 줄여(앞 몇 글자 … 끝 꼬리) 끝이 잘리지 않게 — 전체 주소는 title 에 */}
     <span className={styles.stripUrl} title={`${stripHost}${stripPath}`}><Globe size={14} aria-hidden /><b>{stripHost}</b><span className={styles.stripPathFull}>{stripPath}</span>{stripSlug && <span className={styles.stripPathShort} aria-hidden="true">/launch/{shortSlug(stripSlug)}</span>}</span>
@@ -808,7 +840,7 @@ export function HomepageScreen() {
       결제 전(홈페이지만 · 계획서도 결제 전 · 예시 사업)에는 칸 위 줄에 단추를 두지 않는다 — 같은 결제 안내를 여는 머리줄 [공개하기] 하나(대표 결정 r40·r40-2).
       예시 사업은 왼쪽 대화 칸의 '대화로 내 사업 시작하기'로 내 사업을 시작한다. 주소·상태는 그대로
     */}
-    {editable && <>
+    {editable && !floatTools && <>
       {!inApp && <button type="button" className={`${styles.stripBtn} ${styles.stripSoft}`} onClick={openDomain}><Link2 size={14} aria-hidden />{site?.customDomain ? site.customDomain : "내 주소 연결"}</button>}
       <button type="button" className={styles.stripBtn} disabled={busy} onClick={() => setBuilderOpen(true)}><Pencil size={14} aria-hidden />직접 고치기</button>
     </>}
@@ -994,9 +1026,11 @@ export function HomepageScreen() {
     /* 작업실 안이면 main 대신 칸 본문(div) — 저장·공개 단추는 작업실 머리줄(넓은 화면)·칸 맨 위 줄(좁은 화면)에. 머리줄이 없는 작업실이면 예전처럼 칸 위 도구 줄(actions) */
     /* 작업실 PC 새 배치(studioPro)면 바깥 스크롤 틀 대신 흰 카드 — 맨 위 공개 주소 줄(strip) + 그 아래만 굴러가는 본문 */
     <Root className={`${frame.page} ${styles.page}`} data-embedded={embedded ? "" : undefined} data-studio-pro={studioPro ? "" : undefined} onClickCapture={paneLinkCapture(nav, screenPlanId)}><BusinessAppChrome title="홈페이지" backHref={back} actions={studioHeader ? undefined : headerActions}>
-    <div className={studioPro ? styles.proCard : styles.frameScroll}>{strip}<div className={studioPro ? styles.proScroll : styles.frameInner} id={studioPro ? PRO_SCROLL_ID : undefined}>
+    <div className={studioPro ? styles.proCard : styles.frameScroll}>{strip}{floatingTools}<div className={studioPro ? styles.proScroll : styles.frameInner} id={studioPro ? PRO_SCROLL_ID : undefined}>
       {/* 작업실 좁은 화면 — 머리줄 대신 칸 맨 위에 저장·공개(넓은 화면에서는 머리줄 단추가 같은 일을 한다) */}
-      {studioHeader && headerActions && <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{headerActions}</div>}
+      {/* lovable 구조 2단계 — 아래 100px 막대(공개하기 · … 안의 저장)가 있는 작업실 휴대폰은 같은 단추를 칸 위에 두지 않는다. 막대에 없는 미리보기 크기 · 공개됨 메뉴(주소 복사 · 공개 멈추기)는 그대로 */}
+      {studioHeader && nav?.toolbarTools ? <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{publishedMenu(styles.headerPrimary)}</div>
+        : studioHeader && headerActions && <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{headerActions}</div>}
       {/* 휴대폰의 '대화로 고치기'는 미리보기 위 '홈페이지 고치기' 옆 작은 글 단추로 옮겼다(모바일 점검 r37: 고치는 길이 셋이었다) — chatEdit 참고 */}
       {/* 전체 화면 — 방문자가 보는 그대로 */}
       {fullscreen && draft && (

@@ -74,3 +74,28 @@ button.step[aria-disabled="true"]:hover { background:#f7f8fa; }
   .toggle { width: 44px; height: 44px; }
   .tree .parts button { min-height: 44px; }
 }
+
+/*
+ * 왼쪽 메뉴(lovable 배치, RailMenu grouped) — 묶음 제목 14px 회색(위 16 아래 6), 사업 칸 240×32(20px 글자 아바타 r6 + 이름),
+ * '모든 사업 보기'·'최근 대화' 14px 회색. 색은 --app-* 토큰만.
+ */
+.grouped { flex:0 1 auto; gap:0; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+.grouped .group { display:flex; align-items:center; justify-content:space-between; box-sizing:border-box; width:calc(100% - 16px); min-height:22px; margin:16px 8px 6px; padding:0; border:0; background:transparent; color:var(--app-muted); font:inherit; font-size:.875rem; font-weight:400; line-height:1.5; text-align:left; cursor:pointer; }
+.grouped .group:hover { color:var(--app-text); }
+.groupCaret { flex:none; width:14px; height:14px; transition:transform .15s ease; }
+.groupCaret:not([data-open]) { transform:rotate(-90deg); }
+.groupTitle { margin:16px 8px 6px; color:var(--app-muted); font-size:.875rem; line-height:1.5; }
+.grouped .list { display:flex; padding:0; overflow:visible; }
+.grouped .planRow { gap:8px; min-height:32px; height:auto; padding:4px 6px; color:var(--app-body); font-size:.875rem; font-weight:400; }
+.grouped .planRow[data-current] { background:color-mix(in srgb, var(--app-text) 8%, transparent); color:var(--app-text); }
+.grouped .planRow:hover { background:color-mix(in srgb, var(--app-text) 5%, transparent); }
+.letter { display:inline-grid; place-items:center; flex:none; width:20px; height:20px; border-radius:6px; background:var(--app-selected); color:var(--app-selected-text); font-size:.6875rem; font-weight:600; }
+.more { display:block; margin:4px 8px; color:var(--app-muted); font-size:.875rem; line-height:1.5; text-decoration:none; }
+a.more:hover { color:var(--app-text); }
+.recent { display:flex; flex-direction:column; }
+.recentRow { display:block; box-sizing:border-box; min-height:32px; padding:5px 8px; overflow:hidden; border-radius:8px; color:var(--app-body); font-size:.875rem; line-height:1.6; text-decoration:none; text-overflow:ellipsis; white-space:nowrap; }
+.recentRow:hover { background:color-mix(in srgb, var(--app-text) 5%, transparent); color:var(--app-text); }
+.grouped :is(.group, .recentRow, .more):focus-visible { outline:2px solid var(--app-primary); outline-offset:-2px; }
+@media (max-width:640px) { .grouped .list { display:flex; } }
+:global([data-rail-open]) .grouped .planRow, :global([data-rail-open]) .recentRow { min-height:44px; font-size:1rem; }
+@media (pointer:coarse) { .recentRow, .grouped .group { min-height:44px; } }

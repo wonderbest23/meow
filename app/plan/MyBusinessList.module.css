@@ -1,32 +1,27 @@
 /*
- * 내 사업 목록 — 사업 이름 · 한 줄 소개 · 진행 상태 · 수정일만(대표 요청 2026-10-14: 꾸밈이 AI 같고 복잡하다).
- * 카드 전체가 누르는 곳, 오른쪽 위 ⋯ 는 이름 변경·삭제.
+ * 내 사업 카드(시안 Main.dc.html) — 썸네일 16:9 r8(사업 소개 · 왼쪽 아래 상태 배지) + 32px 아바타 + 이름 14/500 + '수정됨 n일 전' 13 회색.
+ * 카드 전체가 누르는 곳, 이름 줄 오른쪽 ⋯ 는 이름 변경·삭제. 배치(2열 · 316px · 간격 30)는 PlanHome.module.css.
  */
-.list { display: grid; gap: 10px; }
-.row { position: relative; border: 1px solid #e5e8eb; border-radius: 14px; background: #fff; transition: border-color .15s ease; }
-.row:has(.open:hover) { border-color: #c9d1da; }
+.list { display:grid; gap:30px; }
+.row { position:relative; min-width:0; }
+.open { display:block; min-width:0; color:var(--app-text); text-decoration:none; }
+.open:hover .title { text-decoration:underline; text-underline-offset:3px; }
+.row:has(.open:hover) [data-plan-open] > span:first-child { box-shadow:0 0 0 1px var(--app-line-strong); }
+.title { overflow:hidden; font-size:.875rem; font-weight:500; line-height:1.5; text-overflow:ellipsis; white-space:nowrap; }
+/* 썸네일 안 사업 소개 — 네 줄까지 */
+.desc { position:absolute; inset:14px 14px 44px; display:-webkit-box; overflow:hidden; color:var(--app-body); font-size:.8125rem; line-height:1.6; -webkit-box-orient:vertical; -webkit-line-clamp:4; word-break:keep-all; }
+.meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; color:var(--app-muted); font-size:.8125rem; line-height:1.5; }
 
-.open { display: grid; gap: 6px; min-height: 84px; padding: 18px 56px 18px 20px; color: #191f28; text-decoration: none; }
-.title { display: -webkit-box; overflow: hidden; font-size: 1.0625rem; font-weight: 700; line-height: 1.45; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
-.desc { display: -webkit-box; overflow: hidden; color: #6b7684; font-size: .875rem; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
-.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #6b7684; font-size: .8125rem; }
+/* ⋯ 단추 — 이름 줄 오른쪽 */
+.menu { position:absolute; right:-8px; bottom:-6px; }
+.menu summary { width:44px !important; height:44px !important; } /* 누르는 자리 44px(감사 r36) */
+/* ⋯ 단추가 운영(합쳐진 CSS 순서)에서 BusinessHub 의 .rowMenu{position:relative} 에 밀리지 않게 — 더 센 선택자로 고정 */
+.row > .menu { position:absolute; top:auto; right:-8px; bottom:-6px; }
 
-/* ⋯ 단추 — 카드 오른쪽 위 */
-.menu { position: absolute; top: 10px; right: 8px; }
-.menu summary { width: 44px !important; height: 44px !important; } /* 누르는 자리 44px(감사 r36) */
-
-.rename { padding: 16px 20px; }
-
-@media (max-width: 640px) {
-  .open { min-height: 78px; padding: 16px 52px 16px 16px; }
-  .title { font-size: 1rem; }
-}
-
-/* ⋯ 단추가 운영(합쳐진 CSS 순서)에서 BusinessHub 의 .rowMenu{position:relative} 에 밀려 카드 아래 왼쪽으로 떨어졌다 — 더 센 선택자로 오른쪽 위에 고정 */
-.row > .menu { position: absolute; top: 10px; right: 8px; }
+.rename { margin-top:12px; }
 
 /* 이름 바꾸기 안내(100자·홈페이지 이름) — 입력칸 아래 한 줄. BusinessHub 의 .content p(글자 16px·아래 20px)보다 센 선택자로 */
-p.renameHint[id] { flex-basis: 100%; margin: 2px 0 0; font-size: .8125rem; line-height: 1.6; color: var(--app-muted); }
+p.renameHint[id] { flex-basis:100%; margin:2px 0 0; font-size:.8125rem; line-height:1.6; color:var(--app-muted); }
 /* 삭제했어요 같은 짧은 알림 — 비어 있을 때는 자리를 차지하지 않는다(알림 영역은 남겨 둬야 읽어 준다) */
-p.status[role] { margin: 0 0 16px; font-size: .875rem; line-height: 1.6; color: var(--app-muted); }
-p.status[role][data-empty] { margin: 0; }
+p.status[role] { margin:0 0 16px; font-size:.875rem; line-height:1.6; color:var(--app-muted); }
+p.status[role][data-empty] { margin:0; }

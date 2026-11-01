@@ -1011,12 +1011,6 @@ button.workLogRow { min-height: 32px; }
 .page[data-embedded][data-studio-pro] .composerTarget button::before { inset: 7px; border-radius: 4px; }
 .page[data-embedded][data-studio-pro] .composerTarget small { color: var(--app-muted); }
 .page[data-embedded][data-studio-pro] .composerContext { padding: 2px 2px 0; }
-/* '고칠 곳 고르기' 장 목록 — 단추 바로 위로 연다(입력창이 칸 맨 아래라 아래로는 자리가 없다) */
-.pickWrap { position: relative; min-width: 0; }
-.pickMenu { position: absolute; left: -4px; bottom: calc(100% + 6px); z-index: 20; display: flex; flex-direction: column; min-width: 220px; max-width: min(320px, 80vw); max-height: 320px; overflow-y: auto; padding: 6px; border: 1px solid var(--app-line); border-radius: 12px; background: var(--app-surface); box-shadow: 0 8px 24px rgba(16, 24, 40, .14); }
-.pickMenu button { display: block; width: 100%; padding: 9px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--app-text); font-size: .84375rem; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pickMenu button:hover, .pickMenu button:focus-visible { background: var(--app-raised); }
-.pickMenu button:focus-visible { outline: 2px solid var(--app-primary); outline-offset: -2px; }
 .composerBar { display: flex; align-items: center; gap: 4px; min-height: 32px; }
 .composerAction { display: inline-flex; align-items: center; gap: 4px; min-width: 0; height: 32px; margin-left: -4px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--app-muted); font-size: .75rem; white-space: nowrap; }
 .composerAction:hover { background: var(--app-raised); color: var(--app-body); }
@@ -1044,3 +1038,70 @@ button.workLogRow { min-height: 32px; }
 .lockedTurn .chipRow a.chip > svg { flex: none; }
 /* 내 말풍선은 짧은 답이 많다 — 두 줄이면 줄 길이를 고르게('…(카페 / · 음식점)'처럼 끝 몇 글자만 떨어졌다 · 휴대폰 점검 2026-10-24) */
 .userMessage > p { text-wrap: balance; }
+
+/*
+ * ── lovable 구조 2단계: 작업 화면 대화 칸(시안 PcStudio · MChat) ──────────────────────
+ * PC(data-studio-pro): 대화 열 451(안쪽 16) · 메시지 14px 행간 1.65 · 내 말풍선 오른쪽 r16(흰 바탕 1px 선) · 도구 카드 r12(알약 단추)
+ *   · 제안 알약 32 r999(첫 번째 파랑 채움) · 입력 상자 r12(＋ 28 원 · 모드 알약 32 · 마이크 28 · 보내기 28 검정 원).
+ * 휴대폰(작업실 안): 메시지 16px · 제안 알약 36 가로 스크롤 · 입력 상자 r24(＋ 40 · 모드 알약 40 · 마이크 40 · 보내기 40).
+ * 색은 --app-* 토큰만. 예전 대화 화면(/plan/chat, data-embedded 없음)은 그대로다.
+ */
+.composerGrow { flex: 1 1 0; min-width: 0; }
+.composerRound { position: relative; display: inline-grid; place-items: center; flex: none; box-sizing: border-box; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; box-shadow: inset 0 0 0 1px var(--app-line-strong); color: var(--app-body); cursor: pointer; }
+.composerRound svg { width: 16px; height: 16px; }
+.composerRound:hover:not(:disabled) { background: var(--app-raised); color: var(--app-text); }
+.composerRound:disabled { color: var(--app-line-strong); cursor: default; }
+.composerRound[aria-pressed="true"] { background: var(--app-danger-bg); box-shadow: inset 0 0 0 1px var(--app-danger); color: var(--app-danger); }
+.composerRound:focus-visible, .modePill:focus-visible { outline: 3px solid var(--app-focus-ring); outline-offset: 2px; }
+.modePill { display: inline-flex; align-items: center; gap: 6px; flex: 0 1 auto; box-sizing: border-box; min-width: 0; max-width: 160px; min-height: 32px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; box-shadow: inset 0 0 0 1px var(--app-line); color: var(--app-body); font: inherit; font-size: .875rem; font-weight: 500; cursor: pointer; }
+.modePill span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modePill svg { flex: none; width: 14px; height: 14px; }
+.modePill:hover { background: var(--app-raised); color: var(--app-text); }
+.page[data-embedded] .composerBar[data-studio-bar] { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.page[data-embedded] .composerBar[data-studio-bar] > .sendButton { flex: 0 0 28px; width: 28px; height: 28px; margin-left: 0; border-radius: 50%; background: var(--app-text); color: var(--app-surface); }
+.page[data-embedded] .composerBar[data-studio-bar] > .sendButton svg { width: 14px; height: 14px; }
+.page[data-embedded] .composerBar[data-studio-bar] > .sendButton:hover:not(:disabled) { background: var(--app-body); }
+.page[data-embedded] .composerBar[data-studio-bar] > .sendButton:disabled { background: var(--app-line-strong); color: var(--app-surface); }
+.page[data-embedded] .composerRow { display: block; }
+.page[data-embedded] .composerRow textarea { width: 100%; }
+
+/* PC 대화 열 */
+.page[data-embedded][data-studio-pro] .inputContent { padding: 8px 16px 16px; }
+.page[data-embedded][data-studio-pro] .assistantMessage { margin: 0 0 20px; font-size: .875rem; line-height: 1.65; }
+.page[data-embedded][data-studio-pro] .assistantMessage > p, .page[data-embedded][data-studio-pro] .assistantMessage > .conversationText, .page[data-embedded][data-studio-pro] .chatQuestion h2 { font-size: .875rem; line-height: 1.65; }
+.page[data-embedded][data-studio-pro] .userMessage { max-width: 70%; margin: 0 0 20px auto; padding: 12px 16px; border-radius: 16px; background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line); color: var(--app-text); font-size: .875rem; line-height: 1.65; }
+.page[data-embedded][data-studio-pro] .chatQuestion[data-question-card], .page[data-embedded][data-studio-pro] .changeCard { border-radius: 12px; box-shadow: none; }
+.page[data-embedded][data-studio-pro] .chatQuestion[data-question-card] { padding: 16px; }
+.page[data-embedded][data-studio-pro] .changeCard .chip, .page[data-embedded][data-studio-pro] .studioEditTurn .chip, .page[data-embedded][data-studio-pro] .lockedTurn .chipRow .chip, .page[data-embedded][data-studio-pro] .editTurn .chipRow .chip { min-height: 36px; padding: 0 14px; border-radius: 999px; font-size: .875rem; }
+.page[data-embedded][data-studio-pro] .messageMeta { gap: 16px; margin: -12px 0 20px; }
+.page[data-embedded][data-studio-pro] .metaButton { width: 28px; height: 28px; margin: 0 -6px; border-radius: 999px; }
+.page[data-embedded][data-studio-pro] .composer { gap: 12px; padding: 12px 16px 16px; }
+.page[data-embedded][data-studio-pro] .composerShell, .page[data-embedded][data-studio-pro] .composerShell:focus-within { padding: 12px 12px 10px; border: 0; border-radius: 12px; background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line), 0 8px 24px -12px color-mix(in srgb, var(--app-text) 20%, transparent); }
+.page[data-embedded][data-studio-pro] .composerShell:focus-within { box-shadow: 0 0 0 1px var(--app-primary), 0 8px 24px -12px color-mix(in srgb, var(--app-text) 20%, transparent); }
+.page[data-embedded][data-studio-pro] .composerRow textarea { min-height: 28px; padding: 4px 4px 8px; font-size: .875rem; line-height: 1.5; }
+/* 제안 알약 32 r999 — 첫 번째는 파랑 채움, 나머지는 흰 바탕 1px 선. '추천' 글자는 낭독기에만(무리 이름 aria-label) */
+.page[data-embedded] .suggestRow { gap: 8px; padding-left: 0; }
+.page[data-embedded] .suggestRow > .suggestLabel { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.page[data-embedded] .suggestChip { display: inline-flex; align-items: center; min-height: 32px; padding: 6px 12px; border: 0; border-radius: 999px; background: var(--app-surface); box-shadow: inset 0 0 0 1px var(--app-line); color: var(--app-body); font-size: .875rem; font-weight: 400; line-height: 1.3; white-space: nowrap; text-wrap: nowrap; }
+.page[data-embedded] .suggestChip:hover { background: var(--app-raised); color: var(--app-text); }
+.page[data-embedded] .suggestRow > .suggestChip:first-of-type { background: var(--app-primary); box-shadow: none; color: var(--app-surface); font-weight: 500; }
+.page[data-embedded] .suggestRow > .suggestChip:first-of-type:hover { background: var(--app-primary-hover); }
+/* PC 는 두 줄까지 감싼다 — 넘치는 칩은 SuggestRow 가 통째로 숨긴다(칩 중간에서 잘리지 않게) */
+.page[data-embedded][data-studio-pro] .suggestChip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* 휴대폰 작업실 대화 화면 — 메시지 16px(말풍선 없이), 내 말풍선 흰 바탕 r20, 입력 상자 r24 */
+.page[data-embedded]:not([data-studio-pro]) .assistantMessage { margin: 0 0 18px; font-size: 1rem; line-height: 1.6; }
+.page[data-embedded]:not([data-studio-pro]) .assistantMessage > p, .page[data-embedded]:not([data-studio-pro]) .assistantMessage > .conversationText, .page[data-embedded]:not([data-studio-pro]) .chatQuestion h2 { width: auto; max-width: 100%; padding: 0; border-radius: 0; background: none; color: var(--app-text); font-size: 1rem; line-height: 1.6; }
+.page[data-embedded]:not([data-studio-pro]) .userMessage { max-width: 80%; margin: 0 0 18px auto; padding: 12px 18px; border-radius: 20px; background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line); color: var(--app-text); font-size: 1rem; line-height: 1.6; }
+.page[data-embedded]:not([data-studio-pro]) .composer { display: flex; flex-direction: column; gap: 12px; padding: 0 12px max(12px, env(safe-area-inset-bottom)); background: transparent; }
+.page[data-embedded]:not([data-studio-pro]) .composerShell, .page[data-embedded]:not([data-studio-pro]) .composerShell:focus-within { padding: 14px 12px 12px; border: 0; border-radius: 24px; background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line), 0 -8px 32px -16px color-mix(in srgb, var(--app-text) 20%, transparent); }
+.page[data-embedded]:not([data-studio-pro]) .composerShell:focus-within { box-shadow: 0 0 0 1px var(--app-primary), 0 -8px 32px -16px color-mix(in srgb, var(--app-text) 20%, transparent); }
+.page[data-embedded]:not([data-studio-pro]) .composerRow textarea { min-height: 32px; padding: 0 6px 10px; font-size: 1.0625rem; line-height: 1.45; }
+.page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] { gap: 10px; min-height: 40px; }
+.page[data-embedded]:not([data-studio-pro]) .composerRound, .page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] > .sendButton { flex-basis: 40px; width: 40px; height: 40px; }
+.page[data-embedded]:not([data-studio-pro]) .composerRound svg, .page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] > .sendButton svg { width: 20px; height: 20px; }
+.page[data-embedded]:not([data-studio-pro]) .modePill { min-height: 40px; padding: 0 14px; font-size: .9375rem; }
+/* 제안 알약 36 — 한 줄 가로 스크롤(넘치는 것은 밀어서 본다) */
+.page[data-embedded]:not([data-studio-pro]) .suggestRow { flex-wrap: nowrap; overflow-x: auto; margin: 0 -12px; padding: 0 16px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.page[data-embedded]:not([data-studio-pro]) .suggestRow::-webkit-scrollbar { display: none; }
+.page[data-embedded]:not([data-studio-pro]) .suggestChip { flex: none; min-height: 36px; padding: 0 14px; font-size: .9375rem; }

@@ -12,7 +12,7 @@ import { newChatHref } from "../../../lib/plan-builder/studio";
 import styles from "./LaunchWorkspace.module.css";
 import { wonLabel } from "../../../lib/plan-builder/intake-options";
 import MarketingKitPanel from "./MarketingKit";
-import { useStudioDirty, useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import { useStudioCommand, useStudioDirty, useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import { useHomepageStatus } from "../use-homepage";
 import paneHeader from "./PaneHeaderActions.module.css";
 import { ChevronRight } from "lucide-react";
@@ -158,6 +158,14 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
     </div>;
   }, [studioHeader, nextHref, nextTitle, studioNav, plan.id]);
   useStudioHeaderActions(headerNode);
+  /*
+   * 휴대폰 아래 막대의 파란 '다음 단계'(lovable 구조 2단계) — 모든 단계를 마쳤으면 머리줄 단추와 같은 다음 단계(홈페이지 · 유지보수)로,
+   * 아직 남았으면 지금 할 단계로 데려간다(맨 위 제목에 초점).
+   */
+  useStudioCommand("launch-next", () => {
+    if (nextHref && studioNav) { setActivePlan(plan.id); studioNav.push(nextHref); return; }
+    top();
+  }, !!pane);
 
   return <div className={styles.launch}>
     {/* PC 작업실은 늘 보이는 대화 칸에 같은 단추가 있다 — 여기 링크는 휴대폰·작업실 밖에서만(같은 단추 두 번 · PC 점검 2026-10-24) */}
