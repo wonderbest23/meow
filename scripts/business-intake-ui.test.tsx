@@ -1025,9 +1025,9 @@ async function main() {
     assert.match(meta, /<time/);
     assert.match(meta, /답 복사하기/);
     assert.ok(!renderToStaticMarkup(<MessageMeta text="답" />).includes("<time"), "시각을 모르면 시각을 쓰지 않는다");
-    // 대화 기록 — PC 에서만 AI 답 아래 메타 줄, 작업 기록은 그 시각 뒤 첫 메시지 앞에
+    // 대화 기록 — AI 답 아래 끝 표시 줄(시각·복사)은 PC·휴대폰 모두(2026-11-02 사장님: 답이 어디서 끝나는지 보이게), 작업 기록은 그 시각 뒤 첫 메시지 앞에
     const talk: IntakeSnapshot = { ...base0, coach: { ...base0.coach, messages: [{ id: "u1", role: "user", text: "가격을 바꿔 줘", at: "2026-09-16T04:00:00.000Z" }, { id: "a1", role: "assistant", text: "바꿀 내용을 정리했어요.", at: "2026-09-16T04:00:05.000Z" }] } };
-    assert.ok(!renderToStaticMarkup(<ConversationHistory snapshot={talk} onEdit={noop} />).includes("data-message-meta"));
+    assert.match(renderToStaticMarkup(<ConversationHistory snapshot={talk} onEdit={noop} />), /data-message-meta/, "휴대폰에도 AI 답 아래 끝 표시 줄");
     const proTalk = renderToStaticMarkup(<ConversationHistory pro snapshot={talk} onEdit={noop} log={{ at, node: <p data-test-log="1">기록</p> }} />);
     assert.match(proTalk, /data-message-meta/);
     assert.ok(proTalk.indexOf("data-test-log") < proTalk.indexOf("가격을 바꿔 줘"), "작성을 시작한 뒤에 온 말 앞에 기록이 놓인다");

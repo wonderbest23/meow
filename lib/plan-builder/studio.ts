@@ -217,7 +217,9 @@ export function studioSteps<T extends { id: JourneyStepId; state: JourneyState }
 export function studioLockedStep(tab: StudioTab, steps: ReadonlyArray<{ id: JourneyStepId; state: JourneyState }>, workspaceOpen: boolean): Exclude<JourneyStepId, "chat"> | null {
   const step = stepForStudioTab(tab);
   if (step === "chat") return null;
-  if (step === "care" || step === "launch") return workspaceOpen ? null : step;
+  if (step === "launch") return workspaceOpen ? null : step;
+  /* 유지보수는 홈페이지를 공개한 뒤부터(홈페이지를 고치고 문의·실적을 관리하는 단계) — 2026-11-02 사장님: 순서대로 열리게. 개업 준비는 홈페이지(유료) 없이도 연다 */
+  if (step === "care") return workspaceOpen && steps.find(item => item.id === "homepage")?.state === "done" ? null : step;
   const index = steps.findIndex(item => item.id === step);
   if (index <= 0) return null;
   return steps[index].state !== "todo" || steps[index - 1].state === "done" ? null : step;

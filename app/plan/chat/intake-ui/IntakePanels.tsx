@@ -39,16 +39,20 @@ const GREETING_CHAR_MS = 28;
 /** 빈 새 대화의 첫 인사 — 입력 중 점이 잠깐 보인 뒤 인사가 글자 단위로 나타난다. 다 나타나면 onReady(그때 첫 질문이 따라온다). 움직임 줄이기 설정이면 바로 다 보인다. */
 function CoachGreeting({ onReady }: { onReady: () => void }) {
   const [phase, setPhase] = useState<"typing" | "greeting">("typing");
+  /* 인사가 다 나타난 뒤에만 끝 표시 줄 — 글자가 나타나는 중에 먼저 보이지 않게 */
+  const [done, setDone] = useState(false);
   const ready = useRef(onReady); ready.current = onReady;
   const words = ENTRY_GREETING.split(" ");
   useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setPhase("greeting"); ready.current(); return; }
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setPhase("greeting"); setDone(true); ready.current(); return; }
     const toGreeting = window.setTimeout(() => setPhase("greeting"), GREETING_TYPING_MS);
-    const toReady = window.setTimeout(() => ready.current(), GREETING_TYPING_MS + ENTRY_GREETING.length * GREETING_CHAR_MS + 450);
+    const toReady = window.setTimeout(() => { setDone(true); ready.current(); }, GREETING_TYPING_MS + ENTRY_GREETING.length * GREETING_CHAR_MS + 450);
     return () => { window.clearTimeout(toGreeting); window.clearTimeout(toReady); };
   }, []);
   let index = 0;
+  /* 인사가 다 나타나면 아래 끝 표시 줄(시간 없이 복사만) — lovable 처럼 답이 어디서 끝나는지 보이게(2026-11-02 사장님) */
   return <div className={styles.greeting} data-coach-greeting={phase}>
+    {done && <MessageMeta text={ENTRY_GREETING} />}
     {phase === "typing" ? <TypingBubble /> : <p>
       <span className={styles.srOnly}>{ENTRY_GREETING}</span>
       <span aria-hidden="true">{words.map((word, w) => <Fragment key={w}>{w > 0 && " "}<span data-word>{[...word].map(char => { const delay = index++ * GREETING_CHAR_MS; return <span key={delay} data-char style={{ animationDelay: `${delay}ms` }}>{char}</span>; })}</span></Fragment>)}</span>
@@ -562,7 +566,7 @@ const FINISHED_TEXT = "사업계획서를 다 만들었어요. 계획서를 확�
 export function GenerationFinishedTurn({ planId, onPlan, onHomepage, pro = false }: { planId: string; onPlan: () => void; onHomepage: () => void; pro?: boolean }) {
   return <section className={styles.lockedTurn} aria-label="사업계획서 작성 완료" data-generation-finished>
     <div className={styles.assistantMessage}><p>{FINISHED_TEXT}</p></div>
-    {pro && <MessageMeta text={FINISHED_TEXT} />}
+    <MessageMeta text={FINISHED_TEXT} />
     <div className={styles.chipRow}>
       <button type="button" className={`${styles.chip} ${styles.chipStrong}`} onClick={onPlan}>계획서 보기</button>
       <button type="button" className={styles.chip} onClick={onHomepage}>홈페이지 만들기</button>
@@ -683,7 +687,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
           <CopyButton text={sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)} />
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} aria-hidden="true" /></button>}
         </div>}
-        {pro && message.role === "assistant" && <MessageMeta text={text} at={message.at} />}
+        {message.role === "assistant" && <MessageMeta text={text} at={message.at} />}
         {receipt && message.id === lastUserId && !notes.length ? <p className={styles.messageStatus} data-receipt>{receipt}</p>
           : message.id === industryAnswerId && replacedIndustry.size > 0 ? <p className={styles.messageStatus}>업종을 바꿨어요</p>
           : changedAnswerIds.has(message.id) && <p className={styles.messageStatus}>답을 바꿨어요</p>}

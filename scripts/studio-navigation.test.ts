@@ -275,7 +275,8 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioLockedStep("plan", designed, true), null, "대화를 마치면 계획서가 열린다");
   assert.equal(studioLockedStep("homepage", designed, true), "homepage", "홈페이지는 계획서를 마쳐야");
   assert.equal(studioLockedStep("launch", designed, true), null);
-  assert.equal(studioLockedStep("operations", designed, true), null);
+  assert.equal(studioLockedStep("operations", designed, true), "care", "유지보수는 홈페이지를 공개해야(2026-11-02)");
+  assert.equal(studioLockedStep("operations", studioSteps(steps("done", "done", "done", "todo"), true), true), null, "홈페이지를 공개하면 유지보수가 열린다");
   assert.equal(studioLockedStep("plan", studioSteps(steps("done", "active", "todo", "todo"), true), true), null, "문서가 이미 있으면 막히지 않는다");
   assert.equal(studioLockedStep("homepage", studioSteps(steps("done", "done", "todo", "todo"), true), true), null);
 }

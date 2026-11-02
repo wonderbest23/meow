@@ -5,16 +5,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, ArrowUp, ChevronDown, Mic, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
-import { businessHubState, businessEntryHref, businessChatHref } from "../../lib/plan-builder/business-hub";
+import { businessHubState, businessEntryHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
 import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
-import { ENTRY_MODES, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref, studioHref, type EntryMode } from "../../lib/plan-builder/studio";
+import { ENTRY_MODES, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref, type EntryMode } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
 const openHref = (plan: Parameters<typeof businessEntryHref>[0]) => { const href = businessEntryHref(plan); return (STUDIO_REDIRECT && studioEntryHref(href)) || href; };
-/* 대화 탭(view=chat)의 카드 — 그 사업의 대화로 바로(아래 탭 막대와 같은 길) */
-const chatHref = (plan: Plan) => STUDIO_REDIRECT ? studioHref(plan.id, "chat") : businessChatHref(plan.id);
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
 import BusinessEmptyState from "./BusinessEmptyState";
@@ -29,13 +27,13 @@ import { useHomepageStatus } from "./use-homepage";
 import { AppButton } from "../../components/app-button";
 import { TextArea, TextField } from "../../components/app-field";
 import { loadAuthSession } from "../../lib/client/auth-session";
-import { PLAN_VIEW_ALL, PLAN_VIEW_CHAT } from "./MobileTabBar";
+import { PLAN_VIEW_ALL } from "./MobileTabBar";
 
 /*
  * 로그인 뒤 첫 화면(/plan) — 시안 Main.dc.html(PC 1440) · MHome.dc.html(휴대폰 390).
  * 인사말 → 큰 입력칸(보내면 새 대화 — 첫 화면 입력칸과 같은 길: newChatHref + idea 보관)
  * → 아래 목록 카드(검색 · 내 사업 · 최근 본 항목 · 예시) + 사업 카드(316px). 휴대폰 첫 화면은 인사말·입력칸만(목록은 아래 탭 '내 사업') — lovable 휴대폰 홈과 같다(2026-11-02).
- * ?view=all 이면 입력칸 없이 사업 카드만(왼쪽 메뉴·아래 탭의 '내 사업'), ?view=chat 이면 같은 목록인데 카드가 그 사업의 대화로 간다(아래 탭 '대화').
+ * ?view=all 이면 입력칸 없이 사업 카드만(왼쪽 메뉴·아래 탭의 '내 사업').
  * 로그인해야 열린다 — 아니면 로그인 화면으로(2026-11-02 사장님: 로그인 없이 들어와졌다). 목록의 데이터·상태(불러오기 실패·빈 화면·이름 변경·삭제 안내)는 예전 그대로.
  */
 type Filter = "search" | "mine" | "recent" | "samples";
@@ -105,8 +103,7 @@ export default function PlanList() {
     setView(nextView);
     if (search) { setFilter("search"); setSearchFocus(n => n + 1); }
   }, []);
-  const chatList = view === PLAN_VIEW_CHAT;
-  const listOnly = view === PLAN_VIEW_ALL || chatList;
+  const listOnly = view === PLAN_VIEW_ALL;
   const recent = useMemo(() => {
     const active = plans.find(plan => plan.id === state?.activePlanId);
     return (active ? [active, ...plans.filter(plan => plan.id !== active.id)] : plans).slice(0, 4);
@@ -144,7 +141,7 @@ export default function PlanList() {
 
   const card = (p: Plan) => { const status=businessHubState(p); const display = planDisplayName(p); return <article key={p.id} className={`${mine.row} ${home.card}`}>
     {/* 썸네일 16:9 r8 — 문서 모양 자리 + 왼쪽 아래 상태 배지. 소개 글은 쓰지 않는다 — 글이 많아 번잡했고 제목·상태면 충분하다(2026-11-02 사장님) */}
-    <Link className={mine.open} href={chatList ? chatHref(p) : openHref(p)} data-plan-open={p.id} aria-label={`${display} ${chatList ? "대화 열기" : status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "내 사업 화면 열기"}`}>
+    <Link className={mine.open} href={openHref(p)} data-plan-open={p.id} aria-label={`${display} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "내 사업 화면 열기"}`}>
       <span className={home.thumb}>
         <span className={home.skeleton} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span>
         <StatusBadge tone={status.statusTone} className={home.thumbBadge}>{status.status}</StatusBadge>
@@ -180,7 +177,7 @@ export default function PlanList() {
     {error && plans.length > 0 && <p role="alert" className={styles.error}>{error} <button type="button" className={styles.inlineRetry} onClick={() => retry.current()}>다시 시도</button></p>}
   </div>;
 
-  return <main className={frame.page} data-plan-view="plans" data-list-only={listOnly || undefined}><BusinessAppChrome title={chatList ? "대화" : "내 사업"} active={chatList ? "chat" : listOnly ? "plans" : "new"} backHref="/" home>
+  return <main className={frame.page} data-plan-view="plans" data-list-only={listOnly || undefined}><BusinessAppChrome title="내 사업" active={listOnly ? "plans" : "new"} backHref="/" home>
     <Suspense fallback={null}><ParamsWatcher onChange={onParams} /></Suspense>
     <div className={home.scroll}>
       {!listOnly && <section className={home.hero} aria-labelledby="plan-home-greeting">
@@ -188,10 +185,10 @@ export default function PlanList() {
         <h1 id="plan-home-greeting" className={home.greeting}>오늘은 어떤 사업을 시작해볼까요?</h1>
         <Composer />
       </section>}
-      <section className={home.listCard} data-list-only={listOnly || undefined} aria-label={chatList ? "대화할 사업 목록" : "내 사업 목록"} id="businesses">
+      <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">
         {/* 사업 카드만 보는 화면 — 제목(휴대폰은 lovable Projects 탭처럼 30/600 + 오른쪽 44 원 검색 단추) */}
         {listOnly && <div className={home.listHead}>
-          <h1 className={home.listTitle}>{chatList ? "대화" : "내 사업"}</h1>
+          <h1 className={home.listTitle}>내 사업</h1>
           <button type="button" className={home.headCircle} aria-label="사업 이름으로 찾기" aria-pressed={filter === "search"} onClick={toggleSearch}><Search size={20} aria-hidden="true" /></button>
         </div>}
         <div className={home.filterRow}>
@@ -204,8 +201,8 @@ export default function PlanList() {
         </div>
         {list}
       </section>
-      {/* 휴대폰 '내 사업'·'대화' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
-      {listOnly && <Link href="/plan/chat?new=1" className={home.newFloat}><Plus size={20} aria-hidden="true" />{chatList ? "새 대화" : "새 사업"}</Link>}
+      {/* 휴대폰 '내 사업' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
+      {listOnly && <Link href="/plan/chat?new=1" className={home.newFloat}><Plus size={20} aria-hidden="true" />새 사업</Link>}
     </div>
   </BusinessAppChrome></main>;
 }
