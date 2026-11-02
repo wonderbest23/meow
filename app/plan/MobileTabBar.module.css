@@ -7,7 +7,7 @@
   .tab[aria-current=page] { background:var(--app-nav-selected); color:var(--app-text); }
   .tab:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:-3px; }
 }
-/* 상담 단추(오른쪽 아래 떠 있는 원)를 막대 위로 올린다 — 막대 오른쪽 끝과 겹쳤다. 펼친 상담 창(.open)은 그대로 */
+/* 떠 있는 상담 단추(오른쪽 아래 원)는 막대가 있는 화면에서 그리지 않는다 — 막대와 겹쳤고 같은 일을 문의 탭이 한다(2026-11-02). 펼친 상담 창(.open)은 그대로 */
 @media (max-width:900px) {
-  :global(body:has([data-mobile-tabbar]) .support-chat-widget:not(.open)) { bottom:calc(24px + 57px + 16px + env(safe-area-inset-bottom)); }
+  :global(body:has([data-mobile-tabbar]) .support-chat-widget:not(.open)) { display:none; }
 }

@@ -55,8 +55,8 @@ function jump(id: string) {
 export const LOCKED_GUIDE: Record<Exclude<JourneyStepId, "chat">, { message: string; back: number; label: string }> = {
   document: { message: "사업 방향 정리를 마쳐야 사업계획서를 만들 수 있어요.", back: 0, label: "대화로 가기" },
   homepage: { message: "사업계획서를 완성해야 홈페이지를 만들 수 있어요.", back: 1, label: "사업계획서로 가기" },
-  /* 유지보수(실적 기록·홈페이지 관리)는 홈페이지가 없어도 쓸 수 있다 — 사업 관리 화면과 같은 규칙. 막히는 건 사업 방향을 정하기 전뿐 */
-  care: { message: "사업 방향 정리를 마쳐야 유지보수를 쓸 수 있어요.", back: 0, label: "대화로 가기" },
+  /* 유지보수(홈페이지 고치기·문의·실적)는 홈페이지를 공개한 뒤부터 — 2026-11-02 사장님: 단계는 순서대로 */
+  care: { message: "홈페이지를 공개하면 유지보수를 쓸 수 있어요.", back: 2, label: "홈페이지로 가기" },
   /* 단계 이름은 journey-steps.ts 한 곳에서 — 운영 중인 사업은 lockedGuide 가 '운영 개선'으로 바꾼다 */
   launch: { message: `사업 방향 정리를 마쳐야 ${JOURNEY_LABELS.launch}를 쓸 수 있어요.`, back: 0, label: "대화로 가기" },
 };
