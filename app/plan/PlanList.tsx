@@ -3,18 +3,16 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, ArrowUp, ChevronDown, Mic, MoreHorizontal, Plus, Search, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUp, ChevronDown, Mic, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, businessEntryHref, businessChatHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
-import { journeyNext, launchProgress } from "../../lib/plan-builder/journey";
 import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
 import { ENTRY_MODES, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref, studioHref, type EntryMode } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
 const openHref = (plan: Parameters<typeof businessEntryHref>[0]) => { const href = businessEntryHref(plan); return (STUDIO_REDIRECT && studioEntryHref(href)) || href; };
-const stepHref = (href: string) => (STUDIO_REDIRECT && studioEntryHref(href)) || href;
 /* 대화 탭(view=chat)의 카드 — 그 사업의 대화로 바로(아래 탭 막대와 같은 길) */
 const chatHref = (plan: Plan) => STUDIO_REDIRECT ? studioHref(plan.id, "chat") : businessChatHref(plan.id);
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
@@ -35,7 +33,7 @@ import { PLAN_VIEW_ALL, PLAN_VIEW_CHAT } from "./MobileTabBar";
 
 /*
  * 로그인 뒤 첫 화면(/plan) — 시안 Main.dc.html(PC 1440) · MHome.dc.html(휴대폰 390).
- * 위 안내 알약(오늘 할 일) → 인사말 → 큰 입력칸(보내면 새 대화 — 첫 화면 입력칸과 같은 길: newChatHref + idea 보관)
+ * 인사말 → 큰 입력칸(보내면 새 대화 — 첫 화면 입력칸과 같은 길: newChatHref + idea 보관)
  * → 아래 목록 카드(검색 · 내 사업 · 최근 본 항목 · 예시) + 사업 카드(316px). 휴대폰 첫 화면은 인사말·입력칸만(목록은 아래 탭 '내 사업') — lovable 휴대폰 홈과 같다(2026-11-02).
  * ?view=all 이면 입력칸 없이 사업 카드만(왼쪽 메뉴·아래 탭의 '내 사업'), ?view=chat 이면 같은 목록인데 카드가 그 사업의 대화로 간다(아래 탭 '대화').
  * 로그인해야 열린다 — 아니면 로그인 화면으로(2026-11-02 사장님: 로그인 없이 들어와졌다). 목록의 데이터·상태(불러오기 실패·빈 화면·이름 변경·삭제 안내)는 예전 그대로.
@@ -186,7 +184,6 @@ export default function PlanList() {
     <Suspense fallback={null}><ParamsWatcher onChange={onParams} /></Suspense>
     <div className={home.scroll}>
       {!listOnly && <section className={home.hero} aria-labelledby="plan-home-greeting">
-        {state && <TodoPill plans={plans} />}
         {/* 인사말에 이름을 붙이지 않는다 — 계정에 이름이 없어 이메일 앞부분(rena35200+review님)이 그대로 보였다(운영 점검 2026-11-02). 동그라미 머리글자는 그대로 */}
         <h1 id="plan-home-greeting" className={home.greeting}>오늘은 어떤 사업을 시작해볼까요?</h1>
         <Composer />
@@ -211,25 +208,6 @@ export default function PlanList() {
       {listOnly && <Link href="/plan/chat?new=1" className={home.newFloat}><Plus size={20} aria-hidden="true" />{chatList ? "새 대화" : "새 사업"}</Link>}
     </div>
   </BusinessAppChrome></main>;
-}
-
-/*
- * 위 안내 알약 — 오늘 할 일 n건 · 가장 최근 사업의 다음 할 일(계획서를 다 만들었으면 journeyNext, 아니면 이어서 하기).
- * 할 일 수 = 다음 단계가 남은 사업 수(계획서를 다 만들고 개업 준비까지 마친 사업은 유지보수만 남아 빼고 센다). 없으면 그리지 않는다.
- */
-function TodoPill({ plans }: { plans: Plan[] }) {
-  const latest = plans[0] ?? null;
-  const homepage = useHomepageStatus(latest?.id ?? null);
-  if (!latest) return null;
-  const count = plans.filter(plan => !(businessHubState(plan).complete && launchProgress(plan) === "done")).length;
-  if (!count) return null;
-  const hub = businessHubState(latest);
-  const next = hub.complete ? { title: journeyNext(latest, homepage).title, href: stepHref(journeyNext(latest, homepage).href) } : { title: hub.coach || hub.job ? "대화 이어가기" : "사업계획서 이어 쓰기", href: openHref(latest) };
-  return <Link href={next.href} className={home.todo} onClick={() => setActivePlan(latest.id)}>
-    <span className={home.todoIcon} aria-hidden="true"><Sparkles size={12} /></span>
-    <span className={home.todoText}>오늘 할 일 {count}건<span className={home.todoDetail}> — {planDisplayName(latest)} · {next.title}</span></span>
-    <ArrowRight size={16} aria-hidden="true" />
-  </Link>;
 }
 
 type Recognition = { lang: string; interimResults: boolean; onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; start: () => void; stop: () => void };
