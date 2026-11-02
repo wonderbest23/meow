@@ -9,7 +9,6 @@
 .row:has(.open:hover) [data-plan-open] > span:first-child { box-shadow:0 0 0 1px var(--app-line-strong); }
 .title { overflow:hidden; font-size:.875rem; font-weight:500; line-height:1.5; text-overflow:ellipsis; white-space:nowrap; }
 /* 썸네일 안 사업 소개 — 네 줄까지 */
-.desc { position:absolute; inset:14px 14px 44px; display:-webkit-box; overflow:hidden; color:var(--app-body); font-size:.8125rem; line-height:1.6; -webkit-box-orient:vertical; -webkit-line-clamp:4; word-break:keep-all; }
 .meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; color:var(--app-muted); font-size:.8125rem; line-height:1.5; }
 
 /* ⋯ 단추 — 이름 줄 오른쪽 */

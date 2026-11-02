@@ -293,7 +293,7 @@
 .stage[data-motion="pause"] .track { animation: showcase-move var(--showcase-ms, 7000ms) both; }
 .stage[data-motion="run"] .chip,
 .stage[data-motion="pause"] .chip { animation: showcase-chip var(--showcase-ms, 7000ms) ease-out both; }
-/* 멈춤(단추 · 마우스 올림 · 입력칸 초점) — 그 자리에 선다 */
+/* 멈춤(입력칸 초점) — 그 자리에 선다 */
 .stage[data-motion="pause"] .track,
 .stage[data-motion="pause"] .chip { animation-play-state: paused; }
 /* 움직임 줄이기 — 맨 위 그대로, 이름표만 화면 아래쪽에 */

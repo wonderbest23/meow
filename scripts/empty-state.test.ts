@@ -67,7 +67,7 @@ const emptyStates = (source: string) => {
 };
 const users: [string, number][] = [
   ["app/plan/inquiries/page.tsx", 2], ["app/plan/document/DocumentWorkspace.tsx", 1], ["app/plan/workspace/OperatingWorkspace.tsx", 2],
-  ["app/account/support/SupportCenter.tsx", 2], ["app/plan/me/page.tsx", 2], ["app/plan/BusinessEmptyState.tsx", 2],
+  ["app/account/support/SupportCenter.tsx", 2], ["app/plan/me/page.tsx", 2], ["app/plan/BusinessEmptyState.tsx", 1],
 ];
 for (const [path, count] of users) {
   const source = read(path);

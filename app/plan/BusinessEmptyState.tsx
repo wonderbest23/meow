@@ -1,4 +1,4 @@
-import { ChevronRight, FolderOpen, LogIn, MessageSquareText, type LucideIcon } from "lucide-react";
+import { ChevronRight, FolderOpen, MessageSquareText, type LucideIcon } from "lucide-react";
 import type { HTMLAttributes, ReactNode } from "react";
 import hub from "./BusinessHub.module.css";
 import styles from "./BusinessEmptyState.module.css";
@@ -37,15 +37,7 @@ export function EmptyState({ icon: Icon, title, heading: Title = "h2", descripti
  * 내 사업·대화 화면의 빈 화면 — 공통 EmptyState 에 문구만 고른다.
  * heading="h2" — 머리줄에 이미 h1(예: '내 사업')이 있는 화면. 화면 읽기 제목이 h1 두 개가 되지 않게 한 단계 낮추고 모양은 그대로 둔다(점검 r41-A).
  */
-export default function BusinessEmptyState({ kind = "planning", heading = "h1" }: { kind?: "planning" | "plans" | "missing" | "loggedOut"; heading?: "h1" | "h2" }) {
-  /*
-   * 로그인하지 않았으면(또는 로그인이 풀렸으면) '사업이 없어요'라고 하지 않는다 — 사업이 지워진 줄 알았다.
-   * 로그인부터 안내하고, 처음이면 바로 시작할 수 있게 둔다.
-   */
-  if (kind === "loggedOut") return <EmptyState as="section" className={hub.emptyPlace} data-business-empty={kind} icon={LogIn} heading={heading} title="로그인하면 내 사업이 보여요" actions={<>
-    <AppButton variant="primary" href="/account?next=%2Fplan">로그인<ChevronRight size={18} aria-hidden="true" /></AppButton>
-    <AppButton variant="secondary" href="/plan/chat?new=1">처음이면 바로 시작하기</AppButton>
-  </>} />;
+export default function BusinessEmptyState({ kind = "planning", heading = "h1" }: { kind?: "planning" | "plans" | "missing"; heading?: "h1" | "h2" }) {
   /* 설명은 찾지 못한 경우에만 — 비어 있을 땐 제목과 단추면 충분하다 */
   return <EmptyState as="section" className={hub.emptyPlace} data-business-empty={kind} icon={kind === "plans" ? FolderOpen : MessageSquareText} heading={heading}
     title={kind === "missing" ? MISSING_BUSINESS_TITLE : kind === "plans" ? "아직 등록된 사업이 없어요" : "아직 진행 중인 기획이 없어요"}

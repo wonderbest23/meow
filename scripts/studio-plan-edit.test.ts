@@ -43,10 +43,10 @@ import { PLAN_EDIT_MAX_LENGTH, planChapterComposeRequest, planChapterEditLabel, 
   assert.match(workspace, />대화로 고치기</, "고치기 단추 이름은 '대화로 고치기' · '직접 고치기' 둘뿐");
   assert.doesNotMatch(workspace, /문장에서 바로 고치기|채팅으로 수정하기|이 장을 대화로 고치기/);
   assert.match(workspace, /직접 고치기/);
-  assert.match(workspace, /styles\.chapterChatEdit/, "휴대폰 도구 줄의 대화로 고치기");
+  assert.doesNotMatch(workspace, /chapterChatEdit/, "휴대폰 도구 줄의 '대화로 고치기'는 뺐다 — 장 머리에만(2026-11-02)");
   assert.doesNotMatch(workspace, /registerEditHandler\(\s*["']plan-section/, "plan-section 처리기는 등록하지 않는다(대화 칸의 기존 채팅 수정을 쓴다)");
   const css = readFileSync(new URL("../app/plan/document/DocumentWorkspace.module.css", import.meta.url), "utf8");
-  assert.match(css, /@media \(min-width:901px\) \{ \.chapterChatEdit \{ display:none; \} \}/, "도구 줄 단추는 좁은 화면에서만");
+  assert.doesNotMatch(css, /chapterChatEdit/, "도구 줄 '대화로 고치기' 규칙도 함께 뺐다");
 
   /* 작업실 PC 새 화면(1024px 이상, 2026-10-24 승인 시안) — 휴대폰·작업실 밖은 예전 그대로 */
   assert.match(workspace, /const studioPc = studioHeader && wide;/, "새 화면은 머리줄이 있는 작업실 + 넓은 화면에서만");

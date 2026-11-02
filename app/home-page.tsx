@@ -8,8 +8,6 @@ import type { RankedOpportunity } from "../lib/opportunity-engine";
 import type { ProjectRecord } from "../lib/service-domain";
 import { SiteHeader, SiteLogo, useSignedIn } from "../components/site-header";
 import { HomePromptHero } from "../components/home-prompt-hero";
-import MobileTabBar from "./plan/MobileTabBar";
-import theme from "../components/workspace-theme.module.css";
 import { HomePromptSections } from "../components/home-prompt-sections";
 import { HomeCopyChrome } from "../components/home-copy-chrome";
 import homeLanding from "../components/home-landing.module.css";
@@ -74,6 +72,12 @@ function Home({
   const legalValue = (value: string | null | undefined) => value?.trim() || LEGAL_PENDING_TEXT;
   /* 로그인했으면 첫 화면의 '로그인해도 이어져요'·'로그인·계정 복구'를 빼고, 머리말은 '내 사업'을 보인다 */
   const signedIn = useSignedIn();
+  /* 로그인한 사람은 소개 화면 대신 바로 내 사업(/plan)으로(lovable 처럼, 2026-11-02 사장님). 어드민 홈 편집 미리보기(iframe ?copyEdit=1)만 그대로 둔다 */
+  const router = useRouter();
+  useEffect(() => {
+    if (signedIn !== true || new URL(window.location.href).searchParams.get("copyEdit") === "1") return;
+    router.replace("/plan");
+  }, [signedIn, router]);
   /*
    * 어드민이 고친 홈 문구(/admin/homepage). 코드의 기본 문구로 먼저 그려지고,
    * 오버라이드가 오면 바꿔 끼운다 — 실패하면 그냥 기본 문구다.
@@ -113,8 +117,6 @@ function Home({
    * 세기는 스크롤 0~120px 구간에서 0→1로 오르는 --frost 하나로 정한다(home-landing.module.css).
    */
   const headerShell = useRef<HTMLDivElement>(null);
-  /* 로그인한 사람의 아래 3탭 막대 — 첫 화면(제목·입력 카드)에서만 보이고, 반 화면 넘게 내려가면 흐려져 사라진다(2026-11-02, lovable 홈처럼 늘 있되 소개 글은 가리지 않게) */
-  const tabShell = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const shell = headerShell.current;
     if (!shell) return;
@@ -122,7 +124,6 @@ function Home({
     const apply = () => {
       frame = 0;
       shell.style.setProperty("--frost", Math.min(1, Math.max(0, window.scrollY / 120)).toFixed(3));
-      tabShell.current?.toggleAttribute("data-hidden", window.scrollY > window.innerHeight * 0.5);
     };
     const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(apply); };
     apply();
@@ -148,7 +149,6 @@ function Home({
         <HomePromptHero title={sc("promptHome.title")} subtitle={scBr("promptHome.subtitle")} hidden={siteCopy.hidden} signedIn={signedIn} />
         <HomePromptSections signedIn={signedIn} />
       </div>
-      {signedIn === true && <div ref={tabShell} className={`${theme.tokens} ${homeLanding.tabShell}`}><MobileTabBar /></div>}
       {copyEdit ? <HomeCopyChrome hidden={siteCopy.hidden} selected={copySelected} /> : null}
 
       {/*

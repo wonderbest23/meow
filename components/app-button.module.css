@@ -1,5 +1,5 @@
 /*
- * 앱 공통 버튼 — 종류 넷(primary·secondary·text·danger) × 크기 둘(기본 44px·작은 36px), 모서리 8px 하나, PC·모바일 같은 규격.
+ * 앱 공통 버튼 — 종류 넷(primary·secondary·text·danger) + 설정 둘(soft·dangerOutline) + 로그인 둘(inverse·link) × 크기 둘(기본 44px·작은 36px), 모서리 8px 하나, PC·모바일 같은 규격.
  * 색은 --app-* 토큰만 쓴다(workspace-theme.module.css). 흰 글자/주 색·위험 색, 본문 글자/흰 바탕 모두 4.5:1 이상.
  * 쓰는 쪽은 자리(여백·너비·정렬)만 정하고 높이·안쪽 여백·글자·색·모서리는 여기서만 정한다.
  * 알약형(999px)은 칩·선택지에만 남긴다 — 이 버튼은 쓰지 않는다.
@@ -38,6 +38,11 @@
 .button[data-variant=soft]:hover:not(:disabled) { background:var(--app-fill-hover); }
 .button[data-variant=dangerOutline] { background:transparent; border-color:var(--app-danger-line); color:var(--app-danger); }
 .button[data-variant=dangerOutline]:hover:not(:disabled) { background:var(--app-danger-bg); }
+/* 로그인 화면(lovable 로그인 실측 2026-11-02) — 검정 바탕 흰 글자 16/480 주 단추 · 14px 밑줄 글자 링크(비밀번호 재설정·회원가입이 단추처럼 보여 로그인과 헷갈렸다) */
+.button[data-variant=inverse] { background:var(--app-inverse); border-color:var(--app-inverse); color:var(--app-on-inverse); font-size:1rem; font-weight:480; }
+.button[data-variant=inverse]:hover:not(:disabled) { opacity:.9; }
+.button[data-variant=link] { background:transparent; border-color:transparent; color:var(--app-text); font-size:.875rem; font-weight:400; text-decoration:underline; text-underline-offset:3px; }
+.button[data-variant=link]:hover:not(:disabled) { color:var(--app-muted); }
 /* 포커스 표시 하나 — 주 색 70% 선 3px(앱 테마의 2px 선보다 앞서도록 한 단계 높인다) */
 .button[data-variant][data-size]:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 .button[data-variant]:disabled, .button[data-variant][aria-disabled=true] { opacity:.5; cursor:not-allowed; }

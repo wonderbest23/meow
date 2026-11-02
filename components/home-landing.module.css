@@ -128,8 +128,6 @@
 .headerShell :global(.site-header) :global(.header-profile):hover { background: #f2f4f6; }
 .headerShell :global(.header-profile-menu) [data-anchor="top"] { left: auto; right: 20px; top: 64px; }
 /* 로그인한 사람의 아래 3탭 막대(앱과 같은 것) — 첫 화면에서만 보이고, 소개 구간으로 내려가면 흐려져 사라진다 */
-.tabShell { transition: opacity .25s ease; }
-.tabShell[data-hidden] { opacity: 0; pointer-events: none; }
 .headerShell :global(.site-header) a:focus-visible,
 .headerShell :global(.site-header) button:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
 

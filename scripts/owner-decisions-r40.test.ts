@@ -36,7 +36,7 @@ assert.match(homepage, /<span>공개하기<\/span><\/AppButton>/, "PC 머리줄 
 assert.match(homepage, /confirmLabel: "내 사업으로 만들기"/, "예시 사업은 머리줄 [공개하기] 확인창에서 '내 사업으로 만들기'");
 
 const css = read("app/plan/document/DocumentWorkspace.module.css");
-assert.match(css, /@media \(min-width:761px\) and \(max-width:900px\) \{ \.page:has\(\.chapterChatEdit\) \.chapterChatAction \{ display:none; \} \}/);
+assert.doesNotMatch(css, /chapterChatEdit/, "휴대폰 도구 줄의 '대화로 고치기' 규칙은 뺐다(2026-11-02)");
 const workspace = read("app/plan/document/DocumentWorkspace.tsx");
 assert.match(workspace, /styles\.chapterChatAction/);
 assert.doesNotMatch(workspace, /예시 사업계획서/, "예시 PC 칸 위 줄은 '사업계획서'");
