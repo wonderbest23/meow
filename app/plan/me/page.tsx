@@ -48,9 +48,9 @@ const BAD_STATUS = new Set(["canceled", "partial_canceled", "aborted", "expired"
 
 /* 이용 상태 — 문서마다 결제하는 사람도 있다(모든 문서 / 결제한 문서 있음 / 없음 / 확인 못 함) */
 const USAGE: Record<"all" | "some" | "free" | "unknown", { label: string; description: string; tone: StatusTone }> = {
-  all: { label: "모든 사업계획서 이용 중", description: "결제한 사업계획서는 모두 열어 볼 수 있어요.", tone: "success" },
-  some: { label: "결제한 사업계획서 이용 중", description: "결제한 사업계획서를 열어 볼 수 있어요.", tone: "success" },
-  free: { label: "결제한 사업계획서 없음", description: "사업계획서는 결제한 뒤에 쓸 수 있어요.", tone: "neutral" },
+  all: { label: "모든 사업계획서 이용 중", description: "결제한 계획서를 열 수 있어요.", tone: "success" },
+  some: { label: "결제한 사업계획서 이용 중", description: "결제한 계획서를 열 수 있어요.", tone: "success" },
+  free: { label: "결제한 사업계획서 없음", description: "계획서는 결제 뒤에 열려요.", tone: "neutral" },
   unknown: { label: "확인하지 못했어요", description: "잠시 뒤 새로고침하면 다시 확인해요.", tone: "warning" },
 };
 

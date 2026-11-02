@@ -44,7 +44,7 @@ export function LogoutRow({ size = "compact" }: { size?: AppButtonSize }) {
     clearLocalState();
     router.push("/plan");
   }
-  return <SettingsRow title="로그아웃" description="이 기기에서만 나가요. 사업은 그대로 남아요."
+  return <SettingsRow title="로그아웃" description="이 기기에서만 나가요."
     control={<AppButton type="button" variant="secondary" size={size} className={styles.logout} disabled={logoutBusy} onClick={() => void logout()}>{logoutBusy ? "로그아웃 중…" : "로그아웃"}</AppButton>}>
     {logoutMessage && <p className={styles.rowNotice} role="alert">{logoutMessage}</p>}
   </SettingsRow>;
@@ -89,7 +89,7 @@ export function DeleteAccountRow({ email, size = "compact" }: { email: string | 
   }
 
   /* 줄 안내는 한 줄만(lovable Delete account 와 같게, 2026-11-02 사장님) — 자세한 영향은 '탈퇴 진행하기'를 누른 뒤에 */
-  const note = "계정과 사업·문서가 모두 지워지고 되돌릴 수 없어요.";
+  const note = "사업·문서가 모두 지워져요.";
   const detail = "공개한 홈페이지도 닫히고 연결한 도메인도 끊어져요. 결제·환불 기록은 법령상 보존 의무가 있어 사람과 연결되지 않는 형태로만 남아요.";
   if (!showDelete) return <SettingsRow title="회원 탈퇴" description={note}
     control={<AppButton ref={deleteOpener} type="button" variant="dangerOutline" size={size} className={styles.dangerOpen} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>

@@ -39,18 +39,18 @@ export default function Preferences() {
     <SettingsHeader title="환경설정" description="화면과 알림을 나에게 맞게 바꿔요." mobile="band" />
     <SettingsSection id="pref-display" title="화면" description="밝은 화면과 어두운 화면 중에 골라요.">
       <SettingsCard mobile="band">
-        <SettingsRow title="화면 테마" descriptionId="pref-theme-desc" description="시스템을 고르면 기기 설정을 따라가요. 이 기기에만 저장돼요."
+        <SettingsRow title="화면 테마" descriptionId="pref-theme-desc" description="이 기기에만 저장돼요."
           control={<SettingsSegment label="화면 테마" items={THEME_OPTIONS.map(([value, label]) => ({ value, label }))} value={themePref} onChange={setThemePref} />} />
       </SettingsCard>
     </SettingsSection>
     <SettingsSection id="pref-alerts" title="알림" description="상담 단추와 손님 문의 알림이에요.">
       <SettingsCard mobile="band">
-        <SettingsRow inline title="상담 단추 새 답변 숫자" descriptionId="pref-badge-desc" description="상담 단추에 읽지 않은 답변 수를 띄워요. 이 기기에만 저장돼요."
+        <SettingsRow inline title="상담 단추 새 답변 숫자" descriptionId="pref-badge-desc" description="읽지 않은 답변 수를 띄워요."
           control={<SettingsToggle checked={badge} onChange={changeBadge} label="상담 단추 새 답변 숫자" describedBy="pref-badge-desc" />} />
         {plans === null ? <SettingsRow title="문의 알림 번호" description="사업 목록을 불러오는 중…" />
           : plans.length === 0 ? <SettingsRow title="문의 알림 번호" description={stale ? "사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요." : "사업을 시작하고 홈페이지를 만들면, 손님 문의를 문자로 받을 번호를 정할 수 있어요."} />
           : plans.map(plan => <SettingsRow key={plan.id} title={plans.length > 1 ? `문의 알림 번호 · ${planDisplayName(plan)}` : "문의 알림 번호"}
-            description="홈페이지로 손님 문의가 오면 문자로 알려 줄 번호예요. 그 사업의 홈페이지 화면에서 정해요."
+            description="손님 문의를 문자로 받을 번호예요."
             control={<AppButton href={`${homepageHref(plan.id)}#hk-leads`} variant="soft" size="adaptive" aria-label={`${planDisplayName(plan)} 문의 알림 번호 설정`}>설정</AppButton>} />)}
       </SettingsCard>
     </SettingsSection>
