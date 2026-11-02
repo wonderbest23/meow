@@ -88,7 +88,9 @@ export function DeleteAccountRow({ email, size = "compact" }: { email: string | 
     }
   }
 
-  const note = "계정과 사업·문서가 모두 지워져요. 공개한 홈페이지도 닫히고 연결한 도메인도 끊어져요. 결제·환불 기록은 법령상 보존 의무가 있어 사람과 연결되지 않는 형태로만 남아요.";
+  /* 줄 안내는 한 줄만(lovable Delete account 와 같게, 2026-11-02 사장님) — 자세한 영향은 '탈퇴 진행하기'를 누른 뒤에 */
+  const note = "계정과 사업·문서가 모두 지워지고 되돌릴 수 없어요.";
+  const detail = "공개한 홈페이지도 닫히고 연결한 도메인도 끊어져요. 결제·환불 기록은 법령상 보존 의무가 있어 사람과 연결되지 않는 형태로만 남아요.";
   if (!showDelete) return <SettingsRow title="회원 탈퇴" description={note}
     control={<AppButton ref={deleteOpener} type="button" variant="dangerOutline" size={size} className={styles.dangerOpen} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>
       탈퇴 진행하기
@@ -97,9 +99,10 @@ export function DeleteAccountRow({ email, size = "compact" }: { email: string | 
     <div className={styles.deleteForm}>
       {/* 이메일 없는 계정(카카오 등)은 다시 적을 이메일이 없어 탈퇴할 수 없었다 — '탈퇴'를 적게 한다(감사 2026-10-23) */}
       <p id="delete-guide" className={styles.deleteGuide}>
+        {detail}{" "}
         {email
-          ? <>되돌릴 수 없어요. 계속하려면 로그인한 이메일 <b>{email}</b> 을 그대로 적어 주세요.</>
-          : <>되돌릴 수 없어요. 계속하려면 아래 칸에 <b>{NO_EMAIL_CONFIRM}</b> 를 그대로 적어 주세요.</>}
+          ? <>계속하려면 로그인한 이메일 <b>{email}</b> 을 그대로 적어 주세요.</>
+          : <>계속하려면 아래 칸에 <b>{NO_EMAIL_CONFIRM}</b> 를 그대로 적어 주세요.</>}
       </p>
       <TextField
         className={styles.deleteInput}
