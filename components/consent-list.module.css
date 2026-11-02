@@ -1,5 +1,5 @@
 /* 약관 동의 목록 — 동그란 체크 · 이름 (필수) · › */
-.list { --consent-accent: var(--landing-accent, #3182f6); display: grid; margin: 0; text-align: left; }
+.list { --consent-accent: var(--landing-accent, rgb(0 0 0 / .88)); /* 회원가입 체크(랜딩 색이 없을 때)는 lovable 처럼 검정, 2026-11-02 */ display: grid; margin: 0; text-align: left; }
 .list ul { margin: 0; padding: 8px 0 0; list-style: none; display: grid; }
 
 .row { position: relative; display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: start; column-gap: 12px; min-height: 44px; padding: 10px 0; cursor: pointer; }
