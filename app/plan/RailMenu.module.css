@@ -43,7 +43,7 @@
 .promo { position:relative; flex:none; display:flex; align-items:center; box-sizing:border-box; width:100%; height:56px; padding:8px 12px; overflow:hidden; border-radius:12px; background:var(--app-panel); box-shadow:0 0 0 1px var(--app-line); color:var(--app-text); text-decoration:none; }
 .promo:hover { box-shadow:0 0 0 1px var(--app-line-strong); }
 /* 우리 장식 — 파랑 계열 원(lovable 그림 아님) */
-.promo i { position:absolute; top:-8px; right:-16px; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--app-primary) 38%, transparent), color-mix(in srgb, #5bb4ff 22%, transparent) 55%, transparent 72%); }
+.promo i { position:absolute; top:-8px; right:-16px; width:72px; height:72px; border-radius:50%; background:radial-gradient(circle at 35% 35%, color-mix(in srgb, var(--app-primary) 38%, transparent), color-mix(in srgb, var(--app-muted) 22%, transparent) 55%, transparent 72%); }
 .promoText { position:relative; z-index:1; display:grid; min-width:0; padding-right:56px; }
 .promoTitle { font-size:.875rem; font-weight:480; line-height:1.4286; }
 .promoDesc { overflow:hidden; color:var(--app-muted); font-size:.75rem; line-height:1.3333; text-overflow:ellipsis; white-space:nowrap; }
