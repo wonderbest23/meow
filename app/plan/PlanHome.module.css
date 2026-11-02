@@ -2,27 +2,19 @@
  * 로그인 뒤 첫 화면(/plan) — lovable 캡처(docs/design/lovable-capture/dashboard-pc-*.html · dashboard-mobile-*.html)의 실측값.
  * 색은 --app-* 토큰만(라이트/다크). 판 자체의 그라데이션은 AppChrome.module.css(.hero), 여기는 판 안의 배치만.
  *
- * PC 1440×900: 안내 알약 36(y92) · 인사말 30/480/37.5 자간 -0.675(y322) · 입력 상자 672×98 r28 안쪽 12(y392)
+ * 위 "오늘 할 일 n건" 알약은 뺐다(2026-11-02 사장님) — 할 일 데이터가 없어 안 끝난 사업 수를 세던 것이라, 할 일이 없는 계정에도 떴다.
+ * PC 1440×900: 인사말 30/480/37.5 자간 -0.675(y322) · 입력 상자 672×98 r28 안쪽 12(y392)
  *   → 목록 카드 r24(y≈876, 첫 화면 아래로 넘어가 있다) · 필터 막대 40 r999 안 32 알약 · 사업 카드 3열(328 · 간격 20/24).
  */
 .scroll { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
 .scroll * { box-sizing:border-box; }
 
 /*
- * 히어로 — 판 높이(화면 - 32)를 채운다. 알약은 판 위 84(y92), 인사말+입력 상자 묶음은
+ * 히어로 — 판 높이(화면 - 32)를 채운다. 인사말+입력 상자 묶음은
  * 위 108 · 아래 180 을 뺀 자리의 가운데(900 높이에서 인사말 y322 · 입력 상자 y392 — 캡처와 같다).
  */
 .hero { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:max(560px, calc(100dvh - 32px)); padding:108px 24px 180px; }
 
-/* 안내 알약 36 r999 안쪽 6 12 6 6, 14/480 — 반투명 흰 유리(캡처 'Add AI' 알약과 같은 모양, 내용은 우리 '오늘 할 일') */
-.todo { position:absolute; top:84px; left:50%; display:inline-flex; align-items:center; gap:8px; max-width:calc(100% - 48px); height:36px; padding:6px 12px 6px 6px; border-radius:999px; background-image:linear-gradient(rgb(255 255 255 / .74), rgb(255 255 255 / .46)); box-shadow:0 0 0 1px rgb(0 0 0 / .08), inset 0 0 0 1px rgb(255 255 255 / .55), inset 0 1px 0 rgb(255 255 255 / .9), inset 0 -1px 0 rgb(0 0 0 / .04), 0 1px 2px rgb(0 0 0 / .05), 0 8px 24px -8px rgb(0 0 0 / .1); color:var(--app-text); font-size:.875rem; font-weight:480; line-height:21px; text-decoration:none; transform:translateX(-50%); white-space:nowrap; }
-:global(html[data-app-theme="dark"]) .todo { background-image:linear-gradient(rgb(255 255 255 / .12), rgb(255 255 255 / .06)); box-shadow:0 0 0 1px rgb(0 0 0 / .4), inset 0 0 0 1px rgb(255 255 255 / .09), inset 0 1px 0 rgb(255 255 255 / .14), inset 0 -1px 0 rgb(0 0 0 / .3), 0 8px 24px -8px rgb(0 0 0 / .45); }
-.todo:hover { background-image:linear-gradient(rgb(255 255 255 / .9), rgb(255 255 255 / .6)); }
-:global(html[data-app-theme="dark"]) .todo:hover { background-image:linear-gradient(rgb(255 255 255 / .18), rgb(255 255 255 / .1)); }
-.todo > svg { flex:none; width:16px; height:16px; color:var(--app-text); }
-.todoIcon { display:inline-grid; place-items:center; flex:none; width:24px; height:24px; border-radius:50%; background:var(--app-primary); color:var(--app-on-primary); }
-.todoText { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.todoDetail { color:var(--app-body); font-weight:400; }
 
 /* 자간 -0.675px — 사이트 전체 '자간 0 !important'(globals.css body *) 보다 앞서야 해서 이 한 곳만 !important */
 .hero .greeting { max-width:720px; margin:0; padding:0 16px; color:var(--app-text); font-size:1.875rem; font-weight:480; line-height:37.5px; letter-spacing:-.675px !important; text-align:center; text-wrap:balance; word-break:keep-all; }
@@ -117,13 +109,11 @@
 .scroll :is(a, button, summary, input):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:3px; }
 
 /*
- * 휴대폰 390 — lovable 실측(2026-11-01, 375 폭): 안내 알약 36(14px, 안쪽 6 12 6 6, y≈205) · 인사말 24/행간 30 좌우 16(y≈289)
+ * 휴대폰 390 — lovable 실측(2026-11-01, 375 폭): 인사말 24/행간 30 좌우 16(y≈289)
  * · 입력 상자 폭-32 × 121 r28 안쪽 12(y≈379), 글칸 16/행간 24 최소 60 · 아래 줄 ＋ 36 · 모드 알약 36(안쪽 8 12, 14px) · 마이크 36 · 목록 카드 좌우 16
  */
 @media (max-width:900px) {
   .hero { justify-content:flex-start; min-height:0; padding:clamp(24px, 18vh, 160px) 16px 32px; }
-  .todo { position:static; transform:none; max-width:100%; }
-  .todoDetail { display:none; }
   .hero .greeting { margin:clamp(24px, 6vh, 48px) 0 0; font-size:1.5rem; line-height:30px; letter-spacing:-.48px !important; }
   .composer { margin-top:30px; padding:12px; }
   /* 글자 16px — iOS 확대 방지(16px 이상)를 지킨다. 전역 입력칸 규칙(!important)보다 앞서도록 !important */
