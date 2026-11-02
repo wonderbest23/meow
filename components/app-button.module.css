@@ -28,7 +28,8 @@
 .button[data-variant=primary]:hover:not(:disabled) { background:var(--app-primary-hover); border-color:var(--app-primary-hover); }
 .button[data-variant=secondary] { background:var(--app-surface); border-color:var(--app-line-strong); color:var(--app-text); }
 .button[data-variant=secondary]:hover:not(:disabled) { background:var(--app-raised); }
-.button[data-variant=text] { background:transparent; border-color:transparent; color:var(--app-primary-text); }
+/* 글자 단추는 본문색 — 파란 링크색이면 '취소'·'대화로 고치기'가 링크처럼 보였다(lovable 의 ghost 단추는 무채색, 2026-11-02) */
+.button[data-variant=text] { background:transparent; border-color:transparent; color:var(--app-text); }
 .button[data-variant=text][data-size] { padding-inline:8px; }
 .button[data-variant=text]:hover:not(:disabled) { background:var(--app-soft); }
 .button[data-variant=danger] { background:var(--app-danger-fill); border-color:var(--app-danger-fill); color:var(--app-on-primary); }

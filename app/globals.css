@@ -1,6 +1,6 @@
 :root {
-  --ink: #0d0a2c;
-  --muted: #5f5c7f;
+  --ink: #121214; /* 남색 기운(#0d0a2c)을 뺀 거의 검정 — lovable fg-primary 와 같은 무채색(2026-11-02) */
+  --muted: #636363; /* 보라빛 회색 → 무채색 회색(2026-11-02) */
   --paper: #f6f5ff;
   --green: #3272db;      /* 주색 파랑 — 흰 글씨 4.64:1 (기존 보라 #4a3aff 를 이 색으로 통일) */
   --green-dark: #3272db;
@@ -4853,36 +4853,36 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 
 /* Platform legal, account and launch readiness */
 .platform-legal-page { min-height: 100vh; background: #f6f5ff; }
-.platform-legal-header { height: var(--topbar-h); flex: none; padding: 0 max(24px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid #cccae3; background: white; display: flex; align-items: center; justify-content: space-between; }
+.platform-legal-header { height: var(--topbar-h); flex: none; padding: 0 max(24px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid rgb(119 119 113 / .16); background: white; display: flex; align-items: center; justify-content: space-between; }
 .platform-legal-header img { height: var(--topbar-logo-h); width: auto; display: block; }
 .platform-legal-header > a:first-child { display: flex; align-items: center; min-height: 44px; } /* 로고 누르는 자리(점검 r39) */
-.platform-legal-header > a:last-child { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; color: #585667; font-size: .75rem; font-weight: 700; } /* 누르는 자리 44px(감사 2026-10-23) */
+.platform-legal-header > a:last-child { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; color: #636363; font-size: .75rem; font-weight: 700; } /* 누르는 자리 44px(감사 2026-10-23) */
 .platform-legal-header svg { width: 15px; }
 .platform-legal-layout { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 42px 0 80px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 42px; align-items: start; }
 .platform-legal-layout > aside { position: sticky; top: 24px; }
-.platform-legal-layout > aside > strong { display: block; margin-bottom: 11px; color: #5f5c7f; font-size: .625rem; }
-.platform-legal-layout > aside nav { border-top: 1px solid #cccae3; display: grid; }
-.platform-legal-layout > aside a { min-height: 44px; padding: 0 10px; border-bottom: 1px solid #cccae3; color: #585667; display: flex; align-items: center; font-size: .75rem; }
-.platform-legal-layout > aside a.active { border-left: 3px solid #3272db; background: white; color: #0d0a2c; font-weight: 800; }
-.platform-legal-document { border: 1px solid #cccae3; border-radius: 8px; background: white; overflow: hidden; }
+.platform-legal-layout > aside > strong { display: block; margin-bottom: 11px; color: #030303; font-size: .625rem; }
+.platform-legal-layout > aside nav { border-top: 1px solid rgb(119 119 113 / .16); display: grid; }
+.platform-legal-layout > aside a { min-height: 44px; padding: 0 10px; border-bottom: 1px solid rgb(119 119 113 / .16); color: #636363; display: flex; align-items: center; font-size: .75rem; }
+.platform-legal-layout > aside a.active { border-left: 3px solid #030303; background: white; color: #030303; font-weight: 800; }
+.platform-legal-document { border: 1px solid rgb(119 119 113 / .16); border-radius: 8px; background: white; overflow: hidden; }
 .platform-legal-document > header { padding: 46px 50px 38px; border-bottom: 1px solid #dfdef1; background: #f9f9ff; }
-.platform-legal-document > header > span { color: #1b64da; display: flex; align-items: center; gap: 6px; font-size: .6875rem; font-weight: 800; }
+.platform-legal-document > header > span { color: #030303; display: flex; align-items: center; gap: 6px; font-size: .6875rem; font-weight: 800; }
 .platform-legal-document > header > span svg { width: 16px; }
 .platform-legal-document h1 { margin: 14px 0 10px; font-size: 2.125rem; letter-spacing: 0; }
-.platform-legal-document > header p { max-width: 680px; margin: 0 0 15px; color: #585667; font-size: .875rem; line-height: 1.7; }
-.platform-legal-document > header small { color: #5f5c7f; font-size: .625rem; }
+.platform-legal-document > header p { max-width: 680px; margin: 0 0 15px; color: #636363; font-size: .875rem; line-height: 1.7; }
+.platform-legal-document > header small { color: #030303; font-size: .625rem; }
 .platform-legal-draft { margin: 28px 50px 0; padding: 15px 17px; border: 1px solid #e5d7ab; border-radius: 7px; background: #fffbee; }
 .platform-legal-draft strong { font-size: .8125rem; }
 .platform-legal-draft p { margin: 4px 0 0; color: #786a41; font-size: .6875rem; line-height: 1.6; }
 .platform-legal-document > section { margin: 0 50px; padding: 32px 0; border-bottom: 1px solid #dfdef1; }
 .platform-legal-document > section h2 { margin: 0 0 14px; font-size: 1.0625rem; letter-spacing: 0; }
-.platform-legal-document > section p, .platform-legal-document > section li { color: #585667; font-size: .8125rem; line-height: 1.85; }
+.platform-legal-document > section p, .platform-legal-document > section li { color: #636363; font-size: .8125rem; line-height: 1.85; }
 .platform-legal-document > section p { margin: 8px 0; }
 .platform-legal-document > section ul { margin: 0; padding-left: 20px; }
 .platform-legal-document > footer { padding: 28px 50px 36px; background: #f9f9ff; }
 .platform-legal-document > footer strong { font-size: .75rem; }
 .platform-legal-document > footer div { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
-.platform-legal-document > footer a { min-height: 34px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #333d4b; display: flex; align-items: center; gap: 5px; font-size: .625rem; font-weight: 700; }
+.platform-legal-document > footer a { min-height: 34px; padding: 0 10px; border: 1px solid rgb(119 119 113 / .16); border-radius: 6px; background: white; color: #030303; display: flex; align-items: center; gap: 5px; font-size: .625rem; font-weight: 700; }
 .platform-legal-document > footer svg { width: 12px; }
 
 .account-loading { min-height: 100vh; display: grid; place-items: center; color: #585667; }
@@ -5088,11 +5088,11 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   /* 폭을 못박으면 4:1 로고가 늘어난다 — 높이는 토큰이 정한다 */
   .platform-legal-header img { width: auto; }
   .platform-legal-layout { width: 100%; padding: 0 0 50px; grid-template-columns: 1fr; gap: 0; }
-  .platform-legal-layout > aside { position: static; padding: 13px 18px; border-bottom: 1px solid #cccae3; background: white; overflow-x: auto; }
+  .platform-legal-layout > aside { position: static; padding: 13px 18px; border-bottom: 1px solid rgb(119 119 113 / .16); background: white; overflow-x: auto; }
   .platform-legal-layout > aside > strong { display: none; }
   .platform-legal-layout > aside nav { width: max-content; border: 0; display: flex; gap: 5px; }
-  .platform-legal-layout > aside a { min-height: 34px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; white-space: nowrap; }
-  .platform-legal-layout > aside a.active { border-left-width: 1px; border-color: #3272db; }
+  .platform-legal-layout > aside a { min-height: 34px; padding: 0 10px; border: 1px solid rgb(119 119 113 / .16); border-radius: 6px; white-space: nowrap; }
+  .platform-legal-layout > aside a.active { border-left-width: 1px; border-color: #030303; }
   .platform-legal-document { border: 0; border-radius: 0; }
   .platform-legal-document > header { padding: 34px 20px 28px; }
   .platform-legal-document h1 { font-size: 1.6875rem; }
@@ -7627,18 +7627,18 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
   .landing-block-cta h2 { font-size: 36px; }
 }
 
-.manual-payment-page { min-height: 100dvh; padding: 28px 20px 60px; background: #f6f5ff; color: #0d0a2c; }
+.manual-payment-page { min-height: 100dvh; padding: 28px 20px 60px; background: #f6f5ff; color: #030303; }
 .manual-payment-page > header { width: min(620px, 100%); height: var(--topbar-h); margin: 0 auto 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .manual-payment-page > header img { height: var(--topbar-logo-h); width: auto; display: block; }
-.manual-payment-page > header > span { color: #585667; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; }
-.manual-payment-page > header > span svg { width: 15px; color: #3272db; }
-.manual-payment-card { width: min(620px, 100%); margin: auto; border: 1px solid #cccae3; border-radius: 8px; background: white; overflow: hidden; box-shadow: 0 20px 55px #0d0a2c12; }
+.manual-payment-page > header > span { color: #636363; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; }
+.manual-payment-page > header > span svg { width: 15px; color: #030303; }
+.manual-payment-card { width: min(620px, 100%); margin: auto; border: 1px solid rgb(119 119 113 / .16); border-radius: 8px; background: white; overflow: hidden; box-shadow: 0 20px 55px rgb(0 0 0 / 0.07); }
 .manual-payment-state { padding: 30px 30px 24px; border-bottom: 1px solid #dfdef1; background: #f9f9ff; display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: start; gap: 14px; }
-.manual-payment-state > svg { width: 42px; height: 42px; padding: 10px; border-radius: 8px; background: #efeefb; color: #3272db; }
+.manual-payment-state > svg { width: 42px; height: 42px; padding: 10px; border-radius: 8px; background: #efeefb; color: #030303; }
 .manual-payment-state > span { min-width: 0; }
-.manual-payment-state small { color: #5f5c7f; font-size: 9px; overflow-wrap: anywhere; }
+.manual-payment-state small { color: #030303; font-size: 9px; overflow-wrap: anywhere; }
 .manual-payment-state h1 { margin: 4px 0 7px; font-size: 24px; line-height: 1.35; }
-.manual-payment-state p { margin: 0; color: #585667; font-size: 12px; line-height: 1.65; }
+.manual-payment-state p { margin: 0; color: #636363; font-size: 12px; line-height: 1.65; }
 .manual-bank-account { margin: 24px 30px 0; padding: 18px; border: 1px solid #b0b8c1; border-radius: 8px; background: #eef6ff; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .manual-bank-account > div { min-width: 0; display: flex; align-items: center; gap: 12px; }
 .manual-bank-account > div > svg { width: 24px; flex: 0 0 auto; color: #3272db; }
@@ -7650,8 +7650,8 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .manual-bank-account button svg { width: 14px; }
 .manual-payment-card > dl { margin: 20px 30px 0; padding: 0; border-top: 1px solid #dfdef1; }
 .manual-payment-card > dl > div { min-height: 46px; border-bottom: 1px solid #dfdef1; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
-.manual-payment-card dt { color: #5f5c7f; font-size: 10px; }
-.manual-payment-card dd { margin: 0; color: #2c3440; font-size: 11px; font-weight: 800; text-align: right; }
+.manual-payment-card dt { color: #030303; font-size: 10px; }
+.manual-payment-card dd { margin: 0; color: #030303; font-size: 11px; font-weight: 800; text-align: right; }
 .manual-deposit-report, .manual-project-start { width: calc(100% - 60px); min-height: 52px; margin: 22px 30px 0; border: 0; border-radius: 7px; background: #3272db; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 850; cursor: pointer; }
 .manual-deposit-report:disabled { opacity: .6; cursor: wait; }
 .manual-deposit-report svg, .manual-project-start svg { width: 17px; }
@@ -7665,17 +7665,17 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .manual-receipt-status span { display: grid; gap: 2px; }
 .manual-receipt-status strong { font-size: 10px; }
 .manual-receipt-status small { color: #5f5c7f; font-size: 9px; }
-.manual-payment-message { margin: 10px 30px 0; padding: 10px 12px; border-radius: 6px; background: #eef6ff; color: #3272db; font-size: 10px; line-height: 1.5; }
+.manual-payment-message { margin: 10px 30px 0; padding: 10px 12px; border-radius: 6px; background: #eef6ff; color: #030303; font-size: 10px; line-height: 1.5; }
 .manual-payment-card > footer { margin-top: 4px; padding: 20px 30px 24px; background: #f9f9ff; }
-.manual-payment-card > footer p { margin: 0; color: #5f5c7f; font-size: 9px; line-height: 1.65; }
-.manual-payment-card > footer p strong { color: #333d4b; }
+.manual-payment-card > footer p { margin: 0; color: #030303; font-size: 9px; line-height: 1.65; }
+.manual-payment-card > footer p strong { color: #030303; }
 .manual-payment-card > footer nav { margin-top: 11px; display: flex; flex-wrap: wrap; gap: 14px; }
-.manual-payment-card > footer a { color: #585667; font-size: 9px; font-weight: 800; text-decoration: underline; }
+.manual-payment-card > footer a { color: #636363; font-size: 9px; font-weight: 800; text-decoration: underline; }
 .manual-payment-page.loading, .manual-payment-page.error { place-content: center; justify-items: center; gap: 10px; text-align: center; display: grid; }
-.manual-payment-page.loading > svg, .manual-payment-page.error > svg { width: 34px; color: #3272db; }
+.manual-payment-page.loading > svg, .manual-payment-page.error > svg { width: 34px; color: #030303; }
 .manual-payment-page.error h1 { margin: 6px 0 0; font-size: 22px; }
-.manual-payment-page.error p { margin: 0 0 14px; color: #585667; font-size: 14px; } /* 글→단추 24px(gap 10 + 14) */
-.manual-payment-page.error a { min-height: 44px; padding: 0 16px; border: 1px solid #cccae3; border-radius: 8px; background: white; color: #333d4b; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; } /* 누르는 자리 44px·글자 14px(점검 r39) */
+.manual-payment-page.error p { margin: 0 0 14px; color: #636363; font-size: 14px; } /* 글→단추 24px(gap 10 + 14) */
+.manual-payment-page.error a { min-height: 44px; padding: 0 16px; border: 1px solid rgb(119 119 113 / .16); border-radius: 8px; background: white; color: #030303; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 700; } /* 누르는 자리 44px·글자 14px(점검 r39) */
 .manual-payment-page.error a svg { width: 14px; }
 
 .admin-payment-page { min-height: 100dvh; padding-bottom: 50px; background: #f6f5ff; color: #0d0a2c; }
@@ -8938,14 +8938,14 @@ body:has(.explore-page) .support-chat-toggle::after {
   --surface: #ffffff;
   --surface-soft: #f9f9ff;
   --surface-muted: #f6f5ff;
-  --text-strong: #0d0a2c;
-  --text-body: #585667;
+  --text-strong: #121214;
+  --text-body: #2e2e2d;
   /*
    * 흰 바탕 위 3.04 라 기준(4.5)에 못 미쳤다. 작은 라벨이 아니라 실제로 읽는
    * 글에 쓰이는 자리가 많아(플랜 유형 설명, 안내 문구) 흐린 채로 둘 수 없다.
    * Neuros 의 CoolGray/60 — 5.02 로 통과한다.
    */
-  --text-muted: #5f5c7f;
+  --text-muted: #636363;
   --blue: #3272db;
   --blue-dark: #3272db;
   --blue-soft: #efeefb;
@@ -10067,7 +10067,7 @@ body {
   .platform-legal-layout > aside a {
     min-height: 44px;
     padding: 0 12px;
-    border: 1px solid #cccae3;
+    border: 1px solid rgb(119 119 113 / .16);
     border-radius: 8px;
     white-space: nowrap;
     font-size: .78125rem;
@@ -11956,9 +11956,9 @@ body {
   --action-blue: #3272db;
   --action-blue-hover: #3a2ddb;
   --blue-soft: #efeefb;
-  --text-strong: #0d0a2c;
-  --text-body: #585667;
-  --text-muted: #5f5c7f;
+  --text-strong: #121214;
+  --text-body: #2e2e2d;
+  --text-muted: #636363;
   --border-soft: #dfdef1;
   --surface-soft: #f9f9ff;
   --surface-muted: #f6f5ff;
@@ -17589,5 +17589,5 @@ html:has([data-app-surface]) { background: #fff; }
  * 대표 결정 r41: 입금 기한이 지난 계좌이체 주문의 주 단추 '새로 주문하기 ›' — 제목→본문 8px, 본문→단추 24px
  */
 .manual-payment-card.status-expired .manual-payment-state h1 { margin-bottom: 8px; }
-.manual-reorder { width: 100%; min-height: 52px; margin-top: 24px; padding: 0 16px; border-radius: 14px; background: var(--action-blue); color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 850; text-decoration: none; }
+.manual-reorder { width: 100%; min-height: 52px; margin-top: 24px; padding: 0 16px; border-radius: 14px; background: #030303; color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 850; text-decoration: none; }
 .manual-reorder svg { display: inline-block; width: 18px; height: 18px; flex: 0 0 auto; }

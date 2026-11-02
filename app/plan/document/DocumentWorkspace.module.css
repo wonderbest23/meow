@@ -42,7 +42,7 @@
 .identity span { font-size:.875rem; line-height:1.6; color:var(--app-muted); word-break:keep-all; }
 .chapter + .chapter { margin-top:56px; }
 .chapterHeading { margin:0 0 32px; }
-.chapterHeading > span { color:var(--app-accent); font-size:.6875rem; font-weight:600; }
+.chapterHeading > span { color:var(--app-muted); font-size:.6875rem; font-weight:600; }
 .chapterHeading h2 { font-size:1.4375rem; line-height:1.45; margin:8px 0 0; font-weight:700; word-break:keep-all; overflow-wrap:anywhere; }
 .section { margin:0 0 38px; scroll-margin-top:20px; min-width:0; }
 .section h3 { display:flex; gap:10px; font-size:1.125rem; line-height:1.5; margin:0 0 16px; font-weight:600; word-break:keep-all; overflow-wrap:anywhere; }
@@ -445,7 +445,7 @@
  * 휴대폰은 도구 줄(목차 · 보기 바꾸기 줄)에도 '대화로 고치기'를 둔다 — 장 머리가 위로 밀려 올라가도 누를 수 있게.
  */
 .chapterHeadingTop { display:flex; align-items:center; justify-content:space-between; gap:4px 8px; flex-wrap:wrap; }
-.chapterHeadingTop > span { color:var(--app-accent); font-size:.6875rem; font-weight:600; }
+.chapterHeadingTop > span { color:var(--app-muted); font-size:.6875rem; font-weight:600; }
 .chapterActions { display:flex; align-items:center; gap:2px; flex-wrap:wrap; margin-right:-8px; }
 .chapterAction { white-space:nowrap; }
 
