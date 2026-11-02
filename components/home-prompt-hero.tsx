@@ -197,7 +197,6 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
   const [focused, setFocused] = useState(false);
   const [typed, setTyped] = useState("");
   const [tab, setTab] = useState(0);
-  const [playing, setPlaying] = useState(true);
   /* 진열 띠·탭 줄 위에 마우스가 있는 동안 — 그 자리에 멈춘다(멈춤 단추의 상태와는 따로) */
   const [hovering, setHovering] = useState(false);
   /* 탭을 직접 고른 뒤 — 저절로 넘기지 않고 그 탭의 움직임만 한 번 보여 준 뒤 끝 장면에 머문다 */
@@ -226,9 +225,8 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setMounted(true);
     setReduced(media.matches);
-    if (media.matches) setPlaying(false);
     setMicReady(!!speechRecognition() && !inNativeApp());
-    const onChange = () => { setReduced(media.matches); if (media.matches) setPlaying(false); };
+    const onChange = () => setReduced(media.matches);
     media.addEventListener("change", onChange);
     const pending = timers.current;
     return () => { media.removeEventListener("change", onChange); pending.forEach(id => window.clearTimeout(id)); pending.clear(); recognition.current?.stop(); };
@@ -346,15 +344,9 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
    * 저절로 넘길 때는 진행 막대가 다 찬 순간(animationend) 다음 탭으로 — 시계를 따로 두지 않아 멈췄다 이어도 어긋나지 않는다.
    * 숨은 창에서는 브라우저가 움직임을 멈추므로 그동안 넘어가지도 않는다.
    */
-  const moving = mounted && !reduced && !focused && !hovering && (playing || manual);
+  const moving = mounted && !reduced && !focused && !hovering;
   const motion = !mounted ? "idle" : reduced ? "static" : moving ? "run" : "pause";
-  const advance = () => { if (playing && !reduced) cutTo((tabRef.current + 1) % SHOWCASE.length); };
-  const togglePlay = () => {
-    if (playing) { setPlaying(false); setManual(false); return; }
-    /* 직접 고른 탭을 보던 중이면 그 탭을 처음부터 다시 — 움직임과 진행 막대를 같이 시작한다 */
-    if (manual) { setManual(false); setRun(value => value + 1); }
-    setPlaying(true);
-  };
+  const advance = () => { if (!reduced) cutTo((tabRef.current + 1) % SHOWCASE.length); };
   const hoverProps = { onPointerEnter: (event: PointerEvent) => { if (event.pointerType === "mouse") setHovering(true); }, onPointerLeave: () => setHovering(false) };
 
   const submit = () => {
@@ -391,7 +383,7 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
     try { engine.start(); setListening(true); } catch { setListening(false); setMicNote("음성 입력을 쓰지 못했어요. 글로 적어 주세요."); }
   };
 
-  const pickTab = (index: number) => { setPlaying(false); setManual(true); if (index === tabRef.current) setRun(value => value + 1); cutTo(index); };
+  const pickTab = (index: number) => { setManual(true); if (index === tabRef.current) setRun(value => value + 1); cutTo(index); };
   const onTabKey = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
     if (!delta) return;
@@ -403,6 +395,8 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
 
   const titleLines = title.split("\n");
   return <section className={styles.hero} data-sc-section="promptHome" aria-labelledby="home-hero-title">
+    {/* 제목·입력 카드 묶음 — 휴대폰에서는 이 묶음만 첫 화면에 가운데 오고, 탭·진열은 내려야 보인다(lovable 휴대폰 홈과 같게, 2026-11-02) */}
+    <div className={styles.lead}>
     {/* 어드민에서 제목을 숨겨도 문서 제목(h1)은 화면 낭독기에 남긴다 */}
     <h1 id="home-hero-title" className={hidden.includes("promptHome.title") ? styles.srOnly : styles.title} data-sc-field="promptHome.title">
       {titleLines.map((line, index) => <span key={index}>{accentLine(line, index === titleLines.findIndex(text => text.includes(ACCENT_WORD)))}{index < titleLines.length - 1 ? <br /> : null}</span>)}
@@ -440,11 +434,12 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
         </button>
       </div>
     </form>
+    </div>
 
     <div className={styles.tabsRow} {...hoverProps}>
       {/*
         * 알약 모양 탭(2026-10-23 사장님: base44 의 [괄호]·네모 점 말고 우리 모양으로) — 옅은 회색 통 안에서 고른 탭만 흰 알약으로 떠오른다.
-        * 저절로 넘기는 동안에는 고른 알약 아래 얇은 막대가 7초에 걸쳐 차서 다음 탭까지 남은 시간을 보여 준다(멈추면 화면 안 움직임과 함께 그 자리에 선다).
+        * 고른 탭 안의 .progress 는 보이지 않는 시계다 — 7초 CSS 움직임이 끝나면(animationend) 다음 탭으로. 파란 막대·멈춤 단추는 뺐다(2026-11-02 사장님: 디자인과 안 어울림).
         */}
       <div role="tablist" aria-label="만들어지는 결과물" className={styles.tabs}>
         {SHOWCASE.map((set, index) => <button
@@ -464,12 +459,6 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
           {index === tab && mounted && !reduced && !manual && <span key={`${tab}-${run}`} className={styles.progress} style={{ animationDuration: `${ADVANCE_MS}ms`, animationPlayState: moving ? "running" : "paused" }} onAnimationEnd={advance} aria-hidden="true" />}
         </button>)}
       </div>
-      {/* 이름은 그대로 두고 눌림 상태(aria-pressed)만 바뀐다 — 이름까지 바뀌면 낭독기가 다른 단추로 읽었다 */}
-      <button type="button" className={styles.play} aria-pressed={!playing} aria-label="예시 넘김 멈추기" title={playing ? "예시 넘김 멈추기" : "예시 넘김 다시 시작"} onClick={togglePlay}>
-        {playing
-          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" /><rect x="14" y="5" width="4" height="14" /></svg>
-          : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5l12 7-12 7z" /></svg>}
-      </button>
     </div>
 
     {/*
