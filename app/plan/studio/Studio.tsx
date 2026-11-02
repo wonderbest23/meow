@@ -673,9 +673,9 @@ export default function Studio() {
    * 브라우저 탭 제목 — '사업명 · 보는 칸 | 오늘창업'(layout 의 '사업 작업실 | 오늘창업'은 사업을 부르기 전까지만). 창을 여럿 열어도 구분된다.
    * PC 는 오른쪽 칸, 휴대폰은 지금 탭. 새 대화 · 못 찾음 · 로그인이 풀림은 칸 이름 없이.
    */
-  /* 이름을 정하기 전 제목은 첫 답 문장 그대로라(머리줄에 '…가게를 하…'로 잘림) 업종 이름이나 '새 사업'을 잠깐 보여 준다(r37 휴대폰 점검) */
+  /* 머리줄 이름은 목록과 같은 저장된 이름 그대로 — 예전엔 첫 답과 같은 이름이면 업종 이름(김밥 및 기타 간이 음식점업)으로 바꿔 보여, 목록의 이름과 달라 내가 정한 이름이 아닌 줄 알았다(2026-11-02 사장님) */
   const shownCoach = intakeSnapshot?.coach ?? (plan ? readCoach(plan.answers) : null);
-  const draftTitle = provisionalTitle(title || plan?.title || "", shownCoach, intakeSnapshot?.ksic?.name);
+  const draftTitle = title || plan?.title || "";
   /* 대표 결정 r41: '이미 사업 중이에요'로 시작한 대화의 임시 이름은 '내 사업 개선', 이름이 빈 사업은 '이름 없는 사업'(표시만) */
   const operatingDraft = shownCoach?.stage === "operating";
   const shownTitle = plan ? businessDisplayName(draftTitle, { operating: operatingDraft }) : draftBusinessTitle(draftTitle, operatingDraft);
@@ -897,19 +897,6 @@ export default function Studio() {
       </BusinessAppChrome>
     </main>
   </StudioNavContext.Provider>;
-}
-
-/*
- * 사업 이름이 아직 없을 때의 제목 — 서버는 첫 답(사업 설명)을 그대로(60자 넘으면 '…') 제목으로 둔다.
- * 사용자가 이름을 정했거나 사업 방향 정리로 이름이 생기면 그 이름을 그대로 쓴다.
- */
-function provisionalTitle(title: string, coach: ReturnType<typeof readCoach>, ksicName?: string | null): string {
-  if (!title || !coach || coach.design || coach.business.nameConfirmed) return title;
-  const description = coach.business.description.trim();
-  const fromDescription = !!description && (title === description || (title.endsWith("…") && description.startsWith(title.slice(0, -1).trimEnd())));
-  if (!fromDescription) return title;
-  const industry = coach.business.industry.trim();
-  return ksicName?.trim() || (industry && !industry.startsWith("새로운 사업") ? industry : "") || "새 사업";
 }
 
 function sampleTitle(planId: string, title: string): string {
