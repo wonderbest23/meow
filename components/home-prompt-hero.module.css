@@ -13,6 +13,9 @@
   text-align: center;
 }
 
+/* 제목·부제·입력 카드 묶음 — 컴퓨터에서는 그냥 세로 묶음(간격은 .hero 와 같게) */
+.lead { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+
 .srOnly {
   position: absolute !important;
   width: 1px;
@@ -149,12 +152,11 @@
 .send:hover { background: var(--brand-primary-hover, #1957c2); }
 
 /* 전역 'button svg 숨김'(globals.css) 때문에 아이콘 단추가 빈칸이 됐다 — 이 화면의 아이콘은 되살린다 */
-.hero .iconButton svg, .hero .send svg, .hero .play svg { display: block !important; flex: 0 0 auto; }
+.hero .iconButton svg, .hero .send svg { display: block !important; flex: 0 0 auto; }
 
 .iconButton:focus-visible,
 .send:focus-visible,
 .tab:focus-visible,
-.play:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
 
 
 /*
@@ -216,38 +218,9 @@
   pointer-events: none;
   user-select: none;
 }
-/* 다음 탭까지 남은 시간 — 고른 알약 아래쪽 안에 얇게. 자리를 차지하지 않아(absolute) 나타나고 사라져도 줄이 밀리지 않는다 */
-.progress {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 5px;
-  height: 2px;
-  border-radius: 2px;
-  background: #1b64da;
-  transform: scaleX(0);
-  transform-origin: left center;
-  opacity: .85;
-  animation: tab-progress linear forwards;
-  pointer-events: none;
-}
+/* 보이지 않는 시계 — 7초 움직임이 끝나는 순간(animationend) 다음 탭으로 넘긴다. 예전엔 고른 알약 아래 파란 막대였다(2026-11-02 뺌) */
+.progress { position: absolute; width: 0; height: 0; opacity: 0; animation: tab-progress linear forwards; pointer-events: none; }
 @keyframes tab-progress { to { transform: scaleX(1); } }
-.play {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
-  border: 1px solid #e5e8eb;
-  border-radius: 50%;
-  background: #fff;
-  color: #4e5968;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: color 160ms ease, border-color 160ms ease;
-}
-.play:hover { color: #191f28; border-color: #d1d6db; }
-.hero .tabsRow .play.play { border-radius: 50% !important; }
 
 /*
  * 진열 띠 — 한 번에 한 화면을 크게(2026-10-23 사장님: 작은 카드 여러 장은 휴대폰에서 글자가 안 읽힌다).
@@ -336,7 +309,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card, .browser, .phone, .send, .tab, .play { transition: none; }
+  .card, .browser, .phone, .send, .tab { transition: none; }
   /* 화면이 붙기 전(스크립트가 움직임 줄이기를 알기 전)에도 움직이지 않게 */
   .stage .track { animation: none !important; transform: none; }
   .stage .chip { animation: none !important; opacity: 1; top: auto; bottom: 5%; left: 50%; transform: translateX(-50%); }
@@ -352,24 +325,24 @@
 
 @media (max-width: 640px) {
   .hero { padding-top: 28px; gap: 16px; }
+  /* 휴대폰: 제목·입력 카드만 첫 화면(머리말 64px 아래)에 가운데 — 탭·진열은 내려야 보인다(lovable 휴대폰 홈) */
+  .lead { min-height: calc(100svh - 64px - env(safe-area-inset-top, 0px) - 28px); justify-content: center; gap: 16px; }
   .subtitle { font-size: 1.0625rem; }
   .card { padding: 16px 12px 12px 16px; gap: 18px; }
   .textarea, .typing { font-size: 1.0625rem; }
   .tabsRow { margin-top: 14px; gap: 4px; }
   .tab { font-size: .9375rem; padding: 0 12px; }
-  .progress { left: 10px; right: 10px; }
   /* 아이폰 틀 한 장만 가운데 크게 — 틀 너비 340px(화면 약 313px), 좁으면 남는 너비만큼(옆 단추 자리 3px씩 남김) */
   .stage { padding: 0 0 4px; display: flex; justify-content: center; }
   .browser { display: none; }
   .stage .phone { position: relative; right: auto; bottom: auto; width: min(340px, calc(100% - 6px)); }
 }
 
-/* 400px 이하 — 탭 넷과 멈춤 단추가 360px 에서도 한 줄에 들어가게 글자와 안쪽 여백을 줄인다 */
+/* 400px 이하 — 탭 넷이 360px 에서도 한 줄에 들어가게 글자와 안쪽 여백을 줄인다 */
 @media (max-width: 400px) {
   .tabsRow { gap: 4px; }
   .tabs { padding: 3px; gap: 0; }
   .tab { font-size: .875rem; padding: 0 9px; }
-  .progress { left: 8px; right: 8px; bottom: 4px; }
 }
 /* 글자 크기 설정을 키워 탭 넷이 한 줄에 안 들어가면 3+1 로 흩어지지 않게 2×2 로(기본 16px 에서는 358px 이하에서만 켜짐) */
 @media (max-width: 22.4em) {
@@ -377,7 +350,6 @@
 }
 @media (max-width: 340px) {
   .tab { padding: 0 6px; }
-  .progress { left: 6px; right: 6px; }
 }
 
 /* 제목의 '사업' — 진한 파랑에서 밝은 파랑으로 옅게 흐르는 글자색. 큰 글씨라 가장 밝은 쪽도 바탕과 3:1 이상 */
