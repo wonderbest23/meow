@@ -60,7 +60,6 @@
 /* 버튼은 세로 스택 — 나란히 두면 좁은 폭에서 겹치거나 어색하게 감겼다. 모양은 공통 버튼, 여기는 폭·간격만(가운데 정렬은 .wrap 의 text-align) */
 .primary { width: 100%; max-width: 300px; }
 
-.secondary { width: 100%; max-width: 300px; margin-top: 10px; }
 
 .note {
   margin: 18px 0 0;
