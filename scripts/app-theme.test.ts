@@ -44,8 +44,9 @@ assert.equal(runBoot(null, true, true), undefined, "저장소가 막혀도 오�
 
 // 3) 토큰 — 라이트·다크 두 벌, 표식이 있을 때만
 const tokens = read("components/workspace-theme.module.css");
-assert.match(tokens, /:global\(html\[data-app-theme\]\) :is\(\.tokens, \.theme\) \{/, "라이트 토큰(표식이 있을 때)");
-assert.match(tokens, /:global\(html\[data-app-theme="dark"\]\) :is\(\.tokens, \.theme\) \{[^}]*color-scheme: dark;/, "다크 토큰 + color-scheme");
+assert.match(tokens, /:global\(html\[data-app-theme\]\) :where\(\.tokens, \.theme\) \{/, "라이트 토큰(표식이 있을 때) — :where 로 공통 단추 글자색보다 세지 않게(2026-11-02 파란 단추 검정 글자)");
+assert.match(tokens, /:global\(html\[data-app-theme="dark"\]\) :where\(\.tokens, \.theme\) \{[^}]*color-scheme: dark;/, "다크 토큰 + color-scheme");
+assert.doesNotMatch(tokens, /html\[data-app-theme[^\]]*\]\) :is\(\.tokens, \.theme\)/, "테마 묶음은 :where — :is 면 (0,2,1) 이라 .button[data-variant] 글자색을 덮는다");
 for (const name of ["--app-bg", "--app-panel", "--app-surface", "--app-text", "--app-body", "--app-muted", "--app-line", "--app-primary", "--app-danger", "--app-ring-shadow"]) {
   const dark = tokens.slice(tokens.indexOf(':global(html[data-app-theme="dark"])'));
   assert.match(dark, new RegExp(`${name}:`), `다크 토큰에 ${name} 이 없다`);

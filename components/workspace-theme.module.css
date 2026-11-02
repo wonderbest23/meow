@@ -81,14 +81,18 @@
  *   fg-primary #030303/#fff · fg-secondary #2e2e2d/#e1e1e0 · fg-tertiary #636363/#a6a6a4 · fg-quaternary #9b9b9b/#777775
  *   bg-accent #1f55f1 · fg-accent #123ec5/#749df7 · 선 rgba(119,119,113,.16/.32)
  */
-:global(html[data-app-theme]) :is(.tokens, .theme) {
+/*
+ * 2026-11-02 사장님: lovable 라이트 그대로 — 주 단추·선택·강조는 파랑이 아니라 검정/회색(lovable bg-inverse · glow-neutral). 파랑(fg-accent)은 글 링크(--app-accent)에만 남긴다.
+ * :where — 이 묶음의 color 가 공통 단추(.button[data-variant])의 글자색보다 세지 않게(세서 파란 단추 글자가 검정으로 보였다).
+ */
+:global(html[data-app-theme]) :where(.tokens, .theme) {
   --app-bg: #f0f0f0;
   --app-base: #f5f5f5;
   --app-panel: #fafafa;
   --app-surface: #ffffff;
   --app-raised: #f5f5f5;
   --app-hover: rgb(119 119 113 / .16);
-  --app-soft: rgb(31 85 241 / .08);
+  --app-soft: rgb(119 119 113 / .08);
   --app-line: rgb(119 119 113 / .16);
   --app-line-strong: rgb(119 119 113 / .32);
   --app-text: #030303;
@@ -96,9 +100,9 @@
   --app-muted: #636363;
   --app-faint: #9b9b9b;
   --app-accent: #123ec5;
-  --app-primary: #1f55f1;
-  --app-selected: rgb(31 85 241 / .16);
-  --app-selected-text: #123ec5;
+  --app-primary: rgb(0 0 0 / .88);
+  --app-selected: rgb(119 119 113 / .16);
+  --app-selected-text: #030303;
   --app-danger: #b90e19;
   --app-danger-bg: rgb(225 36 41 / .1);
   --app-warning: #a53803;
@@ -106,8 +110,8 @@
   --app-success: #296807;
   --app-success-bg: rgb(51 133 0 / .1);
   --app-panel-fill: var(--app-panel);
-  --app-primary-fill: #1f55f1;
-  --app-on-primary: #ffffff;
+  --app-primary-fill: rgb(0 0 0 / .88);
+  --app-on-primary: #fafafa;
   --app-inverse: rgb(0 0 0 / .88);
   --app-on-inverse: #fafafa;
   --app-fill: rgb(119 119 113 / .12);
@@ -125,14 +129,14 @@
   --blue-dark: #123ec5;
   color: var(--app-text);
 }
-:global(html[data-app-theme="dark"]) :is(.tokens, .theme) {
+:global(html[data-app-theme="dark"]) :where(.tokens, .theme) {
   --app-bg: #171716;
   --app-base: #1d1d1c;
   --app-panel: #212120;
   --app-surface: #272726;
   --app-raised: #2e2e2d;
   --app-hover: rgb(119 119 113 / .16);
-  --app-soft: rgb(31 85 241 / .14);
+  --app-soft: rgb(255 255 255 / .08);
   --app-line: rgb(119 119 113 / .32);
   --app-line-strong: rgb(119 119 113 / .5);
   --app-text: #ffffff;
@@ -140,17 +144,17 @@
   --app-muted: #a6a6a4;
   --app-faint: #777775;
   --app-accent: #749df7;
-  --app-primary: #1f55f1;
-  --app-selected: rgb(31 85 241 / .24);
-  --app-selected-text: #a9c2fa;
+  --app-primary: rgb(255 255 255 / .96);
+  --app-selected: rgb(255 255 255 / .16);
+  --app-selected-text: #ffffff;
   --app-danger: #ff867b;
   --app-danger-bg: rgb(225 36 41 / .2);
   --app-warning: #ff895e;
   --app-warning-bg: rgb(206 71 0 / .2);
   --app-success: #73be59;
   --app-success-bg: rgb(51 133 0 / .2);
-  --app-primary-fill: #1f55f1;
-  --app-on-primary: #ffffff;
+  --app-primary-fill: rgb(255 255 255 / .96);
+  --app-on-primary: #1f1f1d;
   --app-inverse: rgb(255 255 255 / .96);
   --app-on-inverse: #1f1f1d;
   --app-fill: rgb(119 119 113 / .2);
