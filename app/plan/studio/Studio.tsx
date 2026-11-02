@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, Mic, MoreHorizontal, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, MoreHorizontal, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, X } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -35,7 +35,6 @@ import StudioIntakeSummary from "./StudioIntakeSummary";
 import { AppButton } from "../../../components/app-button";
 import { JourneyGuideTurn } from "../chat/intake-ui/JourneyGuideTurn";
 import { GUIDE_PARAM, journeyGuide, journeyGuideContext, readJourneyGuide } from "../../../lib/plan-builder/journey-guides";
-import { useDictation } from "../../../components/use-dictation";
 import { PopMenu, type PopMenuItem } from "./PopMenu";
 import { BizMenu, PageSelect, ToolButton, type PageOption } from "./StudioBars";
 
@@ -689,7 +688,6 @@ export default function Studio() {
   }, [intakeV2, missing, signedOut, pageName, pageTab, fresh, newIntent]);
 
   /* 휴대폰 아래 막대의 마이크 — 대화 화면으로 돌아가 말로 적기를 켠다(브라우저가 지원할 때만 단추가 있다) */
-  const dictation = useDictation(() => {});
 
   if (!intakeV2) return <StudioLoading />;
 
@@ -843,11 +841,10 @@ export default function Studio() {
     </button>
   </header> : null;
 
-  /* 휴대폰 미리보기 아래 68px 막대(lovable 실측) — 왼쪽 ‹ 대화 알약 36 · 마이크 36 원(간격 8) / 오른쪽 … 36 원(페이지 바꾸기 · 내려받기 · 요약 등) · 파랑 주 단추 36 */
+  /* 휴대폰 미리보기 아래 68px 막대(lovable 실측) — 왼쪽 ‹ 대화 알약 36 / 오른쪽 … 36 원(페이지 바꾸기 · 내려받기 · 요약 등) · 파랑 주 단추 36. 마이크는 대화 칸에만(2026-11-02 사장님) */
   const primary = PRIMARY[rightTab];
   const bottomBar = !wide && rightVisible && !missing ? <nav className={styles.bottomBar} aria-label="미리보기 도구">
     <button type="button" className={styles.backPill} onClick={() => selectTab("chat", { focus: "heading" })}><ChevronLeft aria-hidden="true" />대화{unread.includes("chat") && <i className={styles.dot} aria-hidden="true" />}</button>
-    {dictation.supported && <button type="button" className={styles.round48} aria-label="말로 요청하기" title="말로 요청하기" onClick={() => { selectTab("chat"); sendStudioCommand("chat-dictate"); }}><Mic aria-hidden="true" /></button>}
     <span className={styles.grow} />
     <PopMenu placement="above" align="end" buttonClassName={styles.round48} buttonLabel={`더 보기 — 페이지 바꾸기 · 내려받기 · 요약${anyUnread ? " (새 소식)" : ""}`} buttonTitle="더 보기" menuLabel="미리보기 메뉴"
       label={<><MoreHorizontal aria-hidden="true" />{RIGHT_TABS.some(id => unread.includes(id) && id !== rightTab) && <i className={styles.dot} aria-hidden="true" />}</>}

@@ -357,11 +357,11 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
         {/* 오류는 박스 없이 13px 빨간 글 한 줄(입력칸 테두리가 빨갛게 바뀐다). 안내(메일을 보냈어요 등)는 예전 그대로 */}
         {problemShown ? <p role="alert" id={formErrorId} className={styles.formError}>{problemShown}</p> : null}
         {message && (messageError ? <p role="alert" id={problemShown ? undefined : formErrorId} className={styles.formError}>{message}</p> : <p role="status" className={accountStyles.message}>{message}</p>)}
-        <AppButton type="submit" variant="primary" className={styles.primary} data-incomplete={!valid || undefined} aria-disabled={busy || undefined}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</AppButton>
+        <AppButton type="submit" variant="inverse" className={styles.primary} data-incomplete={!valid || undefined} aria-disabled={busy || undefined}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</AppButton>
         <nav className={styles.links} aria-label="계정 메뉴">
           {mode === "login"
-            ? <><AppButton variant="text" size="small" onClick={() => switchMode("recover")}>비밀번호 재설정</AppButton><AppButton variant="text" size="small" onClick={() => switchMode("register")}>회원가입</AppButton></>
-            : <AppButton variant="text" size="small" onClick={() => switchMode("login")}>{mode === "register" ? "이미 계정이 있어요 · 로그인" : "로그인으로 돌아가기"}</AppButton>}
+            ? <><AppButton variant="link" size="small" onClick={() => switchMode("recover")}>비밀번호 재설정</AppButton><AppButton variant="link" size="small" onClick={() => switchMode("register")}>회원가입</AppButton></>
+            : <AppButton variant="link" size="small" onClick={() => switchMode("login")}>{mode === "register" ? "이미 계정이 있어요 · 로그인" : "로그인으로 돌아가기"}</AppButton>}
         </nav>
         {entry && <section className={styles.sns} aria-label="SNS 간편 로그인">
           <p className={styles.snsTitle}>SNS 계정으로 간편 로그인/회원가입</p>

@@ -12,9 +12,9 @@
  * 탭마다 화면 안 그림이 움직인다(2026-10-24 사장님: 그림이 가만히 있어 무엇을 보여 주는지 안 보인다) —
  * 맨 위를 0.8초 보여 주고 → 3초 동안 천천히 아래로 내려 강조할 곳까지 → 그곳으로 살짝 당겨 보며(1.16배) 작은 이름표를 띄우고 → 잠깐 머문 뒤 다음 탭.
  * 움직임 줄이기 설정이면 예시 문장을 그대로 두고, 띠도 저절로 넘기지 않으며, 그림은 맨 위에 둔 채 이름표만 보여 준다.
- * 입력칸에 초점이 있거나 진열 띠 위에 마우스가 있는 동안, 멈춤 단추를 누른 동안에는 그 자리에 멈춘다(글을 쓰거나 그림을 보는 중에 바뀌지 않게).
+ * 입력칸에 초점이 있는 동안에는 그 자리에 멈춘다(글을 쓰는 중에 바뀌지 않게). 마우스 올림으로는 멈추지 않는다 — PC 에서 진열을 보려고 내리면 마우스가 늘 그 위에 있어 '안 움직인다'고 보였다(2026-11-02 사장님).
  */
-import { Children, cloneElement, isValidElement, useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactElement, type ReactNode } from "react";
+import { Children, cloneElement, isValidElement, useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { composerEnterSends } from "../app/plan/chat/intake-ui/guidance";
 import { newChatHref } from "../lib/plan-builder/studio";
@@ -197,8 +197,6 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
   const [focused, setFocused] = useState(false);
   const [typed, setTyped] = useState("");
   const [tab, setTab] = useState(0);
-  /* 진열 띠·탭 줄 위에 마우스가 있는 동안 — 그 자리에 멈춘다(멈춤 단추의 상태와는 따로) */
-  const [hovering, setHovering] = useState(false);
   /* 탭을 직접 고른 뒤 — 저절로 넘기지 않고 그 탭의 움직임만 한 번 보여 준 뒤 끝 장면에 머문다 */
   const [manual, setManual] = useState(false);
   /* 움직임을 처음부터 다시 돌릴 때마다 하나씩 — 화면 안 움직임과 진행 막대를 같은 순간에 새로 시작한다 */
@@ -344,10 +342,9 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
    * 저절로 넘길 때는 진행 막대가 다 찬 순간(animationend) 다음 탭으로 — 시계를 따로 두지 않아 멈췄다 이어도 어긋나지 않는다.
    * 숨은 창에서는 브라우저가 움직임을 멈추므로 그동안 넘어가지도 않는다.
    */
-  const moving = mounted && !reduced && !focused && !hovering;
+  const moving = mounted && !reduced && !focused;
   const motion = !mounted ? "idle" : reduced ? "static" : moving ? "run" : "pause";
   const advance = () => { if (!reduced) cutTo((tabRef.current + 1) % SHOWCASE.length); };
-  const hoverProps = { onPointerEnter: (event: PointerEvent) => { if (event.pointerType === "mouse") setHovering(true); }, onPointerLeave: () => setHovering(false) };
 
   const submit = () => {
     const idea = normalizeLandingIdea(text);
@@ -436,7 +433,7 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
     </form>
     </div>
 
-    <div className={styles.tabsRow} {...hoverProps}>
+    <div className={styles.tabsRow}>
       {/*
         * 알약 모양 탭(2026-10-23 사장님: base44 의 [괄호]·네모 점 말고 우리 모양으로) — 옅은 회색 통 안에서 고른 탭만 흰 알약으로 떠오른다.
         * 고른 탭 안의 .progress 는 보이지 않는 시계다 — 7초 CSS 움직임이 끝나면(animationend) 다음 탭으로. 파란 막대·멈춤 단추는 뺐다(2026-11-02 사장님: 디자인과 안 어울림).
@@ -467,7 +464,7 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
       * 브라우저 틀 그림은 휴대폰 너비에서 숨겨지므로 늦게 받기(lazy) — 숨긴 그림은 받지 않는다.
       * data-motion: idle(화면이 붙기 전 — 맨 위) · run · pause(그 자리에 멈춤) · static(움직임 줄이기 — 맨 위 + 이름표).
       */}
-    <div id="home-showcase" role="tabpanel" aria-labelledby={`home-showcase-tab-${tab}`} className={styles.showcase} {...hoverProps}>
+    <div id="home-showcase" role="tabpanel" aria-labelledby={`home-showcase-tab-${tab}`} className={styles.showcase}>
       <div className={styles.stage} data-motion={motion}>
         {SLOTS.map((kind, index) => {
           const slot = slots[index];

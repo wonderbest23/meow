@@ -30,7 +30,7 @@ const small = rule(css, ".button[data-variant][data-size=small]");
 assert.match(small, /min-height:36px/, "작은 버튼은 36px");
 assert.match(rule(css, ".button[data-variant][data-size=small]::before"), /inset:-4px 0/, "작은 버튼도 누르는 자리는 44px(위아래 4px씩)");
 const variants = [...new Set([...css.matchAll(/\.button\[data-variant=(\w+)\]/g)].map(match => match[1]))];
-assert.deepEqual(variants.sort(), ["danger", "dangerOutline", "primary", "secondary", "soft", "text"], "버튼 종류는 넷 + 설정 화면 둘(soft · dangerOutline)뿐이다");
+assert.deepEqual(variants.sort(), ["danger", "dangerOutline", "inverse", "link", "primary", "secondary", "soft", "text"], "버튼 종류는 넷 + 설정 화면 둘(soft · dangerOutline) + 로그인 화면 둘(inverse · link)뿐이다");
 const large = rule(css, ".button[data-variant][data-size=large]");
 assert.match(large, /height:48px; min-height:48px;[^}]*border-radius:12px;/, "설정 목록 맨 아래 단추(large)는 48px r12");
 assert.doesNotMatch(css.replace(large, ""), /border-radius:\s*(?!8px)\d/, "모서리는 8px 하나(large 48 만 12px) — 알약형(999px)은 칩·선택지에만");
@@ -48,7 +48,7 @@ assert.match(css, /\.button\[data-variant\]:disabled, \.button\[data-variant\]\[
 assert.match(css, /\.button \{ composes: tokens from "\.\/workspace-theme\.module\.css"; \}/, "버튼이 토큰을 들고 다니지 않는다 — 테마 밖(계정·창·첫 로딩)에서 색이 빠진다");
 
 const component = read("components/app-button.tsx");
-assert.match(component, /export type AppButtonVariant = "primary" \| "secondary" \| "text" \| "danger" \| "soft" \| "dangerOutline";/);
+assert.match(component, /export type AppButtonVariant = "primary" \| "secondary" \| "text" \| "danger" \| "soft" \| "dangerOutline" \| "inverse" \| "link";/);
 assert.match(component, /export type AppButtonSize = "default" \| "small" \| "compact" \| "mini" \| "adaptive" \| "large";/);
 assert.match(component, /<LoaderCircle className=\{styles\.spinner\} size=\{16\} aria-hidden="true" \/>/, "로딩은 도는 LoaderCircle");
 assert.match(component, /disabled=\{disabled \|\| loading\} aria-busy=\{loading \|\| undefined\}/, "로딩 중에는 누르지 못하고 aria-busy");

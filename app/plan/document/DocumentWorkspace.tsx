@@ -557,8 +557,7 @@ export default function DocumentWorkspace(props: Props) {
               <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroller()?.scrollTo({ top: 0 }); }}>한 장 요약</button>
             </div>}
             <span className={styles.pageCount}>{summaryMode ? props.summary ? "" : "한 장 요약" : continuous ? "전체 이어 읽기" : grouped.length ? `${chapter + 1} / ${grouped.length}장` : "사업계획서"}</span>
-            {/* 휴대폰(좁은 화면)의 도구 줄 — 장 머리가 위로 밀려 올라가도 지금 보는 장을 대화로 고칠 수 있게. 넓은 화면은 장 머리 단추만 */}
-            {chatEdit && !factMode && !editing && !summaryMode && !continuous && grouped[chapter] && <button type="button" className={styles.chapterChatEdit} aria-label={`${chapter + 1}장 ${grouped[chapter][0]} — 대화로 고치기`} onClick={() => askChatEdit(chapter)}><MessageSquare size={15} aria-hidden="true" />대화로 고치기</button>}
+            {/* '대화로 고치기'는 장 머리에만 — 도구 줄에도 있어 한 화면에 둘씩 보였다(2026-11-02 사장님) */}
             {toolbarHas && <div className={styles.toolbarActions} data-next={(showNext && !studioHeader) || undefined}>{toolbarButtons}</div>}
           </div>}
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}

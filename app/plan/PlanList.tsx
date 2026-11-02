@@ -4,18 +4,19 @@ import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type Ke
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, ArrowUp, ChevronDown, Mic, MoreHorizontal, Plus, Search, Sparkles } from "lucide-react";
-import { currentBusinessDesign } from "../../lib/plan-builder/coach";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
-import { businessHubState, businessEntryHref } from "../../lib/plan-builder/business-hub";
+import { businessHubState, businessEntryHref, businessChatHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
 import { journeyNext, launchProgress } from "../../lib/plan-builder/journey";
 import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
-import { ENTRY_MODES, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref, type EntryMode } from "../../lib/plan-builder/studio";
+import { ENTRY_MODES, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref, studioHref, type EntryMode } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
 const openHref = (plan: Parameters<typeof businessEntryHref>[0]) => { const href = businessEntryHref(plan); return (STUDIO_REDIRECT && studioEntryHref(href)) || href; };
 const stepHref = (href: string) => (STUDIO_REDIRECT && studioEntryHref(href)) || href;
+/* 대화 탭(view=chat)의 카드 — 그 사업의 대화로 바로(아래 탭 막대와 같은 길) */
+const chatHref = (plan: Plan) => STUDIO_REDIRECT ? studioHref(plan.id, "chat") : businessChatHref(plan.id);
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
 import BusinessEmptyState from "./BusinessEmptyState";
@@ -30,13 +31,14 @@ import { useHomepageStatus } from "./use-homepage";
 import { AppButton } from "../../components/app-button";
 import { TextArea, TextField } from "../../components/app-field";
 import { loadAuthSession } from "../../lib/client/auth-session";
-import { PLAN_VIEW_ALL } from "./MobileTabBar";
+import { PLAN_VIEW_ALL, PLAN_VIEW_CHAT } from "./MobileTabBar";
 
 /*
  * 로그인 뒤 첫 화면(/plan) — 시안 Main.dc.html(PC 1440) · MHome.dc.html(휴대폰 390).
  * 위 안내 알약(오늘 할 일) → 인사말 → 큰 입력칸(보내면 새 대화 — 첫 화면 입력칸과 같은 길: newChatHref + idea 보관)
- * → 아래 목록 카드(검색 · 내 사업 · 최근 본 항목 · 예시) + 사업 카드(316px).
- * ?view=all 이면 입력칸 없이 사업 카드만(왼쪽 메뉴·아래 탭의 '내 사업'). 목록의 데이터·상태(불러오기 실패·빈 화면·이름 변경·삭제 안내)는 예전 그대로.
+ * → 아래 목록 카드(검색 · 내 사업 · 최근 본 항목 · 예시) + 사업 카드(316px). 휴대폰 첫 화면은 인사말·입력칸만(목록은 아래 탭 '내 사업') — lovable 휴대폰 홈과 같다(2026-11-02).
+ * ?view=all 이면 입력칸 없이 사업 카드만(왼쪽 메뉴·아래 탭의 '내 사업'), ?view=chat 이면 같은 목록인데 카드가 그 사업의 대화로 간다(아래 탭 '대화').
+ * 로그인해야 열린다 — 아니면 로그인 화면으로(2026-11-02 사장님: 로그인 없이 들어와졌다). 목록의 데이터·상태(불러오기 실패·빈 화면·이름 변경·삭제 안내)는 예전 그대로.
  */
 type Filter = "search" | "mine" | "recent" | "samples";
 const FILTERS: Array<[Filter, string]> = [["search", "검색"], ["mine", "내 사업"], ["recent", "최근 본 항목"], ["samples", "예시"]];
@@ -84,11 +86,10 @@ export default function PlanList() {
     window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", visible);
     return () => { alive = false; window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", visible); };
   }, []);
-  // 로그인 여부 — 확인하지 못했으면(null) 예전처럼 둔다
+  // 로그인 여부 — 모르면(null) 로딩, 아니면(false) 로그인 화면으로. 확인에 실패하면 로딩이 '늦어지고 있어요'로 바뀌고 다시 시도가 새로 불러온다
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
-  useEffect(() => { let alive = true; loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}).finally(() => { if (alive) setAuthChecked(true); }); return () => { alive = false; }; }, []);
-  /* 인사말의 이름 — 이메일 앞부분 */
+  useEffect(() => { let alive = true; loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}); return () => { alive = false; }; }, []);
+  useEffect(() => { if (signedIn === false) router.replace("/account?next=%2Fplan"); }, [signedIn, router]);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
   const plans = allPlans;
   const samples = state?.plans.filter(p => isSamplePlan(p.id) && LISTED_SAMPLE_IDS.has(p.id)) ?? [];
@@ -101,11 +102,13 @@ export default function PlanList() {
   /* 검색칸에 초점을 옮겨 달라는 요청 — 칸이 그려진 뒤(effect)에 옮긴다 */
   const [searchFocus, setSearchFocus] = useState(0);
   useEffect(() => { if (searchFocus) searchInput.current?.focus(); }, [searchFocus]);
+  const toggleSearch = () => { if (filter === "search") { setFilter("mine"); setQuery(""); } else { setFilter("search"); setSearchFocus(n => n + 1); } };
   const onParams = useMemo(() => (nextView: string | null, search: boolean) => {
     setView(nextView);
     if (search) { setFilter("search"); setSearchFocus(n => n + 1); }
   }, []);
-  const listOnly = view === PLAN_VIEW_ALL;
+  const chatList = view === PLAN_VIEW_CHAT;
+  const listOnly = view === PLAN_VIEW_ALL || chatList;
   const recent = useMemo(() => {
     const active = plans.find(plan => plan.id === state?.activePlanId);
     return (active ? [active, ...plans.filter(plan => plan.id !== active.id)] : plans).slice(0, 4);
@@ -136,12 +139,16 @@ export default function PlanList() {
   }
   function sample(id: string) { setActivePlan(id); router.push(`/plan/document?planId=${encodeURIComponent(id)}`); }
 
-  const card = (p: Plan) => { const status=businessHubState(p); const introduction = (status.coach && currentBusinessDesign(status.coach)?.startingPlan.scope) || status.coach?.business.description || ""; const display = planDisplayName(p); return <article key={p.id} className={`${mine.row} ${home.card}`}>
-    {/* 썸네일 16:9 r8 — 사업 소개 한 단락(없으면 문서 모양 자리), 왼쪽 아래 상태 배지 */}
-    <Link className={mine.open} href={openHref(p)} data-plan-open={p.id} aria-label={`${display} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "내 사업 화면 열기"}`}>
+  /* 로그인 확인 전·로그인 안 됨 — 같은 틀 안에 로딩만(화면이 바뀌며 흔들리지 않게). 로그인 안 됐으면 위 effect 가 로그인 화면으로 보낸다 */
+  if (signedIn !== true) return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="new" backHref="/" home>
+    <PlanLoading fill variant="compact" note={signedIn === false ? "로그인 화면으로 가고 있어요" : "화면을 불러오고 있어요"} />
+  </BusinessAppChrome></main>;
+
+  const card = (p: Plan) => { const status=businessHubState(p); const display = planDisplayName(p); return <article key={p.id} className={`${mine.row} ${home.card}`}>
+    {/* 썸네일 16:9 r8 — 문서 모양 자리 + 왼쪽 아래 상태 배지. 소개 글은 쓰지 않는다 — 글이 많아 번잡했고 제목·상태면 충분하다(2026-11-02 사장님) */}
+    <Link className={mine.open} href={chatList ? chatHref(p) : openHref(p)} data-plan-open={p.id} aria-label={`${display} ${chatList ? "대화 열기" : status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "내 사업 화면 열기"}`}>
       <span className={home.thumb}>
-        {/* 소개가 사업 이름과 같으면(첫 답을 그대로 이름으로 쓴 사업) 같은 줄을 두 번 보이지 않는다 */}
-        {introduction && introduction.trim() !== p.title.trim() ? <span className={mine.desc}>{introduction}</span> : <span className={home.skeleton} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span>}
+        <span className={home.skeleton} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span>
         <StatusBadge tone={status.statusTone} className={home.thumbBadge}>{status.status}</StatusBadge>
       </span>
       <span className={home.meta}>
@@ -163,20 +170,19 @@ export default function PlanList() {
     }}><summary aria-label={`${display} 관리`} data-plan-menu={p.id}><MoreHorizontal size={20} /></summary><div><button onClick={() => {setEditing(p.id);setName(isUnnamedBusiness(p.title) ? "" : p.title);setNotice("");}}>이름 변경</button><button onClick={() => remove(p.id,display)}>삭제</button></div></details>}
   </article>; };
 
-  const list = !state ? <PlanLoading fill variant="compact" note="내 사업을 불러오고 있어요" onRetry={() => retry.current()} /> : <div className={home.listBody} data-empty-list={plans.length === 0 && !error ? "" : undefined}>
+  /* 목록 로딩은 목록 카드 안에서 — 화면 한가운데 떠 있으면 인사말·입력칸 위에 겹쳐 무엇이 로딩 중인지 알 수 없었다(2026-11-02 사장님) */
+  const list = !state ? <PlanLoading variant="compact" note="내 사업을 불러오고 있어요" onRetry={() => retry.current()} /> : <div className={home.listBody} data-empty-list={plans.length === 0 && !error ? "" : undefined}>
     <p role="status" className={mine.status} data-empty={notice ? undefined : ""}>{notice}</p>
     {filter === "samples" ? (samples.length ? <div className={home.grid}>{samples.map(p => <button type="button" className={home.sampleCard} key={p.id} onClick={() => sample(p.id)}>
       <span className={home.thumb}><span className={home.skeleton} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span><StatusBadge tone="info" className={home.thumbBadge}>완성 예시</StatusBadge></span>
       <span className={home.meta}><span className={home.avatar} aria-hidden="true">예</span><span className={home.metaText}><strong>{p.title.replace(/^샘플 · /,"")}</strong><span className={mine.meta}>사업계획서 예시 보기</span></span></span>
     </button>)}</div> : <p className={home.quiet}>지금 보여 드릴 예시가 없어요.</p>)
-    : plans.length === 0 && error ? <div role="alert" className={styles.error}><p>사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><AppButton type="button" variant="primary" className={styles.primary} onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</AppButton></div> : plans.length === 0 ? (
-      /* 로그인 여부를 아직 모르면 자리만 잡아 둔다 — '사업이 없어요'를 먼저 보였다가 '로그인하면…'으로 바뀌며 화면이 한 번 흔들렸다(점검 r38) */
-      !authChecked ? <section className={styles.emptyPlace} aria-hidden="true" /> : <BusinessEmptyState heading="h2" kind={signedIn === false ? "loggedOut" : "plans"} />
-    ) : shown.length === 0 ? <p className={home.quiet}>‘{query.trim()}’ 이름의 사업이 없어요.</p> : <div className={`${mine.list} ${home.grid}`}>{shown.map(card)}</div>}
+    : plans.length === 0 && error ? <div role="alert" className={styles.error}><p>사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><AppButton type="button" variant="primary" className={styles.primary} onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</AppButton></div> : plans.length === 0 ? <BusinessEmptyState heading="h2" kind="plans" />
+    : shown.length === 0 ? <p className={home.quiet}>‘{query.trim()}’ 이름의 사업이 없어요.</p> : <div className={`${mine.list} ${home.grid}`}>{shown.map(card)}</div>}
     {error && plans.length > 0 && <p role="alert" className={styles.error}>{error} <button type="button" className={styles.inlineRetry} onClick={() => retry.current()}>다시 시도</button></p>}
   </div>;
 
-  return <main className={frame.page} data-plan-view="plans" data-list-only={listOnly || undefined}><BusinessAppChrome title="내 사업" active={listOnly ? "plans" : "new"} backHref="/" home>
+  return <main className={frame.page} data-plan-view="plans" data-list-only={listOnly || undefined}><BusinessAppChrome title={chatList ? "대화" : "내 사업"} active={chatList ? "chat" : listOnly ? "plans" : "new"} backHref="/" home>
     <Suspense fallback={null}><ParamsWatcher onChange={onParams} /></Suspense>
     <div className={home.scroll}>
       {!listOnly && <section className={home.hero} aria-labelledby="plan-home-greeting">
@@ -185,24 +191,24 @@ export default function PlanList() {
         <h1 id="plan-home-greeting" className={home.greeting}>오늘은 어떤 사업을 시작해볼까요?</h1>
         <Composer />
       </section>}
-      <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">
+      <section className={home.listCard} data-list-only={listOnly || undefined} aria-label={chatList ? "대화할 사업 목록" : "내 사업 목록"} id="businesses">
         {/* 사업 카드만 보는 화면 — 제목(휴대폰은 lovable Projects 탭처럼 30/600 + 오른쪽 44 원 검색 단추) */}
         {listOnly && <div className={home.listHead}>
-          <h1 className={home.listTitle}>내 사업</h1>
-          <button type="button" className={home.headCircle} aria-label="사업 이름으로 찾기" aria-pressed={filter === "search"} onClick={() => { setFilter("search"); setSearchFocus(n => n + 1); }}><Search size={20} aria-hidden="true" /></button>
+          <h1 className={home.listTitle}>{chatList ? "대화" : "내 사업"}</h1>
+          <button type="button" className={home.headCircle} aria-label="사업 이름으로 찾기" aria-pressed={filter === "search"} onClick={toggleSearch}><Search size={20} aria-hidden="true" /></button>
         </div>}
         <div className={home.filterRow}>
           <div className={home.filters} role="group" aria-label="목록 보기">
-            {FILTERS.map(([key, label]) => <button key={key} type="button" className={home.filterPill} aria-pressed={filter === key} onClick={() => { setFilter(key); if (key === "search") setSearchFocus(n => n + 1); }}>{key === "search" && <Search size={16} aria-hidden="true" />}{label}</button>)}
-            {/* 검색칸 — lovable 처럼 필터 막대 안에 펼친다 */}
-            {filter === "search" && <TextField ref={searchInput} type="search" className={home.search} aria-label="사업 이름으로 찾기" placeholder="사업 이름으로 찾기" value={query} onChange={event => setQuery(event.target.value)} />}
+            {/* 검색을 켜면 다른 알약은 접고 검색칸이 막대를 채운다 — 예전엔 알약 옆에 칸이 붙어 막대 밖으로 밀려 나갔다(2026-11-02 사장님). 검색 알약을 다시 누르거나 Esc 로 닫는다 */}
+            {FILTERS.filter(([key]) => filter !== "search" || key === "search").map(([key, label]) => <button key={key} type="button" className={home.filterPill} aria-pressed={filter === key} onClick={() => { if (key === "search") toggleSearch(); else setFilter(key); }}>{key === "search" && <Search size={16} aria-hidden="true" />}{label}</button>)}
+            {filter === "search" && <TextField ref={searchInput} type="search" className={home.search} aria-label="사업 이름으로 찾기" placeholder="사업 이름으로 찾기" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Escape") toggleSearch(); }} />}
           </div>
           {!listOnly && <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={home.browse}>전체 둘러보기<ArrowRight size={16} aria-hidden="true" /></Link>}
         </div>
         {list}
       </section>
-      {/* 휴대폰 '내 사업' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
-      {listOnly && <Link href="/plan/chat?new=1" className={home.newFloat}><Plus size={20} aria-hidden="true" />새 사업</Link>}
+      {/* 휴대폰 '내 사업'·'대화' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
+      {listOnly && <Link href="/plan/chat?new=1" className={home.newFloat}><Plus size={20} aria-hidden="true" />{chatList ? "새 대화" : "새 사업"}</Link>}
     </div>
   </BusinessAppChrome></main>;
 }
