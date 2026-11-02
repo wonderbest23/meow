@@ -518,7 +518,8 @@
 .page[data-studio-pc] .chapter + .chapter { margin-top:64px; }
 .chapterLead { position:relative; margin:0 0 26px; }
 .chapterEyebrow { display:flex; align-items:center; gap:8px; min-height:28px; }
-.chapterEyebrow > span { font-size:.78125rem; font-weight:700; color:var(--app-primary-text); }
+/* 장 번호 작은 글은 링크가 아니라 라벨 — lovable 처럼 회색(2026-11-02 운영 훑기에서 남은 파란 글자 하나) */
+.chapterEyebrow > span { font-size:.78125rem; font-weight:700; color:var(--app-muted); }
 .chapterEyebrow .chapterActions { margin-left:auto; gap:6px; }
 .chapterLead h2 { margin:6px 0 0; font-size:1.5625rem; line-height:1.4; font-weight:750; letter-spacing:-0.025em; color:var(--app-text); word-break:keep-all; overflow-wrap:anywhere; text-wrap:balance; }
 .chapterPitch { margin:14px 0 0; font-size:.9375rem; line-height:1.85; color:var(--app-text); word-break:keep-all; overflow-wrap:anywhere; }
