@@ -106,12 +106,39 @@
 }
 .headerShell :global(.site-header) :global(.small-start):hover { background: #000 !important; }
 .headerShell :global(.site-header) :global(.small-start) svg { display: none; }
+/* 로그인한 사람의 프로필 단추 — 동그라미 안 머리글자(앱의 아바타와 같은 44). PC 메뉴 창은 머리말 오른쪽 아래로(앱에서는 왼쪽 메뉴 아래라 left 로 잡혀 있다) */
+.headerShell :global(.site-header) :global(.header-profile) {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid #d1d6db;
+  background: #fff;
+  color: #191f28;
+  font: inherit;
+  font-size: .9375rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+/* 전역 단추 규칙(button:not(…) — 클래스 셋+요소 하나, !important)보다 한 단계 높여 동그라미로 */
+.headerShell :global(.site-header) :global(.header-profile.header-profile) { border-radius: 50% !important; }
+.headerShell :global(.site-header) :global(.header-profile):hover { background: #f2f4f6; }
+.headerShell :global(.header-profile-menu) [data-anchor="top"] { left: auto; right: 20px; top: 64px; }
+/* 로그인한 사람의 아래 3탭 막대(앱과 같은 것) — 첫 화면에서만 보이고, 소개 구간으로 내려가면 흐려져 사라진다 */
+.tabShell { transition: opacity .25s ease; }
+.tabShell[data-hidden] { opacity: 0; pointer-events: none; }
 .headerShell :global(.site-header) a:focus-visible,
 .headerShell :global(.site-header) button:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
 
 @media (max-width: 900px) {
   .headerShell :global(.site-header) :global(.home-header-nav) { display: none; }
   .headerShell :global(.site-header) :global(.header-actions) { margin-left: auto; }
+  /* 휴대폰·태블릿 — lovable 비로그인 홈처럼 '시작하기' + ☰ 둘만(로그인은 ☰ 메뉴 안) */
+  .headerShell :global(.site-header) :global(.header-login) { display: none; }
+  .headerShell :global(.header-profile-menu) [data-anchor="top"] { right: 16px; top: 60px; }
 }
 /*
  * 태블릿 폭(768~1023px) — 고객센터 둥근 단추가 본문 오른쪽 끝(이용 요금 '출시 기념가' · 자주 묻는 질문 '+')을 덮었다.
@@ -137,8 +164,6 @@
   .headerShell :global(.site-header) :global(.brand-logo) { height: 28px; }
   .headerShell :global(.site-header) :global(.header-login) { padding: 0 10px; }
   .headerShell :global(.site-header) :global(.small-start) { padding: 0 14px !important; font-size: .9375rem !important; }
-  /* 휴대폰 폭에서 내 계정 아이콘은 ☰ 메뉴(내 사업 · 내 계정) 안으로 — 머리말에는 '내 사업' · 시작하기 · ☰ 만 */
-  .headerShell :global(.site-header) :global(.account-link) { display: none; }
 }
 @media (max-width: 360px) {
   .headerShell :global(.site-header) { gap: 6px; }

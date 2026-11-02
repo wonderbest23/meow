@@ -8,6 +8,8 @@ import type { RankedOpportunity } from "../lib/opportunity-engine";
 import type { ProjectRecord } from "../lib/service-domain";
 import { SiteHeader, SiteLogo, useSignedIn } from "../components/site-header";
 import { HomePromptHero } from "../components/home-prompt-hero";
+import MobileTabBar from "./plan/MobileTabBar";
+import theme from "../components/workspace-theme.module.css";
 import { HomePromptSections } from "../components/home-prompt-sections";
 import { HomeCopyChrome } from "../components/home-copy-chrome";
 import homeLanding from "../components/home-landing.module.css";
@@ -111,11 +113,17 @@ function Home({
    * 세기는 스크롤 0~120px 구간에서 0→1로 오르는 --frost 하나로 정한다(home-landing.module.css).
    */
   const headerShell = useRef<HTMLDivElement>(null);
+  /* 로그인한 사람의 아래 3탭 막대 — 첫 화면(제목·입력 카드)에서만 보이고, 반 화면 넘게 내려가면 흐려져 사라진다(2026-11-02, lovable 홈처럼 늘 있되 소개 글은 가리지 않게) */
+  const tabShell = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const shell = headerShell.current;
     if (!shell) return;
     let frame = 0;
-    const apply = () => { frame = 0; shell.style.setProperty("--frost", Math.min(1, Math.max(0, window.scrollY / 120)).toFixed(3)); };
+    const apply = () => {
+      frame = 0;
+      shell.style.setProperty("--frost", Math.min(1, Math.max(0, window.scrollY / 120)).toFixed(3));
+      tabShell.current?.toggleAttribute("data-hidden", window.scrollY > window.innerHeight * 0.5);
+    };
     const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(apply); };
     apply();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -140,6 +148,7 @@ function Home({
         <HomePromptHero title={sc("promptHome.title")} subtitle={scBr("promptHome.subtitle")} hidden={siteCopy.hidden} signedIn={signedIn} />
         <HomePromptSections signedIn={signedIn} />
       </div>
+      {signedIn === true && <div ref={tabShell} className={`${theme.tokens} ${homeLanding.tabShell}`}><MobileTabBar /></div>}
       {copyEdit ? <HomeCopyChrome hidden={siteCopy.hidden} selected={copySelected} /> : null}
 
       {/*

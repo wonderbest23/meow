@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
-import { ChevronRight, Menu, Search, UserRound, X } from "lucide-react";
+import { ChevronRight, Menu, Search, X } from "lucide-react";
 import { CtaArrow } from "./cta-arrow";
 import { useDialogFocus } from "./use-dialog-focus";
 import { loadAuthSession } from "../lib/client/auth-session";
 import menuStyles from "./site-header-menu.module.css";
+import theme from "./workspace-theme.module.css";
+import ProfileMenu from "../app/plan/ProfileMenu";
+import { accountInitial, useAccount } from "../app/plan/use-account";
 
 /*
  * 화면 맨 위 띠.
@@ -55,18 +58,30 @@ const HOME_SECTIONS: Array<[string, string]> = [["#how", "진행 방식"], ["#de
 /* 바닥글의 안내 링크와 같은 것 */
 const LEGAL_LINKS: Array<[string, string]> = [["/business-info", "사업자·통신판매 정보"], ["/privacy", "개인정보처리방침"], ["/ai-notice", "인공지능·국외 처리"], ["/terms", "이용약관"], ["/refund", "취소·환불 기준"]];
 
-/** 머리말 오른쪽 — 로그인했으면 '내 사업'(첫 화면만)과 내 계정 아이콘, 아니면 '로그인 · 회원가입' 두 단추(헷갈리지 않게 글자로) */
-function AccountActions({ signedIn, plans }: { signedIn: boolean | null; plans: boolean }) {
+/*
+ * 머리말 오른쪽(2026-11-02 lovable 대조) — 로그인했으면 동그라미 프로필 하나(누르면 앱과 같은 프로필 메뉴: 휴대폰은 아래 시트, PC 는 아래로 뜨는 창),
+ * 아니면 '로그인'(PC) 글자. '내 사업' 글자·계정 아이콘은 뺐다 — 휴대폰 오른쪽 위에 단추가 넷이나 몰려 번잡했다.
+ */
+function AccountActions({ signedIn }: { signedIn: boolean | null }) {
   /* 확인 전에는 비워 둔다 — 로그인 단추가 잠깐 보였다 바뀌지 않게 */
   if (signedIn === null) return null;
-  if (signedIn) return <>
-    {plans && <a className="header-login header-plans" href="/plan">내 사업</a>}
-    <a className="account-link" href="/account" aria-label="내 계정" title="내 계정"><UserRound /></a>
-  </>;
+  if (signedIn) return <HeaderProfile />;
   /* /account?next= 링크는 로그인 팝업(login-dialog)이 받아 이 화면에서 연다 */
   return <>
     <a className="header-login" href="/account?next=%2Fplan">로그인</a>
     <a className="header-signup" href="/account?mode=register&next=%2Fplan">회원가입</a>
+  </>;
+}
+
+/** 로그인한 사람의 프로필 단추 + 메뉴 — 메뉴는 앱 색 토큰(.tokens)을 입혀 첫 화면(밝은 바탕)에서도 같은 모양 */
+function HeaderProfile() {
+  const account = useAccount();
+  const [open, setOpen] = useState(false);
+  const [anchor, setAnchor] = useState<"sheet" | "top">("sheet");
+  const openMenu = () => { setAnchor(window.matchMedia("(max-width: 900px)").matches ? "sheet" : "top"); setOpen(true); };
+  return <>
+    <button type="button" className="header-profile" aria-label="프로필 메뉴" aria-haspopup="dialog" aria-expanded={open} onClick={openMenu}>{accountInitial(account)}</button>
+    <div className={`${theme.tokens} header-profile-menu`}><ProfileMenu open={open} anchor={anchor} onClose={() => setOpen(false)} account={account} unanswered={0} /></div>
   </>;
 }
 
@@ -178,9 +193,10 @@ export function SiteHeader({
         </nav>
       ) : null}
       <div className="header-actions">
-        {showAccount && <AccountActions signedIn={signedIn} plans={homeNav} />}
-        {onStart && <button className="small-start" onClick={onStart}>시작하기<CtaArrow /></button>}
-        {homeNav && <HomeMenu signedIn={signedIn} />}
+        {showAccount && <AccountActions signedIn={signedIn} />}
+        {/* 로그인했으면 '시작하기'·☰ 없이 프로필 하나만(lovable 과 같게) — 첫 화면 구간·약관 링크는 바닥글에 있다 */}
+        {onStart && signedIn !== true && <button className="small-start" onClick={onStart}>시작하기<CtaArrow /></button>}
+        {homeNav && signedIn !== true && <HomeMenu signedIn={signedIn} />}
       </div>
     </header>
   );
