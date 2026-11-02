@@ -41,11 +41,9 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
         <p className={styles.desc}>
           작성한 내용을 계정에 저장해 어느 기기에서든 이어서 쓸 수 있어요.
         </p>
+        {/* '완성 예시 보기'(/plan)는 뺐다 — /plan 이 로그인 화면으로 되돌려 보내 막다른 길이었다(2026-11-02) */}
         <AppButton href={backTo} variant="primary" className={styles.primary}>
           로그인 · 회원가입
-        </AppButton>
-        <AppButton href="/plan" variant="secondary" className={styles.secondary}>
-          완성 예시 보기
         </AppButton>
       </section>
     );
