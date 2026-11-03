@@ -318,7 +318,8 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   const mismatch = Boolean(passwordConfirm) && password !== passwordConfirm;
   const mismatchId = useId();
   const formErrorId = `${titleId ?? "account"}-form-error`;
-  const problemShown = askedProblem && problem ? problem : "";
+  /* 확인 칸 아래에 이미 '비밀번호가 서로 달라요'가 떠 있으면 단추 위에 같은 말을 또 쓰지 않는다 */
+  const problemShown = askedProblem && problem && !(mismatch && problem.startsWith("비밀번호가 서로 달라요")) ? problem : "";
   const invalid = fieldsInvalid || !!problemShown;
   const passwordField = (label: string, value: string, set: (value: string) => void, autoComplete: string, error?: string) => <PasswordField label={label} value={value} onChange={set} autoComplete={autoComplete} disabled={busy} error={error} />;
 
