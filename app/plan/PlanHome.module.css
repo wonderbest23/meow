@@ -148,6 +148,9 @@
   .listCard[data-list-only] .listBody { padding:0 12px; }
   .listCard[data-list-only] .grid.grid { gap:0; }
   .listCard[data-list-only] .card { display:block; height:88px; border-radius:16px; }
+  /* 이름 바꾸기 칸이 열리면 행 아래로 늘어난다 — 88 고정이라 입력칸·저장·취소가 다음 행 위에 겹쳐 그려졌다(2026-11-02 전수조사) */
+  .listCard[data-list-only] .card:has(form) { height:auto; padding-bottom:12px; }
+  .listCard[data-list-only] .card > form { margin:0 4px; }
   .listCard[data-list-only] .card:hover { background:var(--app-fill); }
   .listCard[data-list-only] .card > a { display:flex; align-items:center; gap:16px; height:88px; padding:8px 52px 8px 4px; }
   .listCard[data-list-only] .thumb { flex:none; width:64px; height:72px; aspect-ratio:auto; box-shadow:0 0 0 1px var(--app-line); }

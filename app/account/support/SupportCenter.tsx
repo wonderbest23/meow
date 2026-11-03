@@ -190,7 +190,7 @@ export default function SupportCenter() {
    * 시안의 '화면 캡처 붙이기'는 지금 문의 접수(/api/account/support)가 글만 받아 두지 않았다 — 시안 문서에 적음.
    */
   return <AppFrame title="고객센터" settings="back"><div className={`${styles.page} plan-ui`} data-fill={loggedOut && !loading ? "" : undefined}>
-    <SettingsHeader title="고객센터" description="불편했던 일이나 궁금한 점을 남겨 주세요. 답변은 이 화면에서 확인할 수 있어요."
+    <SettingsHeader title="고객센터" description="궁금한 점을 남기면 이 화면에서 답을 드려요."
       aside={<>
         {scope && !loading && <SettingsSegment label="고객센터 보기" value={view} onChange={setView} items={[{ value: "write", label: "문의하기" }, { value: "history", label: "문의 내역", count: inquiryCount }]} />}
         <SettingsHelpLink href="/plan/info">이용 안내</SettingsHelpLink>

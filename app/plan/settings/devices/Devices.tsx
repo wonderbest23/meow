@@ -18,8 +18,8 @@ export default function Devices() {
     <SettingsHeader title="기기 및 앱" description="지금 쓰는 기기와 화면 설정이에요." mobile="band" />
     <SettingsSection id="devices-current" title="이 기기">
       <SettingsCard mobile="band">
-        <SettingsRow inline title="지금 쓰는 곳" description="로그인하면 앱과 웹에서 같은 사업을 이어서 볼 수 있어요." control={<StatusBadge tone="info">{label}</StatusBadge>} />
-        <SettingsRow title="화면 설정" description="밝은 화면으로 보여 드려요. 글자 크기는 기기·브라우저의 글자 크기 설정을 따라요." />
+        <SettingsRow inline title="지금 쓰는 곳" description="앱과 웹에서 같은 사업을 이어서 봐요." control={<StatusBadge tone="info">{label}</StatusBadge>} />
+        <SettingsRow title="화면 설정" description="글자 크기는 기기 설정을 따라요." />
       </SettingsCard>
     </SettingsSection>
   </div>;
