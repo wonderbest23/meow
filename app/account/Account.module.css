@@ -1,3 +1,5 @@
+/* 로그인 전 화면은 html[data-app-theme] 밖이라 기본(파란) 토큰이 붙는다 — lovable 처럼 주 색·포커스 선을 무채색으로 */
+.page:global(.account-page) { --app-primary:rgb(0 0 0 / .88); --app-focus-ring:rgb(0 0 0 / .4); }
 .page { min-height:100dvh; background:#fff; color:var(--app-text); letter-spacing:0; }
 .page * { box-sizing:border-box; letter-spacing:0; }
 .page :is(h1,h2,p,button,a,span,strong) { word-break:keep-all; overflow-wrap:anywhere; }
