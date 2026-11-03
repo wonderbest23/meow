@@ -81,3 +81,5 @@
 .root .form .reveal[aria-pressed="true"] { color: var(--app-primary); }
 .root .form .reveal:focus-visible { outline: 2px solid var(--app-primary); outline-offset: -2px; }
 .root .form .reveal svg { display: block !important; width: 20px; height: 20px; }
+/* 폼 뿌리와 입력칸(app-field 는 토큰을 composes 로 직접 든다)에 기본(파란) 포커스 선이 다시 붙는다 — 로그인 화면과 같이 무채색으로(Account.module.css) */
+.root.root, .root.root [data-app-field] { --app-primary:rgb(0 0 0 / .88); --app-focus-ring:rgb(0 0 0 / .4); }

@@ -11,7 +11,7 @@
 /* 전역 'body * { letter-spacing:0 !important }'(globals.css)를 이기려면 !important — 첫 화면 인사말(PlanHome)과 같은 방법 */
 .lead { margin:4px 0 0; color:var(--app-muted); font-size:.875rem; line-height:1.3125rem; word-break:keep-all; }
 .topAside { display:flex; flex:none; align-items:center; gap:16px; }
-.doc { display:inline-flex; align-items:center; gap:6px; margin-top:2px; color:var(--app-muted); font-size:.875rem; line-height:1.3125rem; text-decoration:none; white-space:nowrap; }
+.doc { display:inline-flex; align-items:center; gap:6px; min-height:32px; /* 누르는 자리 — lovable 설정 조작 높이 */ color:var(--app-muted); font-size:.875rem; line-height:1.3125rem; text-decoration:none; white-space:nowrap; }
 .doc:hover { color:var(--app-text); }
 
 /* 소제목 16/500 — 위 24(첫 묶음) · 카드까지 16 · 카드 뒤 32 */
