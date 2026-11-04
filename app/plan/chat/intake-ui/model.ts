@@ -646,12 +646,17 @@ export const SKIP_VALUE_PREFIX = "skip:";
 export const isSkipOption = (option: { value: string }) => option.value.startsWith(SKIP_VALUE_PREFIX);
 
 /** Sector for client-side ladders (amount ranges): the confirmed intake sector, else the rule-based reading of the business text, else general. */
-export function intakeChipSector(snapshot: Pick<IntakeSnapshot, "intake" | "coach">): ProposalSector {
-  if (snapshot.intake.sector !== "general") return snapshot.intake.sector;
+/** 사장님이 적은 사업 설명(코치 필드 → 인테이크 답 순). 없으면 "" */
+export function businessDescriptionText(snapshot: Pick<IntakeSnapshot, "intake" | "coach">): string {
   const field = snapshot.coach.fields.find(item => item.key === "business" && item.basis === "user")?.value;
   const answer = snapshot.intake.answers.business;
-  const text = field ?? (answer?.status === "answered" && typeof answer.value === "string" ? answer.value : "");
-  return text.trim() ? descriptionSector(text) : "general";
+  return (field ?? (answer?.status === "answered" && typeof answer.value === "string" ? answer.value : "")).trim();
+}
+
+export function intakeChipSector(snapshot: Pick<IntakeSnapshot, "intake" | "coach">): ProposalSector {
+  if (snapshot.intake.sector !== "general") return snapshot.intake.sector;
+  const text = businessDescriptionText(snapshot);
+  return text ? descriptionSector(text) : "general";
 }
 
 /** kind text + catalogue options = hybrid_text_chips (spec §2); business stays a prefill-only typing exception. */

@@ -12,8 +12,27 @@ export type QuestionSuggestions = { pending: boolean; items: string[]; source: "
  * 바꿔 넣는다. 서버가 꺼져 있거나(204) 실패하면 자체 추천이 그대로 남아 빈자리가 생기지 않는다.
  * 추천은 그 설명으로 새로 만든 사업에만 붙는다 — 다른 사업을 열면 보이지 않는다.
  */
-export function useAnswerSuggestions(planId: string | null | undefined) {
+type Stage = "startup" | "operating";
+const cacheKey = (planId: string) => `answer-suggestions:${planId}`;
+const readCache = (planId: string, text: string): SuggestionMap | null => {
+  try { const saved = JSON.parse(window.localStorage.getItem(cacheKey(planId)) ?? "null"); return saved && saved.text === text && saved.suggestions ? saved.suggestions as SuggestionMap : null; } catch { return null; }
+};
+const writeCache = (planId: string, text: string, suggestions: SuggestionMap) => { try { window.localStorage.setItem(cacheKey(planId), JSON.stringify({ text, suggestions })); } catch { /* 저장소를 못 쓰면 다음 열기에 자체 추천만 보인다 */ } };
+
+/**
+ * @param restore 새로 고치거나 다시 열었을 때 쓸 사업 설명·단계 — AI를 다시 부르지 않고 이 기기에 저장해 둔 AI 추천을 꺼내거나(같은 설명일 때만),
+ *   없으면 설명으로 자체 추천만 다시 만든다(소유자 결정 2026-11-04: 새로 고치면 칩이 전부 다시 보이던 문제).
+ */
+export function useAnswerSuggestions(planId: string | null | undefined, restore?: { text: string; stage: Stage } | null) {
   const [state, setState] = useState<{ planId: string | null; suggestions: SuggestionMap; local: SuggestionMap; pending: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!planId || !restore?.text) return;
+    setState(current => {
+      if (current && current.planId === planId) return current;
+      return { planId, suggestions: readCache(planId, restore.text) ?? {}, local: localSuggestions(restore.text, restore.stage), pending: false };
+    });
+  }, [planId, restore?.text, restore?.stage]);
   const controllerRef = useRef<AbortController | null>(null);
 
   // 요청 시점에는 아직 사업이 없으므로, 처음 열린 사업에 추천을 붙인다.
@@ -22,7 +41,7 @@ export function useAnswerSuggestions(planId: string | null | undefined) {
   }, [planId]);
 
   /** planId: 이미 열린 사업에서 사업 설명에 답할 때('생각한 사업이 있어요' 카드로 시작) — 첫 사업을 기다리지 않고 바로 붙인다 */
-  const request = useCallback(async (text: string, stage: "startup" | "operating", planId?: string) => {
+  const request = useCallback(async (text: string, stage: Stage, planId?: string) => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
@@ -42,7 +61,7 @@ export function useAnswerSuggestions(planId: string | null | undefined) {
           if (list.length) suggestions[key] = list;
         }
       }
-      if (controllerRef.current === controller) setState(current => current ? { ...current, suggestions, pending: false } : current);
+      if (controllerRef.current === controller) setState(current => { if (current?.planId && Object.keys(suggestions).length) writeCache(current.planId, text, suggestions); return current ? { ...current, suggestions, pending: false } : current; });
     } catch {
       // 추천은 보조 기능이라 실패를 알리지 않는다(대기 표시만 거둔다).
       if (controllerRef.current === controller) setState(current => current ? { ...current, pending: false } : current);
