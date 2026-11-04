@@ -12,7 +12,7 @@ import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCan
 import { amountRanges, rangeMidpoint, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
-import { changedResourceLimits, intakeChipSector, needsEntryConfirmation, numberInSentence, periodDisplay, routeComposerInput, unitCostRanges, withRo, zeroPriceAnswer } from "../app/plan/chat/intake-ui/model";
+import { GROUP_TITLES, groupTitle, changedResourceLimits, intakeChipSector, needsEntryConfirmation, numberInSentence, periodDisplay, routeComposerInput, unitCostRanges, withRo, zeroPriceAnswer } from "../app/plan/chat/intake-ui/model";
 import { budgetSentence, mentionedAnswer, mentionsSolo } from "../app/plan/chat/intake-ui/guidance";
 import { readChatResponse } from "../lib/http/read-chat-response";
 import { generationEta } from "../lib/plan-builder/generation-progress";
@@ -76,6 +76,15 @@ async function main() {
   for (const priced of ["1000", "3만원", 25000, null, "무료일 수도"]) assert.equal(zeroPriceAnswer(priceQuestion, priced), false, String(priced));
   assert.equal(zeroPriceAnswer(coreQuestions("startup").find(question => question.id === "budget")!, "0"), false, "a zero budget is a real answer, not a price slip");
   assert.equal(zeroPriceAnswer(customer, "0"), false);
+  // 모든 질문의 보기 묶음에 한국어 제목이 있어야 한다 — 없으면 단계 이름 자리에 영어 키가 보였다(전수조사 2026-11-04)
+  const PROPOSAL_SECTORS_ALL = ["b2b_service", "software", "food_beverage", "retail_commerce", "manufacturing", "education", "local_service", "space_hospitality", "logistics", "content_media", "general"] as const;
+  const everyQuestion = [...(["exploring", "startup", "operating"] as const).flatMap(mode => [...coreQuestions(mode), ...structureQuestions(mode, { revenue: "per_unit", sides: "one" })]), ...PROPOSAL_SECTORS_ALL.flatMap(sector => detailQuestions(sector))];
+  for (const question of everyQuestion) for (const group of new Set((question.options ?? []).map(option => option.group).filter((g): g is string => !!g))) {
+    if (group.startsWith("filter:")) continue;
+    assert.ok(group in GROUP_TITLES, `${question.id}: 보기 묶음 '${group}'의 한국어 제목이 GROUP_TITLES에 없다`);
+    assert.ok(!/^[a-z]+$/.test(groupTitle(group)), `${question.id}: '${group}' 제목이 영어 키 그대로`);
+  }
+  assert.equal(groupTitle("brand-new-group"), "", "모르는 묶음은 빈 제목(영어 키 노출 금지)");
   assert.equal(routeComposerInput(original, original.nextQuestion!, "세상에 없는 복합 사업").kind, "clarify");
   assert.deepEqual(routeComposerInput(original, original.nextQuestion!, "카페"), { kind: "answer", questionId: "industry", value: "food_beverage" });
   // 보기 이름이 값인 선택형 질문은 칩과 안 맞는 글도 답으로 저장한다(2026-11-04); 값이 코드인 질문(업종·시작 조건)은 그대로 되묻는다

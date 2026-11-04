@@ -277,7 +277,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       {/* 여러 개 고르는 질문은 입력창의 보내기 하나로 보낸다(소유자 결정 2026-10-09) — 칩 옆 '다 골랐어요'를 두면 보낼 곳이 둘이라 헷갈렸다 */}
       {coach && choice && question.kind === "multi" && draft.selected.length > 0 && <p className={styles.multiSendHint} role="status">다 고르면 ↑ 보내기를 눌러 주세요</p>}
       {candidate && (inChat
-        ? <div className={styles.chipRow}><button type="button" className={styles.chip} aria-pressed={draft.custom} data-selected={draft.custom || undefined} disabled={disabled} onClick={() => { onChange({ ...draft, custom: !draft.custom, selected: [], unknown: false, ksic: undefined }); if (!draft.custom) onComposer?.(); }}>직접 적을래요</button></div>
+        /* 선택지 칩과 같은 모양이면 사업 하나로 보인다 — '잘 모르겠어요'처럼 밑줄 글자 단추로(전수조사 2026-11-04) */
+        ? <button type="button" className={styles.unknownChoice} aria-pressed={draft.custom} disabled={disabled} onClick={() => { onChange({ ...draft, custom: !draft.custom, selected: [], unknown: false, ksic: undefined }); if (!draft.custom) onComposer?.(); }}><strong>직접 적을래요</strong></button>
         : <label className={styles.customToggle}><input type="checkbox" checked={draft.custom} onChange={event => onChange({ ...draft, custom: event.target.checked, selected: [], unknown: false, ksic: undefined })} />직접 생각한 사업 적기</label>)}
       {hybrid && <HybridChips question={question} draft={draft} disabled={disabled} groups={groups} revealed={revealed} suggestions={inChat ? suggestions : undefined} onChange={onChange} coach={coach} onSend={send} />}
       {ticket && <AmountLadder question={question} ranges={ticketRanges} disabled={disabled} staging={inChat} exactLabel="정확한 금액 알아요 (기록 있음)" onCommit={commit} onRange={range => stage(`${range.label} (예상)`)} onExact={amount => stage(`${formatWon(amount)} (실제 기록)`)} />}
