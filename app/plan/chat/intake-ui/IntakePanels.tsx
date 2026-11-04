@@ -262,7 +262,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         <legend className={groups.length > 1 && group.name ? styles.stepLegend : styles.srOnly}>{groups.length > 1 && group.name ? groupTitle(group.name) : question.label}</legend>
         {group.options.map(option => {
           const idea = candidate ? snapshot.candidateIdeas.find(item => item.id === option.value) : undefined;
-          return <div key={option.value} className={idea ? styles.ideaOption : undefined} data-selected={draft.selected.includes(option.value)}><label className={styles.option} data-selected={draft.selected.includes(option.value)} data-picked={question.kind === "multi" && draft.selected.includes(option.value) || undefined}>
+          return <div key={option.value} className={idea ? styles.ideaOption : undefined} data-selected={draft.selected.includes(option.value)}><label className={styles.option} data-selected={draft.selected.includes(option.value)}>
             <input type={question.kind === "multi" ? "checkbox" : "radio"} name={`intake-${question.id}`} value={option.value} checked={draft.selected.includes(option.value)} disabled={inChat && disabled} onChange={() => choose(option.value)}
               {...coach && question.kind === "single" ? {
                 onKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => radioKey(event, option.value),
