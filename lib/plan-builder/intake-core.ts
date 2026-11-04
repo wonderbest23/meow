@@ -5,7 +5,7 @@ import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
 import { calculateFinancials, financialsToReference } from "./financials";
-import { amountCheckPrompt, coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
+import { acceptsFreeChoice, FREE_CHOICE_MAX_CHARS, amountCheckPrompt, coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
 import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
 import { playbookForKsic, playbookForText } from "./industry-playbooks";
@@ -697,13 +697,15 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
     if (!valid || dates[0] > dates[1]) throw new IntakeError("invalid_period", "실적 기간의 시작일과 종료일을 YYYY-MM-DD / YYYY-MM-DD 형식으로 확인해 주세요");
     return `${dates[0]} / ${dates[1]}`;
   }
+  const allowed = (item: unknown) => question.options?.some(option => option.value === item)
+    || acceptsFreeChoice(question) && typeof item === "string" && !!item.trim() && item.trim().length <= FREE_CHOICE_MAX_CHARS;
   if (question.kind === "single") {
-    if (!question.options?.some(option => option.value === value)) throw new IntakeError("invalid_option", "보기에 있는 것 중에서 다시 골라 주세요");
-    return value;
+    if (!allowed(value)) throw new IntakeError("invalid_option", "보기에 있는 것 중에서 다시 골라 주세요");
+    return String(value).trim();
   }
   if (question.kind === "multi") {
-    if (!Array.isArray(value) || !value.length || value.some(item => !question.options?.some(option => option.value === item))) throw new IntakeError("invalid_option", "보기에 있는 것 중에서 다시 골라 주세요");
-    return [...new Set(value)];
+    if (!Array.isArray(value) || !value.length || value.length > 8 || value.some(item => !allowed(item))) throw new IntakeError("invalid_option", "보기에 있는 것 중에서 다시 골라 주세요");
+    return [...new Set(value.map(item => String(item).trim()))];
   }
   if (question.kind === "number") {
     // 질문 기간과 같은 말('월 30만', '30만원/월')은 떼고 읽는다

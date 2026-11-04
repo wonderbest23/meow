@@ -78,6 +78,12 @@ async function main() {
   assert.equal(zeroPriceAnswer(customer, "0"), false);
   assert.equal(routeComposerInput(original, original.nextQuestion!, "세상에 없는 복합 사업").kind, "clarify");
   assert.deepEqual(routeComposerInput(original, original.nextQuestion!, "카페"), { kind: "answer", questionId: "industry", value: "food_beverage" });
+  // 보기 이름이 값인 선택형 질문은 칩과 안 맞는 글도 답으로 저장한다(2026-11-04); 값이 코드인 질문(업종·시작 조건)은 그대로 되묻는다
+  const feedback = detailQuestions("education").find(question => question.id === "education.feedback")!;
+  assert.deepEqual(routeComposerInput(original, feedback, "과제를 첨삭해 줍니다, 월 1회 상담"), { kind: "answer", questionId: "education.feedback", value: ["과제를 첨삭해 줍니다", "월 1회 상담"] });
+  assert.equal(routeComposerInput(original, feedback, "x".repeat(121)).kind, "clarify");
+  const conditions = coreQuestions("exploring").find(question => question.id === "conditions")!;
+  assert.equal(routeComposerInput(original, conditions, "집에서 조용히").kind, "clarify");
   // 뜻 없는 짧은 말은 답으로 저장하지 않고 '어떻게 남길까요'로 묻는다. 모른다는 말은 '잘 모르겠어요'와 같다.
   for (const text of ["음", "음...", "ㅇㅇ", "ㅋㅋ", "ㅎ", "ㅠㅠ", "흠"]) assert.deepEqual(routeComposerInput(original, customer, text), { kind: "clarify", canAnswer: false }, text);
   for (const text of ["몰라요", "잘 몰라요", "글쎄요", "잘 모르겠어요", "모름"]) assert.deepEqual(routeComposerInput(original, customer, text), { kind: "answer", questionId: "customer", value: null, unknown: true }, text);

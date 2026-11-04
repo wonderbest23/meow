@@ -6,6 +6,17 @@ import { coachAmountLower } from "./coach-feasibility";
 import { stripAnswerPeriod } from "./answer-number";
 
 export type IntakeMode = "exploring" | "startup" | "operating";
+/**
+ * 보기 이름이 곧 값인 선택형 질문은 글로 적은 답도 그대로 받는다 — 칩과 안 맞는 글이 전부 '어떻게 남길까요?'로 빠져
+ * 답이 안 저장된 것처럼 보였다(소유자 2026-11-04). 값이 코드인 질문(업종·관심 분야·살펴볼 사업·제공 단계)은 그대로 보기만 받는다.
+ */
+export const FREE_CHOICE_MAX_CHARS = 120;
+export function acceptsFreeChoice(question: Pick<IntakeQuestion, "id" | "kind" | "options">): boolean {
+  // 시작 조건은 이름이 값이지만 뒤에서 조건 코드로 읽힌다(isCondition·KSIC 후보) — 글 답을 받으면 조용히 버려진다
+  if (question.id === "conditions") return false;
+  return ["single", "multi"].includes(question.kind) && !!question.options?.length && question.options.every(option => option.value === option.label);
+}
+
 export type IntakeQuestion = {
   id: string;
   label: string;

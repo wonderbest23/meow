@@ -3,7 +3,7 @@ import { intakeCommandSchema } from "../../../../lib/plan-builder/intake-command
 import { COACH_FIELD_LABELS } from "../../../../lib/plan-builder/coach-presentation";
 import { applyIntakeAnswer, finishIntakeMutation, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot } from "../../../../lib/plan-builder/intake-core";
 import type { ServerPlan } from "../../../../lib/plan-builder/plan-server-store";
-import { amountCheckPrompt, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
+import { acceptsFreeChoice, FREE_CHOICE_MAX_CHARS, amountCheckPrompt, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { SECTOR_PROFILES, type ProposalSector } from "../../../../lib/plan-builder/proposal-blueprint";
 import { coachAmount } from "../../../../lib/plan-builder/coach-feasibility";
 import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS, amountRanges, periodMonths, rangeMidpoint, scaledAmountRanges, wonAnswer, type AmountRange } from "../../../../lib/plan-builder/intake-options";
@@ -212,7 +212,10 @@ export function routeComposerInput(snapshot: IntakeSnapshot, question: IntakeQue
   if (!question) return { kind: "note", intent: "memo" };
   if (["single", "multi"].includes(question.kind)) {
     const choice = question.kind === "multi" && hasExclusiveOptions(question) ? undefined : typedChoiceAnswer(snapshot, question, value);
-    return choice === undefined ? { kind: "clarify", canAnswer: false } : { kind: "answer", questionId: question.id, value: choice };
+    if (choice !== undefined) return { kind: "answer", questionId: question.id, value: choice };
+    // 보기 이름이 값인 질문은 적은 글을 그대로 답으로(서버도 같은 규칙으로 받는다)
+    if (acceptsFreeChoice(question) && value.length <= FREE_CHOICE_MAX_CHARS) return { kind: "answer", questionId: question.id, value: question.kind === "multi" ? value.split(/[,\n]/).map(part => part.trim()).filter(Boolean) : value };
+    return { kind: "clarify", canAnswer: false };
   }
   if (question.id === "budget" || question.id === "hoursPerWeek") {
     const parsed = parseResourceLimit(value, question.id === "budget" ? "initialCost" : "weeklyOperatingHours");

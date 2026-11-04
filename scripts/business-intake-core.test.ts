@@ -606,7 +606,10 @@ async function main() {
       answer(f, "education.feedback", [feedback.options![0].value, feedback.options![2].value]);
       assert.deepEqual(f.intake.answers["education.feedback"].value, [feedback.options![0].value, feedback.options![2].value]);
       assert.equal(snapshot(f).summary.find(item => item.id === "education.feedback")?.value, `${feedback.options![0].label}, ${feedback.options![2].label}`);
-      rejected(f, { questionId: "education.feedback", value: "과제를 첨삭해 줍니다" }, "invalid_option");
+      rejected(f, { questionId: "education.feedback", value: "과제를 첨삭해 줍니다" }, "invalid_option"); // 여러 개 질문은 목록 모양이어야 한다
+      answer(f, "education.feedback", ["과제를 첨삭해 줍니다", feedback.options![0].value]);
+      assert.deepEqual(f.intake.answers["education.feedback"].value, ["과제를 첨삭해 줍니다", feedback.options![0].value], "보기 이름이 값인 질문은 글로 적은 답도 받는다(2026-11-04)");
+      rejected(f, { questionId: "education.feedback", value: ["x".repeat(121)] }, "invalid_option");
       answer(f, "education.classSize", "정원 제한 없음(녹화·자율 수강)");
       assert.equal((f.plan.answers["intake/details"]["education.classSize"] as { value: unknown; unit: unknown }).value, "정원 제한 없음(녹화·자율 수강)");
       assert.equal((f.plan.answers["intake/details"]["education.classSize"] as { unit: unknown }).unit, "명");
