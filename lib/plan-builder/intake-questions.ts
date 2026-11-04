@@ -49,7 +49,7 @@ function fieldQuestion(key: CoachField["key"], prompt: string, extra: Partial<Pi
 export const PRICE_DEFAULT_PERIOD = "판매 1건";
 export const pricePrompt = (period: string, mode?: IntakeMode) => mode === "operating" ? `지금 받는 ${period} 평균 가격은 얼마인가요?` : `${period} 가격은 얼마쯤인가요?`;
 
-const business = fieldQuestion("business", "어떤 사업인가요? 한 문장(60자 안)으로 알려 주세요.", { hint: "아래 보기를 누르면 입력창에 채워져요. 그대로 보내거나 상호·지역을 덧붙여 주세요." });
+const business = fieldQuestion("business", "어떤 사업인가요? 한 문장(60자 안)으로 알려 주세요.", { hint: "보기를 고르거나 직접 적어 주세요." });
 const customer = fieldQuestion("customer", "주로 누가 이용하나요? (최대 2개)");
 const problem = fieldQuestion("problem", "그 고객의 어떤 불편을 해결하나요? (최대 2개)");
 /* 도움말 '유형을 고른 뒤 상품명을 덧붙일 수 있어요'는 뺐다 — 보기를 누르면 바로 보내져 말과 동작이 달랐다(r37 점검) */
