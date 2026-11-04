@@ -87,7 +87,7 @@ for (const [path, count] of users) {
 for (const path of ["app/plan/PlanList.tsx", "app/plan/chat/page.tsx"]) assert.match(read(path), /<BusinessEmptyState\b/, `${path}: 내 사업·대화 빈 화면은 BusinessEmptyState`);
 // 문구·링크는 그대로
 const copies: [string, RegExp][] = [
-  ["app/plan/inquiries/page.tsx", /"답할 문의가 없어요" : "아직 들어온 문의가 없어요"[\s\S]*description="홈페이지를 공개하면 여기로 모여요"[\s\S]*href=\{homepageHref\(recentPlanId\)\}>홈페이지 보기[\s\S]*#hk-leads`\}>알림 번호 설정[\s\S]*onClick=\{\(\) => refresh\(true\)\}><RefreshCw size=\{14\} aria-hidden \/> 새로 확인/],
+  ["app/plan/inquiries/page.tsx", /published === 0 \? "아직 공개한 홈페이지가 없어요" : "아직 들어온 문의가 없어요"[\s\S]*홈페이지 만들기[\s\S]*#hk-leads`\}>알림 번호 설정[\s\S]*onClick=\{\(\) => refresh\(true\)\}><RefreshCw size=\{14\} aria-hidden \/> 새로 확인/],
   ["app/plan/document/DocumentWorkspace.tsx", /title="아직 만든 문서가 없어요" description=\{pane \? undefined : "사업 이야기를 이어서 계획서를 만들어 보세요\."\}[\s\S]*href=\{coachHref \?\? back\}>사업계획서 만들기[\s\S]*href=\{coachHref \?\? back\}>사업안으로 돌아가기/],
   ["app/plan/workspace/OperatingWorkspace.tsx", /title="아직 기간 기록이 없어요"[\s\S]*대화에서 말한 실적으로 첫 기록 만들기[\s\S]*기간 기록 추가[\s\S]*저장 전에 고칠 수 있어요<\/small>\}\s*<\/EmptyState>/],
   ["app/plan/workspace/OperatingWorkspace.tsx", /title="보관한 리포트가 없어요" description="기간 기록에서 다음 개선 행동을 정한 뒤 보관하세요"/],

@@ -10,7 +10,7 @@ import { fetchWithTimeout } from "../../../lib/client/user-error";
  * (이 기기에 저장된 사업만 보던 예전 방식은 다른 기기에서 만든 사업의 문의를 빠뜨렸다).
  */
 export type Inquiry = { lead: LandingLeadRecord; planId: string; planTitle: string; projectId: string; businessName: string };
-type Loaded = { items: Inquiry[]; at: number };
+type Loaded = { items: Inquiry[]; published: number | null; at: number };
 
 let cache: Loaded | null = null;
 let pending: Promise<Loaded> | null = null;
@@ -40,10 +40,10 @@ async function fetchAll(): Promise<Loaded> {
   // 서버가 답을 주지 않으면 20초 뒤 끊는다 — '문의를 불러오고 있어요'가 끝없이 돌지 않게
   const response = await fetchWithTimeout("/api/plan/inquiries", { cache: "no-store" });
   if (response.status === 401) throw new Error("INQUIRIES_AUTH_REQUIRED");
-  const data = await response.json().catch(() => null) as { items?: Inquiry[] } | null;
+  const data = await response.json().catch(() => null) as { items?: Inquiry[]; published?: number | null } | null;
   // 실패를 '문의 없음'으로 바꾸지 않는다 — 예전엔 연결이 끊기면 '아직 들어온 문의가 없어요'가 3분 동안 남았다
   if (!response.ok || !Array.isArray(data?.items)) throw new Error("INQUIRIES_LOAD_FAILED");
-  return { items: applyOverrides(data.items, startedAt), at: Date.now() };
+  return { items: applyOverrides(data.items, startedAt), published: typeof data.published === "number" ? data.published : null, at: Date.now() };
 }
 
 function announce() {
@@ -70,22 +70,22 @@ export function unansweredCount(items: Inquiry[] | LandingLeadRecord[]): number 
 /** enabled=false 면 부르지 않는다(로그인 전 왼쪽 메뉴) */
 export function useInquiries(enabled = true) {
   // 첫 화면은 서버와 같게 비워 두고, 올라온 뒤에 기억한 목록을 채운다(서버 화면과 어긋나지 않게)
-  const [state, setState] = useState<{ items: Inquiry[] | null; error: string }>({ items: null, error: "" });
+  const [state, setState] = useState<{ items: Inquiry[] | null; published: number | null; error: string }>({ items: null, published: null, error: "" });
   const refresh = useCallback((force = false) => {
     if (!enabled) return;
     loadInquiries(force)
-      .then(value => setState({ items: value.items, error: "" }))
+      .then(value => setState({ items: value.items, published: value.published, error: "" }))
       .catch((error: unknown) => {
         const name = error instanceof Error ? error.name : "";
         const message = error instanceof Error && error.message === "INQUIRIES_AUTH_REQUIRED" ? AUTH_ERROR : name === "TimeoutError" || name === "AbortError" ? SLOW_ERROR : LOAD_ERROR;
-        setState(current => ({ items: current.items, error: message }));
+        setState(current => ({ ...current, error: message }));
       });
   }, [enabled]);
   useEffect(() => {
     if (!enabled) return;
-    if (cache) setState({ items: cache.items, error: "" });
+    if (cache) setState({ items: cache.items, published: cache.published, error: "" });
     refresh();
-    const changed = () => { if (cache) setState({ items: cache.items, error: "" }); };
+    const changed = () => { if (cache) setState({ items: cache.items, published: cache.published, error: "" }); };
     window.addEventListener(INQUIRIES_EVENT, changed);
     return () => window.removeEventListener(INQUIRIES_EVENT, changed);
   }, [enabled, refresh]);
