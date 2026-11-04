@@ -1,5 +1,6 @@
 "use client";
 
+import { settleTransition } from "../../../lib/client/view-transition";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -132,6 +133,8 @@ export default function Studio() {
    */
   const fresh = !planId;
   const [startedFresh] = useState(fresh);
+  /* 홈 입력칸에서 넘어온 화면 전환 — 작업실이 그려졌으니 홈 → 작업실 그림을 돌린다 */
+  useEffect(() => { settleTransition(); }, []);
   const newIntent = searchParams.get("new") === "1" || !!searchParams.get("idea") || !!searchParams.get("prompt");
 
   /*
