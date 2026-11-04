@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
-import { listOwnerInquiries } from "../../../../lib/landing/repository";
+import { countPublishedOwnerSites, listOwnerInquiries } from "../../../../lib/landing/repository";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 
 export const runtime = "nodejs";
@@ -15,9 +15,11 @@ const headers = { "Cache-Control": "private, no-store, max-age=0" };
 export async function GET() {
   try {
     const identity = await requireGuestIdentity();
-    const [items, state] = await Promise.all([listOwnerInquiries(identity.hash), loadPlanState(identity.hash).catch(() => null)]);
+    const [items, state, published] = await Promise.all([listOwnerInquiries(identity.hash), loadPlanState(identity.hash).catch(() => null), countPublishedOwnerSites(identity.hash).catch(() => null)]);
     const titles = new Map((state?.plans ?? []).map(plan => [plan.id, plan.title]));
     return NextResponse.json({
+      // 공개한 홈페이지 수 — 0이면 메뉴를 막고 화면은 '홈페이지 만들기'만 보인다(세지 못하면 null: 막지 않는다)
+      published,
       items: items.map(item => ({
         lead: item.lead,
         projectId: item.projectId,

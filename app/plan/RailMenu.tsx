@@ -83,9 +83,10 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
         <LayoutGrid aria-hidden="true" /><span>내 사업</span>
       </Link>
       {/* 손님 문의 — 홈페이지로 들어온 손님 문의를 메신저처럼. 사업이 하나도 없으면 받을 문의가 없으니 막아 둔다 */}
-      {planCount === 0 && !openInquiries ? (
-        <span className={`${menu.item} ${menu.disabled}`} aria-disabled="true" title="사업을 시작하면 열려요">
-          <MessagesSquare aria-hidden="true" /><span className={menu.disabledText}>손님 문의<small>사업을 시작하면 열려요</small></span>
+      {/* 공개한 홈페이지가 없으면 막는다 — 문의가 올 곳이 없는데 빈 화면에 단추만 셋이었다(2026-11-04 사장님). 세지 못한 동안(null)은 막지 않는다 */}
+      {(planCount === 0 || inquiries.published === 0) && !openInquiries ? (
+        <span className={`${menu.item} ${menu.disabled}`} aria-disabled="true" title="홈페이지를 공개하면 열려요">
+          <MessagesSquare aria-hidden="true" /><span className={menu.disabledText}>손님 문의<small>홈페이지를 공개하면 열려요</small></span>
         </span>
       ) : (
         <Link href="/plan/inquiries" className={menu.item} title="손님 문의" aria-current={here("inquiries")}>

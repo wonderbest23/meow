@@ -231,6 +231,17 @@ export async function listOwnerInquiries(guestTokenHash: string, limit = 300): P
   });
 }
 
+/** 이 주인이 공개한 홈페이지 수 — 손님 문의 메뉴·화면이 '홈페이지를 공개해야 열린다'를 판단한다 */
+export async function countPublishedOwnerSites(guestTokenHash: string): Promise<number> {
+  const projects = await listOwnedProjectRefs(guestTokenHash);
+  if (!projects.length) return 0;
+  const supabase = getServerSupabase();
+  if (!supabase) return projects.filter(project => { const site = demo.sites.get(demo.projectIndex.get(project.id) ?? ""); return site?.publishedVersion != null; }).length;
+  const { data, error } = await supabase.from("landing_sites").select("id").in("project_id", projects.map(project => project.id)).not("published_version", "is", null);
+  if (error) throw error;
+  return data?.length ?? 0;
+}
+
 /**
  * 문의 '처리 완료' 표시·해제 — 이 프로젝트 홈페이지의 문의일 때만.
  * 주인 확인은 getLandingForProject(주인 해시로 프로젝트를 찾는다)가 한다.

@@ -31,7 +31,7 @@ function shortTime(iso: string) {
  * 홈페이지 화면의 '접수된 문의' 칸을 여기로 옮겼다(소유자 요청 2026-10-07).
  */
 export default function InquiriesPage() {
-  const { items, error, refresh } = useInquiries();
+  const { items, published, error, refresh } = useInquiries();
   const [filter, setFilter] = useState<"all" | "open">("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const shown = useMemo(() => (items ?? []).filter(item => filter === "all" || item.lead.handledAt === null), [items, filter]);
@@ -82,14 +82,14 @@ export default function InquiriesPage() {
         </div>}
         {error ? <p className={styles.notice} role="alert">{error} {error === AUTH_ERROR ? <AppButton variant="text" size="small" className={styles.retry} href={`/account?next=${encodeURIComponent("/plan/inquiries")}`}>다시 로그인</AppButton> : <AppButton type="button" variant="text" size="small" className={styles.retry} onClick={() => refresh(true)}>다시 시도</AppButton>}</p> : null}
         {/* 불러오지 못했으면 '문의 없음'이라고 하지 않는다 — 있는 문의를 없다고 믿게 된다 */}
-        {items === null ? null : shown.length === 0 ? <EmptyState icon={Inbox} heading="p" title={filter === "open" && items?.length ? "답할 문의가 없어요" : "아직 들어온 문의가 없어요"} description="홈페이지를 공개하면 여기로 모여요"
-          actions={items.length === 0 ? <>
-            {recentPlanId ? <>
-              <AppButton variant="primary" href={homepageHref(recentPlanId)}>홈페이지 보기<ChevronRight size={18} aria-hidden="true" /></AppButton>
-              <AppButton variant="secondary" href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정<ChevronRight size={18} aria-hidden="true" /></AppButton>
-            </> : null}
-            <AppButton type="button" variant="secondary" onClick={() => refresh(true)}><RefreshCw size={14} aria-hidden /> 새로 확인</AppButton>
-          </> : undefined} /> : <ul className={styles.rows}>
+        {/* 빈 화면 단추는 하나 — 공개한 홈페이지가 없으면 '홈페이지 만들기', 있으면 '알림 번호 설정'(단추 셋이 헷갈렸다, 2026-11-04 사장님) */}
+        {items === null ? null : shown.length === 0 ? <EmptyState icon={Inbox} heading="p"
+          title={filter === "open" && items?.length ? "답할 문의가 없어요" : published === 0 ? "아직 공개한 홈페이지가 없어요" : "아직 들어온 문의가 없어요"}
+          description={published === 0 ? "홈페이지를 공개하면 손님 문의가 여기로 모여요" : "홈페이지를 공개하면 여기로 모여요"}
+          actions={items.length === 0 ? (published === 0
+            ? <AppButton variant="primary" href={recentPlanId ? homepageHref(recentPlanId) : "/plan/chat?new=1"}>홈페이지 만들기<ChevronRight size={18} aria-hidden="true" /></AppButton>
+            : recentPlanId ? <AppButton variant="primary" href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정<ChevronRight size={18} aria-hidden="true" /></AppButton>
+            : <AppButton type="button" variant="secondary" onClick={() => refresh(true)}><RefreshCw size={14} aria-hidden /> 새로 확인</AppButton>) : undefined} /> : <ul className={styles.rows}>
           {shown.map(item => <li key={item.lead.id}>
             <button type="button" aria-current={item.lead.id === selected?.lead.id ? "true" : undefined} onClick={() => setSelectedId(item.lead.id)}>
               <i aria-hidden>{item.lead.name.slice(0, 1)}</i>
