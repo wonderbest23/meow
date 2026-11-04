@@ -1255,9 +1255,16 @@ button.workLogRow { min-height: 32px; }
 @media (prefers-reduced-motion: reduce) {
   .page .chatQuestion[data-chat-question], .page[data-embedded][data-studio-pro] .chatQuestion[data-question-card], .workLogCard { animation: none; }
   .userActions, .page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option) { transition: none; }
+  .page[data-coach] .chatQuestion .chip[data-picked] { animation: none; position: absolute; visibility: hidden; }
 }
 
 /* '잘 모르겠어요'는 답이 아니라 건너뛰기다 — 업종·선택지 칩과 같은 알약 모양이면 선택지 하나로 보여 헷갈린다(소유자 피드백 2026-11-04). 칩 줄 아래 밑줄 글자 단추로 */
 .page .chatQuestion .unknownChoice.unknownChoice, .page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { display: inline-flex; flex-basis: 100%; width: max-content; min-height: 32px; margin-top: 10px; padding: 4px 2px; border: 0; border-radius: 4px; background: none; color: var(--app-muted); text-decoration: underline; text-underline-offset: 3px; transform: none; }
 .page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { color: var(--app-text); }
 .page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"], .page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"]:hover:not(:disabled) { background: none; color: var(--app-text); font-weight: 600; }
+
+/* 고른 칩은 입력창 글이 되어 올라가므로 줄에서 빠진다(소유자 2026-11-04) — 180ms 줄어들며 사라진 뒤 흐름에서 빠져 옆 칩이 자리를 메운다. 입력창에서 글을 지우면 다시 나타난다.
+   여러 개 고르는 체크 질문은 고른 것이 입력창에 안 보이므로(체크 표시만) 숨기지 않는다 */
+@keyframes intake-chip-leave { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(.7); } }
+@keyframes intake-chip-gone { to { position: absolute; visibility: hidden; } }
+.page[data-coach] .chatQuestion .chip[data-picked] { animation: intake-chip-leave .18s ease forwards, intake-chip-gone 0s linear .18s forwards; pointer-events: none; }
