@@ -17591,3 +17591,14 @@ html:has([data-app-surface]) { background: #fff; }
 .manual-payment-card.status-expired .manual-payment-state h1 { margin-bottom: 8px; }
 .manual-reorder { width: 100%; min-height: 52px; margin-top: 24px; padding: 0 16px; border-radius: 14px; background: #030303; color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 850; text-decoration: none; }
 .manual-reorder svg { display: inline-block; width: 18px; height: 18px; flex: 0 0 auto; }
+
+/*
+ * 홈 입력칸 → 대화 화면 전환(lib/client/view-transition.ts) — 새 화면이 홈 한가운데서 확대되며 나타나고(.4s),
+ * 입력칸(chat-composer)은 홈 큰 칸에서 대화 입력칸 자리로 모양이 이어진다. 그 밖의 이동은 전환 없이 그대로.
+ */
+::view-transition-old(root) { animation: 160ms ease-out both app-fade-out; }
+::view-transition-new(root) { animation: 400ms cubic-bezier(.2,.8,.2,1) both app-grow-in; }
+::view-transition-group(chat-composer) { animation-duration: 400ms; animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+@keyframes app-fade-out { to { opacity: 0; } }
+@keyframes app-grow-in { from { opacity: 0; transform: scale(.94); } }
+@media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root), ::view-transition-group(chat-composer) { animation: none; } }
