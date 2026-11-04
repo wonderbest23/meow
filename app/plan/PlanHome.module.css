@@ -105,6 +105,8 @@
 .sampleCard:hover .thumb { box-shadow:0 0 0 1px var(--app-line-strong); }
 
 .newFloat { display:none; }
+/* 휴대폰 홈 입력칸 아래 최근 사업 — PC는 아래 목록 카드가 있어 숨긴다 */
+.recent { display:none; }
 
 .scroll :is(a, button, summary, input):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:3px; }
 
@@ -133,6 +135,12 @@
   .filters .search[data-app-field][data-app-field][data-app-field] { height:36px; font-size:max(16px, 1rem); }
   /* 휴대폰 첫 화면은 인사말·입력칸만 — 목록은 아래 탭 '내 사업'·'대화'에(lovable 휴대폰 홈과 같게, 2026-11-02). 내리면 입력칸이 위 머리와 붙어 겹쳐 보이던 것도 없어진다 */
   .listCard:not([data-list-only]) { display:none; }
+  .recent { display:flex; flex-direction:column; width:100%; margin-top:24px; }
+  .recent > a { display:flex; align-items:center; gap:8px; min-height:44px; padding:0 8px; border-radius:12px; color:var(--app-text); font-size:.9375rem; text-decoration:none; }
+  .recent > a:hover { background:var(--app-fill); }
+  .recent > a > span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .recent > a > time, .recent > a > svg { flex:none; color:var(--app-muted); font-size:.8125rem; }
+  .recentAll.recentAll { justify-content:center; min-height:40px; color:var(--app-muted); font-size:.875rem; }
 
   /*
    * '내 사업' 목록(?view=all) — lovable Projects 탭(dashboard-mobile-*): 제목 30/600/45(16,16) · 오른쪽 44 원 검색 단추,
