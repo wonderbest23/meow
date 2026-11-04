@@ -3,7 +3,7 @@ import { intakeCommandSchema } from "../../../../lib/plan-builder/intake-command
 import { COACH_FIELD_LABELS } from "../../../../lib/plan-builder/coach-presentation";
 import { applyIntakeAnswer, finishIntakeMutation, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot } from "../../../../lib/plan-builder/intake-core";
 import type { ServerPlan } from "../../../../lib/plan-builder/plan-server-store";
-import { amountCheckPrompt, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
+import { acceptsFreeChoice, FREE_CHOICE_MAX_CHARS, amountCheckPrompt, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { SECTOR_PROFILES, type ProposalSector } from "../../../../lib/plan-builder/proposal-blueprint";
 import { coachAmount } from "../../../../lib/plan-builder/coach-feasibility";
 import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS, amountRanges, periodMonths, rangeMidpoint, scaledAmountRanges, wonAnswer, type AmountRange } from "../../../../lib/plan-builder/intake-options";
@@ -212,7 +212,10 @@ export function routeComposerInput(snapshot: IntakeSnapshot, question: IntakeQue
   if (!question) return { kind: "note", intent: "memo" };
   if (["single", "multi"].includes(question.kind)) {
     const choice = question.kind === "multi" && hasExclusiveOptions(question) ? undefined : typedChoiceAnswer(snapshot, question, value);
-    return choice === undefined ? { kind: "clarify", canAnswer: false } : { kind: "answer", questionId: question.id, value: choice };
+    if (choice !== undefined) return { kind: "answer", questionId: question.id, value: choice };
+    // 보기 이름이 값인 질문은 적은 글을 그대로 답으로(서버도 같은 규칙으로 받는다)
+    if (acceptsFreeChoice(question) && value.length <= FREE_CHOICE_MAX_CHARS) return { kind: "answer", questionId: question.id, value: question.kind === "multi" ? value.split(/[,\n]/).map(part => part.trim()).filter(Boolean) : value };
+    return { kind: "clarify", canAnswer: false };
   }
   if (question.id === "budget" || question.id === "hoursPerWeek") {
     const parsed = parseResourceLimit(value, question.id === "budget" ? "initialCost" : "weeklyOperatingHours");
@@ -593,8 +596,15 @@ export type ChipQuestion = Pick<IntakeQuestion, "id" | "kind" | "options" | "uni
 export const FILTER_GROUP_PREFIX = "filter:";
 export const isFilterGroup = (group?: string) => !!group && group.startsWith(FILTER_GROUP_PREFIX);
 /** Display titles for the lib's catalogue step keys (intake-options.ts CHIP_GROUPS); merged and single-purpose steps show no title. */
-const GROUP_TITLES: Record<string, string> = { [CHIP_GROUPS.channelCommon]: "", [CHIP_GROUPS.channelSector]: "", [CHIP_GROUPS.prefill]: "", [CHIP_GROUPS.people]: "누가", [CHIP_GROUPS.period]: "기간", [CHIP_GROUPS.unit]: "단위", [CHIP_GROUPS.metric]: "목표", [CHIP_GROUPS.amount]: "금액", [CHIP_GROUPS.priceBasis]: "가격 기준" };
-export const groupTitle = (group?: string) => group ? (GROUP_TITLES[group] ?? group.replace(FILTER_GROUP_PREFIX, "").trim()) : "";
+export const GROUP_TITLES: Record<string, string> = { [CHIP_GROUPS.channelCommon]: "", [CHIP_GROUPS.channelSector]: "", [CHIP_GROUPS.prefill]: "", [CHIP_GROUPS.people]: "누가", [CHIP_GROUPS.period]: "기간", [CHIP_GROUPS.unit]: "단위", [CHIP_GROUPS.metric]: "목표", [CHIP_GROUPS.amount]: "금액", [CHIP_GROUPS.priceBasis]: "가격 기준",
+  // 세부 질문의 단계 이름 — 질문 힌트와 같은 말을 쓴다("완료 확인 기준도 함께 고를 수 있어요" → 완료 확인 기준). 빠지면 영어 키가 보였다(전수조사 2026-11-04); scripts/business-intake-ui.test.tsx 가 잡는다
+  decision: "결정자", user: "실제 사용하는 담당자", deliverable: "결과물", acceptance: "완료 확인 기준", payment: "지급 방식", extra: "추가 요청 비용", cycle: "과금 주기", free: "무료 플랜",
+  menu: "대표 메뉴", order: "주문 방식", window: "반품 기한", shipping: "배송비 부담", status: "확인 상태", type: "인증 종류", area: "서비스 범위", remote: "온라인·비대면",
+  included: "포함되는 것", excluded: "제외되는 것", cancel: "취소 조건", noshow: "노쇼 처리", purpose: "용도", tenure: "공간 확보 상태", permit: "인허가 상태", damage: "파손 대응", range: "구간", schedule: "정기·비정기",
+  format: "형식", usage: "사용처", term: "사용 기간", rights: "권리 조건",
+};
+/* 제목이 없는 묶음은 빈 줄 — 영어 키를 그대로 보여 주지 않는다 */
+export const groupTitle = (group?: string) => group ? (GROUP_TITLES[group] ?? (group.startsWith(FILTER_GROUP_PREFIX) ? group.replace(FILTER_GROUP_PREFIX, "").trim() : "")) : "";
 
 /** Catalogue groups that render as one step: channel/problem "common" + "sector" form a single 8-chip grid (spec §1.3). */
 export const stepKey = (group?: string) => group === CHIP_GROUPS.channelSector ? CHIP_GROUPS.channelCommon : group;
@@ -636,12 +646,17 @@ export const SKIP_VALUE_PREFIX = "skip:";
 export const isSkipOption = (option: { value: string }) => option.value.startsWith(SKIP_VALUE_PREFIX);
 
 /** Sector for client-side ladders (amount ranges): the confirmed intake sector, else the rule-based reading of the business text, else general. */
-export function intakeChipSector(snapshot: Pick<IntakeSnapshot, "intake" | "coach">): ProposalSector {
-  if (snapshot.intake.sector !== "general") return snapshot.intake.sector;
+/** 사장님이 적은 사업 설명(코치 필드 → 인테이크 답 순). 없으면 "" */
+export function businessDescriptionText(snapshot: Pick<IntakeSnapshot, "intake" | "coach">): string {
   const field = snapshot.coach.fields.find(item => item.key === "business" && item.basis === "user")?.value;
   const answer = snapshot.intake.answers.business;
-  const text = field ?? (answer?.status === "answered" && typeof answer.value === "string" ? answer.value : "");
-  return text.trim() ? descriptionSector(text) : "general";
+  return (field ?? (answer?.status === "answered" && typeof answer.value === "string" ? answer.value : "")).trim();
+}
+
+export function intakeChipSector(snapshot: Pick<IntakeSnapshot, "intake" | "coach">): ProposalSector {
+  if (snapshot.intake.sector !== "general") return snapshot.intake.sector;
+  const text = businessDescriptionText(snapshot);
+  return text ? descriptionSector(text) : "general";
 }
 
 /** kind text + catalogue options = hybrid_text_chips (spec §2); business stays a prefill-only typing exception. */

@@ -123,12 +123,10 @@ export interface ProposalBlueprint {
   cautions: string[];
 }
 
-export function inferProposalSector(name: string, description = ""): ProposalSector {
-  const subject = `${name} ${description}`.toLowerCase();
-  // Delivery model wins over the customer's industry: software for cafes is not a cafe.
-  const tests: [ProposalSector, RegExp][] = [
+/** 설명 글에서 업종을 찍는 규칙 — 앞선 것이 이긴다(소프트웨어가 카페보다 먼저: 카페용 앱은 카페가 아니다). 자체 추천(local-suggestions)도 같은 표로 업종 순위를 매긴다 */
+export const SECTOR_PATTERNS: readonly (readonly [ProposalSector, RegExp])[] = [
     ["software", /saas|소프트웨어|플랫폼|앱 개발|업무 자동화|software|관리 앱/],
-    // 2-syllable words (퀵, 이사) are bounded so 퀵보드 or 관리이사 do not match.
+  // 2-syllable words (퀵, 이사) are bounded so 퀵보드 or 관리이사 do not match.
     ["logistics", /물류|배송 대행|배달 대행|운송|화물|풀필먼트|용달|택배\s*(?:대행|기사|사업|영업소|집하|위탁)|(?:^|[^가-힣])퀵(?:$|[^가-힣])|퀵\s*(?:서비스|배송|배달)|logistics/],
     ["education", /교육|강의|학원|코칭|수업|과외|레슨|교습소|education|coaching/],
     ["content_media", /촬영|사진 제작|영상|콘텐츠 제작|미디어|photo service|media/],
@@ -138,8 +136,11 @@ export function inferProposalSector(name: string, description = ""): ProposalSec
     ["space_hospitality", /숙박|펜션|공간 대여|대관|공유\s*오피스|스튜디오\s*대관|파티룸|스터디\s*(?:룸|카페)|게스트하우스|hotel/],
     ["local_service", /청소|수리|미용|네일|헤어|피부\s*(?:관리|샵|미용)|마사지|에스테틱|왁싱|세차|세탁|방문 서비스|꽃집|플라워|반려동물\s*(?:미용|돌봄|호텔)|펫\s*(?:미용|시터)|(?:^|[^가-힣])이사(?:$|[^가-힣])|이사\s*(?:업체|서비스|짐|센터)|포장이사|이사업체/],
     ["food_beverage", /카페|커피|음식점|식당|베이커리|레스토랑|반찬|도시락|밀키트|분식|주점|술집|디저트|coffee|cafe|restaurant/],
-  ];
-  return tests.find(([, test]) => test.test(subject))?.[0] ?? "general";
+];
+
+export function inferProposalSector(name: string, description = ""): ProposalSector {
+  const subject = `${name} ${description}`.toLowerCase();
+  return SECTOR_PATTERNS.find(([, test]) => test.test(subject))?.[0] ?? "general";
 }
 
 export function inferProposalPurpose(planType = ""): ProposalPurpose {

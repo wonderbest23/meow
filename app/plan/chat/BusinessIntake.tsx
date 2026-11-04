@@ -27,7 +27,7 @@ import { GenerationCard, GenerationDialog, generationFinished, generationStalled
 import { InlineLogin } from "../../../components/login-dialog";
 import { ResourcePanel } from "./intake-ui/ResourcePanel";
 import { IdeaExploration } from "./intake-ui/IdeaExploration";
-import { incompleteChoiceText, nextRefinementQuestion, questionPromptText } from "./intake-ui/model";
+import { businessDescriptionText, incompleteChoiceText, nextRefinementQuestion, questionPromptText } from "./intake-ui/model";
 import { composerEnterSends, composerLimitNote, resultUpdateNotice, resumeSummary, visibleComposerText } from "./intake-ui/guidance";
 import { nativePlatform } from "../../../lib/native-app";
 import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/domain";
@@ -264,7 +264,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const [amountCheck, setAmountCheck] = useState<{ text?: string; questionId: string; value: IntakeValue; revision: number; prompt: string } | null>(null);
   const [draft, setDraft] = useState<IntakeDraft>(emptyDraft);
   const liveComment = useLiveComment();
-  const answerSuggestions = useAnswerSuggestions(plan?.planId);
+  const answerSuggestions = useAnswerSuggestions(plan?.planId, plan && (plan.intake.mode === "startup" || plan.intake.mode === "operating") ? { text: businessDescriptionText(plan), stage: plan.intake.mode } : null);
   const [ideaRejectIds, setIdeaRejectIds] = useState<string[]>([]);
   // 마지막으로 고른 AI 제안 — 저장하지 못하면 그 카드 바로 아래에 이유를 보인다
   const [ideaPick, setIdeaPick] = useState<string | null>(null);

@@ -16,11 +16,11 @@ const requestSchema = z.object({
 const noStore = { "Cache-Control": "private, no-store" };
 
 /*
- * 첫 사업 설명에 맞춘 답변 추천(시험 기능, INTAKE_ANSWER_SUGGESTIONS=1일 때만).
- * 꺼져 있거나 AI 연결이 없으면 204로 조용히 끝나고, 화면은 기존 업종 칩만 보여 준다.
+ * 첫 사업 설명에 맞춘 답변 추천. 시험 기능이었다가 기본으로 켰다(소유자 결정 2026-11-04) — INTAKE_BETA_SAFETY=1 로만 끈다.
+ * AI 연결이 없거나 실패하면 204로 조용히 끝나고, 화면은 자체 추천(local-suggestions)을 그대로 둔다.
  */
 export async function POST(request: Request) {
-  if (process.env.INTAKE_ANSWER_SUGGESTIONS !== "1" || process.env.INTAKE_BETA_SAFETY === "1") return new Response(null, { status: 204, headers: noStore });
+  if (process.env.INTAKE_BETA_SAFETY === "1") return new Response(null, { status: 204, headers: noStore });
   // 대화 화면과 같은 로그인 규칙 — 예전엔 주소를 직접 부르면 로그인 없이도 AI 가 돌았다
   if (intakeLoginRequired((await requireGuestIdentity()).userId)) return new Response(null, { status: 204, headers: noStore });
   const limited = await enforceRateLimit("intake-answer-suggestions", request, { limit: 12, windowMs: 10 * 60_000, message: "잠시 후 다시 시도해 주세요." });

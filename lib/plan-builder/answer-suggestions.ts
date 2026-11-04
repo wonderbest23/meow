@@ -77,7 +77,7 @@ export async function suggestAnswers(config: LLMConfig, idea: string, stage: "st
     effort: "low",
     maxOutputTokens: 700,
     timeoutMs: 25_000,
-    allowFallback: false,
+    // 한 공급사가 막히면 다른 공급사로 1회 넘어간다(completeText 기본). 25초 안에서만 — 넘어가도 화면엔 자체 추천이 이미 떠 있다
     signal,
     onFailure: event => { failure = event.code; },
   });

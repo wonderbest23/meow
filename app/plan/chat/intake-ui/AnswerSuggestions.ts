@@ -1,17 +1,38 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isSuggestionField } from "../../../../lib/plan-builder/answer-suggestion-fields";
+import { localSuggestions } from "../../../../lib/plan-builder/local-suggestions";
 
 export type SuggestionMap = Partial<Record<string, string[]>>;
-/** 질문 하나에 보여 줄 추천 상태. pending이면 자리만 잡아 두고, 도착하면 그 자리에 칩이 들어간다. */
-export type QuestionSuggestions = { pending: true } | { pending: false; items: string[] };
+/** 질문 하나에 보여 줄 추천. source: ai = 이 설명을 읽은 AI 추천, local = 업종 칩 표에서 고른 자체 추천(AI를 기다리는 동안·AI가 꺼졌을 때) */
+export type QuestionSuggestions = { pending: boolean; items: string[]; source: "ai" | "local" };
 
 /**
- * 첫 사업 설명에 맞춘 답변 추천을 받아 둔다(시험 기능). 서버가 꺼져 있거나(204) 실패하면 조용히 비어 있고,
- * 화면은 기존 업종 칩만 보여 준다. 추천은 그 설명으로 새로 만든 사업에만 붙는다 — 다른 사업을 열면 보이지 않는다.
+ * 첫 사업 설명에 맞춘 답변 추천을 받아 둔다. 설명을 받은 즉시 자체 추천(규칙)을 먼저 채우고, AI 추천이 오면 그 자리에
+ * 바꿔 넣는다. 서버가 꺼져 있거나(204) 실패하면 자체 추천이 그대로 남아 빈자리가 생기지 않는다.
+ * 추천은 그 설명으로 새로 만든 사업에만 붙는다 — 다른 사업을 열면 보이지 않는다.
  */
-export function useAnswerSuggestions(planId: string | null | undefined) {
-  const [state, setState] = useState<{ planId: string | null; suggestions: SuggestionMap; pending: boolean } | null>(null);
+type Stage = "startup" | "operating";
+const cacheKey = (planId: string) => `answer-suggestions:${planId}`;
+const readCache = (planId: string, text: string): SuggestionMap | null => {
+  try { const saved = JSON.parse(window.localStorage.getItem(cacheKey(planId)) ?? "null"); return saved && saved.text === text && saved.suggestions ? saved.suggestions as SuggestionMap : null; } catch { return null; }
+};
+const writeCache = (planId: string, text: string, suggestions: SuggestionMap) => { try { window.localStorage.setItem(cacheKey(planId), JSON.stringify({ text, suggestions })); } catch { /* 저장소를 못 쓰면 다음 열기에 자체 추천만 보인다 */ } };
+
+/**
+ * @param restore 새로 고치거나 다시 열었을 때 쓸 사업 설명·단계 — AI를 다시 부르지 않고 이 기기에 저장해 둔 AI 추천을 꺼내거나(같은 설명일 때만),
+ *   없으면 설명으로 자체 추천만 다시 만든다(소유자 결정 2026-11-04: 새로 고치면 칩이 전부 다시 보이던 문제).
+ */
+export function useAnswerSuggestions(planId: string | null | undefined, restore?: { text: string; stage: Stage } | null) {
+  const [state, setState] = useState<{ planId: string | null; suggestions: SuggestionMap; local: SuggestionMap; pending: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!planId || !restore?.text) return;
+    setState(current => {
+      if (current && current.planId === planId) return current;
+      return { planId, suggestions: readCache(planId, restore.text) ?? {}, local: localSuggestions(restore.text, restore.stage), pending: false };
+    });
+  }, [planId, restore?.text, restore?.stage]);
   const controllerRef = useRef<AbortController | null>(null);
 
   // 요청 시점에는 아직 사업이 없으므로, 처음 열린 사업에 추천을 붙인다.
@@ -20,11 +41,11 @@ export function useAnswerSuggestions(planId: string | null | undefined) {
   }, [planId]);
 
   /** planId: 이미 열린 사업에서 사업 설명에 답할 때('생각한 사업이 있어요' 카드로 시작) — 첫 사업을 기다리지 않고 바로 붙인다 */
-  const request = useCallback(async (text: string, stage: "startup" | "operating", planId?: string) => {
+  const request = useCallback(async (text: string, stage: Stage, planId?: string) => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
-    setState({ planId: planId ?? null, suggestions: {}, pending: true });
+    setState({ planId: planId ?? null, suggestions: {}, local: localSuggestions(text, stage), pending: true });
     try {
       const response = await fetch("/api/plan/chat/suggestions", {
         method: "POST",
@@ -40,7 +61,7 @@ export function useAnswerSuggestions(planId: string | null | undefined) {
           if (list.length) suggestions[key] = list;
         }
       }
-      if (controllerRef.current === controller) setState(current => current ? { ...current, suggestions, pending: false } : current);
+      if (controllerRef.current === controller) setState(current => { if (current?.planId && Object.keys(suggestions).length) writeCache(current.planId, text, suggestions); return current ? { ...current, suggestions, pending: false } : current; });
     } catch {
       // 추천은 보조 기능이라 실패를 알리지 않는다(대기 표시만 거둔다).
       if (controllerRef.current === controller) setState(current => current ? { ...current, pending: false } : current);
@@ -57,9 +78,10 @@ export function useAnswerSuggestions(planId: string | null | undefined) {
 
   const forQuestion = (questionId: string | undefined): QuestionSuggestions | undefined => {
     if (!isSuggestionField(questionId) || !state || !planId || state.planId !== planId) return undefined;
-    if (state.pending) return { pending: true };
-    const items = state.suggestions[questionId];
-    return items?.length ? { pending: false, items } : undefined;
+    const ai = state.suggestions[questionId];
+    if (ai?.length) return { pending: false, items: ai, source: "ai" };
+    const local = state.local[questionId] ?? [];
+    return local.length || state.pending ? { pending: state.pending, items: local, source: "local" } : undefined;
   };
 
   return { request, cancel, forQuestion };

@@ -1256,3 +1256,8 @@ button.workLogRow { min-height: 32px; }
   .page .chatQuestion[data-chat-question], .page[data-embedded][data-studio-pro] .chatQuestion[data-question-card], .workLogCard { animation: none; }
   .userActions, .page .chatQuestion :is(.chip, .ksicChip, .unknownChoice, .presetChip, .sendPartial, .option) { transition: none; }
 }
+
+/* '잘 모르겠어요'는 답이 아니라 건너뛰기다 — 업종·선택지 칩과 같은 알약 모양이면 선택지 하나로 보여 헷갈린다(소유자 피드백 2026-11-04). 칩 줄 아래 밑줄 글자 단추로 */
+.page .chatQuestion .unknownChoice.unknownChoice, .page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { display: inline-flex; flex-basis: 100%; width: max-content; min-height: 32px; margin-top: 10px; padding: 4px 2px; border: 0; border-radius: 4px; background: none; color: var(--app-muted); text-decoration: underline; text-underline-offset: 3px; transform: none; }
+.page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { color: var(--app-text); }
+.page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"], .page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"]:hover:not(:disabled) { background: none; color: var(--app-text); font-weight: 600; }
