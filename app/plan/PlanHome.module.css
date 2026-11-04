@@ -147,12 +147,13 @@
   .listCard[data-list-only] .filterRow { padding:0 12px 12px; }
   .listCard[data-list-only] .listBody { padding:0 12px; }
   .listCard[data-list-only] .grid.grid { gap:0; }
-  .listCard[data-list-only] .card { display:block; height:88px; border-radius:16px; }
+  /* 예시 카드도 같은 행 모양 — 예전엔 PC 카드 규칙만 받아 작은 썸네일 아래 글이 따로 놓였다(2026-11-04 휴대폰 전수조사) */
+  .listCard[data-list-only] :is(.card, .sampleCard) { display:block; height:88px; border-radius:16px; }
   /* 이름 바꾸기 칸이 열리면 행 아래로 늘어난다 — 88 고정이라 입력칸·저장·취소가 다음 행 위에 겹쳐 그려졌다(2026-11-02 전수조사) */
   .listCard[data-list-only] .card:has(form) { height:auto; padding-bottom:12px; }
   .listCard[data-list-only] .card > form { margin:0 4px; }
-  .listCard[data-list-only] .card:hover { background:var(--app-fill); }
-  .listCard[data-list-only] .card > a { display:flex; align-items:center; gap:16px; height:88px; padding:8px 52px 8px 4px; }
+  .listCard[data-list-only] :is(.card, .sampleCard):hover { background:var(--app-fill); }
+  .listCard[data-list-only] :is(.card > a, .sampleCard) { display:flex; align-items:center; gap:16px; height:88px; padding:8px 52px 8px 4px; }
   .listCard[data-list-only] .thumb { flex:none; width:64px; height:72px; aspect-ratio:auto; box-shadow:0 0 0 1px var(--app-line); }
   .listCard[data-list-only] .thumb > :not(.skeleton) { display:none; }
   .listCard[data-list-only] .skeleton { inset:8px; gap:4px; }
@@ -166,6 +167,9 @@
   .listCard[data-list-only] .card > details > summary { position:relative; z-index:0; width:44px !important; height:44px !important; color:var(--app-text); }
   /* ⋯ 뒤 32 원 — 점과 같은 가운데(예전엔 오른쪽으로 치우쳐 점이 원 왼쪽 끝에 걸렸다, 2026-11-02 사장님) */
   .listCard[data-list-only] .card > details > summary::before { content:""; position:absolute; inset:6px; border-radius:999px; background:var(--app-fill); z-index:-1; }
+  /* 빈 목록 — 머리·필터 아래 남은 높이의 가운데, '시작하기'는 뺀다(아래 '새 사업' 알약과 같은 일이라 둘이면 헷갈린다, 2026-11-04 사장님) */
+  .listCard[data-list-only] .listBody > [data-business-empty] { min-height:calc(100dvh - 256px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  .listCard[data-list-only] [data-business-empty] [data-empty-part=actions] { display:none; }
   .newFloat { position:fixed; left:50%; bottom:calc(24px + 57px + 12px + env(safe-area-inset-bottom)); z-index:59; display:inline-flex; align-items:center; gap:6px; height:44px; padding:10px 20px 10px 14px; border-radius:999px; background:var(--app-surface); box-shadow:var(--app-ring-shadow); color:var(--app-text); font-size:.875rem; font-weight:480; line-height:21px; text-decoration:none; transform:translateX(-50%); white-space:nowrap; }
 }
 

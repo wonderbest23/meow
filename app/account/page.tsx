@@ -103,9 +103,9 @@ export default function AccountPage() {
     void loadSession().catch(() => { setMessageError(true); setMessage("로그인 상태를 확인하지 못했어요. 연결을 확인하고 다시 시도해 주세요."); setSession({ authenticated: false, email: null, projects: [] }); });
   }, []);
 
-  // 이미 로그인돼 있으면 붙잡아두지 않는다 — 돌아갈 곳이 있으면 거기로, 없으면 내 계정으로
+  // 이미 로그인돼 있으면 붙잡아두지 않는다 — 돌아갈 곳이 있으면 거기로, 없으면 홈(오늘은 어떤 사업을…)으로. 예전엔 마이페이지라 들어온 자리가 어색했다(2026-11-04 사장님)
   useEffect(() => {
-    if (session?.authenticated) router.replace(nextPath ?? "/plan/me");
+    if (session?.authenticated) router.replace(nextPath ?? "/plan");
   }, [session?.authenticated, nextPath, router]);
 
   /** 확인 화면에서 "이 계정으로 로그인"을 눌렀을 때만 세션을 만들고 게스트 기획을 옮긴다. */
