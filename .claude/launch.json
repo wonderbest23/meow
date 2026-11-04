@@ -45,7 +45,6 @@
         "APP_ENV=prelaunch",
         "NEXT_PUBLIC_APP_ENV=prelaunch",
         "INTAKE_LIVE_COMMENT=1",
-        "INTAKE_ANSWER_SUGGESTIONS=1",
         "NEXT_PUBLIC_INTAKE_COACH_CHAT=1",
         "NEXT_PUBLIC_INTAKE_EDIT_CHAT=1",
         "NEXT_PUBLIC_STUDIO=1",

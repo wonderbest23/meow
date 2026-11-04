@@ -337,8 +337,10 @@ function HybridChips({ question, draft, disabled, groups, revealed, suggestions,
   coach?: boolean; onSend?: (value: AnswerDraft) => void;
 }) {
   const limit = chipLimit(question.id);
-  const aiItems = suggestions && !suggestions.pending ? suggestions.items : [];
+  const aiItems = suggestions?.items ?? [];
   const pieces = unmatchedPieces(question, draft.text);
+  // 추천이 있으면 업종 칩 표는 접는다 — 둘이 같이 보이면 사업과 상관없는 칩이 섞여 보였다(소유자 피드백 2026-11-04). 이미 고른 칩이 있으면 펼친 채로
+  const [showAll, setShowAll] = useState(false);
   const extraPicked = aiItems.filter(item => pieces.includes(item)).length;
   // 추천은 첫 선택지 줄(필터가 아닌 첫 단계)에 붙는다
   const aiGroup = groups.findIndex(group => !isFilterGroup(group.name));
@@ -365,12 +367,14 @@ function HybridChips({ question, draft, disabled, groups, revealed, suggestions,
     const picked = group.options.filter(option => draft.selected.includes(option.value)).length + (filter ? 0 : extraPicked);
     const title = groupTitle(group.name);
     const withAi = index === aiGroup && !!suggestions;
+    const folded = withAi && aiItems.length > 0 && !showAll && !group.options.some(option => draft.selected.includes(option.value));
+    const note = !suggestions ? "" : suggestions.pending ? "이 사업에 맞춘 추천을 고르고 있어요" : suggestions.source === "ai" ? "표시는 이 사업에 맞춘 추천이에요" : "표시는 비슷한 사업에서 많이 고르는 답이에요";
     return <div key={group.name ?? index} className={styles.chipStep} role="group" aria-label={title || question.label} data-step={groups.length > 1 ? index + 1 : undefined}>
-      {(title || stepLimit > 1 || withAi) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{`최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}{withAi && <span className={styles.suggestionNote} role="status"><Sparkles size={12} aria-hidden="true" />{suggestions?.pending ? "이 사업에 맞춘 추천을 고르고 있어요" : "표시는 이 사업에 맞춘 추천이에요"}</span>}</p>}
-      <div className={styles.chipRow}>{withAi && suggestions?.pending && [180, 140].map(width => <span key={`ai-wait-${width}`} className={styles.suggestionSkeleton} style={{ width }} aria-hidden="true" />)}{index === aiGroup && aiItems.map(item => {
+      {(title || stepLimit > 1 || withAi) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{`최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}{withAi && <span className={styles.suggestionNote} role="status"><Sparkles size={12} aria-hidden="true" />{note}</span>}</p>}
+      <div className={styles.chipRow}>{withAi && suggestions?.pending && aiItems.length === 0 && [180, 140].map(width => <span key={`ai-wait-${width}`} className={styles.suggestionSkeleton} style={{ width }} aria-hidden="true" />)}{index === aiGroup && aiItems.map(item => {
         const selected = pieces.includes(item);
         return <button key={`ai-${item}`} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => toggleSuggestion(item)}><span className={styles.suggestionLabel}><Sparkles size={13} aria-hidden="true" />{item}<span className={styles.srOnly}> (맞춤 추천)</span></span></button>;
-      })}{group.options.map(option => {
+      })}{folded ? <button type="button" className={styles.chip} disabled={disabled} aria-expanded={false} onClick={() => setShowAll(true)}>다른 선택지 보기<ChevronRight size={14} aria-hidden="true" /></button> : group.options.map(option => {
         const selected = draft.selected.includes(option.value);
         return <button key={option.value} type="button" className={styles.chip} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => tap(option.value)}>{goalChipLabel(question.id, option.label)}{option.hint && <small className={styles.chipHint}>{option.hint}</small>}</button>;
       })}</div>

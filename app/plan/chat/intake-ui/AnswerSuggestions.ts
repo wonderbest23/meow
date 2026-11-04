@@ -1,17 +1,19 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { isSuggestionField } from "../../../../lib/plan-builder/answer-suggestion-fields";
+import { localSuggestions } from "../../../../lib/plan-builder/local-suggestions";
 
 export type SuggestionMap = Partial<Record<string, string[]>>;
-/** 질문 하나에 보여 줄 추천 상태. pending이면 자리만 잡아 두고, 도착하면 그 자리에 칩이 들어간다. */
-export type QuestionSuggestions = { pending: true } | { pending: false; items: string[] };
+/** 질문 하나에 보여 줄 추천. source: ai = 이 설명을 읽은 AI 추천, local = 업종 칩 표에서 고른 자체 추천(AI를 기다리는 동안·AI가 꺼졌을 때) */
+export type QuestionSuggestions = { pending: boolean; items: string[]; source: "ai" | "local" };
 
 /**
- * 첫 사업 설명에 맞춘 답변 추천을 받아 둔다(시험 기능). 서버가 꺼져 있거나(204) 실패하면 조용히 비어 있고,
- * 화면은 기존 업종 칩만 보여 준다. 추천은 그 설명으로 새로 만든 사업에만 붙는다 — 다른 사업을 열면 보이지 않는다.
+ * 첫 사업 설명에 맞춘 답변 추천을 받아 둔다. 설명을 받은 즉시 자체 추천(규칙)을 먼저 채우고, AI 추천이 오면 그 자리에
+ * 바꿔 넣는다. 서버가 꺼져 있거나(204) 실패하면 자체 추천이 그대로 남아 빈자리가 생기지 않는다.
+ * 추천은 그 설명으로 새로 만든 사업에만 붙는다 — 다른 사업을 열면 보이지 않는다.
  */
 export function useAnswerSuggestions(planId: string | null | undefined) {
-  const [state, setState] = useState<{ planId: string | null; suggestions: SuggestionMap; pending: boolean } | null>(null);
+  const [state, setState] = useState<{ planId: string | null; suggestions: SuggestionMap; local: SuggestionMap; pending: boolean } | null>(null);
   const controllerRef = useRef<AbortController | null>(null);
 
   // 요청 시점에는 아직 사업이 없으므로, 처음 열린 사업에 추천을 붙인다.
@@ -24,7 +26,7 @@ export function useAnswerSuggestions(planId: string | null | undefined) {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
-    setState({ planId: planId ?? null, suggestions: {}, pending: true });
+    setState({ planId: planId ?? null, suggestions: {}, local: localSuggestions(text, stage), pending: true });
     try {
       const response = await fetch("/api/plan/chat/suggestions", {
         method: "POST",
@@ -57,9 +59,10 @@ export function useAnswerSuggestions(planId: string | null | undefined) {
 
   const forQuestion = (questionId: string | undefined): QuestionSuggestions | undefined => {
     if (!isSuggestionField(questionId) || !state || !planId || state.planId !== planId) return undefined;
-    if (state.pending) return { pending: true };
-    const items = state.suggestions[questionId];
-    return items?.length ? { pending: false, items } : undefined;
+    const ai = state.suggestions[questionId];
+    if (ai?.length) return { pending: false, items: ai, source: "ai" };
+    const local = state.local[questionId] ?? [];
+    return local.length || state.pending ? { pending: state.pending, items: local, source: "local" } : undefined;
   };
 
   return { request, cancel, forQuestion };
