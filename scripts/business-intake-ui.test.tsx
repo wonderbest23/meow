@@ -472,6 +472,8 @@ async function main() {
   assert.ok(incompleteChoiceText(customerChips, { ...emptyAnswer(), text: "개인", selected: ["개인"] }), "A filter-only pick cannot be saved from the composer either");
   assert.ok(!hybridFilterOnly.includes("최대 2개 · 0/2"), "한도 세기는 질문 제목과 겹쳐 지웠다(소유자 2026-11-04)");
   const hybridReady = chat(customerChips, { text: "주거 상권 가족·주부", selected: ["개인", "가족"], custom: false });
+  // 고른 칩은 줄에서 사라진다(data-picked); 필터 단계 칩('개인')은 남는다(소유자 2026-11-04)
+  assert.equal((hybridReady.match(/data-picked="true"/g) ?? []).length, 1, "고른 선택지 칩 하나만 data-picked");
   assert.equal(incompleteChoiceText(customerChips, { text: "주거 상권 가족·주부", selected: ["개인", "가족"], custom: false }), false);
   assert.match(buttonMarkup(hybridReady, "주거 상권 가족·주부"), /aria-pressed="true"/);
   assert.ok(incompleteChoiceText(customerChips, { text: "주거 상권 가족·주부 / ", selected: ["개인", "가족"], custom: false }), "A dangling separator blocks the save");
