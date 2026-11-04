@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, ChevronRight, ArrowUp, ChevronDown, Mic, MoreHorizontal, Plus, Search } from "lucide-react";
@@ -229,16 +229,25 @@ function Composer() {
   const [listening, setListening] = useState(false);
   const [canListen, setCanListen] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
+  const form = useRef<HTMLFormElement>(null);
   const recognition = useRef<Recognition | null>(null);
+  /* 보내는 중 — 입력칸이 대화 입력칸 자리(아래)로 미끄러져 내려가고 인사말은 사라진다. 그동안 작업실이 열려 대화로 이어진 느낌(2026-11-04 사장님) */
+  const [handoff, setHandoff] = useState<number | null>(null);
   useEffect(() => { setCanListen(!!speechRecognition()); return () => recognition.current?.stop(); }, []);
+  /* 작업실 경로를 미리 받아 둔다 — 보낼 때 코드 묶음을 그제야 받아 버벅였다 */
+  useEffect(() => { router.prefetch(newChatHref()); }, [router]);
   const idea = normalizeLandingIdea(text);
   function send(event?: FormEvent) {
     event?.preventDefault();
-    if (!idea) { field.current?.focus(); return; }
+    if (!idea || handoff !== null) { field.current?.focus(); return; }
     let storage: Storage | null = null;
     try { storage = window.sessionStorage; } catch { /* 저장소가 막혀 있으면 주소로만 넘어간다 */ }
     stashLandingIdea(storage, idea, Date.now());
-    router.push(newChatHref(idea));
+    const rect = form.current?.getBoundingClientRect();
+    setHandoff(rect ? Math.max(0, window.innerHeight - rect.bottom - 24) : 0);
+    /* 경로를 미리 받아 둬 바로 넘기면 50ms 만에 화면이 바뀌어 움직임이 끊긴다 — 입력칸이 내려간 뒤(.4s 중 320ms) 넘어간다. 움직임 줄이기면 바로 */
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(() => router.push(newChatHref(idea)), reduce ? 0 : 320);
   }
   function onKey(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); }
@@ -254,7 +263,7 @@ function Composer() {
     recognition.current = r; setListening(true);
     try { r.start(); } catch { setListening(false); }
   }
-  return <form className={home.composer} onSubmit={send}>
+  return <form ref={form} className={home.composer} onSubmit={send} data-handoff={handoff !== null || undefined} style={handoff !== null ? { "--handoff-y": `${handoff}px` } as CSSProperties : undefined} aria-busy={handoff !== null || undefined}>
     <TextArea ref={field} className={home.composerField} aria-label="어떤 사업을 시작할지 적어 주세요" placeholder={`예: ${EXAMPLE_IDEA}`} rows={1} maxLength={LANDING_IDEA_MAX} value={text} onChange={event => setText(event.target.value)} onKeyDown={onKey} />
     <div className={home.composerBar}>
       <button type="button" className={home.circle} aria-label="예시 문장 넣기" title="예시 문장 넣기" onClick={() => { setText(EXAMPLE_IDEA); field.current?.focus(); }}><Plus size={18} aria-hidden="true" /></button>

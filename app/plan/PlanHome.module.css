@@ -105,6 +105,10 @@
 .sampleCard:hover .thumb { box-shadow:0 0 0 1px var(--app-line-strong); }
 
 .newFloat { display:none; }
+/* 보내는 중 — 입력칸은 대화 입력칸 자리로 내려가고(--handoff-y 는 보낼 때 잰 남은 높이), 인사말·최근 사업은 사라진다 */
+.composer[data-handoff] { transform:translateY(var(--handoff-y, 0px)); transition:transform .4s cubic-bezier(.2,.8,.2,1); pointer-events:none; }
+.hero:has(.composer[data-handoff]) :is(.greeting, .recent) { opacity:0; transition:opacity .2s ease; }
+@media (prefers-reduced-motion: reduce) { .composer[data-handoff] { transition:none; transform:none; } }
 /* 휴대폰 홈 입력칸 아래 최근 사업 — PC는 아래 목록 카드가 있어 숨긴다 */
 .recent { display:none; }
 
