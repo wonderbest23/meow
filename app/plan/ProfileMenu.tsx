@@ -17,8 +17,10 @@ import styles from "./ProfileMenu.module.css";
  */
 export type ProfileAnchor = "top" | "bottom" | "sheet";
 
-export default function ProfileMenu({ open, onClose, account, unanswered, anchor = "sheet", onOpenMenu }: {
+export default function ProfileMenu({ open, onClose, account, unanswered, inquiriesClosed = false, anchor = "sheet", onOpenMenu }: {
   open: boolean; onClose: () => void; account: Account | null; unanswered: number;
+  /** 공개한 홈페이지가 없어 손님 문의가 닫혀 있으면 '받은 알림' 줄도 뺀다(왼쪽 메뉴와 같게) */
+  inquiriesClosed?: boolean;
   /** 어디에 뜨는지 — sheet(휴대폰, 아래에서) · top(PC 계정 단추 아래) · bottom(PC 아바타 위) */
   anchor?: ProfileAnchor;
   /** 휴대폰 — 내 사업 나무(사업 → 목차)를 담은 메뉴 서랍을 연다 */
@@ -46,7 +48,7 @@ export default function ProfileMenu({ open, onClose, account, unanswered, anchor
       </div> : <div className={styles.who}><div className={styles.whoText}><p className={styles.name}>로그인하면 내 사업이 보여요</p></div></div>}
       <nav aria-label="프로필 메뉴 목록">
         {signedIn
-          ? row("/plan/inquiries", <Inbox aria-hidden="true" />, "받은 알림", unanswered ? <b className={styles.count} aria-label={`답할 문의 ${unanswered}건`}>{unanswered}</b> : null, true)
+          ? inquiriesClosed ? null : row("/plan/inquiries", <Inbox aria-hidden="true" />, "받은 알림", unanswered ? <b className={styles.count} aria-label={`답할 문의 ${unanswered}건`}>{unanswered}</b> : null, true)
           : <>
             {row(`/account?next=${next}`, <LogIn aria-hidden="true" />, "로그인", null, true)}
             {row(`/account?mode=register&next=${next}`, <UserPlus aria-hidden="true" />, "회원가입", null, true)}

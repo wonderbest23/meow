@@ -187,7 +187,7 @@ export default function PlanList() {
         <Composer />
         {/* 휴대폰만 — 진행 중인 사업이 있으면 입력칸 아래에 최근 3개를 작게(바로 이어가게, 2026-11-04 사장님). PC는 아래 목록 카드가 보인다 */}
         {recent.length > 0 && <nav className={home.recent} aria-label="최근 사업">
-          {recent.slice(0, 3).map(p => <Link key={p.id} href={openHref(p)}><span>{planDisplayName(p)}</span><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><ChevronRight size={16} aria-hidden="true" /></Link>)}
+          {recent.slice(0, 3).map(p => <Link key={p.id} href={openHref(p)} aria-label={`${planDisplayName(p)} 열기`}><span>{planDisplayName(p)}</span><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><ChevronRight size={16} aria-hidden="true" /></Link>)}
           {plans.length > 3 && <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={home.recentAll}>전체 보기<ArrowRight size={14} aria-hidden="true" /></Link>}
         </nav>}
       </section>}

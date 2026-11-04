@@ -55,6 +55,8 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
   /* 사업 수 — 모르는 동안(null)은 손님 문의를 막지 않는다 */
   const [planCount, setPlanCount] = useState<number | null>(null);
   const openInquiries = inquiries.items ? unansweredCount(inquiries.items) : 0;
+  /* 손님 문의 닫힘 — 사업이 없거나 공개한 홈페이지가 없고 답할 문의도 없을 때. 세지 못한 동안(null)은 막지 않는다 */
+  const inquiriesClosed = (planCount === 0 || inquiries.published === 0) && !openInquiries;
   /* 프로필 메뉴 — 위 계정 단추에서 열면 그 아래, 아래 아바타에서 열면 그 위에 */
   const [profile, setProfile] = useState<ProfileAnchor | null>(null);
   useEffect(() => { setProfile(null); }, [pathname]);
@@ -84,7 +86,7 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
       </Link>
       {/* 손님 문의 — 홈페이지로 들어온 손님 문의를 메신저처럼. 사업이 하나도 없으면 받을 문의가 없으니 막아 둔다 */}
       {/* 공개한 홈페이지가 없으면 막는다 — 문의가 올 곳이 없는데 빈 화면에 단추만 셋이었다(2026-11-04 사장님). 세지 못한 동안(null)은 막지 않는다 */}
-      {(planCount === 0 || inquiries.published === 0) && !openInquiries ? (
+      {inquiriesClosed ? (
         <span className={`${menu.item} ${menu.disabled}`} aria-disabled="true" title="홈페이지를 공개하면 열려요">
           <MessagesSquare aria-hidden="true" /><span className={menu.disabledText}>손님 문의<small>홈페이지를 공개하면 열려요</small></span>
         </span>
@@ -109,7 +111,7 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
         <button type="button" className={menu.footAvatar} aria-haspopup="dialog" aria-expanded={profile === "bottom"} aria-label={`프로필 메뉴 열기 (${account.email ?? "로그인됨"})${openInquiries ? ` · 답할 문의 ${openInquiries}건` : ""}`} onClick={() => setProfile(profile === "bottom" ? null : "bottom")}>
           <span className={menu.avatar} aria-hidden="true">{accountInitial(account)}{openInquiries ? <em>{openInquiries > 9 ? "9+" : openInquiries}</em> : null}</span>
         </button>
-        <Link href="/plan/inquiries" className={menu.footIcon} aria-label="받은 알림" title="받은 알림"><Inbox aria-hidden="true" /></Link>
+        {!inquiriesClosed && <Link href="/plan/inquiries" className={menu.footIcon} aria-label="받은 알림" title="받은 알림"><Inbox aria-hidden="true" /></Link>}
       </div>
     ) : (
       /* /account?next= 는 로그인 팝업이 받아 이 화면에서 연다 */
@@ -118,6 +120,6 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
         <a className={menu.signup} href={`/account?mode=register&next=${loginNext}`}>회원가입<ChevronRight aria-hidden="true" /></a>
       </div>
     )}
-    <ProfileMenu open={profile !== null} anchor={profile ?? "bottom"} onClose={() => setProfile(null)} account={account} unanswered={openInquiries} />
+    <ProfileMenu open={profile !== null} anchor={profile ?? "bottom"} onClose={() => setProfile(null)} account={account} unanswered={openInquiries} inquiriesClosed={inquiriesClosed} />
   </div>;
 }
