@@ -455,7 +455,7 @@ async function main() {
   const hybridFilterOnly = chat(customerChips, { ...emptyAnswer(), selected: ["개인"] });
   assert.ok(hybridFilterOnly.includes("주거 상권 가족·주부"), "A filter pick reveals the next step");
   assert.ok(incompleteChoiceText(customerChips, { ...emptyAnswer(), text: "개인", selected: ["개인"] }), "A filter-only pick cannot be saved from the composer either");
-  assert.ok(hybridFilterOnly.includes("최대 2개 · 0/2"));
+  assert.ok(!hybridFilterOnly.includes("최대 2개 · 0/2"), "한도 세기는 질문 제목과 겹쳐 지웠다(소유자 2026-11-04)");
   const hybridReady = chat(customerChips, { text: "주거 상권 가족·주부", selected: ["개인", "가족"], custom: false });
   assert.equal(incompleteChoiceText(customerChips, { text: "주거 상권 가족·주부", selected: ["개인", "가족"], custom: false }), false);
   assert.match(buttonMarkup(hybridReady, "주거 상권 가족·주부"), /aria-pressed="true"/);

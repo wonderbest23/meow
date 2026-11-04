@@ -370,7 +370,8 @@ function HybridChips({ question, draft, disabled, groups, revealed, suggestions,
     const folded = withAi && aiItems.length > 0 && !showAll && !group.options.some(option => draft.selected.includes(option.value));
     const note = !suggestions ? "" : suggestions.pending ? "이 사업에 맞춘 추천을 고르고 있어요" : suggestions.source === "ai" ? "표시는 이 사업에 맞춘 추천이에요" : "표시는 비슷한 사업에서 많이 고르는 답이에요";
     return <div key={group.name ?? index} className={styles.chipStep} role="group" aria-label={title || question.label} data-step={groups.length > 1 ? index + 1 : undefined}>
-      {(title || stepLimit > 1 || withAi) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{`최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}{withAi && <span className={styles.suggestionNote} role="status"><Sparkles size={12} aria-hidden="true" />{note}</span>}</p>}
+      {/* '최대 N개 · 0/N' 세기는 질문 제목에 이미 있는 말을 또 보여 헷갈렸다(소유자 2026-11-04) — 한도는 칩이 비활성화되는 것으로 안다 */}
+      {(title || withAi) && <p className={styles.stepLegend}>{title}{withAi && <span className={styles.suggestionNote} role="status"><Sparkles size={12} aria-hidden="true" />{note}</span>}</p>}
       <div className={styles.chipRow}>{withAi && suggestions?.pending && aiItems.length === 0 && [180, 140].map(width => <span key={`ai-wait-${width}`} className={styles.suggestionSkeleton} style={{ width }} aria-hidden="true" />)}{index === aiGroup && aiItems.map(item => {
         const selected = pieces.includes(item);
         return <button key={`ai-${item}`} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => toggleSuggestion(item)}><span className={styles.suggestionLabel}><Sparkles size={13} aria-hidden="true" />{item}<span className={styles.srOnly}> (맞춤 추천)</span></span></button>;
