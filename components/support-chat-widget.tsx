@@ -1045,8 +1045,16 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
 
               <form className="support-chat-form" onSubmit={sendMessage}>
                 <div className="support-chat-form-heading">
-                  <span>{mode === "consult" ? "상담사에게 이야기하기" : operatorMode ? "고객센터에 전달돼요" : "직접 질문하기"}</span>
-                  {mode === "support" && !showQuickMenu && <button type="button" onClick={openQuestionMenu}><ClipboardList /> 질문 다시 고르기</button>}
+                  {/* 답을 받은 뒤엔 입력창 위 칩 줄로 다른 분야를 바로 고른다. 첫 화면은 분야가 대화 안에 있어 비운다 */}
+                  {mode === "support" && !operatorMode ? !showQuickMenu && <div className="support-chat-quick-chips" aria-label="질문 분야 바로 고르기">
+                    {supportFaqCategories.map((category) => (
+                      <button type="button" key={category.id} onClick={() => { openQuestionMenu(); setSelectedCategoryId(category.id); }}>{category.label}</button>
+                    ))}
+                    <button type="button" onClick={() => startOperatorInquiry()}>직접 문의</button>
+                  </div> : <>
+                    <span>{mode === "consult" ? "상담사에게 이야기하기" : "고객센터에 전달돼요"}</span>
+                    {mode === "support" && !showQuickMenu && <button type="button" onClick={openQuestionMenu}><ClipboardList /> 질문 다시 고르기</button>}
+                  </>}
                 </div>
                 {error && <p className="support-chat-error">{error}</p>}
                 {/* 2,000자 한도의 90%부터 남은 글자 수를 알려 준다 — 조용히 잘리면 뒤쪽이 사라진 줄 모른다 */}
