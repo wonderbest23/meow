@@ -62,6 +62,12 @@ function ParamsWatcher({ onChange }: { onChange: (view: string | null, search: b
   return null;
 }
 
+/* 열린 ⋯ 메뉴를 닫는다 — except 하나만 남긴다. 바깥 누름은 문서에서 한 번 듣는다 */
+function closeOtherRowMenus(except?: Element | null) {
+  document.querySelectorAll<HTMLDetailsElement>("details[open][class*=rowMenu]").forEach(menu => { if (menu !== except) menu.open = false; });
+}
+if (typeof document !== "undefined") document.addEventListener("pointerdown", event => { closeOtherRowMenus((event.target as Element).closest("details[class*=rowMenu]")); });
+
 export default function PlanList() {
   const router = useRouter();
   const [state, setState] = useState<PlanState | null>(null);
@@ -157,7 +163,8 @@ export default function PlanList() {
     {editing===p.id && <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><TextField aria-label="사업 이름" aria-describedby={`rename-hint-${p.id}`} value={name} maxLength={100} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><AppButton type="submit" variant="primary" className={styles.primary}>저장</AppButton><AppButton variant="text" onClick={()=>cancelRename(p.id)}>취소</AppButton>
       {/* 열면 기존 이름을 골라 둔다(바로 새로 쓰게). 100자에 닿으면 더 써지지 않는 이유를 알린다. 홈페이지 이름은 따로 바뀐다 */}
       <p id={`rename-hint-${p.id}`} className={mine.renameHint} aria-live="polite">{name.length >= 100 ? "이름은 100자까지 쓸 수 있어요. " : ""}홈페이지 이름은 홈페이지 화면에서 따로 바꿔요.</p></form>}
-    {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
+    {/* 한 번에 하나만 — 다른 행 ⋯을 누르거나 바깥을 누르면 열린 메뉴를 닫는다(네 개가 같이 열렸다, 2026-11-05 사장님) */}
+    {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onToggle={event => { if (event.currentTarget.open) closeOtherRowMenus(event.currentTarget); }} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
       /* Esc로 닫고 ⋯ 단추로 초점을 돌려준다(접근성 점검 2026-10-22) */
       const menu = event.currentTarget as HTMLDetailsElement;
       if (event.key !== "Escape" || !menu.open) return;

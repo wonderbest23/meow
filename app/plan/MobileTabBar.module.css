@@ -10,4 +10,6 @@
 /* 떠 있는 상담 단추(오른쪽 아래 원)는 막대가 있는 화면에서 그리지 않는다 — 막대와 겹쳤고 같은 일을 문의 탭이 한다(2026-11-02). 펼친 상담 창(.open)은 그대로 */
 @media (max-width:900px) {
   :global(body:has([data-mobile-tabbar]) .support-chat-widget:not(.open)) { display:none; }
+  /* 펼친 상담 창은 아래 막대 위까지만 — 막대가 남아야 앱 화면과 구별된다(2026-11-05 사장님). 24 여백 + 57 막대 + 12 틈 */
+  :global(body:has([data-mobile-tabbar]) .support-chat-widget.open .support-chat-panel) { height:calc(100dvh - 93px - env(safe-area-inset-bottom)); margin-bottom:0; }
 }
