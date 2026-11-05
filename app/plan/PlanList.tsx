@@ -5,14 +5,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, ChevronRight, ArrowUp, ChevronDown, Mic, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
-import { businessHubState, businessEntryHref } from "../../lib/plan-builder/business-hub";
+import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
 import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
-import { ENTRY_MODES, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref, type EntryMode } from "../../lib/plan-builder/studio";
+import { ENTRY_MODES, newChatEntryHref, newChatHref, type EntryMode } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
-const openHref = (plan: Parameters<typeof businessEntryHref>[0]) => { const href = businessEntryHref(plan); return (STUDIO_REDIRECT && studioEntryHref(href)) || href; };
+const openHref = planOpenHref;
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
 import BusinessEmptyState from "./BusinessEmptyState";
@@ -61,6 +61,12 @@ function ParamsWatcher({ onChange }: { onChange: (view: string | null, search: b
   useEffect(() => { onChange(view, search); }, [view, search, onChange]);
   return null;
 }
+
+/* 열린 ⋯ 메뉴를 닫는다 — except 하나만 남긴다. 바깥 누름은 문서에서 한 번 듣는다 */
+function closeOtherRowMenus(except?: Element | null) {
+  document.querySelectorAll<HTMLDetailsElement>("details[open][class*=rowMenu]").forEach(menu => { if (menu !== except) menu.open = false; });
+}
+if (typeof document !== "undefined") document.addEventListener("pointerdown", event => { closeOtherRowMenus((event.target as Element).closest("details[class*=rowMenu]")); });
 
 export default function PlanList() {
   const router = useRouter();
@@ -157,7 +163,8 @@ export default function PlanList() {
     {editing===p.id && <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><TextField aria-label="사업 이름" aria-describedby={`rename-hint-${p.id}`} value={name} maxLength={100} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><AppButton type="submit" variant="primary" className={styles.primary}>저장</AppButton><AppButton variant="text" onClick={()=>cancelRename(p.id)}>취소</AppButton>
       {/* 열면 기존 이름을 골라 둔다(바로 새로 쓰게). 100자에 닿으면 더 써지지 않는 이유를 알린다. 홈페이지 이름은 따로 바뀐다 */}
       <p id={`rename-hint-${p.id}`} className={mine.renameHint} aria-live="polite">{name.length >= 100 ? "이름은 100자까지 쓸 수 있어요. " : ""}홈페이지 이름은 홈페이지 화면에서 따로 바꿔요.</p></form>}
-    {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
+    {/* 한 번에 하나만 — 다른 행 ⋯을 누르거나 바깥을 누르면 열린 메뉴를 닫는다(네 개가 같이 열렸다, 2026-11-05 사장님) */}
+    {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onToggle={event => { if (event.currentTarget.open) closeOtherRowMenus(event.currentTarget); }} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
       /* Esc로 닫고 ⋯ 단추로 초점을 돌려준다(접근성 점검 2026-10-22) */
       const menu = event.currentTarget as HTMLDetailsElement;
       if (event.key !== "Escape" || !menu.open) return;

@@ -6786,7 +6786,8 @@ body:has(.document-editor-studio) .support-chat-widget.open {
 }
 .support-chat-widget.open .support-chat-panel {
   width: min(420px, calc(100vw - 32px));
-  height: min(660px, calc(100dvh - 48px));
+  /* 위쪽은 사이트 머리줄(64px)+여유만큼 비운다 — 48px 만 빼면 세로 756px 미만 노트북에서 창이 머리줄을 덮었다(2026-11-05) */
+  height: min(660px, calc(100dvh - 112px));
   margin: 0;
   border: 1px solid rgb(119 119 113 / .16);
   border-radius: 8px;
@@ -17591,3 +17592,164 @@ html:has([data-app-surface]) { background: #fff; }
 .manual-payment-card.status-expired .manual-payment-state h1 { margin-bottom: 8px; }
 .manual-reorder { width: 100%; min-height: 52px; margin-top: 24px; padding: 0 16px; border-radius: 14px; background: #030303; color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 15px; font-weight: 850; text-decoration: none; }
 .manual-reorder svg { display: inline-block; width: 18px; height: 18px; flex: 0 0 auto; }
+
+/* ── 고객센터 문의 화면 — 메신저형 말풍선(2026-11) ─────────────────────
+ * 봇 원형 아바타 + 왼쪽 위만 각진 흰 말풍선, 내 말은 파랑 꽉 찬 말풍선(오른쪽 아래만 각짐),
+ * 연회색 대화 바탕, 분야는 알약 칩, 질문은 흰 카드 목록(구분선 + ›), 입력은 둥근 알약 + 원형 보내기.
+ * 앞쪽에 겹겹이 쌓인 규칙(일부 !important)을 문의 모드(.mode-support)에서만 덮는다 — AI 창업 상담은 그대로.
+ */
+.support-chat-widget .support-chat-panel.mode-support {
+  --sc-accent: #3272db;
+  --sc-line: #e9ebf0;
+  --sc-bg: #f4f5f8;
+}
+.support-chat-widget .support-chat-panel.mode-support > header {
+  min-height: 62px;
+  padding: 0 12px 0 16px;
+  border-bottom: 1px solid var(--sc-line);
+  background: #fff;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 10px;
+}
+.support-chat-widget .support-chat-panel.mode-support > header > span {
+  width: 36px; height: 36px; border: 0; border-radius: 50%; overflow: hidden; background: #eef3fc; display: block;
+}
+.support-chat-widget .support-chat-panel.mode-support > header > span::after { display: none; }
+.support-chat-widget .support-chat-panel.mode-support > header > span img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.support-chat-widget .support-chat-panel.mode-support > header strong { font-size: 15px; font-weight: 700; }
+.support-chat-widget .support-chat-panel.mode-support > header small { display: flex; align-items: center; gap: 5px; color: #888; }
+.support-chat-widget .support-chat-panel.mode-support > header small i { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; box-shadow: none; flex: none; }
+
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages { padding: 16px 12px; gap: 10px; background: var(--sc-bg); }
+
+/* 봇 인사 — 원형 아바타 + 말풍선 */
+.support-chat-panel.mode-support .support-chat-bot-message { width: auto; max-width: 92%; grid-template-columns: 30px minmax(0, 1fr); gap: 8px; }
+.support-chat-panel.mode-support .support-chat-bot-message > span,
+.support-chat-panel.mode-support .support-chat-thinking > span { width: 30px; height: 30px; border: 0; border-radius: 50%; overflow: hidden; background: #eef3fc; display: block; }
+.support-chat-panel.mode-support .support-chat-bot-message > span::after,
+.support-chat-panel.mode-support .support-chat-thinking > span::after { display: none; }
+.support-chat-panel.mode-support .support-chat-bot-message > span img,
+.support-chat-panel.mode-support .support-chat-thinking > span img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.support-chat-panel.mode-support .support-chat-bot-message > div { padding: 10px 14px; border: 1px solid var(--sc-line); border-radius: 4px 16px 16px 16px; background: #fff; box-shadow: none; }
+.support-chat-panel.mode-support .support-chat-bot-message strong { color: #222; font-weight: 700; }
+.support-chat-panel.mode-support .support-chat-bot-message p { margin-top: 2px; color: #666; }
+
+/* 분야 고르기 — 알약 칩(왼쪽 정렬, 아바타 폭만큼 들여서) */
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles {
+  padding-left: 38px; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 6px;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles button {
+  max-width: 100%; min-height: 36px; padding: 7px 13px; border: 1px solid #d9e3f5; border-radius: 999px;
+  background: #fff; color: var(--sc-accent); font-size: 13.5px !important; font-weight: 600; box-shadow: none; transform: none; animation: none;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles button:hover,
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles button:focus-visible {
+  border-color: var(--sc-accent); background: #f3f7fe; color: var(--sc-accent); transform: none;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles button.operator { border-color: var(--sc-line); color: #555; }
+
+/* 한 분야의 질문 — 흰 카드 안 목록, 줄 구분선 + › */
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions {
+  width: auto; margin-left: 38px; padding: 0; flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0;
+  overflow: hidden; border: 1px solid var(--sc-line); border-radius: 14px; background: #fff;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions button {
+  width: 100%; min-height: 46px; padding: 11px 34px 11px 16px; border: 0; border-top: 1px solid #f0f1f4; border-radius: 0;
+  border-radius: 0 !important; background: #fff; color: #222; box-shadow: none !important; position: relative; font-size: 14px !important; font-weight: 500; text-align: left;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions button:first-child { border-top: 0; }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions button::after {
+  content: "›"; position: absolute; right: 14px; top: 50%; transform: translateY(-52%); color: #b5b8c0; font-size: 18px;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions button:hover { background: #f7f9fd; color: var(--sc-accent); }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions button.back,
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions button.operator {
+  min-height: 42px; padding: 10px 16px; color: #666; font-size: 13px !important; text-align: center;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions button.back::after,
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions button.operator::after { display: none; }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-choice-bubbles.questions button.back { border-top-color: var(--sc-line); }
+
+/* 내가 고른 분야·내 말 — 파랑 말풍선, 오른쪽 아래만 각짐 */
+.support-chat-panel.mode-support .support-chat-selected-bubble > span,
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.customer > p {
+  padding: 8px 14px; border: 0; border-radius: 16px 16px 4px 16px; background: var(--sc-accent); color: #fff; box-shadow: none; font-size: 14px; font-weight: 500;
+}
+
+/* 봇 답 — 이름표 대신 원형 아바타, 흰 말풍선(왼쪽 위만 각짐) */
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.assistant,
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.admin {
+  max-width: 92%; padding-left: 38px; position: relative; justify-items: start; gap: 6px;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.assistant::before,
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.admin::before {
+  content: ""; position: absolute; left: 0; top: 0; width: 30px; height: 30px; border-radius: 50%;
+  background: #eef3fc url(/support-agent-avatar-2026.png) center / cover no-repeat;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.assistant > span,
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.admin > span,
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.customer > span { display: none; }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.assistant > p,
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article.admin > p {
+  padding: 10px 14px; border: 1px solid var(--sc-line); border-radius: 4px 16px 16px 16px; background: #fff; color: #222; box-shadow: none;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-messages article time { color: #a3a6ad; }
+
+/* 답 아래 행동 — 다음 화면은 파랑 테두리 알약, '해결되지 않았어요'는 회색 알약 */
+.support-chat-panel.mode-support .support-answer-link,
+.support-chat-panel.mode-support .support-answer-more {
+  min-height: 34px; padding: 0 13px; border-radius: 999px; display: inline-flex; align-items: center; gap: 3px; font-size: 13px; font-weight: 600; box-shadow: none;
+}
+.support-chat-panel.mode-support .support-answer-link { border: 1px solid var(--sc-accent); background: #fff; color: var(--sc-accent); }
+.support-chat-panel.mode-support .support-answer-link:hover { background: #f3f7fe; }
+.support-chat-panel.mode-support .support-answer-more { border: 1px solid #e1e3e8; background: #fff; color: #666; }
+.support-chat-panel.mode-support .support-answer-more:hover { border-color: #c9ccd3; color: #333; }
+
+/* 답 쓰는 중 — 아바타 + 말풍선 안 점 세 개 */
+.support-chat-panel.mode-support .support-chat-thinking {
+  flex: none; width: fit-content; min-height: 0; padding: 0 16px 0 52px; height: 40px; border: 0; background: none; box-shadow: none;
+  display: flex; align-items: center; gap: 5px; position: relative; isolation: isolate;
+}
+.support-chat-panel.mode-support .support-chat-thinking > span { position: absolute; left: 0; top: 0; }
+.support-chat-panel.mode-support .support-chat-thinking::after {
+  content: ""; position: absolute; inset: 0 0 0 38px; z-index: -1; border: 1px solid var(--sc-line); border-radius: 4px 16px 16px 16px; background: #fff;
+}
+.support-chat-panel.mode-support .support-chat-thinking > i {
+  width: 6px; height: 6px; margin: 0; border-radius: 50%; background: #b5b8c3; opacity: 1; animation: support-dot-bounce 1s ease-in-out infinite;
+}
+.support-chat-panel.mode-support .support-chat-thinking > i:nth-of-type(2) { animation-delay: .12s; }
+.support-chat-panel.mode-support .support-chat-thinking > i:nth-of-type(3) { animation-delay: .24s; }
+@keyframes support-dot-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .support-chat-panel.mode-support .support-chat-thinking > i { animation: none; } }
+
+/* 입력 영역 — 흰 바탕 + 위 구분선, 칩 줄, 둥근 알약 입력 + 원형 보내기 */
+.support-chat-widget .support-chat-panel.mode-support .support-chat-form { padding-top: 8px; border-top: 1px solid var(--sc-line); background: #fff; }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-form > .support-chat-form-heading:empty { display: none; }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-form > .support-chat-form-heading:has(.support-chat-quick-chips) { min-height: 0; margin: 0 0 8px; display: block; }
+.support-chat-quick-chips { margin: 0 -12px; padding: 0 12px 2px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.support-chat-quick-chips::-webkit-scrollbar { display: none; }
+.support-chat-widget .support-chat-panel .support-chat-quick-chips > button {
+  flex: none; width: auto; height: 32px; min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px;
+  background: #f1f2f6; color: #555; font-size: 12.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.support-chat-widget .support-chat-panel .support-chat-quick-chips > button:hover { background: #e7ecf7; color: var(--sc-accent); }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-form > .support-chat-input-row {
+  flex-direction: row; align-items: flex-end; gap: 8px; padding: 4px 4px 4px 16px; border: 0; border-radius: 22px; background: #f1f2f6; box-shadow: none;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-form > .support-chat-input-row:focus-within { border: 0; box-shadow: 0 0 0 2px rgb(50 114 219 / .3); }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-input-row textarea {
+  min-height: 40px; max-height: 120px; padding: 9px 0 !important; field-sizing: content; resize: none; line-height: 1.45;
+}
+.support-chat-widget .support-chat-panel.mode-support .support-chat-input-row > button { flex: none; width: 40px !important; height: 40px !important; align-self: flex-end; }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-input-row > button:not(:disabled) { background: var(--sc-accent) !important; color: #fff !important; }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-input-row > button:disabled { background: #d6d9e0 !important; color: #fff !important; }
+.support-chat-widget .support-chat-panel.mode-support .support-chat-input-row > button svg { width: 17px !important; height: 17px !important; animation: none; }
+/* 폰: 손가락으로 누르는 자리는 44px 아래로 내리지 않는다 */
+@media (max-width: 640px) {
+  .support-chat-widget .support-chat-panel.mode-support .support-chat-input-row textarea { min-height: 44px; padding: 11px 0 !important; }
+  .support-chat-widget .support-chat-panel.mode-support .support-chat-input-row > button { width: 44px !important; height: 44px !important; }
+  .support-chat-widget .support-chat-panel .support-chat-quick-chips > button { height: 36px; min-height: 36px; }
+}
+
+/* 직접 문의 대화 아래 작은 되돌아가기(질문 고르기로) */
+.support-chat-widget .support-chat-back { display: block; width: auto; margin: -10px auto 0 38px; text-align: left; padding: 6px 4px; border: 0; background: none; color: #636363; font-size: 13px; font-weight: 400; line-height: 1.4; cursor: pointer; }
