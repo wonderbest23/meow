@@ -6786,7 +6786,8 @@ body:has(.document-editor-studio) .support-chat-widget.open {
 }
 .support-chat-widget.open .support-chat-panel {
   width: min(420px, calc(100vw - 32px));
-  height: min(660px, calc(100dvh - 48px));
+  /* 위쪽은 사이트 머리줄(64px)+여유만큼 비운다 — 48px 만 빼면 세로 756px 미만 노트북에서 창이 머리줄을 덮었다(2026-11-05) */
+  height: min(660px, calc(100dvh - 112px));
   margin: 0;
   border: 1px solid rgb(119 119 113 / .16);
   border-radius: 8px;

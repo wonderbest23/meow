@@ -11,10 +11,11 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
-import { faqAnswer, supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
+import { faqAnswer, findSupportFaqInstant, supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
 import { nativePlatform } from "../lib/native-app";
 import { supportChatHidden, supportChatPhoneHide } from "./support-chat-visibility";
 import tap from "./support-chat-tap.module.css";
+import { recentKindFor, SupportRecent } from "./support-chat-recent";
 import { focusableIn, useDialogFocus } from "./use-dialog-focus";
 import { koreanText, userErrorMessage } from "../lib/client/user-error";
 import type { SupportChat } from "../lib/support-chat/repository";
@@ -553,6 +554,13 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
   };
 
   const askSupportAssistant = async (nextMessage: string) => {
+    /* 단골 질문은 FAQ 로 바로 답한다 — AI 를 부르지 않아 비용·기다림이 없다(애매하면 아래 AI 로) */
+    const instant = findSupportFaqInstant(nextMessage);
+    if (instant) {
+      trackFunnel("support_instant_faq", { faq: instant.id });
+      appendFaqAnswer(instant, nextMessage);
+      return;
+    }
     const customerCreatedAt = new Date().toISOString();
     setShowQuickMenu(false);
     setOperatorMode(false);
@@ -971,6 +979,10 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
                         {(item.faq?.link ?? item.link)!.label} <ChevronRight />
                       </a>
                     )}
+                    {item.sender === "assistant" && (() => {
+                      const kind = recentKindFor(item.faq?.id, item.link?.href);
+                      return kind ? <SupportRecent kind={kind} /> : null;
+                    })()}
                     {item.sender === "assistant" && (item.faq || item.allowOperator) && (
                       <button type="button" className="support-answer-more" onClick={() => startOperatorInquiry(item.faq, item.operatorContext)}>
                         이 답변으로 해결되지 않았어요 <ChevronRight />
