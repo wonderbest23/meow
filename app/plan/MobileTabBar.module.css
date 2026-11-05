@@ -12,4 +12,6 @@
   :global(body:has([data-mobile-tabbar]) .support-chat-widget:not(.open)) { display:none; }
   /* 펼친 상담 창은 아래 막대 위까지만 — 막대가 남아야 앱 화면과 구별된다(2026-11-05 사장님). 24 여백 + 57 막대 + 12 틈 */
   :global(body:has([data-mobile-tabbar]) .support-chat-widget.open .support-chat-panel) { height:calc(100dvh - 93px - env(safe-area-inset-bottom)); margin-bottom:0; }
+  /* 상담 창 안의 탭(홈·문의·설정)은 휴대폰에선 뺀다 — 아래 막대와 두 줄이었다(2026-11-05 사장님). 대화로는 홈 카드 단추로, 닫기는 X로 */
+  :global(body:has([data-mobile-tabbar]) .support-chat-widget.open nav[aria-label="상담 창 메뉴"]) { display:none; }
 }

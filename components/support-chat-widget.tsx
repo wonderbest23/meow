@@ -90,7 +90,9 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
   const [open, setOpen] = useState(initialOpen);
   const [mode, setMode] = useState<"consult" | "support">("support");
   /* 메신저형 탭 — 버튼으로 열면 홈부터, 다른 화면이 질문을 들고 열면 바로 대화 */
-  const [tab, setTab] = useState<SupportTab>("home");
+  /* 휴대폰(아래 막대 있는 화면)에선 홈 카드 없이 바로 담당자 문의 대화로 연다(2026-11-05 사장님) — 창 안 탭도 거기선 숨긴다 */
+  const firstTab = (): SupportTab => (typeof document !== "undefined" && document.querySelector("[data-mobile-tabbar]") && window.matchMedia("(max-width: 900px)").matches ? "chat" : "home");
+  const [tab, setTab] = useState<SupportTab>(() => initialOpen ? firstTab() : "home");
   const [badge, setBadge] = useState(initialBadge);
   useEffect(() => { try { setBadge(window.localStorage.getItem(SUPPORT_BADGE_KEY) !== "0"); } catch { /* 저장소를 못 쓰면 켬 */ } }, []);
   const changeBadge = (value: boolean) => { setBadge(value); try { window.localStorage.setItem(SUPPORT_BADGE_KEY, value ? "1" : "0"); } catch { /* 이 창에서만 적용 */ } };
@@ -1096,7 +1098,7 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
           ref={toggleRef}
           type="button"
           className="support-chat-toggle"
-          onClick={() => { setMode("support"); setTab("home"); setOpen(true); }}
+          onClick={() => { setMode("support"); setTab(firstTab()); setOpen(true); }}
           aria-expanded="false"
           aria-label="고객센터 열기"
           title="고객센터"
