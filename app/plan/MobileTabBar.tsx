@@ -31,6 +31,10 @@ export default function MobileTabBar() {
     <Suspense fallback={null}><ViewWatcher onChange={setView} /></Suspense>
     <Link href="/plan" className={styles.tab} aria-current={home ? "page" : undefined} aria-label="홈"><House aria-hidden="true" /></Link>
     <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={styles.tab} aria-current={all ? "page" : undefined} aria-label="내 사업"><LayoutGrid aria-hidden="true" /></Link>
-    <Link href="/account/support" className={styles.tab} aria-current={support ? "page" : undefined} aria-label="문의"><Headset aria-hidden="true" /></Link>
+    {/* 문의 — 휴대폰에선 챗봇 창(전체 화면)을 연다. 챗봇 단추가 없는 화면(고객센터·대화)에서는 양식 화면으로(2026-11-05 사장님) */}
+    <Link href="/account/support" className={styles.tab} aria-current={support ? "page" : undefined} aria-label="문의" onClick={event => {
+      const launcher = document.querySelector<HTMLButtonElement>('button[aria-label="고객센터 열기"]');
+      if (launcher) { event.preventDefault(); launcher.click(); }
+    }}><Headset aria-hidden="true" /></Link>
   </nav>;
 }
