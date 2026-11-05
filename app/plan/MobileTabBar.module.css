@@ -5,6 +5,9 @@
   .tab { flex:1; display:flex; align-items:center; justify-content:center; min-width:44px; height:47px; border-radius:999px; color:var(--app-text); text-decoration:none; -webkit-tap-highlight-color:transparent; }
   .tab svg { width:24px; height:24px; stroke-width:1.8; }
   .tab[aria-current=page] { background:var(--app-nav-selected); color:var(--app-text); }
+  /* 챗봇 창이 열려 있으면 '문의' 탭만 눌린 모양(2026-11-05 사장님) */
+  :global(body:has(.support-chat-widget.open)) .tab[aria-current=page] { background:none; }
+  :global(body:has(.support-chat-widget.open)) .tab[aria-label="문의"] { background:var(--app-nav-selected); }
   .tab:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:-3px; }
 }
 /* 떠 있는 상담 단추(오른쪽 아래 원)는 막대가 있는 화면에서 그리지 않는다 — 막대와 겹쳤고 같은 일을 문의 탭이 한다(2026-11-02). 펼친 상담 창(.open)은 그대로 */
