@@ -17752,4 +17752,4 @@ html:has([data-app-surface]) { background: #fff; }
 }
 
 /* 직접 문의 대화 아래 작은 되돌아가기(질문 고르기로) */
-.support-chat-widget .support-chat-back { display: block; width: auto; margin: 2px auto 0 38px; text-align: left; padding: 6px 4px; border: 0; background: none; color: #636363; font-size: 13px; font-weight: 400; line-height: 1.4; cursor: pointer; }
+.support-chat-widget .support-chat-back { display: block; width: auto; margin: -10px auto 0 38px; text-align: left; padding: 6px 4px; border: 0; background: none; color: #636363; font-size: 13px; font-weight: 400; line-height: 1.4; cursor: pointer; }
