@@ -6,7 +6,6 @@ import {
   X,
   ClipboardList,
   MessageCircleQuestion,
-  ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -1085,8 +1084,6 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
                     */}
                   <button type="submit" disabled={!visibleComposerText(message) || sending || assistantThinking || consultThinking || (mode === "consult" && Boolean(consultLimit))} aria-label="메시지 보내기" title="보내기"><ArrowUp aria-hidden="true" /></button>
                 </div>
-                <small><ShieldCheck /> 비밀번호나 주민등록번호는 입력하지 마세요.</small>
-                <small className="ai-caution">AI 답변에는 정확하지 않은 정보가 포함될 수 있어요.</small>
               </form>
             </div>
           </div>
