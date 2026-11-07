@@ -105,6 +105,8 @@
 .sampleCard:hover .thumb { box-shadow:0 0 0 1px var(--app-line-strong); }
 
 .newFloat { display:none; }
+/* 보내면 대화 입력칸으로 이어지는 상대(intake .composerShell 과 같은 이름) */
+.composer { view-transition-name: chat-composer; }
 /* 휴대폰 홈 입력칸 아래 최근 사업 — PC는 아래 목록 카드가 있어 숨긴다 */
 .recent { display:none; }
 
@@ -153,6 +155,8 @@
   .listCard[data-list-only] .headCircle { display:inline-grid; place-items:center; width:44px; height:44px; padding:0; border:1px solid var(--app-line); border-radius:999px; background:var(--app-surface); box-shadow:0 1px 3px rgb(0 0 0 / .1); color:var(--app-text); cursor:pointer; }
   .listCard[data-list-only] .headCircle[aria-pressed=true] { background:var(--app-selected); color:var(--app-selected-text); }
   .listCard[data-list-only] .filterRow { padding:0 12px 12px; }
+  /* '검색' 알약은 뺀다 — 오른쪽 위 동그라미가 같은 일을 한다(2026-11-04 사장님). 동그라미를 누르면 검색칸만 막대를 채운다 */
+  .listCard[data-list-only] .filterPill:has(> svg) { display:none; }
   .listCard[data-list-only] .listBody { padding:0 12px; }
   .listCard[data-list-only] .grid.grid { gap:0; }
   /* 예시 카드도 같은 행 모양 — 예전엔 PC 카드 규칙만 받아 작은 썸네일 아래 글이 따로 놓였다(2026-11-04 휴대폰 전수조사) */

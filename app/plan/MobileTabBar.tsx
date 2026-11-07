@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Headset, House, LayoutGrid } from "lucide-react";
+import { openSupportChat } from "../../lib/client/open-support-chat";
 import styles from "./MobileTabBar.module.css";
 
 /*
@@ -27,10 +28,15 @@ export default function MobileTabBar() {
   const home = pathname === "/plan" && view !== PLAN_VIEW_ALL;
   const all = pathname === "/plan" && view === PLAN_VIEW_ALL;
   const support = pathname.startsWith("/account/support") || pathname.startsWith("/plan/inquiries");
+  /* 홈·내 사업을 누르면 열린 챗봇 창은 닫는다(창이 모든 화면 위에 남아 있어 탭이 안 먹는 듯 보였다, 2026-11-05 사장님) */
+  const closeChat = () => document.querySelector<HTMLButtonElement>('button[aria-label="문의창 닫기"]')?.click();
   return <nav className={styles.bar} aria-label="아래 메뉴" data-mobile-tabbar="">
     <Suspense fallback={null}><ViewWatcher onChange={setView} /></Suspense>
-    <Link href="/plan" className={styles.tab} aria-current={home ? "page" : undefined} aria-label="홈"><House aria-hidden="true" /></Link>
-    <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={styles.tab} aria-current={all ? "page" : undefined} aria-label="내 사업"><LayoutGrid aria-hidden="true" /></Link>
-    <Link href="/account/support" className={styles.tab} aria-current={support ? "page" : undefined} aria-label="문의"><Headset aria-hidden="true" /></Link>
+    <Link href="/plan" className={styles.tab} aria-current={home ? "page" : undefined} aria-label="홈" onClick={closeChat}><House aria-hidden="true" /></Link>
+    <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={styles.tab} aria-current={all ? "page" : undefined} aria-label="내 사업" onClick={closeChat}><LayoutGrid aria-hidden="true" /></Link>
+    {/* 문의 — 휴대폰에선 챗봇 창(전체 화면)을 연다. 챗봇 단추가 없는 화면(고객센터·대화)에서는 양식 화면으로(2026-11-05 사장님) */}
+    <Link href="/account/support" className={styles.tab} aria-current={support ? "page" : undefined} aria-label="문의" onClick={event => {
+      if (openSupportChat()) event.preventDefault();
+    }}><Headset aria-hidden="true" /></Link>
   </nav>;
 }

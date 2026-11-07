@@ -5,14 +5,15 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, ChevronRight, ArrowUp, ChevronDown, Mic, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
-import { businessHubState, businessEntryHref } from "../../lib/plan-builder/business-hub";
+import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
 import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
+import { navigateWithTransition } from "../../lib/client/view-transition";
 import { ENTRY_MODES, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref, type EntryMode } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
-const openHref = (plan: Parameters<typeof businessEntryHref>[0]) => { const href = businessEntryHref(plan); return (STUDIO_REDIRECT && studioEntryHref(href)) || href; };
+const openHref = planOpenHref;
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
 import BusinessEmptyState from "./BusinessEmptyState";
@@ -61,6 +62,12 @@ function ParamsWatcher({ onChange }: { onChange: (view: string | null, search: b
   useEffect(() => { onChange(view, search); }, [view, search, onChange]);
   return null;
 }
+
+/* 열린 ⋯ 메뉴를 닫는다 — except 하나만 남긴다. 바깥 누름은 문서에서 한 번 듣는다 */
+function closeOtherRowMenus(except?: Element | null) {
+  document.querySelectorAll<HTMLDetailsElement>("details[open][class*=rowMenu]").forEach(menu => { if (menu !== except) menu.open = false; });
+}
+if (typeof document !== "undefined") document.addEventListener("pointerdown", event => { closeOtherRowMenus((event.target as Element).closest("details[class*=rowMenu]")); });
 
 export default function PlanList() {
   const router = useRouter();
@@ -157,7 +164,8 @@ export default function PlanList() {
     {editing===p.id && <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><TextField aria-label="사업 이름" aria-describedby={`rename-hint-${p.id}`} value={name} maxLength={100} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><AppButton type="submit" variant="primary" className={styles.primary}>저장</AppButton><AppButton variant="text" onClick={()=>cancelRename(p.id)}>취소</AppButton>
       {/* 열면 기존 이름을 골라 둔다(바로 새로 쓰게). 100자에 닿으면 더 써지지 않는 이유를 알린다. 홈페이지 이름은 따로 바뀐다 */}
       <p id={`rename-hint-${p.id}`} className={mine.renameHint} aria-live="polite">{name.length >= 100 ? "이름은 100자까지 쓸 수 있어요. " : ""}홈페이지 이름은 홈페이지 화면에서 따로 바꿔요.</p></form>}
-    {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
+    {/* 한 번에 하나만 — 다른 행 ⋯을 누르거나 바깥을 누르면 열린 메뉴를 닫는다(네 개가 같이 열렸다, 2026-11-05 사장님) */}
+    {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onToggle={event => { if (event.currentTarget.open) closeOtherRowMenus(event.currentTarget); }} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
       /* Esc로 닫고 ⋯ 단추로 초점을 돌려준다(접근성 점검 2026-10-22) */
       const menu = event.currentTarget as HTMLDetailsElement;
       if (event.key !== "Escape" || !menu.open) return;
@@ -186,7 +194,7 @@ export default function PlanList() {
         <Composer />
         {/* 휴대폰만 — 진행 중인 사업이 있으면 입력칸 아래에 최근 3개를 작게(바로 이어가게, 2026-11-04 사장님). PC는 아래 목록 카드가 보인다 */}
         {recent.length > 0 && <nav className={home.recent} aria-label="최근 사업">
-          {recent.slice(0, 3).map(p => <Link key={p.id} href={openHref(p)}><span>{planDisplayName(p)}</span><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><ChevronRight size={16} aria-hidden="true" /></Link>)}
+          {recent.slice(0, 3).map(p => <Link key={p.id} href={openHref(p)} aria-label={`${planDisplayName(p)} 열기`}><span>{planDisplayName(p)}</span><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><ChevronRight size={16} aria-hidden="true" /></Link>)}
           {plans.length > 3 && <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={home.recentAll}>전체 보기<ArrowRight size={14} aria-hidden="true" /></Link>}
         </nav>}
       </section>}
@@ -229,16 +237,21 @@ function Composer() {
   const [listening, setListening] = useState(false);
   const [canListen, setCanListen] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
+  const [sending, setSending] = useState(false);
   const recognition = useRef<Recognition | null>(null);
   useEffect(() => { setCanListen(!!speechRecognition()); return () => recognition.current?.stop(); }, []);
+  /* 작업실 경로를 미리 받아 둔다 — 보낼 때 코드 묶음을 그제야 받아 버벅였다 */
+  useEffect(() => { router.prefetch(newChatHref()); }, [router]);
   const idea = normalizeLandingIdea(text);
   function send(event?: FormEvent) {
     event?.preventDefault();
-    if (!idea) { field.current?.focus(); return; }
+    if (!idea || sending) { field.current?.focus(); return; }
     let storage: Storage | null = null;
     try { storage = window.sessionStorage; } catch { /* 저장소가 막혀 있으면 주소로만 넘어간다 */ }
     stashLandingIdea(storage, idea, Date.now());
-    router.push(newChatHref(idea));
+    setSending(true);
+    /* 대화 화면이 홈에서 확대되며 열리고 입력칸이 대화 입력칸으로 이어진다(globals.css ::view-transition) */
+    navigateWithTransition(() => router.push(newChatHref(idea)));
   }
   function onKey(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); }
@@ -254,7 +267,7 @@ function Composer() {
     recognition.current = r; setListening(true);
     try { r.start(); } catch { setListening(false); }
   }
-  return <form className={home.composer} onSubmit={send}>
+  return <form className={home.composer} onSubmit={send} aria-busy={sending || undefined}>
     <TextArea ref={field} className={home.composerField} aria-label="어떤 사업을 시작할지 적어 주세요" placeholder={`예: ${EXAMPLE_IDEA}`} rows={1} maxLength={LANDING_IDEA_MAX} value={text} onChange={event => setText(event.target.value)} onKeyDown={onKey} />
     <div className={home.composerBar}>
       <button type="button" className={home.circle} aria-label="예시 문장 넣기" title="예시 문장 넣기" onClick={() => { setText(EXAMPLE_IDEA); field.current?.focus(); }}><Plus size={18} aria-hidden="true" /></button>
