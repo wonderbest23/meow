@@ -155,7 +155,7 @@ export default function PlanMePage() {
 
   const header = <SettingsHeader title="내 계정" description="로그인 정보와 사업, 결제 내역을 한곳에서 봐요." mobile="hidden" aside={<SettingsHelpLink href="/account/support">도움말</SettingsHelpLink>} />;
   if (account === null && loadFailed) return <div className={styles.page}>{header}<p className={styles.notice} role="alert">계정 정보를 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p></div>;
-  if (account === null) return <div className={styles.page}>{header}<PlanLoading variant="rows" count={3} note="계정 정보를 불러오는 중…" /></div>;
+  if (account === null) return <div className={styles.page}>{header}<PlanLoading fill note="계정 정보를 불러오는 중…" /></div>;
   if (!account.authenticated) {
     return (
       <div className={styles.page}>

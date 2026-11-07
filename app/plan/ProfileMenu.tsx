@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, BookOpen, Check, ChevronRight, CircleHelp, Contrast, CreditCard, Inbox, LayoutGrid, LogIn, Monitor, Moon, Settings, Sun, User, UserPlus } from "lucide-react";
 import { useThemePreference } from "../../components/app-theme";
 import { THEME_OPTIONS } from "../../lib/client/app-theme";
+import { openSupportChat } from "../../lib/client/open-support-chat";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import { accountInitial, accountName, type Account } from "./use-account";
 import styles from "./ProfileMenu.module.css";
@@ -30,14 +31,29 @@ export default function ProfileMenu({ open, onClose, account, unanswered, inquir
   const ref = useDialogFocus<HTMLDivElement>(open, { onEscape: onClose });
   const [display, setDisplay] = useState(false);
   const [themePref, setThemePref] = useThemePreference();
+  const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => { if (!open) setPending(null); }, [open]);
   if (!open) return null;
   const signedIn = account?.authenticated === true;
   const name = accountName(account);
   const next = encodeURIComponent(pathname);
-  /* 링크를 누르면 닫는다 — 같은 주소(#칸 이동)여도 시트가 덮고 있지 않게 */
-  const row = (href: string, icon: React.ReactNode, label: string, extra?: React.ReactNode, chevron = false) => (
-    <Link href={href} className={styles.row} onClick={onClose}>{icon}<span className={styles.label}>{label}</span>{extra}{chevron && <ChevronRight className={styles.chev} aria-hidden="true" />}</Link>
+  /*
+   * 다른 화면으로 가는 줄은 바로 닫지 않는다 — 다음 화면이 뜰 때(주소가 바뀌면 부모가 닫는다)까지 눌린 줄을 보여 준다.
+   * 바로 닫으면 느린 화면이 뜨는 사이 빈 곳을 다시 눌러 아래 메뉴가 눌렸다(휴대폰 앱, 2026-11-07 사장님). 같은 주소(#칸 이동)면 바로 닫는다.
+   */
+  const go = (href: string) => (event: React.MouseEvent) => {
+    if (href.split(/[?#]/)[0] === pathname) { onClose(); return; }
+    if (pending) { event.preventDefault(); return; }
+    setPending(href);
+  };
+  const row = (href: string, icon: React.ReactNode, label: string, extra?: React.ReactNode, chevron = false, onClick = go(href)) => (
+    <Link href={href} className={styles.row} data-pending={pending === href || undefined} aria-busy={pending === href || undefined} onClick={onClick}>{icon}<span className={styles.label}>{label}</span>{extra}{chevron && <ChevronRight className={styles.chev} aria-hidden="true" />}</Link>
   );
+  /* 휴대폰 '고객센터'는 아래 막대 '문의'와 같은 챗봇 창으로. 챗봇 단추가 없는 화면이면 양식 화면으로 */
+  const support = (event: React.MouseEvent) => {
+    if (anchor === "sheet" && openSupportChat()) { event.preventDefault(); onClose(); return; }
+    go("/account/support")(event);
+  };
   return <>
     <div className={styles.scrim} data-anchor={anchor} onClick={onClose} aria-hidden="true" />
     <div ref={ref} className={styles.sheet} data-anchor={anchor} role="dialog" aria-modal="true" aria-label="프로필 메뉴">
@@ -62,7 +78,7 @@ export default function ProfileMenu({ open, onClose, account, unanswered, inquir
           {row(anchor === "sheet" ? "/plan/settings" : "/plan/me#me-info", <Settings aria-hidden="true" />, "계정 설정", null, anchor === "sheet")}
           {row("/plan/me#me-payments", <CreditCard aria-hidden="true" />, "결제 내역")}
         </>}
-        {row("/account/support", <CircleHelp aria-hidden="true" />, "고객센터", null, true)}
+        {row("/account/support", <CircleHelp aria-hidden="true" />, "고객센터", null, true, support)}
         {row("/plan/info", <BookOpen aria-hidden="true" />, "이용 안내", null, true)}
         {/* 화면 설정 — 시스템 / 라이트 / 다크(lovable 과 같은 세 가지). 이 기기에 저장되고 기본은 라이트 */}
         <button type="button" className={styles.row} aria-expanded={display} aria-controls="profile-display-options" onClick={() => setDisplay(value => !value)}><Contrast aria-hidden="true" /><span className={styles.label}>화면 설정</span><ChevronRight className={styles.chev} data-open={display || undefined} aria-hidden="true" /></button>

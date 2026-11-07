@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Headset, House, LayoutGrid } from "lucide-react";
+import { openSupportChat } from "../../lib/client/open-support-chat";
 import styles from "./MobileTabBar.module.css";
 
 /*
@@ -35,9 +36,7 @@ export default function MobileTabBar() {
     <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={styles.tab} aria-current={all ? "page" : undefined} aria-label="내 사업" onClick={closeChat}><LayoutGrid aria-hidden="true" /></Link>
     {/* 문의 — 휴대폰에선 챗봇 창(전체 화면)을 연다. 챗봇 단추가 없는 화면(고객센터·대화)에서는 양식 화면으로(2026-11-05 사장님) */}
     <Link href="/account/support" className={styles.tab} aria-current={support ? "page" : undefined} aria-label="문의" onClick={event => {
-      if (document.querySelector('.support-chat-widget.open')) { event.preventDefault(); return; }
-      const launcher = document.querySelector<HTMLButtonElement>('button[aria-label="고객센터 열기"]');
-      if (launcher) { event.preventDefault(); launcher.click(); }
+      if (openSupportChat()) event.preventDefault();
     }}><Headset aria-hidden="true" /></Link>
   </nav>;
 }

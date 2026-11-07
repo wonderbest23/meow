@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useReducer, useRef, 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
-import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, Mic, PencilLine, Plus, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, Mic, Plus, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
@@ -1605,13 +1605,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   </div> : undefined;
   /* 입력칸 위 칩은 질문 이름만 — 질문 번호는 위 진행 줄이 말한다(r37 글 점검). 지난 답을 고칠 때만 '고치기'를 붙인다 */
   const questionTarget = pro && !studioRoute && questionComposer && question && plan ? draft.editingId ? `${question.label} 고치기` : question.label : "";
-  /*
-   * 입력 상자 아래 줄의 ＋(지금까지 답 보기) · 모드 알약(고칠 곳 고르기)이 있으면 대화 안의 '지금까지 답변 보기' 글 단추를 또 두지 않는다.
-   * 질문 중에는 두지 않는다 — 오른쪽 칸이 지금까지 정한 내용을, 위 진행 줄이 질문 수를 이미 보여 준다(r37 글 점검).
-   */
   const openSummary = () => { setView("summary"); setDeskSummary(true); };
   const pickable = pro && !editTarget && !!plan?.hasDocuments && editChatReady && editChapterList.length > 0 && (studioRoute === "chat" || studioRoute === "section");
-  const composerSummary = pro && !!plan && !(questionComposer && !studioRoute && !plan.coreComplete) && !pickable && !!summaryToggle;
   /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로. 이미 보낸 예시는 다시 권하지 않는다(r42) */
   const priceAnswer = plan?.intake.answers.price;
   /* 휴대폰 작업실도 같은 추천을 입력 상자 위 한 줄(가로로 밀어 보기)로 — lovable 구조 2단계(시안 MChat) */
@@ -1752,8 +1747,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
                 </>}
                 {generating && generation.state && !embedded && <AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => setGenerationOpen(true)}>사업계획서 작성 중 {generation.state.done}/{generation.state.total} · 진행 보기</AppButton>}
                 {!signedIn && <p className={styles.guestSaveNote}>로그인하지 않으면 이 브라우저에만 저장돼요. <Link href={loginHref}>로그인</Link>하면 다른 기기·브라우저에서도 이어서 볼 수 있어요.</p>}
-                {/* 입력창 아래 '지금까지 답 보기'가 있으면 같은 단추를 또 두지 않는다(r37 점검) */}
-                {!(composerSummary && showComposer) && <span className={styles.editLink}><AppButton variant="text" onClick={() => setView("summary")}><PencilLine size={14} aria-hidden="true" />지금까지 답변 보기</AppButton></span>}
+                {/* '지금까지 답변 보기' 글 단추는 뺐다 — 결제 단추 하나만 남긴다(2026-11-07 사장님). 답 고치기는 입력칸의 ＋에서 */}
               </section>)}
             </div>
             {/* 작업실 3단계: 대화로 고치기 기록 · 쓰는 동안 보낸 요청 · 홈페이지 고치기 제안 — 기존 대화 뒤에 이 기기에서만 그린다 */}

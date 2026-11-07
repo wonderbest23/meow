@@ -196,7 +196,7 @@ export default function SupportCenter() {
         <SettingsHelpLink href="/plan/info">이용 안내</SettingsHelpLink>
       </>} />
     <div className={styles.content}>
-      {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <EmptyState as="section" className={styles.empty} icon={LogIn} title="로그인 후 문의를 남겨 주세요" actions={<AppButton variant="primary" href={loginHref}><LogIn size={19} />로그인하기<ChevronRight size={18} aria-hidden="true" /></AppButton>} /> : <>
+      {loading ? <PlanLoading fill note="문의 내역을 불러오고 있어요" /> : loggedOut ? <EmptyState as="section" className={styles.empty} icon={LogIn} title="로그인 후 문의를 남겨 주세요" actions={<AppButton variant="primary" href={loginHref}><LogIn size={19} />로그인하기<ChevronRight size={18} aria-hidden="true" /></AppButton>} /> : <>
         {scope && <>
           {receipt && <p className={styles.success} role="status"><CheckCircle2 size={20} aria-hidden="true" />{receipt}</p>}
           {firstWaiting && view === "write" && <SettingsNote icon={<CircleAlert size={18} aria-hidden="true" />}

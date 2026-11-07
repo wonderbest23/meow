@@ -268,6 +268,8 @@
 .resultSummary dt { color: var(--app-muted); font-size: .8125rem; font-weight: 600; }
 .resultSummary dd { margin: 0; color: var(--app-text); font-size: .9375rem; line-height: 1.65; }
 .resultAction { display: grid; justify-items: start; gap: 8px; margin-top: 18px; }
+/* 결제로 이끄는 단추 하나 — 휴대폰에선 폭 가득, 크게(2026-11-07 사장님) */
+@media (max-width: 900px) { .resultAction { justify-items: stretch; } .resultAction > .primaryButton { width: 100%; } .resultAction > .nextStepHint { text-align: center; } }
 /* 사업 방향 정리 진행(DesignProgress): 막대 + 단계 체크 */
 .designProgress { display: grid; gap: 12px; width: min(100%, 360px); margin-top: 10px; padding: 14px 16px; border: 1px solid var(--app-line); border-radius: 16px; background: var(--app-surface); }
 .designSteps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
