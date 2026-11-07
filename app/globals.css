@@ -17753,3 +17753,13 @@ html:has([data-app-surface]) { background: #fff; }
 
 /* 직접 문의 대화 아래 작은 되돌아가기(질문 고르기로) */
 .support-chat-widget .support-chat-back { display: block; width: auto; margin: -10px auto 0 38px; text-align: left; padding: 6px 4px; border: 0; background: none; color: #636363; font-size: 13px; font-weight: 400; line-height: 1.4; cursor: pointer; }
+/*
+ * 홈 입력칸 → 대화 화면 전환(lib/client/view-transition.ts) — 새 화면이 홈 한가운데서 확대되며 나타나고(.4s),
+ * 입력칸(chat-composer)은 홈 큰 칸에서 대화 입력칸 자리로 모양이 이어진다. 그 밖의 이동은 전환 없이 그대로.
+ */
+::view-transition-old(root) { animation: 160ms ease-out both app-fade-out; }
+::view-transition-new(root) { animation: 400ms cubic-bezier(.2,.8,.2,1) both app-grow-in; }
+::view-transition-group(chat-composer) { animation-duration: 400ms; animation-timing-function: cubic-bezier(.2,.8,.2,1); }
+@keyframes app-fade-out { to { opacity: 0; } }
+@keyframes app-grow-in { from { opacity: 0; transform: scale(.94); } }
+@media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root), ::view-transition-group(chat-composer) { animation: none; } }

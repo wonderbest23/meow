@@ -172,6 +172,6 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
       {children}
     </div>
     {tabBar && <MobileTabBar />}
-    <ProfileMenu open={profile} onClose={() => setProfile(false)} account={account} unanswered={unanswered} anchor="sheet" onOpenMenu={() => setOpen(true)} />
+    <ProfileMenu open={profile} onClose={() => setProfile(false)} account={account} unanswered={unanswered} inquiriesClosed={inquiries.published === 0 && !unanswered} anchor="sheet" onOpenMenu={() => setOpen(true)} />
   </>;
 }

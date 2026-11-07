@@ -4,6 +4,8 @@
  */
 .list { display:grid; gap:30px; }
 .row { position:relative; min-width:0; }
+/* ⋯ 메뉴를 연 행은 위로 — 아래 행(같은 relative)이 뒤에 그려져 메뉴가 다음 행 ⋯ 단추에 가렸다(2026-11-04 사장님) */
+.row:has(details[open]) { z-index:3; }
 .open { display:block; min-width:0; color:var(--app-text); text-decoration:none; }
 .open:hover .title { text-decoration:underline; text-underline-offset:3px; }
 .row:has(.open:hover) [data-plan-open] > span:first-child { box-shadow:0 0 0 1px var(--app-line-strong); }
