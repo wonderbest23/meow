@@ -167,6 +167,9 @@
 .namePill svg { flex:none; width:16px; height:16px; color:var(--app-muted); }
 .reloginRow { display:flex; justify-content:center; padding:4px 16px 8px; }
 .mHead :is(button,a):focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
+/* 작업실 로딩 머리 — 이름을 모를 때도 알약 폭을 지켜 진짜 머리로 바뀔 때 흔들리지 않게. PC 는 머리 없이 로딩만 */
+.loadingHead .namePill { min-width:96px; justify-content:center; }
+@media (min-width:1024px) { .loadingHead { display:none; } }
 
 /*
  * 휴대폰 미리보기 아래 막대(68px = 위아래 16 + 단추 36, 시안 MPreview · lovable 실측 2026-11-01) — 왼쪽 ‹ 대화 알약 36(안쪽 8 16 8 8, 16px) · 마이크 36 원(간격 8) / 오른쪽 … 36 원
