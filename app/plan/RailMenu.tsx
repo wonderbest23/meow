@@ -11,6 +11,7 @@ import BusinessRailTree, { type DocumentToc } from "./BusinessRailTree";
 import ProfileMenu, { type ProfileAnchor } from "./ProfileMenu";
 import { accountInitial, accountName, useAccount } from "./use-account";
 import { PLAN_VIEW_ALL } from "./MobileTabBar";
+import { newChatHref } from "../../lib/plan-builder/studio";
 
 /*
  * 왼쪽 메뉴 하나(시안 Main.dc.html — lovable 배치) — 대화·내 사업 화면(BusinessAppChrome)과 예전 문서 화면(PlanShell)이 같이 쓴다.
@@ -74,7 +75,7 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
       <b aria-hidden="true">{accountInitial(account)}</b><span>{name || "내 계정"}</span><ChevronsUpDown aria-hidden="true" />
     </button>}
     <div className={menu.nav}>
-      <Link href="/plan/chat?new=1" className={menu.item} title="새 대화" aria-current={here("new")}>
+      <Link href={newChatHref()} className={menu.item} title="새 대화" aria-current={here("new")}>
         <SquarePen aria-hidden="true" /><span>새 대화</span>
       </Link>
       {/* 검색 — 사업 카드 화면을 열고 검색칸에 초점을 둔다 */}

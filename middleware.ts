@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { adminClosedOnHost, closedForLaunch } from "./lib/launch-scope";
 import { adminCookieName, resolveScope, verifyAdminSessionToken } from "./lib/support-chat/admin-session";
+import { STUDIO_REDIRECT, studioRedirectHref } from "./lib/plan-builder/studio";
 
 // Admin API endpoints that must stay reachable without an existing admin session:
 // the session endpoint is how an operator logs in, checks status, and logs out.
@@ -80,6 +81,16 @@ export async function middleware(request: NextRequest) {
     /* 페이지로 다시 보내면(rewrite) 또 로딩 화면이 먼저 나가 200 이 된다 — 같은 문구의 작은 화면을 여기서 바로 404 로 */
     const missing = new NextResponse(LAUNCH_MISSING_HTML, { status: 404, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
     return withSecurityHeaders(missing);
+  }
+
+  /*
+   * 예전 화면 주소(대화 · 계획서 · 홈페이지 · 사업 관리의 시작하기/유지보수)는 서버에서 바로 작업실로 보낸다.
+   * 화면(StudioRedirect)에서 보내면 예전 머리줄이 잠깐 보였다가 작업실로 바뀌었다(2026-11-08 사장님). 판단은 화면과 같은 studioRedirectHref.
+   * #해시는 서버가 모른다 — 브라우저가 이동 뒤에도 붙여 둔다. 화면 쪽 StudioRedirect 는 그대로 남겨 둔다(안전망).
+   */
+  if (STUDIO_REDIRECT && !pathname.startsWith("/api/")) {
+    const target = studioRedirectHref(`${pathname}${request.nextUrl.search}`, request.nextUrl.origin);
+    if (target) return withSecurityHeaders(NextResponse.redirect(new URL(target, request.url)));
   }
 
   /*

@@ -110,8 +110,10 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     if (!active || active === document.body) toggle.current?.focus({ preventScroll: true });
   }, [open]);
   const menuButton = (className: string, size = 24) => <button ref={toggle} type="button" className={className} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls={open ? "app-drawer" : undefined} onClick={() => setOpen(!open)}><Menu size={size} /></button>;
+  /* 휴대폰 새 머리를 쓸 수 있는 화면 — 머리줄에 단추 줄·부제가 없을 때 */
+  const simpleNarrow = !actions && !subtitle;
   const avatarButton = <button type="button" className={chrome.avatar} data-guest={account?.authenticated ? undefined : ""} aria-haspopup="dialog" aria-expanded={profile} aria-label={`프로필 메뉴 열기${unanswered ? ` · 답할 문의 ${unanswered}건` : ""}`} onClick={() => setProfile(true)}>
-    {account?.authenticated ? accountInitial(account) : <UserRound aria-hidden="true" />}{unanswered ? <em aria-hidden="true" /> : null}
+    {account === null ? null : account.authenticated ? accountInitial(account) : <UserRound aria-hidden="true" />}{unanswered ? <em aria-hidden="true" /> : null}
   </button>;
   if (pane) return <>
     {actions && <div className={studio.paneToolbar}>{actions}</div>}
@@ -149,7 +151,16 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
         <Link className={chrome.circle} href={backHref} aria-label={settings === "close" ? "설정 닫기" : "이전 화면으로"}>{settings === "close" ? <X size={20} strokeWidth={2} aria-hidden="true" /> : <ChevronLeft size={20} strokeWidth={2} aria-hidden="true" />}</Link>
         <strong className={chrome.settingsTitle}>{title}</strong>
         <span className={chrome.circleSpace} aria-hidden="true" />
-      </header> : home ? null : <>{topBar ? topBar({ button: menuButton, open: () => setOpen(true), isOpen: open }) : <header className={styles.header}>
+      </header> : home ? null : <>{topBar ? topBar({ button: menuButton, open: () => setOpen(true), isOpen: open }) : <>
+        {/* 휴대폰 — 설정 화면과 같은 머리(44 원 ‹ · 가운데 제목 · 아바타). 예전 흰 머리줄(‹ 왼쪽 제목)이 손님 문의 등에 남아 예전 디자인처럼 보였다(2026-11-08 사장님). 단추 줄·부제가 있는 화면은 예전 머리 그대로 */}
+        {simpleNarrow && <header className={`${chrome.settingsBar} ${drawer.narrowOnly}`}>
+          {onBack
+            ? <button type="button" className={chrome.circle} onClick={onBack} aria-label="이전 화면으로"><ChevronLeft size={20} strokeWidth={2} aria-hidden="true" /></button>
+            : <Link className={chrome.circle} href={backHref} aria-label="이전 화면으로"><ChevronLeft size={20} strokeWidth={2} aria-hidden="true" /></Link>}
+          {titleHeading ? <h1 className={chrome.settingsTitle}>{title}</h1> : <strong className={chrome.settingsTitle}>{title}</strong>}
+          {avatarButton}
+        </header>}
+        <header className={`${styles.header} ${simpleNarrow ? drawer.wideOnly : ""}`}>
         {onBack
           ? <button type="button" className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} onClick={onBack} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></button>
           : <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>}
@@ -165,7 +176,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
         <div className={`${styles.headerMenu} ${drawer.narrowOnly}`}>
           {avatarButton}
         </div>
-      </header>}</>}
+      </header></>}</>}
       {sync === "offline" && <div className={styles.syncNotice} role="status">변경한 내용을 서버에 저장하지 못했어요.<button onClick={()=>void pushToServer()}>다시 저장</button></div>}
       {/* 본문 바로가기(SkipLink)가 데려오는 자리 — 머리줄 바로 아래 */}
       <span id="plan-content" tabIndex={-1} className="plan-content-anchor" />

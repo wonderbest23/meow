@@ -215,7 +215,7 @@ export default function PlanList() {
         {list}
       </section>
       {/* 휴대폰 '내 사업' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
-      {listOnly && <Link href="/plan/chat?new=1" className={home.newFloat}><Plus size={20} aria-hidden="true" />새 사업</Link>}
+      {listOnly && <Link href={newChatHref()} className={home.newFloat}><Plus size={20} aria-hidden="true" />새 사업</Link>}
     </div>
   </BusinessAppChrome></main>;
 }

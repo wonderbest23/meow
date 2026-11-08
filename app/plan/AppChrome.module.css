@@ -73,6 +73,6 @@
 @media (max-width:900px) { :global(main[data-list-only]) .homeBar { display:none; } }
 .circle:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 .circleSpace { flex:none; width:44px; height:44px; }
-.settingsTitle { min-width:0; overflow:hidden; color:var(--app-text); font-size:1rem; font-weight:500; line-height:1.4; text-overflow:ellipsis; white-space:nowrap; }
+.settingsTitle { margin:0; min-width:0; overflow:hidden; color:var(--app-text); font-size:1rem; font-weight:500; line-height:1.4; text-overflow:ellipsis; white-space:nowrap; }
 /* '내 사업' 목록(?view=all) — 히어로가 없는 화면이라 그라데이션 없이 판 색만 */
 :global(main[data-list-only]) .hero.hero { background-image:none; }

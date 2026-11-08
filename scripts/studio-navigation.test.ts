@@ -400,7 +400,10 @@ console.log("studio navigation ok");
   // lovable 구조 5단계(캡처 project-pc) — 작업 화면 PC 는 왼쪽 메뉴를 늘 접고 대화 열 머리 ☰ 로 같은 메뉴(서랍)를 연다
   assert.match(studio, /showRail=\{false\} bare=\{wide\}/, "PC 작업 화면은 왼쪽 메뉴 없이 판 없는 본문(둥근 판은 미리보기 판)");
   assert.match(studio, /\{menu\.button\(styles\.tool, 16\)\}/, "대화 열 머리 ☰ 로 같은 메뉴를 연다");
-  assert.match(chrome, /\{topBar \? topBar\(\{ button: menuButton, open: \(\) => setOpen\(true\), isOpen: open \}\) : <header className=\{styles\.header\}>/);
+  assert.match(chrome, /\{topBar \? topBar\(\{ button: menuButton, open: \(\) => setOpen\(true\), isOpen: open \}\) : <>/);
+  // 휴대폰 — 단추 줄·부제가 없는 화면은 설정 화면과 같은 머리(44 원 ‹ · 가운데 제목 · 아바타), PC 는 예전 머리줄
+  assert.match(chrome, /\{simpleNarrow && <header className=\{`\$\{chrome\.settingsBar\} \$\{drawer\.narrowOnly\}`\}>/);
+  assert.match(chrome, /<header className=\{`\$\{styles\.header\} \$\{simpleNarrow \? drawer\.wideOnly : ""\}`\}>/);
   // 예전 넓은 탭 줄 · 머리줄 진행 단계 목록은 없다(머리줄 한 줄의 탭 · 진행 막대로)
   assert.ok(!studio.includes("styles.wideTabs") && !studioCss.includes(".wideTabs"), "예전 넓은 탭 줄을 다시 그리지 않는다");
   // 가운데 알약 — PC 에서만 통로를 준다(휴대폰은 칸이 자기 안에 그린다) · 보이는 칸의 것만 · 같은 것을 다시 주면 무시
