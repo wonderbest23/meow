@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { liveCommentConfig, streamLiveComment } from "../lib/plan-builder/live-comment";
+import { liveCommentConfig, streamLiveComment, tagScrubber } from "../lib/plan-builder/live-comment";
 import type { LLMConfig } from "../lib/llm/complete";
 
 const claude: LLMConfig = { provider: "anthropic", apiKey: "test-only", model: "claude-opus-5-5" };
@@ -73,6 +73,16 @@ async function main() {
     if (previousModel === undefined) delete process.env.INTAKE_COMMENT_MODEL;
     else process.env.INTAKE_COMMENT_MODEL = previousModel;
   }
+}
+
+/* 생각 메모 태그는 안의 글까지, 감싸는 태그는 태그만 — 조각이 어디서 끊겨도 같다 */
+{
+  const run = (chunks: string[]) => { const scrub = tagScrubber(); return chunks.map(chunk => scrub.push(chunk)).join(""); };
+  const raw = "<reasoning>Key issue: 영업신고 ~120 chars.</reasoning>빵집은 영업신고가 필요할 수 있어요.";
+  assert.equal(run([raw]), "빵집은 영업신고가 필요할 수 있어요.");
+  assert.equal(run(raw.split("")), "빵집은 영업신고가 필요할 수 있어요.");
+  assert.equal(run(["<interp", "retation>첫 고객이 어려울 수 있어요.</interpretation>"]), "첫 고객이 어려울 수 있어요.");
+  assert.equal(run(["가격 < 원가면 남지 않아요."]), "가격 < 원가면 남지 않아요.");
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

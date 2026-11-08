@@ -41,7 +41,7 @@ export function cleanSuggestions(value: unknown): string[] {
   const out: string[] = [];
   for (const item of value) {
     if (typeof item !== "string") continue;
-    const text = item.replace(/\s+/g, " ").replace(/^[-*·•\d.)\s]+/, "").replace(/^["'“”‘’]|["'“”‘’]$/g, "").trim();
+    const text = item.replace(/\s+/g, " ").replace(/^\s*(?:[-*·•]\s*|\d+[.)]\s+)/, "").replace(/^["'“”‘’]|["'“”‘’]$/g, "").trim();
     if (text.length < 2 || text.length > 40) continue;
     if (NUMERIC_CLAIM.test(text) || /[,/\n]/.test(text)) continue;
     if (sanitizeBusinessClaimText(text).changedCount > 0) continue;
