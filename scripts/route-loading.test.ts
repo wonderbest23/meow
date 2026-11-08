@@ -45,4 +45,7 @@ for (const old of ["/plan/chat?planId=p", "/plan/chat?new=1", "/plan/document?pl
   assert.match(studioRedirectHref(old) ?? "", /^\/plan\/studio/, `${old} 가 작업실로 가지 않는다`);
 }
 
+/* 3) 로그인한 사람의 첫 화면(/)도 서버에서 바로 내 사업으로 — 화면에서 보내면 소개 화면이 잠깐 보인다 */
+assert.match(middleware, /pathname === "\/" && request\.cookies\.has\("venture_refresh"\)/, "로그인한 사람은 서버가 / → /plan 으로 보내야 한다");
+
 console.log("route-loading: ok");
