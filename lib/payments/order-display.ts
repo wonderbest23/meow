@@ -21,3 +21,18 @@ export function displayOrderName(orderName: string | null | undefined): string {
   if (!mapped) return name;
   return rest.length ? `${mapped} · ${rest.join(" · ")}` : mapped;
 }
+
+/** 손님에게 보이는 결제 상태 이름(마이페이지·상담 창 공용) */
+export const PAYMENT_STATUS_LABEL: Record<string, string> = {
+  created: "결제 대기",
+  awaiting_deposit: "입금 대기",
+  deposit_reported: "입금 확인 중",
+  refunded: "환불됨",
+  confirming: "승인 중",
+  done: "결제 완료",
+  canceled: "취소됨",
+  partial_canceled: "부분 취소",
+  aborted: "중단됨",
+  expired: "기한 만료",
+  failed: "실패",
+};

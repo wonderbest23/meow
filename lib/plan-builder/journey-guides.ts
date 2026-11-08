@@ -68,13 +68,10 @@ const GUIDES: Record<JourneyGuideCode, GuideRow> = {
   "design-ready": {
     stage: "J1",
     tab: "plan",
-    message: () => "사업안 정리가 끝났어요 👏 이제 이 내용으로 사업계획서를 만들어요. '사업계획서 만들기'를 누르면 장마다 차례로 써 드려요. 결제 전이면 결제 화면으로 먼저 이어져요. 고치고 싶은 내용이 있으면 먼저 말씀해 주세요.",
-    prefill: "사업안에서 고칠 부분이 있는지 먼저 짚어 주세요",
-    /* '계획서 만들기'는 대화 칸의 '사업계획서 만들기'와 같은 일 — start=1 이면 한 번 작성을 시작하고, 결제 전이면 서버가 결제 화면으로 보낸다 */
-    actions: planId => [
-      { label: "계획서 만들기", href: studioHref(planId, "chat", { start: "1" }) },
-      { label: "사업안 다시 보기", href: businessChatHref(planId) },
-    ],
+    /* 결제로 이끄는 단추는 대화 칸의 '사업계획서 만들기' 하나 — 같은 일 칩·미리 넣는 문장은 뺐다(2026-11-07 사장님) */
+    message: () => "사업안 정리가 끝났어요 👏 위의 '사업계획서 만들기'를 누르면 결제 후 바로 이 내용으로 장마다 차례로 써 드려요.",
+    prefill: null,
+    actions: () => [],
   },
   /* J2 계획서 완성 → 홈페이지 만들기 */
   "plan-complete": {

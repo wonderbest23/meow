@@ -44,7 +44,7 @@ suites.push("online-store-plan");
 suites.push("answer-number");
 suites.push("plan-account-switch");
 suites.push("landing-idea-carry");
-suites.push("studio-navigation");
+suites.push("studio-navigation", "route-loading");
 suites.push("studio-plan-edit");
 suites.push("journey-guides");
 suites.push("owner-decisions-r39");

@@ -3,6 +3,7 @@ import { coachDocumentRevision, readCoach } from "./coach";
 import { isCoachJobActive, readCoachJob } from "./coach-job-types";
 import type { Plan } from "./plan-store";
 import { launchSteps, launchStatus, readLaunch } from "./business-launch";
+import { STUDIO_REDIRECT, studioEntryHref } from "./studio";
 
 export const ACTION_KEY = "__business_next_action";
 
@@ -60,6 +61,12 @@ export function businessEntryHref(plan: Plan) {
   if (hub.coach?.design && !hub.documents.length) return `${businessChatHref(plan.id)}&guide=design-ready`;
   if (readCoach(plan.answers) || readCoachJob(plan.answers)) return businessChatHref(plan.id);
   return hub.documents.length ? documentHref(plan.id) : workspaceHref(plan.id);
+}
+
+/** 목록에서 사업을 눌렀을 때 갈 곳 — 작업실이 켜져 있으면 작업실 주소로(내 사업 목록·상담 창 공용) */
+export function planOpenHref(plan: Plan) {
+  const href = businessEntryHref(plan);
+  return (STUDIO_REDIRECT && studioEntryHref(href)) || href;
 }
 export function shouldResumeBusinessChat(plan: Plan): boolean {
   const { coach, job, documents } = businessHubState(plan);

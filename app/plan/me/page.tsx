@@ -6,7 +6,7 @@ import { hydrateFromServer, lastHydrationFailed, isSamplePlan, loadState, type P
 import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
 import { planDisplayName } from "../../../lib/plan-builder/business-name";
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
-import { displayOrderName } from "../../../lib/payments/order-display";
+import { displayOrderName, PAYMENT_STATUS_LABEL as STATUS_LABEL } from "../../../lib/payments/order-display";
 import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
 import { StatusBadge, type StatusTone } from "../../../components/status-badge";
@@ -29,20 +29,6 @@ import { DeleteAccountRow, LogoutRow } from "./AccountActions";
  * lovable 구조 3단계 — 설정 행 카드(components/settings-row)로: 로그인 정보 → 내 사업 → 결제 내역 → 계정 정리.
  * 로그인 수단(카카오·애플) 표시·연결은 지금 서버가 알려 주지 않아(/api/auth/session 은 이메일만) 행을 두지 않는다 — 시안 문서에 적음.
  */
-
-const STATUS_LABEL: Record<string, string> = {
-  created: "결제 대기",
-  awaiting_deposit: "입금 대기",
-  deposit_reported: "입금 확인 중",
-  refunded: "환불됨",
-  confirming: "승인 중",
-  done: "결제 완료",
-  canceled: "취소됨",
-  partial_canceled: "부분 취소",
-  aborted: "중단됨",
-  expired: "기한 만료",
-  failed: "실패",
-};
 
 const BAD_STATUS = new Set(["canceled", "partial_canceled", "aborted", "expired", "failed"]);
 
@@ -169,7 +155,7 @@ export default function PlanMePage() {
 
   const header = <SettingsHeader title="내 계정" description="로그인 정보와 사업, 결제 내역을 한곳에서 봐요." mobile="hidden" aside={<SettingsHelpLink href="/account/support">도움말</SettingsHelpLink>} />;
   if (account === null && loadFailed) return <div className={styles.page}>{header}<p className={styles.notice} role="alert">계정 정보를 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p></div>;
-  if (account === null) return <div className={styles.page}>{header}<PlanLoading variant="rows" count={3} note="계정 정보를 불러오는 중…" /></div>;
+  if (account === null) return <div className={styles.page}>{header}<PlanLoading fill note="계정 정보를 불러오는 중…" /></div>;
   if (!account.authenticated) {
     return (
       <div className={styles.page}>

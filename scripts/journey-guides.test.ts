@@ -42,8 +42,9 @@ for (const code of JOURNEY_GUIDE_CODES) {
     /* 작업실이 그 주소를 같은 사업의 그 탭으로 읽는다 */
     assert.deepEqual(studioTarget(url.href, id, origin)?.tab, guide.tab);
     assert.equal(studioTarget(url.href, id, origin)?.params[GUIDE_PARAM], code);
-    /* 다음 할 일 단추 2~3개 — 같은 사업 주소는 작업실 탭 바꾸기로 열린다 */
-    assert.ok(guide.actions.length >= 2 && guide.actions.length <= 3, `${code} 단추 수`);
+    /* 다음 할 일 단추 2~3개(J1 은 대화 칸 '사업계획서 만들기' 하나라 0개) — 같은 사업 주소는 작업실 탭 바꾸기로 열린다 */
+    if (code === "design-ready") assert.equal(guide.actions.length, 0, `${code} 단추 수`);
+    else assert.ok(guide.actions.length >= 2 && guide.actions.length <= 3, `${code} 단추 수`);
     for (const action of guide.actions) {
       if (action.external) { assert.match(action.href, /^https:\/\//); continue; }
       assert.ok(studioTarget(action.href, id, origin), `${code} '${action.label}' 은 작업실 안 주소`);
@@ -79,9 +80,10 @@ assert.ok(readFileSync(new URL("../lib/plan-builder/business-launch.ts", import.
 assert.equal(journeyGuide("registration", id).actions[0].href, businessChatHref(id, REGISTRATION_PROMPT));
 assert.equal(journeyGuide("registration", id).actions[1].href, LAUNCH_SOURCES.registration.url);
 assert.equal(journeyGuide("registration", id).actions[1].external, true);
-for (const code of ["design-ready", "plan-complete", "homepage-published", "launch-done"] as const) assert.ok(journeyGuide(code, id).prefill, `${code} 미리 넣는 문장`);
-/* J1 '계획서 만들기'는 대화 칸의 작성 시작(start=1)과 같다 — 결제 전이면 서버가 결제 화면으로 */
-assert.equal(new URL(journeyGuide("design-ready", id).actions[0].href, origin).searchParams.get("start"), "1");
+for (const code of ["plan-complete", "homepage-published", "launch-done"] as const) assert.ok(journeyGuide(code, id).prefill, `${code} 미리 넣는 문장`);
+/* J1 은 칩·미리 넣는 문장 없이 대화 칸의 '사업계획서 만들기' 하나로 결제에 이끈다 */
+assert.equal(journeyGuide("design-ready", id).actions.length, 0);
+assert.equal(journeyGuide("design-ready", id).prefill, null);
 /* J3 '첫 준비 단계 열기'는 개업 준비의 다음 단계를 바로 연다 */
 assert.equal(new URL(journeyGuide("homepage-published", id, { launchStep: "license" }).actions[0].href, origin).searchParams.get("step"), "license");
 assert.equal(new URL(journeyGuide("homepage-published", id).actions[0].href, origin).searchParams.get("step"), null);

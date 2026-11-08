@@ -1,0 +1,17 @@
+/* 상담 답변 아래 '내 최근 결제·사업' 카드 — 문의 화면의 흰 카드 목록(질문 목록)과 같은 모서리·구분선 */
+.card { width: 100%; border: 1px solid #e9ebf0; border-radius: 14px; background: #fff; overflow: hidden; }
+.card h4 { margin: 0; padding: 12px 16px 4px; color: #888; font-size: 12px; font-weight: 700; }
+.row { padding: 11px 16px; border-top: 1px solid #f0f1f4; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #222; text-decoration: none; }
+.card h4 + .row { border-top: 0; }
+a.row:hover { background: #f7f9fd; }
+.row > div { min-width: 0; display: grid; gap: 2px; }
+.row strong { overflow: hidden; font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.row small { color: #999; font-size: 11.5px; }
+.ok, .muted, .open { flex: none; font-size: 12px; font-weight: 700; }
+.ok { color: #1f7a43; }
+.muted { color: #999; }
+.open { height: 30px; padding: 0 10px; border: 1px solid #3272db; border-radius: 999px; color: #3272db; display: flex; align-items: center; gap: 1px; }
+.open svg, .more svg { width: 13px; }
+.more { padding: 10px 16px; border-top: 1px solid #f0f1f4; display: flex; align-items: center; justify-content: center; gap: 2px; color: #666; font-size: 12.5px; font-weight: 600; text-decoration: none; }
+.more:hover { background: #f7f9fd; }
+.loading { margin: 0; color: #999; font-size: 12px; }

@@ -1,5 +1,6 @@
 "use client";
 
+import { settleTransition } from "../../../lib/client/view-transition";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -30,7 +31,7 @@ import { trackFunnel } from "../../../lib/funnel/client";
 import { askConfirm, showCopyText, showNotice } from "../../../components/confirm-dialog";
 import { openLogin } from "../../../components/login-dialog";
 import { loadAuthSession } from "../../../lib/client/auth-session";
-import StudioLoading from "./loading";
+import StudioLoading, { useCachedPlanTitle } from "./loading";
 import StudioIntakeSummary from "./StudioIntakeSummary";
 import { AppButton } from "../../../components/app-button";
 import { JourneyGuideTurn } from "../chat/intake-ui/JourneyGuideTurn";
@@ -132,6 +133,8 @@ export default function Studio() {
    */
   const fresh = !planId;
   const [startedFresh] = useState(fresh);
+  /* 홈 입력칸에서 넘어온 화면 전환 — 작업실이 그려졌으니 홈 → 작업실 그림을 돌린다 */
+  useEffect(() => { settleTransition(); }, []);
   const newIntent = searchParams.get("new") === "1" || !!searchParams.get("idea") || !!searchParams.get("prompt");
 
   /*
@@ -675,7 +678,8 @@ export default function Studio() {
    */
   /* 머리줄 이름은 목록과 같은 저장된 이름 그대로 — 예전엔 첫 답과 같은 이름이면 업종 이름(김밥 및 기타 간이 음식점업)으로 바꿔 보여, 목록의 이름과 달라 내가 정한 이름이 아닌 줄 알았다(2026-11-02 사장님) */
   const shownCoach = intakeSnapshot?.coach ?? (plan ? readCoach(plan.answers) : null);
-  const draftTitle = title || plan?.title || "";
+  const cachedTitle = useCachedPlanTitle(planId);
+  const draftTitle = title || plan?.title || cachedTitle;
   /* 대표 결정 r41: '이미 사업 중이에요'로 시작한 대화의 임시 이름은 '내 사업 개선', 이름이 빈 사업은 '이름 없는 사업'(표시만) */
   const operatingDraft = shownCoach?.stage === "operating";
   const shownTitle = plan ? businessDisplayName(draftTitle, { operating: operatingDraft }) : draftBusinessTitle(draftTitle, operatingDraft);

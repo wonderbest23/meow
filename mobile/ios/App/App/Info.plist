@@ -72,5 +72,9 @@
 	<true/>
 	<key>UIUserInterfaceStyle</key>
 	<string>Light</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>말로 사업 이야기를 입력할 때 마이크를 사용해요.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>말한 내용을 글자로 바꿔 입력칸에 넣을 때 사용해요.</string>
 </dict>
 </plist>

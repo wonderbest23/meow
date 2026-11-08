@@ -109,11 +109,11 @@ export const supportFaqCategories: SupportFaqCategory[] = [
     description: "로그인과 기기 간 이어보기",
     items: [
       { id: "account-save", question: "작업 내용은 자동으로 저장되나요?", answer: "네. 대화와 계획서는 자동 저장돼요. 로그인하면 서버에도 보관되어 다른 기기에서 같은 계정으로 이어서 볼 수 있어요.", keywords: ["자동 저장", "저장되", "보관"] },
-      { id: "account-device", question: "휴대전화와 PC에서 같은 문서를 볼 수 있나요?", answer: "같은 계정으로 로그인하면 어느 기기에서든 ‘내 사업’에서 같은 사업을 이어서 볼 수 있어요. 로그인하지 않은 작업은 사용한 브라우저에만 남아요.", keywords: ["다른 기기", "휴대폰 PC", "모바일 PC", "같은 문서", "동기화"] },
+      { id: "account-device", question: "휴대전화와 PC에서 같은 문서를 볼 수 있나요?", answer: "같은 계정으로 로그인하면 어느 기기에서든 ‘내 사업’에서 같은 사업을 이어서 볼 수 있어요. 로그인하지 않은 작업은 사용한 브라우저에만 남아요.", keywords: ["다른 기기", "휴대폰 PC", "모바일 PC", "같은 문서", "동기화", "핸드폰", "컴퓨터"] },
       { id: "account-guest", question: "로그인하지 않아도 쓸 수 있나요?", answer: "완성 예시 보기와 AI 창업 상담은 로그인 없이 가능해요. 사업계획서 작성은 내용을 계정에 저장하기 위해 로그인이 필요해요.", keywords: ["비로그인", "로그인 안", "게스트", "가입 없이"] },
       { id: "account-mypage", question: "결제 내역은 어디서 확인하나요?", answer: "메뉴 아래쪽 ‘내 계정’에서 계정 정보, 내 사업 목록과 결제 내역을 확인하고 카드 결제 환불을 요청할 수 있어요. 앱 안에서 결제한 주문은 Apple·Google Play에 환불을 신청해요.", appAnswer: "메뉴 아래쪽 ‘내 계정’에서 계정 정보, 내 사업 목록과 결제 내역을 확인할 수 있어요. 앱에서 결제한 주문의 환불은 Apple(App Store)이나 Google Play에 신청해요.", keywords: ["결제 내역", "마이페이지", "구매 내역", "영수증"], link: { href: "/plan/me", label: "마이페이지 열기" } },
       { id: "account-delete", question: "회원 탈퇴하면 제 정보가 지워지나요?", answer: "메뉴의 ‘내 계정’ 맨 아래 ‘회원 탈퇴’에서 탈퇴할 수 있어요. 탈퇴하면 계정과 작성한 사업·문서가 모두 삭제되고 되돌릴 수 없어요. 결제·환불 기록만 법령상 보존 의무가 있어 사람과 연결되지 않는 형태로 남아요.", keywords: ["탈퇴", "회원 탈퇴", "계정 삭제", "개인정보 삭제", "정보 삭제"] },
-      { id: "account-recover", question: "비밀번호를 잊어버렸어요.", answer: "로그인 화면의 ‘비밀번호 재설정’에서 가입한 이메일을 입력하세요. 복구 메일이 오지 않으면 스팸함을 확인한 뒤 고객센터에 문의해 주세요.", keywords: ["비밀번호", "계정 복구", "복구 메일", "메일 안 와"] },
+      { id: "account-recover", question: "비밀번호를 잊어버렸어요.", answer: "로그인 화면의 ‘비밀번호 재설정’에서 가입한 이메일을 입력하세요. 복구 메일이 오지 않으면 스팸함을 확인한 뒤 고객센터에 문의해 주세요.", keywords: ["비밀번호", "비번", "계정 복구", "복구 메일", "메일 안 와"] },
     ],
   },
   {
@@ -121,7 +121,7 @@ export const supportFaqCategories: SupportFaqCategory[] = [
     label: "오류·기타",
     description: "화면이 작동하지 않을 때",
     items: [
-      { id: "error-generate", question: "계획서 작성이 실패하거나 멈춰요.", answer: "네트워크가 잠시 끊겼을 수 있어요. 페이지를 새로고침하면 멈춘 곳부터 다시 이어서 작성해요. 반복되면 사업 이름과 멈춘 화면을 적어 고객센터에 문의해 주세요.", keywords: ["생성 실패", "작성 실패", "멈춰", "안 만들어", "오류", "에러"] },
+      { id: "error-generate", question: "계획서 작성이 실패하거나 멈춰요.", answer: "네트워크가 잠시 끊겼을 수 있어요. 페이지를 새로고침하면 멈춘 곳부터 다시 이어서 작성해요. 반복되면 사업 이름과 멈춘 화면을 적어 고객센터에 문의해 주세요.", keywords: ["생성 실패", "작성 실패", "멈춰", "멈췄", "안 만들어", "오류", "에러"] },
       { id: "error-load", question: "화면이나 문서가 불러와지지 않아요.", answer: "페이지를 한 번 새로고침한 뒤 ‘내 사업’에서 사업을 다시 열어보세요. 같은 문제가 반복되면 현재 화면 주소와 발생한 행동을 고객센터 문의에 적어 주세요.", keywords: ["불러오지", "로딩", "화면 오류", "안 열려"], link: { href: "/plan", label: "내 사업으로 가기" } },
       { id: "error-quality", question: "작성된 내용이 사업과 맞지 않아요.", answer: "같은 사업의 대화에서 맞지 않는 부분을 구체적으로 말해 주세요. 사업안이 고쳐지고 그에 맞춰 계획서를 다시 써요. 여전히 다른 업종 내용이 섞이면 사업 이름과 해당 장을 고객센터에 알려주세요.", keywords: ["안 맞", "다른 업종", "내용 이상", "이상하게 나와"] },
       { id: "error-human", question: "고객센터에 직접 문의하고 싶어요.", answer: "아래 ‘고객센터에 직접 문의할게요’를 누르면 개별 메시지를 남길 수 있어요. 서비스 이용과 결제 문의에 답변드리며 세무·법률·투자 상담은 제공하지 않아요.", keywords: ["운영자", "직접 문의", "사람 상담", "상담원"] },
@@ -236,4 +236,49 @@ export function findSupportFaq(query: string): SupportFaqItem | null {
     }
   }
   return best?.score ? best.item : null;
+}
+
+/*
+ * AI 없이 바로 답해도 되는 질문 찾기.
+ * 직접 친 질문을 매번 AI 에 보내면 "가격 얼마예요?" 같은 단골 질문에도 비용과 몇 초의 기다림이 든다.
+ * 짧은 질문 하나가 FAQ 하나에 뚜렷이 맞을 때만 그 FAQ 를 돌려주고, 애매하면 null(→ 지금처럼 AI 가 답한다).
+ * 글자 두 개씩 겹치는 정도(바이그램)로 재서 띄어쓰기·어미·맞춤법이 조금 달라도 잡는다.
+ * shortcut: 뜻이 같은 다른 표현은 keywords 에 넣어야 잡힌다, 놓치면 AI 로 가므로 손해는 비용뿐이다.
+ */
+const instantNorm = (value: string) => value.toLowerCase().replace(/[^0-9a-z가-힣]/g, "");
+/* 질문 끝말·흔한 말은 어느 FAQ 에나 겹쳐 점수를 흐린다 */
+const INSTANT_STOP = new Set(["나요", "어요", "해요", "아요", "에요", "예요", "하나", "되나", "있나", "어떻", "떻게", "인가", "가요", "세요", "주세", "싶어", "고싶", "싶은", "는데", "데요", "할수", "수있", "있어", "었어", "했어", "하고", "어디", "디서", "디에", "에서", "언제", "는지", "건가", "까요", "나는"]);
+function instantGrams(value: string) {
+  const text = instantNorm(value);
+  const grams = new Set<string>();
+  for (let index = 0; index < text.length - 1; index += 1) grams.add(text.slice(index, index + 2));
+  return grams;
+}
+export function scoreSupportFaqInstant(query: string) {
+  const normalized = instantNorm(query);
+  const queryGrams = [...instantGrams(query)].filter((gram) => !INSTANT_STOP.has(gram));
+  if (!queryGrams.length) return [];
+  return supportFaqCategories
+    .flatMap((category) => category.items)
+    .map((item) => {
+      const keywordHits = item.keywords.filter((keyword) => normalized.includes(instantNorm(keyword))).length;
+      const head = instantGrams(`${item.question} ${item.keywords.join(" ")}`);
+      const body = instantGrams(item.answer);
+      const score = 3 * keywordHits
+        + (4 * queryGrams.filter((gram) => head.has(gram)).length) / queryGrams.length
+        + queryGrams.filter((gram) => body.has(gram)).length / queryGrams.length;
+      return { item, score };
+    })
+    .sort((left, right) => right.score - left.score);
+}
+export function findSupportFaqInstant(query: string): SupportFaqItem | null {
+  const text = query.trim();
+  /* 긴 글·여러 질문은 AI 가 빠짐없이 답하는 편이 낫다 */
+  if (text.length < 4 || text.length > 50) return null;
+  if ((text.match(/[?？]/g)?.length ?? 0) > 1 || /그리고|그리구|또\s|그런데|근데/.test(text)) return null;
+  const [top, second] = scoreSupportFaqInstant(text);
+  /* 4점 미만은 "얼마" 같은 말 하나만 겹친 경우가 많다(예: 창업 자본금 얼마 → 가격 안내로 오답) */
+  if (!top || top.score < 4) return null;
+  if (second && top.score - second.score < 1.2) return null;
+  return top.item;
 }

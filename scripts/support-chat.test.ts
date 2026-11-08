@@ -6,6 +6,7 @@ async function main() {
   const {
     findSupportFaq,
     findSupportFaqCandidates,
+    findSupportFaqInstant,
     findSupportFaqKeywordMatches,
     supportFaqCategories,
     supportKnowledgeText,
@@ -22,6 +23,25 @@ async function main() {
   } = await import("../lib/support-chat/repository");
 
   assert.equal(supportFaqCategories.length, 7);
+  /* 직접 친 단골 질문은 AI 없이 FAQ 로 바로 — 띄어쓰기·어미가 달라도 잡는다 */
+  const instant: [string, string][] = [
+    ["가격 얼마예요?", "pay-price"],
+    ["환불하고 싶어요", "pay-refund"],
+    ["카드로 결제돼요?", "pay-method"],
+    ["결제 내역 어디서 봐요", "account-mypage"],
+    ["비번 까먹었어요", "account-recover"],
+    ["워드 파일로 받을 수 있어요?", "files-download"],
+    ["중간에 나가면 날아가요?", "write-continue"],
+    ["핸드폰이랑 컴퓨터에서 같이 봐요?", "account-device"],
+    ["작성이 멈췄어요", "error-generate"],
+    ["얼마나 걸려요?", "start-time"],
+  ];
+  for (const [question, id] of instant) assert.equal(findSupportFaqInstant(question)?.id, id, question);
+  /* 애매하거나 FAQ 밖이면 null — 지금처럼 AI 가 답한다 */
+  for (const question of ["오늘 날씨 어때", "카페 창업하려면 자본금 얼마 필요해요?", "가격이랑 환불 규정 알려줘요", "ㅋㅋㅋ", "가격은요? 환불은요?"]) {
+    assert.equal(findSupportFaqInstant(question), null, question);
+  }
+
   assert.equal(findSupportFaq("가격이 얼마예요")?.id, "pay-price");
   assert.equal(findSupportFaq("환불은 어떻게 되나요")?.id, "pay-refund");
   assert.equal(findSupportFaq("완전히 무관한 문장입니다"), null);

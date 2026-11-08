@@ -21,7 +21,7 @@ export default function Security() {
     return () => { alive = false; };
   }, []);
   const header = <SettingsHeader title="보안" description="이 기기에서 나가거나 계정을 정리해요." mobile="band" />;
-  if (!account) return <div className={styles.page}>{header}{failed ? <p className={styles.rowNotice} role="alert">로그인 상태를 확인하지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p> : <PlanLoading variant="rows" count={2} note="계정 정보를 불러오는 중…" />}</div>;
+  if (!account) return <div className={styles.page}>{header}{failed ? <p className={styles.rowNotice} role="alert">로그인 상태를 확인하지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p> : <PlanLoading fill note="계정 정보를 불러오는 중…" />}</div>;
   if (!account.authenticated) return <div className={styles.page}>{header}<PlanGate reason="login_required" /></div>;
   return <div className={styles.page}>
     {header}

@@ -6,9 +6,22 @@ import PlanLoading from "./PlanLoading";
 import ChatLoading from "./chat/loading";
 import StudioLoading from "./studio/loading";
 import BusinessAppChrome from "./BusinessAppChrome";
+import AppFrame from "./AppFrame";
 import frame from "./chat/page.module.css";
 
 const noop = () => () => {};
+/* 설정 쪽 화면 — 진짜 화면과 같은 머리(✕/‹ · 제목)를 먼저 그린다. 예전엔 머리 없는 빈 화면에 로딩만 보였다가 머리가 나타났다(2026-11-08 전수조사). 제목·뒤로 주소는 각 page/layout 과 같게 */
+const SETTINGS: Record<string, [string, "close" | "back" | undefined, string]> = {
+  "/plan/settings": ["계정 설정", "close", "/plan"],
+  "/plan/settings/preferences": ["환경설정", "back", "/plan/settings"],
+  "/plan/settings/security": ["보안", "back", "/plan/settings"],
+  "/plan/settings/devices": ["기기 및 앱", "back", "/plan/settings"],
+  "/plan/me": ["내 계정", "back", "/plan/settings"],
+  "/plan/info": ["약관·정책", "back", "/plan"],
+  /* 결제 — 뒤로 주소는 상품마다 다르지만 로딩 동안은 내 사업으로 */
+  "/plan/pay": ["결제", undefined, "/plan"],
+  "/plan/pay/result": ["결제 결과", undefined, "/plan"],
+};
 const readCareTab = () => new URLSearchParams(window.location.search).get("tab") === "operations";
 
 /**
@@ -28,5 +41,8 @@ export default function Loading() {
   const titles: Record<string, string> = { "/plan": "내 사업", "/plan/workspace": care ? "유지보수" : "내 사업", "/plan/document": "사업계획서", "/plan/homepage": "홈페이지", "/plan/inquiries": "손님 문의" };
   /* 첫 화면(/plan)은 진짜 화면과 같은 머리(계정 알약·아바타, PC 는 머리 없음)로 — 예전엔 '← 내 사업' 머리줄이 잠깐 보였다가 바뀌어 머리가 두 번 그려졌다(2026-11-02 전수조사) */
   if (titles[path]) return <main className={frame.page} data-plan-view={path === "/plan" ? "plans" : undefined}><BusinessAppChrome title={titles[path]} active={path === "/plan/inquiries" ? "inquiries" : path === "/plan" ? "new" : "plans"} backHref={path === "/plan" ? "/" : "/plan"} home={path === "/plan"}><PlanLoading fill variant="compact" note="화면을 불러오고 있어요" /></BusinessAppChrome></main>;
-  return <PlanLoading variant="rows" note="불러오는 중…" />;
+  const settings = SETTINGS[path] ?? (path.startsWith("/plan/info/") ? SETTINGS["/plan/info"] : undefined);
+  if (settings) return <AppFrame title={settings[0]} settings={settings[1]} backHref={settings[2]}><PlanLoading fill variant="compact" note="화면을 불러오고 있어요" /></AppFrame>;
+  /* 그 밖의 화면(프로필·계정 설정·결제 내역·이용 안내…)도 화면 한가운데 — 위에 붙어 있었다(휴대폰 앱, 2026-11-07 사장님) */
+  return <PlanLoading fullPage note="화면을 불러오고 있어요" />;
 }
