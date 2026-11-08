@@ -7,9 +7,6 @@ import { STUDIO_REDIRECT, studioRedirectHref } from "./lib/plan-builder/studio";
 // the session endpoint is how an operator logs in, checks status, and logs out.
 const ADMIN_AUTH_EXEMPT = ["/api/admin/support/session"];
 
-/** 앱이 User-Agent 끝에 붙이는 표시 — mobile/capacitor.config.json 의 appendUserAgent 와 같아야 한다 */
-const APP_USER_AGENT_MARK = "OneulstartApp";
-
 
 function withSecurityHeaders(response: NextResponse) {
   /*
@@ -96,11 +93,12 @@ export async function middleware(request: NextRequest) {
   /*
    * 아이폰·안드로이드 앱(mobile/)에서 로그인한 사람이 앱을 열면 홍보용 첫 화면 대신 '내 사업'으로 바로 보낸다
    * (대표 요청 2026-10-14: 로그인했는데 홈 화면이 떠서 버그처럼 보였다). 화면에서 확인하면 첫 화면이 잠깐 보였다 바뀌므로 여기서 보낸다.
-   * 앱은 요청 머리말(User-Agent)에 APP_USER_AGENT_MARK 를 붙인다(mobile/capacitor.config.json appendUserAgent).
    * 로그인 여부는 갱신 쿠키(lib/identity-tokens.ts AUTH_REFRESH_COOKIE — 그 파일은 node:crypto 를 써서 여기서 못 불러온다)가 있는지로만 본다.
    * 쿠키가 낡았으면 내 사업 화면이 로그인 안내를 보여 준다.
+   * 웹도 같다 — 로그인한 사람은 첫 화면(home-page.tsx)이 내 사업으로 보내는데, 화면에서 보내면 소개 화면이 잠깐 보였다(2026-11-08 전수조사).
+   * 어드민 홈 문구 미리보기(?copyEdit=1)만 그대로 둔다.
    */
-  if (pathname === "/" && request.headers.get("user-agent")?.includes(APP_USER_AGENT_MARK) && request.cookies.has("venture_refresh")) {
+  if (pathname === "/" && request.cookies.has("venture_refresh") && request.nextUrl.searchParams.get("copyEdit") !== "1") {
     return withSecurityHeaders(NextResponse.redirect(new URL("/plan", request.url)));
   }
 
