@@ -27,7 +27,8 @@ const planIdFromUrl = () => new URLSearchParams(window.location.search).get("pla
  * 예전엔 '‹ 사업 작업실' 흰 머리줄(예전 디자인)이 잠깐 보였다가 바뀌었다(2026-11-08 사장님). PC 는 머리 없이 로딩만.
  */
 export default function StudioLoading() {
-  const title = useSyncExternalStore(noSubscribe, () => cachedTitle(planIdFromUrl()), () => "");
+  /* 주소에 사업이 없으면 새 대화 — 진짜 작업실 머리와 같은 글자 */
+  const title = useSyncExternalStore(noSubscribe, () => { const id = planIdFromUrl(); return id ? cachedTitle(id) : "새 대화"; }, () => "");
   return <main className={`${frame.page} ${styles.page}`}>
     <BusinessAppChrome title={title || "사업 작업실"} showRail={false} backHref="/plan" active="plans" topBar={() => <header className={`${styles.mHead} ${styles.loadingHead}`}>
       <Link className={styles.round44} href="/plan" aria-label="첫 화면으로"><X aria-hidden="true" /></Link>

@@ -11,13 +11,16 @@ import frame from "./chat/page.module.css";
 
 const noop = () => () => {};
 /* 설정 쪽 화면 — 진짜 화면과 같은 머리(✕/‹ · 제목)를 먼저 그린다. 예전엔 머리 없는 빈 화면에 로딩만 보였다가 머리가 나타났다(2026-11-08 전수조사). 제목·뒤로 주소는 각 page/layout 과 같게 */
-const SETTINGS: Record<string, [string, "close" | "back", string]> = {
+const SETTINGS: Record<string, [string, "close" | "back" | undefined, string]> = {
   "/plan/settings": ["계정 설정", "close", "/plan"],
   "/plan/settings/preferences": ["환경설정", "back", "/plan/settings"],
   "/plan/settings/security": ["보안", "back", "/plan/settings"],
   "/plan/settings/devices": ["기기 및 앱", "back", "/plan/settings"],
   "/plan/me": ["내 계정", "back", "/plan/settings"],
   "/plan/info": ["약관·정책", "back", "/plan"],
+  /* 결제 — 뒤로 주소는 상품마다 다르지만 로딩 동안은 내 사업으로 */
+  "/plan/pay": ["결제", undefined, "/plan"],
+  "/plan/pay/result": ["결제 결과", undefined, "/plan"],
 };
 const readCareTab = () => new URLSearchParams(window.location.search).get("tab") === "operations";
 
