@@ -22,6 +22,43 @@ export function liveCommentConfig(base: LLMConfig | null): LLMConfig | null {
   return override && base.provider === "anthropic" ? { ...base, model: override } : base;
 }
 
+/*
+ * 모델이 생각 메모를 <reasoning>…</reasoning> 처럼 본문 앞에 쓰거나 답을 <interpretation>…</interpretation> 로 감싸는 일이 있다
+ * (Opus 5.5 실측 8건 중 2건, 2026-11-08). 흘러나오는 글에서 태그를 걷어 낸다 — 생각 메모 태그는 안의 글까지, 그 밖의 태그는 태그만 지운다.
+ */
+const NOTE_TAGS = /^(?:reasoning|thinking|thought|analysis|scratchpad|plan|notes?)$/i;
+export function tagScrubber() {
+  let buffer = "";
+  let skipping: string | null = null;
+  return {
+    push(chunk: string): string {
+      buffer += chunk;
+      let out = "";
+      for (;;) {
+        if (skipping) {
+          const close = buffer.indexOf(`</${skipping}>`);
+          if (close < 0) return out;
+          buffer = buffer.slice(close + skipping.length + 3);
+          skipping = null;
+          continue;
+        }
+        const lt = buffer.indexOf("<");
+        if (lt < 0) { out += buffer; buffer = ""; return out; }
+        out += buffer.slice(0, lt);
+        buffer = buffer.slice(lt);
+        const tag = /^<(\/?)([A-Za-z_]+)>/.exec(buffer);
+        if (!tag) {
+          // 태그가 덜 왔으면 기다리고, 태그가 아닌 '<'면 그대로 낸다
+          if (/^<\/?[A-Za-z_]*$/.test(buffer) && buffer.length < 24) return out;
+          out += "<"; buffer = buffer.slice(1); continue;
+        }
+        buffer = buffer.slice(tag[0].length);
+        if (!tag[1] && NOTE_TAGS.test(tag[2])) skipping = tag[2];
+      }
+    },
+  };
+}
+
 export type LiveCommentTiming = { model: string; firstTokenMs: number | null; totalMs: number; ok: boolean; failure?: LLMFailure["code"] };
 
 export async function streamLiveComment(
@@ -33,6 +70,7 @@ export async function streamLiveComment(
   const started = Date.now();
   let firstTokenMs: number | null = null;
   let failure: LLMFailure["code"] | undefined;
+  const scrub = tagScrubber();
   const text = await streamText(config, {
     kind: "intake-comment",
     system: LIVE_COMMENT_RULES,
@@ -44,8 +82,10 @@ export async function streamLiveComment(
     signal,
     onFailure: event => { failure = event.code; },
   }, chunk => {
+    const visible = scrub.push(chunk);
+    if (!visible) return;
     if (firstTokenMs === null) firstTokenMs = Date.now() - started;
-    onDelta(chunk);
+    onDelta(visible);
   });
   return { model: config.model, firstTokenMs, totalMs: Date.now() - started, ok: !!text, ...(failure ? { failure } : {}) };
 }

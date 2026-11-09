@@ -44,6 +44,8 @@ async function main() {
 
     assert.deepEqual(cleanSuggestions(["가", "a".repeat(41), 42, "매출 30% 증가 보장", "월 5천만 원 매출", "평일 저녁 동네 주민", "평일 저녁 동네 주민", "첫째", "둘째", "셋째"]), ["평일 저녁 동네 주민", "첫째", "둘째"]);
     assert.deepEqual(cleanSuggestions("문자열"), []);
+    // 목록 번호만 지우고 글 앞의 숫자는 남긴다(예전엔 "1:1 맞춤 PT" → ":1 맞춤 PT")
+    assert.deepEqual(cleanSuggestions(["1:1 맞춤 PT", "1인 전용 네일", "2. 동네 주민"]), ["1:1 맞춤 PT", "1인 전용 네일", "동네 주민"]);
 
     // 3) 모델 교체: INTAKE_SUGGEST_MODEL은 Claude 설정에만, Haiku에는 추론 강도 없이 구조화 출력만 보낸다
     const previousModel = process.env.INTAKE_SUGGEST_MODEL;
