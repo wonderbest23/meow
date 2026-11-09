@@ -66,7 +66,7 @@ const placements: [string, string][] = [
   ["app/plan/workspace/LaunchWorkspace.module.css", ".decidedTag"], ["app/plan/workspace/LaunchWorkspace.module.css", ".stepList .status"],
   ["app/plan/PlanRailNav.module.css", ".sampleTag"], ["app/plan/homepage/page.module.css", ".stripBadge"],
   ["app/plan/inquiries/page.module.css", ".handledBadge"], ["app/plan/pay/PlanCheckout.module.css", ".launchTag"],
-  ["app/plan/chat/intake.module.css", ".ksicBadge"], ["app/plan/chat/intake.module.css", ".queueBadge"],
+  ["app/plan/chat/intake.module.css", ".queueBadge"],
   ["app/plan/chat/intake.module.css", ".queueTag"], ["app/plan/chat/intake.module.css", ".bubbleTag"],
   ["components/next-services.module.css", ".ribbon"], ["components/next-services.module.css", ".historyStatus"],
 ];

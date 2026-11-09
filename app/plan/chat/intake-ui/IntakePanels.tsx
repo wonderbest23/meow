@@ -8,7 +8,7 @@ import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEve
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { LoadingStatus, Spinner } from "../../PlanLoading";
-import { ArrowRight, Check, CheckCircle2, ChevronRight, Copy, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, ChevronRight, Copy, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion, type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
@@ -244,7 +244,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         <div className={styles.ksicChips}>{ksicShown.map((item, index) => {
           // 첫 후보에 '추천'을 단다 — 대화(코치)에서는 검색 결과도 가장 가까운 첫 후보를 추천으로 강조해 바로 누르게 한다
           const recommended = index === 0 && (coach ? ksicShown.length > 0 && !draft.ksic : recommendFirst && !ksicSearchable(ksicQuery.trim()));
-          return <button key={item.code} type="button" className={styles.ksicChip} data-recommended={recommended || undefined} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{recommended && <StatusBadge tone="info" className={styles.ksicBadge}>추천</StatusBadge>}{item.name}{ksicNameHint(item.code) && <small className={styles.ksicHint}> ({ksicNameHint(item.code)})</small>}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>;
+          return <button key={item.code} type="button" className={styles.ksicChip} data-recommended={recommended || undefined} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{recommended && <b className={styles.chipTag}>추천</b>}{item.name}{ksicNameHint(item.code) && <small className={styles.ksicHint}> ({ksicNameHint(item.code)})</small>}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>;
         })}</div>
         {recommendFirst && <AppButton variant="text" className={styles.textButton} type="button" disabled={disabled} aria-expanded="false" aria-controls="intake-industry-options" onClick={() => setManualIndustry(true)}><ListFilter size={16} aria-hidden="true" />목록에 없으면 직접 선택하기</AppButton>}
       </div>}
@@ -370,15 +370,15 @@ function HybridChips({ question, draft, disabled, groups, revealed, suggestions,
     const withAi = index === aiGroup && !!suggestions;
     // 추천 칩으로 보이는 보기를 골랐을 땐 접힌 채 둔다(같은 보기라 펼칠 이유가 없다)
     const folded = withAi && aiItems.length > 0 && !showAll && !group.options.some(option => draft.selected.includes(option.value) && !aiItems.includes(option.label));
-    const note = !suggestions ? "" : suggestions.pending ? "이 사업에 맞춘 추천을 고르고 있어요" : suggestions.source === "ai" ? "표시는 이 사업에 맞춘 추천이에요" : "표시는 비슷한 사업에서 많이 고르는 답이에요";
+    const note = !suggestions ? "" : suggestions.pending ? "이 사업에 맞춘 추천을 고르고 있어요" : suggestions.source === "ai" ? "이 사업에 맞춘 답을 앞에 두었어요" : "비슷한 사업에서 많이 고르는 답을 앞에 두었어요";
     return <div key={group.name ?? index} className={styles.chipStep} role="group" aria-label={title || question.label} data-step={groups.length > 1 ? index + 1 : undefined}>
       {/* '최대 N개 · 0/N' 세기는 질문 제목에 이미 있는 말을 또 보여 헷갈렸다(소유자 2026-11-04) — 한도는 칩이 비활성화되는 것으로 안다 */}
-      {(title || withAi) && <p className={styles.stepLegend}>{title}{withAi && <span className={styles.suggestionNote} role="status"><Sparkles size={12} aria-hidden="true" />{note}</span>}</p>}
+      {(title || withAi) && <p className={styles.stepLegend}>{title}{withAi && <span className={styles.suggestionNote} role="status">{!suggestions?.pending && <b className={styles.chipTag} aria-hidden="true">추천</b>}{note}</span>}</p>}
       <div className={styles.chipRow}>{withAi && suggestions?.pending && aiItems.length === 0 && [180, 140].map(width => <span key={`ai-wait-${width}`} className={styles.suggestionSkeleton} style={{ width }} aria-hidden="true" />)}{index === aiGroup && aiItems.map(item => {
         // 자체 추천은 보기 표의 글자 그대로라 '표에 없는 추가 글'이 아니다 — 같은 보기가 있으면 그 보기를 고른 것으로(접힌 칩과 한 몸)
         const option = group.options.find(candidate => candidate.label === item);
         const selected = option ? draft.selected.includes(option.value) : pieces.includes(item);
-        return <button key={`ai-${item}`} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} data-picked={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => option ? tap(option.value) : toggleSuggestion(item)}><span className={styles.suggestionLabel}><Sparkles size={13} aria-hidden="true" />{item}<span className={styles.srOnly}> (맞춤 추천)</span></span></button>;
+        return <button key={`ai-${item}`} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} data-picked={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => option ? tap(option.value) : toggleSuggestion(item)}><span className={styles.suggestionLabel}>{item}<span className={styles.srOnly}> (맞춤 추천)</span></span></button>;
       })}{folded ? <button type="button" className={styles.chip} disabled={disabled} aria-expanded={false} onClick={() => setShowAll(true)}>다른 선택지 보기<ChevronRight size={14} aria-hidden="true" /></button> : group.options.filter(option => !(index === aiGroup && aiItems.includes(option.label))).map(option => {
         const selected = draft.selected.includes(option.value);
         // 고른 칩은 입력창 글로 옮겨 가므로 줄에서 사라진다(data-picked, 코치 채팅 CSS). 필터 단계 칩은 다음 단계의 기준이라 남긴다

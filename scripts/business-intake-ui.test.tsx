@@ -528,7 +528,7 @@ async function main() {
   const recommendedQuestion = renderToStaticMarkup(<QuestionForm inChat question={original.nextQuestion!} snapshot={suggestedBusiness} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
   // 세부 업종 후보가 있으면 한 목록으로 — 큰 분류 카드('이 업종 선택')는 숨기고 첫 후보에 '추천'(여정 점검 2026-10-23: 두 추천이 서로 달랐다)
   for (const text of ["이 업종으로 정리할까요", "직접 선택하기"]) assert.ok(recommendedQuestion.includes(text), text);
-  assert.match(recommendedQuestion, /data-tone="info"[^>]*>(?:<span[^>]*>)?추천<\/span>/, "첫 후보의 '추천'은 공통 상태 배지(파랑)");
+  assert.match(recommendedQuestion, /class="chipTag">추천<\/b>/, "첫 후보의 '추천'은 파랑 알약 글자(NOL 식 선택지)");
   for (const text of ["입력하신 사업 내용을 보면", "이 업종 선택"]) assert.ok(!recommendedQuestion.includes(text), text);
   const cardOnly = renderToStaticMarkup(<QuestionForm inChat question={original.nextQuestion!} snapshot={{ ...suggestedBusiness, ksicCandidates: [] }} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
   for (const text of ["입력하신 사업 내용을 보면", "이 업종 선택", "직접 선택하기"]) assert.ok(cardOnly.includes(text), `후보가 없으면 큰 분류 카드: ${text}`);
