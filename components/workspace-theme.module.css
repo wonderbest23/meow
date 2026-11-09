@@ -72,6 +72,12 @@
   color-scheme: light;
   font-synthesis: none;
   accent-color: var(--app-primary);
+  /* 질문 선택지(NOL 식, 2026-11-09) — 차가운 연회색 판 · 파랑 강조 */
+  --app-choice-bg: #f5f6fa;
+  --app-choice-bg-hover: #eceef4;
+  --app-choice-accent: #4154ff;
+  --app-choice-accent-bg: #f0f2ff;
+  --app-on-choice: #ffffff;
 }
 /*
  * lovable 구조 5단계 — 로그인 뒤 화면 토큰을 lovable 캡처(docs/design/lovable-capture/*.css 의 :root / .dark, oklch)에서 그대로 옮겼다.
@@ -174,6 +180,11 @@
   --blue-dark: #a9c2fa;
   color: var(--app-text);
   color-scheme: dark;
+  --app-choice-bg: rgb(255 255 255 / .07);
+  --app-choice-bg-hover: rgb(255 255 255 / .12);
+  --app-choice-accent: #8d98ff;
+  --app-choice-accent-bg: rgb(65 84 255 / .2);
+  --app-on-choice: #10132a;
 }
 :global(html[data-app-theme="dark"]) .theme :is(input, textarea, select) { color-scheme: dark; }
 :global(html[data-app-theme]) .theme :is(main, aside, nav, article, section, div) { scrollbar-color: var(--app-scrollbar) transparent; }

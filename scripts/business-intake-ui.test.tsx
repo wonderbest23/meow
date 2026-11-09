@@ -528,7 +528,7 @@ async function main() {
   const recommendedQuestion = renderToStaticMarkup(<QuestionForm inChat question={original.nextQuestion!} snapshot={suggestedBusiness} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
   // 세부 업종 후보가 있으면 한 목록으로 — 큰 분류 카드('이 업종 선택')는 숨기고 첫 후보에 '추천'(여정 점검 2026-10-23: 두 추천이 서로 달랐다)
   for (const text of ["이 업종으로 정리할까요", "직접 선택하기"]) assert.ok(recommendedQuestion.includes(text), text);
-  assert.match(recommendedQuestion, /data-tone="info"[^>]*>(?:<span[^>]*>)?추천<\/span>/, "첫 후보의 '추천'은 공통 상태 배지(파랑)");
+  assert.match(recommendedQuestion, /class="chipTag">추천<\/b>/, "첫 후보의 '추천'은 파랑 알약 글자(NOL 식 선택지)");
   for (const text of ["입력하신 사업 내용을 보면", "이 업종 선택"]) assert.ok(!recommendedQuestion.includes(text), text);
   const cardOnly = renderToStaticMarkup(<QuestionForm inChat question={original.nextQuestion!} snapshot={{ ...suggestedBusiness, ksicCandidates: [] }} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
   for (const text of ["입력하신 사업 내용을 보면", "이 업종 선택", "직접 선택하기"]) assert.ok(cardOnly.includes(text), `후보가 없으면 큰 분류 카드: ${text}`);
@@ -823,8 +823,9 @@ async function main() {
   assert.match(source, /if \(!runShown\) return;\n\s*follow\.current = true;/);
   // 요약 단추: 작업실 안에서는 칸 단추 줄(actions)로 넘기지 않고 진행 막대와 한 줄(paneBar)에 둔다
   assert.match(source, /actions=\{embedded \? undefined : summaryToggle\}/);
-  // 기본 질문을 다 답하면 진행 막대는 빼고 요약 단추만(휴대폰 머리 높이 · r37)
-  assert.match(source, /<div className=\{styles\.paneBar\} data-done=\{plan\.coreComplete \|\| undefined\}>\{!plan\.coreComplete && <div className=\{styles\.paneProgress\} aria-hidden="true">/);
+  // 휴대폰 작업실은 44px 줄 대신 얇은 진행선만, 다 답하면 그것도 없다(소유자 2026-11-09) — 요약은 + 메뉴
+  assert.match(source, /: embedded \? !plan\.coreComplete \? <div className=\{styles\.progressLine\} aria-hidden="true">/);
+  assert.match(source, /label: view === "summary" \? "대화로 돌아가기" : "지금까지 답 보기"/);
   assert.match(css, /\.page\[data-embedded\] \.paneBar \{ display: flex;/);
   // 새 사업(주소에 planId 없음)을 작업실에서 시작해도 로그인 뒤 작업실로 돌아온다 · planId 는 지금 경로에 붙인다(tab 유지)
   assert.match(source, /embedded \? plan \? studioHref\(plan\.planId, "chat"\) : `\$\{STUDIO_PATH\}\?new=1`/);
