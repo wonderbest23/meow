@@ -823,8 +823,9 @@ async function main() {
   assert.match(source, /if \(!runShown\) return;\n\s*follow\.current = true;/);
   // 요약 단추: 작업실 안에서는 칸 단추 줄(actions)로 넘기지 않고 진행 막대와 한 줄(paneBar)에 둔다
   assert.match(source, /actions=\{embedded \? undefined : summaryToggle\}/);
-  // 기본 질문을 다 답하면 진행 막대는 빼고 요약 단추만(휴대폰 머리 높이 · r37)
-  assert.match(source, /<div className=\{styles\.paneBar\} data-done=\{plan\.coreComplete \|\| undefined\}>\{!plan\.coreComplete && <div className=\{styles\.paneProgress\} aria-hidden="true">/);
+  // 휴대폰 작업실은 44px 줄 대신 얇은 진행선만, 다 답하면 그것도 없다(소유자 2026-11-09) — 요약은 + 메뉴
+  assert.match(source, /: embedded \? !plan\.coreComplete \? <div className=\{styles\.progressLine\} aria-hidden="true">/);
+  assert.match(source, /label: view === "summary" \? "대화로 돌아가기" : "지금까지 답 보기"/);
   assert.match(css, /\.page\[data-embedded\] \.paneBar \{ display: flex;/);
   // 새 사업(주소에 planId 없음)을 작업실에서 시작해도 로그인 뒤 작업실로 돌아온다 · planId 는 지금 경로에 붙인다(tab 유지)
   assert.match(source, /embedded \? plan \? studioHref\(plan\.planId, "chat"\) : `\$\{STUDIO_PATH\}\?new=1`/);

@@ -1288,3 +1288,6 @@ button.workLogRow { min-height: 32px; }
 .chipTag { display: inline-flex; flex: none; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--app-choice-accent); color: var(--app-on-choice); font-size: .6875rem; font-weight: 700; line-height: 1; letter-spacing: 0; }
 .suggestionNote .chipTag { height: 18px; padding: 0 6px; font-size: .625rem; }
 .page .suggestionNote { gap: 6px; color: var(--app-muted); font-weight: 400; }
+/* 휴대폰 작업실 진행선 — 머리 바로 아래 2px, 선택지와 같은 파랑 */
+.page[data-embedded] .progressLine { height: 2px; background: var(--app-fill); }
+.page[data-embedded] .progressLine > span { background: var(--app-choice-accent); }
