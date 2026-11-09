@@ -1276,13 +1276,13 @@ button.workLogRow { min-height: 32px; }
  * .page:is([data-embedded][data-studio-pro], *) — 위 작업실·코치 규칙과 같은 무게로 맞춰 어느 화면에서나 이 모양이 이기게 한다.
  */
 /* 흰 질문 카드가 없는 화면(휴대폰 대화)은 바탕이 회색이라 연회색 판이 묻힌다 — 흰 판으로 */
-.page .chatQuestion:not([data-question-card]) { --app-choice-bg: var(--app-surface); }
-.page:is([data-embedded][data-studio-pro], [data-coach], *) .chatQuestion :is(.chip, .ksicChip, .ksicChip[data-recommended], .unknownChoice, .presetChip, .sendPartial, .option) {
+.page :is(.chatQuestion:not([data-question-card]), .resultNames) { --app-choice-bg: var(--app-surface); }
+.page:is([data-embedded][data-studio-pro], [data-coach], *) :is(.chatQuestion, .resultNames) :is(.chip, .ksicChip, .ksicChip[data-recommended], .presetChip, .sendPartial, .option) {
   min-height: 40px; padding: 8px 16px; border: 0; border-radius: 12px; background: var(--app-choice-bg); box-shadow: none; color: var(--app-text);
 }
-.page:is([data-embedded][data-studio-pro], [data-coach], *) .chatQuestion :is(.chip, .ksicChip, .ksicChip[data-recommended], .unknownChoice, .presetChip, .sendPartial, .option):hover:not(:disabled) { background: var(--app-choice-bg-hover); color: var(--app-text); }
-.page:is([data-embedded][data-studio-pro], [data-coach], *) .chatQuestion :is(.chip, .ksicChip, .ksicChip[data-recommended], .unknownChoice, .option):is([aria-pressed="true"], [data-selected="true"]),
-.page:is([data-embedded][data-studio-pro], [data-coach], *) .chatQuestion :is(.chip, .ksicChip, .ksicChip[data-recommended], .unknownChoice, .option):is([aria-pressed="true"], [data-selected="true"]):hover:not(:disabled) { background: var(--app-choice-accent-bg); box-shadow: inset 0 0 0 1.5px var(--app-choice-accent); color: var(--app-choice-accent); font-weight: 600; }
+.page:is([data-embedded][data-studio-pro], [data-coach], *) :is(.chatQuestion, .resultNames) :is(.chip, .ksicChip, .ksicChip[data-recommended], .presetChip, .sendPartial, .option):hover:not(:disabled) { background: var(--app-choice-bg-hover); color: var(--app-text); }
+.page:is([data-embedded][data-studio-pro], [data-coach], *) .chatQuestion :is(.chip, .ksicChip, .ksicChip[data-recommended], .option):is([aria-pressed="true"], [data-selected="true"]),
+.page:is([data-embedded][data-studio-pro], [data-coach], *) .chatQuestion :is(.chip, .ksicChip, .ksicChip[data-recommended], .option):is([aria-pressed="true"], [data-selected="true"]):hover:not(:disabled) { background: var(--app-choice-accent-bg); box-shadow: inset 0 0 0 1.5px var(--app-choice-accent); color: var(--app-choice-accent); }
 .page:is([data-embedded][data-studio-pro], [data-coach], *) .chatQuestion .chip.chipStrong { background: var(--app-choice-accent); box-shadow: none; color: var(--app-on-choice); }
 .page .chatQuestion .ksicChip strong { display: inline-flex; align-items: center; gap: 6px; }
 .chipTag { display: inline-flex; flex: none; align-items: center; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--app-choice-accent); color: var(--app-on-choice); font-size: .6875rem; font-weight: 700; line-height: 1; letter-spacing: 0; }
