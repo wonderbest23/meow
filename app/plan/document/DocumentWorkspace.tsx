@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Download, MessageSquare, PenLine } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Download, MessageSquare, PenLine } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import InlineDocEditor, { withBodyHeadingLevels } from "../InlineDocEditor";
 import PlanLoading from "../PlanLoading";
@@ -400,16 +400,12 @@ export default function DocumentWorkspace(props: Props) {
     }}>수정 마치기</AppButton>
     {/* 반영 단추는 여기 하나뿐 — 노란 카드에도 있어 두 번 보였다(대표 결정 r39). 바로 다시 쓸까요? 확인창을 연다 */}
     {factsUnapplied && facts.snapshot && <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" size={size} className={styles.primary} onConfirm={() => void reflectFacts()} />}
-  </> : isSample ? <>
-    {/* 예시 계획서 — 예전엔 누를 수 없는 회색 '예시 · 읽기 전용'만 있어 고장 난 것처럼 보였고 다음으로 갈 길이 없었다. 예시라는 표시는 문서 제목 위에 있다 */}
-    {/* 다른 화면으로 가는 단추라 끝에 › — PC 작업실은 늘 보이는 대화 칸에 같은 단추가 있어 여기서는 뺀다(PC 점검 2026-10-24) */}
-    {!studioPc && <AppButton variant="primary" size={size} className={styles.nextButton} href="/plan/chat?new=1">내 사업 시작하기<ChevronRight size={20} aria-hidden="true" /></AppButton>}
-  </> : <>
+  </> : isSample ? null /* 예시에는 단추 없음 — 내 사업 시작은 대화 칸·첫 화면에 있어 여기서는 헷갈리기만 했다(2026-11-10 사장님) */ : <>
     {/* 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다 · 내려받기는 문서 위 '작성 완료' 옆으로 옮겼다(대표 요청 2026-10-17) */}
     {editButton(size)}
     {showNext && planId && <NextStepButton planId={planId} homepage={homepage} size={size} />}
   </>;
-  const hasActions = factMode || (isSample ? !studioPc : !summaryMode || Boolean(showNext && planId));
+  const hasActions = factMode || (!isSample && (!summaryMode || Boolean(showNext && planId)));
   const singleAction = !factMode && !(!summaryMode && showNext && planId);
   /*
    * 작업실 안(머리줄이 있는 작업실) — '다음 단계'와 '내려받기'는 작업실 머리줄 오른쪽으로 올린다(넓은 화면).
@@ -553,7 +549,7 @@ export default function DocumentWorkspace(props: Props) {
           </div>}
           {/* 고치는 중이면 휴대폰도 이 줄(위에 붙어 있다)에 '수정 마치기 · 계획서에 반영하기' — 아래 단추 줄은 문서 끝에 있어 보이지 않았다(대표 결정 r39) */}
           {!studioPc && <div className={styles.readingBar} data-fact-mode={factMode || undefined}>
-            <button className={styles.tocToggle} onClick={() => setModal("toc")} disabled={!grouped.length}><List size={19} aria-hidden="true" /><span className={styles.tocLabel}>목차</span></button>
+            <button className={styles.tocToggle} onClick={() => setModal("toc")} disabled={!grouped.length}><List size={19} aria-hidden="true" /><span className={styles.tocLabel}>{!summaryMode && !continuous && grouped[chapter] ? `${chapter + 1}장 ${grouped[chapter][0]}` : "목차"}</span><ChevronDown size={16} aria-hidden="true" /></button>
             {props.summary && <div className={styles.viewSelector} role="group" aria-label="문서 보기 방식">
               <button aria-pressed={!summaryMode} onClick={() => { setSummaryMode(false); scroller()?.scrollTo({ top: 0 }); }}>상세 계획서</button>
               <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroller()?.scrollTo({ top: 0 }); }}>한 장 요약</button>
