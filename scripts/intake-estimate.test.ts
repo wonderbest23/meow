@@ -63,6 +63,10 @@ async function main() {
   assert.match(ruled("입주 청소 서비스를 시작하려고 해요").answers.offer, /입주·이사 청소/);
   assert.equal(ruled("굿즈 스마트스토어를 운영하려고 해요").ksic, null);
   assert.doesNotMatch(ruled("라이프 스타일 편집숍").answers.offer, /타일 작업/);
+  // 떨어진 낱말도 잇고(매트리스 … 청소), 낱말 경계를 한 글자만 걸친 것(찜닭 가게의 닭가게)은 버리고, 손님 업종 낱말은 종류로 읽지 않는다
+  assert.deepEqual(["매트리스 소파 방문 청소", "찜닭 가게", "손두부 제조"].map((text) => ruleKind(text)?.word), ["매트리스청소", "찜닭", "두부제조"]);
+  assert.equal(ruled("식당 사장님들에게 식자재 납품").ksic, "46329");
+  assert.equal(ruled("학원 전용 출결 관리 앱").sector, "software");
 
   // 문장 읽기: 사용자가 이미 적은 고객·가격·자금·시간·목표·양·인원은 짐작하지 않고 그대로 읽는다
   const { readSentence } = await import("../lib/plan-builder/intake-sentence");

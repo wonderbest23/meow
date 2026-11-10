@@ -30,6 +30,13 @@ export const SECTOR_BASELINES: Record<ProposalSector, Baseline> = {
   general: { price: 30_000, unitCost: 3_000, cost: 1_000_000, capacity: "일주일 10건" },
 };
 
+/** 사업 종류가 아닌 낱말 — 손님 업종('식당 사장님들에게', '카페에', '미용실 전용', '농가 대상')과 파는 곳('인스타로', '스마트스토어로'). 종류를 찾을 때만 뺀다 */
+const KIND_NOISE = /[가-힣a-z]+(?:\s*사장님들?)?(?:에게|한테)\s|[가-힣a-z]+\s*(?:전용|대상|납품용)\s|[가-힣a-z]+(?:(?<![미이사비고채활응])용|에)\s|(?:인스타(?:그램)?|유튜브|블로그|스마트스토어|라이브커머스|쿠팡|온라인|트럭)(?:으로|로|에서)\s/gi;
+
+/** 파는 곳만 가리키는 낱말 — 사전이 이미 종류를 찾았으면 이 낱말로 뒤집지 않는다(굿즈 스마트스토어 → 굿즈) */
+const CHANNEL_WORD = /^(?:스마트스토어|오픈마켓|온라인쇼핑몰|쇼핑몰|쿠팡|라이브커머스)/;
+const TOOL_TAIL = /(?:앱|어플|소프트웨어|솔루션|플랫폼|saas|관리\s*(?:프로그램|시스템))(?:\s*(?:개발|제작|서비스|창업|스타트업))?$/i;
+
 /** 낱말 규칙(kind-rules.ruleKind)의 모양. 표가 커서 서버 쪽 호출자가 넘겨준다 — 여기서 import 하면 화면 묶음에 딸려 들어간다 */
 export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: string) => boolean) => (BusinessKind & { ksic: string; word: string }) | null;
 
@@ -38,13 +45,18 @@ export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: str
  * chosen·chosenKsic 은 사용자가 이미 고른 업종·분류다(짐작이 그것을 뒤집지 않는다). ksic 은 낱말 규칙으로 찾았을 때만 온다.
  */
 export function estimateIntake(text: string, chosen?: ProposalSector, rules?: KindRules, chosenKsic?: string | null): { sector: ProposalSector; ksic: string | null; answers: Record<string, string> } {
-  const ranked = rankedSectors(text);
+  // 흔한 표기 차이는 사전 표기로 맞춘 뒤 찾는다
+  const spelled = text.replace(/까페/g, "카페").replace(/찌게/g, "찌개");
+  // 문장이 앱·프로그램으로 끝나면 파는 것은 소프트웨어다 — 이때는 손님 업종 낱말('학원 전용')이 종류를 정하는 단서라 빼지 않는다
+  const tool = !chosen && TOOL_TAIL.test(spelled.trim());
+  const said = tool ? spelled : spelled.replace(KIND_NOISE, " ");
+  const ranked = tool ? ["software" as const] : rankedSectors(said);
   // 세부 업종을 찾으면 그 줄의 답과 숫자를 쓴다: 손으로 쓴 사전(치킨집·꽃집) → 낱말 규칙(수만 개) → 못 찾으면 업종 한 줄 기준값과 칩에서 고른 답
-  const hand = businessKind(text, chosen ?? ranked[0]);
-  const found = rules?.(text, (sector, ksic) => chosenKsic ? ksic === chosenKsic : !chosen || sector === chosen) ?? null;
-  // 사전에도 있지만 낱말 규칙이 그 낱말을 품은 더 긴 낱말로 맞았으면(청소 → 입주청소, 학원 → 운전면허학원) 더 구체적인 규칙 줄을 쓴다
+  const hand = businessKind(said, chosen ?? ranked[0]);
+  const found = rules?.(said, (sector, ksic) => chosenKsic ? ksic === chosenKsic : tool ? sector === "software" : !chosen || sector === chosen) ?? null;
+  // 사전에도 있지만 낱말 규칙이 그보다 짧지 않은 낱말로 맞았으면(청소 → 입주청소, 식당 → 식자재납품) 더 구체적인 규칙 줄을 쓴다. 사업자용 앱·프로그램은 예외다(카페용 앱은 카페가 아니다)
   const handWord = hand?.word.toLowerCase().replace(/\s/g, "") ?? "";
-  const rule = !hand || (found && found.sector === hand.sector && found.word.length > handWord.length && found.word.includes(handWord)) ? found : null;
+  const rule = !hand || (found && found.word.length >= handWord.length && !CHANNEL_WORD.test(found.word) && (hand.sector !== "software" || found.sector === "software")) ? found : null;
   const kind = rule ?? hand, sector = rule?.sector ?? chosen ?? ranked[0];
   const base = kind ?? SECTOR_BASELINES[sector];
   const read = readSentence(text);
