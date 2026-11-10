@@ -1082,7 +1082,8 @@ export function HomepageScreen() {
       )}
       {!studioPro && phase === "ready" && draft && !editable && (
         <div className={styles.previewWrap}>
-          <div className={styles.payBar}>
+          {/* 작업실 휴대폰에서는 결제 막대를 그리지 않는다 — 머리의 [공개하기] 하나가 같은 결제 안내를 열고, 개업 준비는 페이지 알약에 있다(같은 단추가 두 번 보였다, 2026-11-10) */}
+          {!embedded && <div className={styles.payBar}>
             {/* 홈페이지만 결제할 때는 제목 없이 단추 하나 — 문구는 맨 위 줄 단추·공개 확인창과 같은 '결제하고 공개하기 · 금액'(대표 결정 r39) */}
             {(sample || !planPaid) && <div>
               <strong className={styles.payTitle}>{sample ? "예시 홈페이지" : `사업계획서 + 홈페이지 · ${price.toLocaleString("ko-KR")}원`}</strong>
@@ -1101,7 +1102,7 @@ export function HomepageScreen() {
                 {journeyLabel("launch", !!screenPlan && readCoach(screenPlan.answers)?.stage === "operating")} 먼저<ChevronRight size={16} aria-hidden="true" />
               </AppButton>}
             </div>
-          </div>
+          </div>}
           {/*
             전체 화면은 문서 화면과 같은 방식 — 미리보기 위에 떠 있는 버튼 하나.
             안내 줄에 나란히 두면 '수정하러 가기'와 무게가 같아 보여, 정작 눌러야

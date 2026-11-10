@@ -562,8 +562,9 @@ export function DocumentLockedTurn({ planId, chatEdit, onChatEdit, pro = false }
     {/* 다 만든 뒤 할 일은 '계획서 보기'가 먼저다 — 예전엔 세 단추가 같은 무게라 무엇을 누를지 몰랐다(여정 점검 2026-10-22) */}
     <div className={styles.chipRow}>
       <Link className={`${styles.chip} ${styles.chipStrong}`} href={`/plan/document?planId=${id}`}>계획서 보기<ChevronRight size={16} aria-hidden="true" /></Link>
-      {chatEdit && (onChatEdit ? <button type="button" className={styles.chip} onClick={onChatEdit}>대화로 고치기</button> : <Link className={styles.chip} href={`/plan/chat?planId=${id}&edit=chat`}>대화로 고치기<ChevronRight size={16} aria-hidden="true" /></Link>)}
-      <Link className={styles.chip} href={`/plan/document?planId=${id}&edit=facts`}>직접 고치기<ChevronRight size={16} aria-hidden="true" /></Link>
+      {/* 작업실(onChatEdit)은 '계획서 보기' 하나 — 고치기는 바로 아래 늘 열린 입력창, 손으로 고치기는 계획서 페이지 메뉴(2026-11-10). 예전 화면만 두 길을 칩으로 */}
+      {!onChatEdit && chatEdit && <Link className={styles.chip} href={`/plan/chat?planId=${id}&edit=chat`}>대화로 고치기<ChevronRight size={16} aria-hidden="true" /></Link>}
+      {!onChatEdit && <Link className={styles.chip} href={`/plan/document?planId=${id}&edit=facts`}>직접 고치기<ChevronRight size={16} aria-hidden="true" /></Link>}
     </div>
   </section>;
 }
@@ -573,14 +574,13 @@ export function DocumentLockedTurn({ planId, chatEdit, onChatEdit, pro = false }
  * '계획서 보기'는 오른쪽(휴대폰은 계획서 탭)을 보여 주고, '홈페이지 만들기'는 홈페이지 탭으로 간다.
  */
 const FINISHED_TEXT = "사업계획서를 다 만들었어요. 계획서를 확인해 보시고, 이 내용으로 홈페이지도 바로 만들 수 있어요.";
-export function GenerationFinishedTurn({ planId, onPlan, onHomepage, pro = false }: { planId: string; onPlan: () => void; onHomepage: () => void; pro?: boolean }) {
+export function GenerationFinishedTurn({ onPlan, onHomepage, pro = false }: { onPlan: () => void; onHomepage: () => void; pro?: boolean }) {
   return <section className={styles.lockedTurn} aria-label="사업계획서 작성 완료" data-generation-finished>
     <div className={styles.assistantMessage}><p>{FINISHED_TEXT}</p></div>
     <MessageMeta text={FINISHED_TEXT} />
     <div className={styles.chipRow}>
       <button type="button" className={`${styles.chip} ${styles.chipStrong}`} onClick={onPlan}>계획서 보기</button>
       <button type="button" className={styles.chip} onClick={onHomepage}>홈페이지 만들기</button>
-      <Link className={styles.chip} href={`/plan/document?planId=${encodeURIComponent(planId)}&edit=facts`}>직접 고치기<ChevronRight size={16} aria-hidden="true" /></Link>
     </div>
   </section>;
 }

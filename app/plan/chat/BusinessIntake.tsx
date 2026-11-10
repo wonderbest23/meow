@@ -1244,7 +1244,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     return () => cancelAnimationFrame(frame);
   }, [runShown, scrollToCurrent]);
   const studioTurn = studioRun ?? (embedded && plan && justFinished
-    ? <GenerationFinishedTurn planId={plan.planId} onPlan={() => showPlan(plan.planId)} onHomepage={() => navigate(homepageHref(plan.planId))} /> : null);
+    ? <GenerationFinishedTurn onPlan={() => showPlan(plan.planId)} onHomepage={() => navigate(homepageHref(plan.planId))} /> : null);
 
   /*
    * ── 작업실 3단계: 대화로 고치기 · 계획서를 쓰는 동안 보낸 요청 ──────────

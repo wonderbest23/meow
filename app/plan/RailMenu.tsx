@@ -16,7 +16,7 @@ import { newChatHref } from "../../lib/plan-builder/studio";
 /*
  * 왼쪽 메뉴 하나(시안 Main.dc.html — lovable 배치) — 대화·내 사업 화면(BusinessAppChrome)과 예전 문서 화면(PlanShell)이 같이 쓴다.
  * 256px(안쪽 8) · 로고 줄 32 → 계정 단추 240×32 → 메뉴 칸 240×32 r8 14px 아이콘 20(새 대화 · 검색 · 내 사업 · 손님 문의)
- * → '내 사업' 묶음(사업 → 목차) · '최근 대화' 묶음 → 맨 아래 고객센터 카드 + 아바타(알림 점) · 받은 알림.
+ * → '내 사업' 묶음(사업 → 목차) → 맨 아래 고객센터 카드 + 아바타(알림 점) · 받은 알림.
  * 예전 아래쪽 줄(약관·정책 · 고객센터 · 내 계정)은 프로필 메뉴(아바타·계정 단추)로 모았다 — 주소는 예전 그대로.
  */
 export type RailActive = "new" | "chat" | "plans" | "info" | "support" | "me" | "inquiries";
@@ -97,7 +97,7 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
         </Link>
       )}
     </div>
-    {/* 내 사업 묶음(사업 → 그 사업의 목차) · 최근 대화 묶음 */}
+    {/* 내 사업 묶음(사업 → 그 사업의 목차) */}
     <BusinessRailTree documentToc={documentToc} onPlanCount={setPlanCount} grouped />
     {/* 예전 문서 화면이면 그 목차가 여기 붙는다 */}
     {children}

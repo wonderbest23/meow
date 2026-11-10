@@ -37,14 +37,6 @@
 .circle.send:disabled { display:none; }
 /* 누르는 자리는 손가락이면 44px */
 @media (pointer:coarse) { .circle { position:relative; } .circle::before { content:""; position:absolute; inset:-6px; } }
-.mode { position:relative; }
-.modePill { display:inline-flex; align-items:center; gap:2px; height:32px; padding:6px 10px; border-radius:999px; color:var(--app-text); font-size:.875rem; font-weight:400; line-height:21px; list-style:none; cursor:pointer; white-space:nowrap; }
-.modePill svg { width:16px; height:16px; margin-left:2px; }
-.modePill::-webkit-details-marker { display:none; }
-.modePill:hover, .mode[open] .modePill { background:var(--app-fill); }
-.modeMenu { position:absolute; right:0; bottom:40px; z-index:5; display:grid; width:220px; padding:4px; border-radius:12px; background:var(--app-surface); box-shadow:var(--app-menu-shadow); }
-.modeMenu a { display:flex; align-items:center; min-height:32px; padding:4px 8px; border-radius:8px; color:var(--app-text); font-size:.875rem; line-height:21px; text-decoration:none; }
-.modeMenu a:hover { background:var(--app-fill); }
 
 /* 목록 카드 — 좌우 48, r24, 위 24(안쪽 줄이 좌우 24를 가진다), 판 색 */
 .listCard { position:relative; margin:0 48px; padding:24px 0 32px; border-radius:24px; background:var(--app-panel); }
@@ -124,7 +116,6 @@
   .composerBar { gap:8px; height:36px; padding:0; }
   .circle { width:36px; height:36px; }
   .circle svg { width:18px; height:18px; }
-  .modePill { height:36px; padding:8px 12px; font-size:.875rem; }
   .listCard { margin:0 16px 24px; padding:16px 0; }
   .listHead { margin:0 16px 16px; }
   .filterRow { flex-wrap:wrap; padding:0 16px 16px; }
@@ -141,7 +132,6 @@
   .recent > a:hover { background:var(--app-fill); }
   .recent > a > span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .recent > a > time, .recent > a > svg { flex:none; color:var(--app-muted); font-size:.8125rem; }
-  .recentAll.recentAll { justify-content:center; min-height:40px; color:var(--app-muted); font-size:.875rem; }
 
   /*
    * '내 사업' 목록(?view=all) — lovable Projects 탭(dashboard-mobile-*): 제목 30/600/45(16,16) · 오른쪽 44 원 검색 단추,

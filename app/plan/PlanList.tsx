@@ -3,13 +3,13 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, ChevronRight, ArrowUp, ChevronDown, Mic, Lightbulb, MoreHorizontal, Plus, Search } from "lucide-react";
+import { ArrowRight, ChevronRight, ArrowUp, Mic, Lightbulb, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, readAuthFlag, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
 import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
 import { navigateWithTransition } from "../../lib/client/view-transition";
-import { ENTRY_MODES, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref, type EntryMode } from "../../lib/plan-builder/studio";
+import { newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
@@ -39,8 +39,6 @@ import { PLAN_VIEW_ALL } from "./MobileTabBar";
  */
 type Filter = "search" | "mine" | "recent" | "samples";
 const FILTERS: Array<[Filter, string]> = [["search", "검색"], ["mine", "내 사업"], ["recent", "최근 본 항목"], ["samples", "예시"]];
-/* 입력칸 '사업계획서 ▾' — 새 대화의 첫 선택지(아이디어 찾기 · 생각한 사업 · 운영 중)를 골라 바로 시작한다(첫 화면 '어떤 사업이든' 카드와 같은 길) */
-const ENTRY_LABELS: Record<EntryMode, string> = { exploring: "아이디어부터 찾을래요", startup: "생각한 사업이 있어요", operating: "사업을 운영 중이에요" };
 const EXAMPLE_IDEA = "성수동에 작은 쿠키 공방을 열고 싶어요";
 
 /** 수정됨 n일 전 — 30일이 넘으면 날짜 */
@@ -195,10 +193,9 @@ export default function PlanList() {
         {/* 인사말에 이름을 붙이지 않는다 — 계정에 이름이 없어 이메일 앞부분(rena35200+review님)이 그대로 보였다(운영 점검 2026-11-02). 동그라미 머리글자는 그대로 */}
         <h1 id="plan-home-greeting" className={home.greeting}>오늘은 어떤 사업을 시작해볼까요?</h1>
         <Composer />
-        {/* 휴대폰만 — 진행 중인 사업이 있으면 입력칸 아래에 최근 3개를 작게(바로 이어가게, 2026-11-04 사장님). PC는 아래 목록 카드가 보인다 */}
+        {/* 휴대폰만 — 진행 중인 사업이 있으면 입력칸 아래에 최근 3개를 작게(바로 이어가게, 2026-11-04 사장님). 전체 목록은 아래 탭 '내 사업' 하나. PC는 아래 목록 카드가 보인다 */}
         {recent.length > 0 && <nav className={home.recent} aria-label="최근 사업">
           {recent.slice(0, 3).map(p => <Link key={p.id} href={openHref(p)} aria-label={`${planDisplayName(p)} 열기`}><span>{planDisplayName(p)}</span><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><ChevronRight size={16} aria-hidden="true" /></Link>)}
-          {plans.length > 3 && <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={home.recentAll}>전체 보기<ArrowRight size={14} aria-hidden="true" /></Link>}
         </nav>}
       </section>}
       <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">
@@ -275,12 +272,6 @@ function Composer() {
     <div className={home.composerBar}>
       <button type="button" className={home.circle} aria-label="예시 문장 넣기" title="예시 문장 넣기" onClick={() => { setText(EXAMPLE_IDEA); field.current?.focus(); }}><Lightbulb size={18} aria-hidden="true" /></button>
       <span className={home.spacer} />
-      <details className={home.mode} onKeyDown={event => { const menu = event.currentTarget; if (event.key === "Escape" && menu.open) { event.preventDefault(); menu.open = false; menu.querySelector("summary")?.focus(); } }}>
-        <summary className={home.modePill} aria-label="시작 방식 고르기 — 지금: 사업계획서">사업계획서<ChevronDown size={14} aria-hidden="true" /></summary>
-        <div className={home.modeMenu}>
-          {ENTRY_MODES.map(mode => <Link key={mode} href={newChatEntryHref(mode)}>{ENTRY_LABELS[mode]}</Link>)}
-        </div>
-      </details>
       {canListen && <button type="button" className={home.circle} aria-label={listening ? "받아쓰기 멈추기" : "말로 입력하기"} aria-pressed={listening} onClick={listen}><Mic size={18} aria-hidden="true" /></button>}
       <button type="submit" className={`${home.circle} ${home.send}`} aria-label="보내기 — 새 대화 시작" disabled={!idea}><ArrowUp size={16} aria-hidden="true" /></button>
     </div>

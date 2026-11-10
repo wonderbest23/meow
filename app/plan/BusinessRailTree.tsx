@@ -9,9 +9,7 @@ import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscrib
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
 import { isStudioTab, stepForStudioTab, studioHref, studioTabForStep, STUDIO_PATH, STUDIO_REDIRECT } from "../../lib/plan-builder/studio";
-import { businessChatHref, shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
-import { readCoach } from "../../lib/plan-builder/coach";
-import { readCoachJob } from "../../lib/plan-builder/coach-job-types";
+import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
 import { planDisplayName } from "../../lib/plan-builder/business-name";
 import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
@@ -175,8 +173,8 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
   /** 사업이 몇 개인지 확인되면 알려 준다(못 불러왔으면 부르지 않는다) — 사업이 없으면 메뉴가 '내 문의'를 막는다 */
   onPlanCount?: (count: number) => void;
   /**
-   * 왼쪽 메뉴(lovable 배치) — '내 사업'은 위 메뉴 칸이 맡고, 여기서는 묶음 제목(내 사업 ⌄) 아래 사업 목록(20px 글자 아바타 + 이름)
-   * · '모든 사업 보기' · '최근 대화' 묶음을 그린다. 사업을 누르면 그 사업의 목차가 펼쳐지는 것은 같다.
+   * 왼쪽 메뉴(lovable 배치) — '내 사업'은 위 메뉴 칸이 맡고, 여기서는 묶음 제목(내 사업 ⌄) 아래 사업 목록(20px 글자 아바타 + 이름)만
+   * 그린다(같은 목록이 '모든 사업 보기' · '최근 대화'로 세 번 보여 뺐다, 2026-11-10). 사업을 누르면 그 사업의 목차가 펼쳐지는 것은 같다.
    */
   grouped?: boolean;
 }) {
@@ -285,10 +283,6 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
   }
 
   if (grouped) {
-    const inStudio = pathname.startsWith(STUDIO_PATH);
-    const chatHref = (plan: Plan) => (inStudio || STUDIO_REDIRECT ? studioHref(plan.id, "chat") : businessChatHref(plan.id));
-    /* 최근 대화 — 대화가 있는 사업 다섯 개(최근 수정 순) */
-    const recent = plans.filter(plan => !!readCoach(plan.answers) || !!readCoachJob(plan.answers)).slice(0, 5);
     return <div className={`${styles.tree} ${styles.grouped}`}>
       <Suspense fallback={null}><UrlPlanWatcher onChange={setUrlPlanId} /></Suspense>
       <button type="button" className={styles.group} aria-expanded={listOpen} aria-controls="rail-plan-list" onClick={toggleList}>
@@ -309,12 +303,6 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
             {open && <PlanBranch plan={plan} here={isCurrent ? step : null} documentToc={documentToc} pathname={pathname} />}
           </div>;
         })}
-        <Link href="/plan?view=all" className={styles.more}>모든 사업 보기</Link>
-      </div>}
-      <p className={styles.groupTitle}>최근 대화</p>
-      {mounted && <div className={styles.recent}>
-        {recent.length ? recent.map(plan => <Link key={plan.id} href={chatHref(plan)} className={styles.recentRow} title={planDisplayName(plan)} onClick={() => setActivePlan(plan.id)}>{planDisplayName(plan)}</Link>)
-          : <span className={styles.more}>아직 대화가 없어요</span>}
       </div>}
     </div>;
   }

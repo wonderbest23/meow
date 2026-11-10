@@ -781,6 +781,8 @@ export default function Studio() {
     ...(rightTab === "plan" ? [
       { key: "toc", label: "목차", icon: <List />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-toc") },
       { key: "summary", label: "한 장 요약", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") },
+      /* 고치는 길은 대화 하나 — 손으로 고치기는 장마다 두지 않고 여기 한 곳(2026-11-10) */
+      { key: "edit", label: "직접 고치기", icon: <PenLine />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => runPlan("plan-edit") },
     ] : []),
     { key: "refresh", label: "새로고침", icon: <RotateCw />, disabled: !planId, onSelect: refreshView },
     ...(openHref ? [{ key: "open", label: "새 창에서 열기", icon: <ExternalLink />, href: openHref, external: true }] : []),

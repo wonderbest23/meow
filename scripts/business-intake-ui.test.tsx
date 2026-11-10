@@ -585,9 +585,10 @@ async function main() {
     assert.ok(!appliedHistory.includes("아래 &quot;계획서에 반영하기") && !appliedHistory.includes("아래 \"계획서에 반영하기"), "반영 단추는 아래에 있지 않다 — '아래'를 떼고 보인다(r37)");
     // 다 만든 뒤 고치는 길의 이름은 '대화로 고치기' · '직접 고치기' 둘뿐
     const lockedStudio = renderToStaticMarkup(<DocumentLockedTurn planId="p1" chatEdit onChatEdit={noop} />);
-    assert.ok(lockedStudio.includes("대화로 고치기</button>") && /직접 고치기<svg[^]*?<\/svg><\/a>/.test(lockedStudio) && lockedStudio.includes("사업계획서를 만들었어요.") && !lockedStudio.includes("아래 입력창"), "한 문장만(r37 글 점검)");
+    // 작업실은 '계획서 보기' 하나 — 고치기는 늘 열린 입력창, 손으로 고치기는 계획서 페이지 메뉴(2026-11-10)
+    assert.ok(lockedStudio.includes("계획서 보기") && !/대화로 고치기|직접 고치기/.test(lockedStudio) && lockedStudio.includes("사업계획서를 만들었어요.") && !lockedStudio.includes("아래 입력창"), "한 문장만(r37 글 점검)");
     const lockedOld = renderToStaticMarkup(<DocumentLockedTurn planId="p1" chatEdit />);
-    assert.ok(lockedOld.includes("edit=chat") && /대화로 고치기<svg[^]*?<\/svg><\/a>/.test(lockedOld));
+    assert.ok(lockedOld.includes("edit=chat") && /대화로 고치기<svg[^]*?<\/svg><\/a>/.test(lockedOld) && /직접 고치기<svg[^]*?<\/svg><\/a>/.test(lockedOld));
     for (const markup of [lockedStudio, lockedOld]) assert.ok(!/채팅으로 수정하기|문장에서 바로 고치기/.test(markup));
   }
   const undecided = previewIntakeAnswer(original, command({ questionId: "industry", value: null, unknown: true }))!;

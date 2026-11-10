@@ -387,8 +387,8 @@ export default function DocumentWorkspace(props: Props) {
   };
   const directEdit = () => { if (factEditable) { setSummaryMode(false); setFactMode(true); } else setEditing(true); };
   const directEditable = !(factEditable && props.writing);
-  /* PC 새 화면은 '직접 고치기'가 칸 위 얇은 줄에 하나만 있다 — 장 머리에는 '대화로 고치기'만 */
-  const directInChapter = directEditable && !studioPc;
+  /* 작업실은 장 머리에 '대화로 고치기'만 — '직접 고치기'는 PC 칸 위 얇은 줄 · ⋯ 메뉴, 휴대폰 페이지 알약 메뉴에 하나(plan-edit) */
+  const directInChapter = directEditable && !studioHeader;
   const chapterActions = (index: number, name: string) => !pane || isSample || !planId || factMode || editing || !(chatEdit || directInChapter) ? undefined : <>
     {chatEdit && <AppButton type="button" variant="text" size="small" className={`${styles.chapterAction} ${styles.chapterChatAction}`} aria-label={`${index + 1}장 ${name} — 대화로 고치기`} onClick={() => askChatEdit(index)}><MessageSquare size={14} aria-hidden="true" />대화로 고치기</AppButton>}
     {directInChapter && <AppButton type="button" variant="text" size="small" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 직접 고치기`} onClick={directEdit}><PenLine size={14} aria-hidden="true" />직접 고치기</AppButton>}
