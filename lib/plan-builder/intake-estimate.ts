@@ -1,5 +1,6 @@
 import { localFieldSuggestions, rankedSectors } from "./local-suggestions";
 import { SUGGESTION_FIELDS } from "./answer-suggestion-fields";
+import { businessKind } from "./business-kinds";
 import type { ProposalSector } from "./proposal-blueprint";
 
 /*
@@ -31,15 +32,19 @@ export const SECTOR_BASELINES: Record<ProposalSector, Baseline> = {
 export function estimateIntake(text: string, chosen?: ProposalSector): { sector: ProposalSector; answers: Record<string, string> } {
   const ranked = rankedSectors(text);
   const sector = chosen ?? ranked[0];
-  const sectors = [sector, ...ranked.filter(item => item !== sector)];
-  const base = SECTOR_BASELINES[sector];
+  // 세부 업종(치킨집·꽃집)을 찾으면 그 줄의 답과 숫자를, 못 찾으면 업종 한 줄 기준값과 칩에서 고른 답을 쓴다
+  const kind = businessKind(text, sector);
+  const base = kind ?? SECTOR_BASELINES[sector];
   const answers: Record<string, string> = {
     price: `${base.price}원`, "structure.unitCost": `${base.unitCost}원`, "structure.cost": `${base.cost}원`,
     capacity: `대표자 혼자 / ${base.capacity}`, goal: "6개월 안에 손익분기 도달",
   };
   for (const field of SUGGESTION_FIELDS) {
-    const guess = localFieldSuggestions(text, field, sectors, "startup")[0];
+    // 하나로 정해 넣는 답은 1순위 업종 칩에서만 고른다 — 2순위 업종 칩이 섞이면 예약 앱의 고객이 '단체 예약 손님'이 됐다
+    const guess = kind?.[field] || localFieldSuggestions(text, field, [sector], "startup")[0];
     if (guess) answers[field] = guess;
   }
+  // 가게·매장이라고 적었으면 온라인 장터가 아니라 매장에서 판다
+  if (/가게|매장|점포|오프라인/.test(text) && !/온라인|스토어|쇼핑몰/.test(text) && answers.channel?.includes("오픈마켓")) answers.channel = "매장 방문";
   return { sector, answers };
 }

@@ -1,5 +1,6 @@
 import { SECTOR_PATTERNS, type ProposalSector } from "./proposal-blueprint";
 import { descriptionSector } from "./intake-sector";
+import { businessKind } from "./business-kinds";
 import { sectorChipOptions, CHIP_GROUPS } from "./intake-options";
 import { SUGGESTION_FIELDS, type SuggestionField } from "./answer-suggestion-fields";
 import type { IntakeMode } from "./intake-questions";
@@ -14,10 +15,10 @@ import type { IntakeMode } from "./intake-questions";
 
 export const LOCAL_PER_FIELD = 3;
 
-/** 설명과 맞는 업종을 점수 순으로(1순위는 기존 규칙과 같다). 아무 규칙도 안 맞으면 ["general"] */
+/** 설명과 맞는 업종을 점수 순으로(1순위는 기존 규칙과 같다). 규칙이 못 찍으면 세부 업종 사전(치킨집·필라테스)으로 찍고, 그것도 없으면 ["general"] */
 export function rankedSectors(text: string): ProposalSector[] {
   const subject = text.toLowerCase();
-  const first = descriptionSector(text);
+  const ruled = descriptionSector(text), first = ruled === "general" ? businessKind(text)?.sector ?? ruled : ruled;
   const scored = SECTOR_PATTERNS
     .map(([sector, pattern]) => [sector, (subject.match(new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`)) ?? []).length] as const)
     .filter(([, hits]) => hits > 0)
