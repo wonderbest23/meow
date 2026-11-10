@@ -4,7 +4,7 @@ import { settleTransition } from "../../../lib/client/view-transition";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, MoreHorizontal, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, List, MoreHorizontal, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, X } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -777,12 +777,14 @@ export default function Studio() {
   const toolItems: PopMenuItem[] = [
     /* 휴대폰 홈페이지 — 칸 위 '저장 · 공개하기' 줄을 접었으니 저장은 여기서(공개하기는 아래 막대 파란 단추) */
     ...(!wide && rightTab === "homepage" && !locks.homepage ? [{ key: "save", label: "홈페이지 저장", icon: <Save />, onSelect: () => sendStudioCommand("homepage-save") }] : []),
-    { key: "download", label: "사업계획서 내려받기", icon: <Download />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 내려받을 수 있어요", onSelect: () => runPlan("plan-download") },
-    { key: "summary", label: "한 장 요약", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => runPlan("plan-summary") },
-    { key: "records", label: "실적과 개선 기록", icon: <ClipboardList />, disabled: !!locks.operations, title: locks.operations?.message, onSelect: () => pickPage("operations") },
+    /* 휴대폰 미리보기는 위 줄이 없다(lovable 실측 2026-11-10) — 목차 · 한 장 요약은 여기서. 내려받기(아래 파란 단추) · 실적 기록(위 '유지보수')은 겹쳐서 뺐다 */
+    ...(rightTab === "plan" ? [
+      { key: "toc", label: "목차", icon: <List />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-toc") },
+      { key: "summary", label: "한 장 요약", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") },
+    ] : []),
     { key: "refresh", label: "새로고침", icon: <RotateCw />, disabled: !planId, onSelect: refreshView },
     ...(openHref ? [{ key: "open", label: "새 창에서 열기", icon: <ExternalLink />, href: openHref, external: true }] : []),
-    { key: "share", label: "홈페이지 주소 나누기", icon: <Share2 />, disabled: !publicUrl, title: publicUrl ? undefined : shareTitle, onSelect: () => void share() },
+    ...(publicUrl ? [{ key: "share", label: "홈페이지 주소 나누기", icon: <Share2 />, onSelect: () => void share() }] : []),
   ];
 
   /*
@@ -845,12 +847,12 @@ export default function Studio() {
     </button>
   </header> : null;
 
-  /* 휴대폰 미리보기 아래 68px 막대(lovable 실측) — 왼쪽 ‹ 대화 알약 36 / 오른쪽 … 36 원(페이지 바꾸기 · 내려받기 · 요약 등) · 파랑 주 단추 36. 마이크는 대화 칸에만(2026-11-02 사장님) */
+  /* 휴대폰 미리보기 아래 68px 막대(lovable 실측) — 왼쪽 ‹ 대화 알약 36 / 오른쪽 … 36 원(페이지 바꾸기 · 도구) · 파랑 주 단추 36. 마이크는 대화 칸에만(2026-11-02 사장님) */
   const primary = PRIMARY[rightTab];
   const bottomBar = !wide && rightVisible && !missing ? <nav className={styles.bottomBar} aria-label="미리보기 도구">
     <button type="button" className={styles.backPill} onClick={() => selectTab("chat", { focus: "heading" })}><ChevronLeft aria-hidden="true" />대화{unread.includes("chat") && <i className={styles.dot} aria-hidden="true" />}</button>
     <span className={styles.grow} />
-    <PopMenu placement="above" align="end" buttonClassName={styles.round48} buttonLabel={`더 보기 — 페이지 바꾸기 · 내려받기 · 요약${anyUnread ? " (새 소식)" : ""}`} buttonTitle="더 보기" menuLabel="미리보기 메뉴"
+    <PopMenu placement="above" align="end" buttonClassName={styles.round48} buttonLabel={`더 보기 — 페이지 바꾸기 · 도구${anyUnread ? " (새 소식)" : ""}`} buttonTitle="더 보기" menuLabel="미리보기 메뉴"
       label={<><MoreHorizontal aria-hidden="true" />{RIGHT_TABS.some(id => unread.includes(id) && id !== rightTab) && <i className={styles.dot} aria-hidden="true" />}</>}
       groups={[
         { key: "pages", heading: "페이지", items: pageOptions.map(item => ({ key: item.id, label: item.label, current: item.id === rightTab, title: item.locked ?? undefined, ariaLabel: `${item.label}${item.done ? " (완료)" : ""}${item.locked ? ` (${item.locked})` : ""}${item.unread ? " (새 소식)" : ""}`, onSelect: () => pickPage(item.id) })) },

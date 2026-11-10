@@ -435,6 +435,8 @@
 @media (min-width:901px) { .page[data-embedded] .narrowOnly { display:none; } }
 /* 보기 바꾸기·장 번호 줄은 칸이 어떻게 스크롤되든 칸 맨 위에 붙어 있게 */
 .page[data-embedded] .readingBar { position:sticky; top:0; z-index:2; }
+/* 휴대폰 작업실: 읽는 동안은 위 줄 없이 문서만 — lovable 미리보기처럼 단추는 아래 막대에만(2026-11-10 사장님). 한 장 요약 · 고치는 중에는 돌아갈 단추가 있어야 해서 보인다 */
+.page[data-bar-hidden] .readingBar { display:none; }
 /*
  * PC 작업실의 오른쪽 칸이 좁을 때(화면 1024~1279px → 칸 약 560~860px) — 왼쪽 목차(190px)가 본문을 350px 남짓으로 눌러
  * 네 칸 표가 찌그러졌다. 이 폭에서는 목차를 '목차' 단추(창)로 접고 본문에 폭을 준다.
