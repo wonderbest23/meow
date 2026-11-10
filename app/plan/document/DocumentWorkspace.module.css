@@ -150,7 +150,7 @@
 .chapterHeading { border-bottom: 1px solid var(--app-line); padding-bottom: 22px; }
 .chapterHeading h2 { color: var(--app-text); }
 .body :global(.tiptap) { color: var(--app-body); }
-.body :global(.tiptap[contenteditable=false]) :is(p,li) > strong { color: var(--app-body); background: var(--app-raised); border-color: var(--app-line-strong); font-weight: 650; }
+.body :global(.tiptap[contenteditable=false]) :is(p,li) > strong { color: var(--app-accent); background: color-mix(in srgb, var(--app-accent) 8%, transparent); border-color: color-mix(in srgb, var(--app-accent) 45%, transparent); font-weight: 650; }
 .body :global(.tiptap[contenteditable=true]) { background: var(--app-raised); outline-color: var(--app-line-strong); }
 .body :global(.tiptap) figure { background: var(--app-surface); color: var(--app-text); }
 .actions { background: var(--app-surface); border-color: var(--app-line); }
