@@ -23,8 +23,8 @@ assert.equal(readJourneyGuide(null), null);
 const expected: Record<string, { tab: string | null; step?: string }> = {
   "design-ready": { tab: "plan" },
   "plan-complete": { tab: "homepage" },
-  "homepage-published": { tab: "launch" },
-  registration: { tab: "launch", step: "registration" },
+  "homepage-published": { tab: "operations" },
+  registration: { tab: "operations", step: "registration" },
   "launch-done": { tab: "operations" },
   "first-lead": { tab: null },
 };
@@ -90,7 +90,7 @@ assert.equal(new URL(journeyGuide("homepage-published", id).actions[0].href, ori
 
 /* guide 는 탭을 바꿀 때 지워지는 한 번용 값 */
 assert.ok((STUDIO_LINK_PARAMS as readonly string[]).includes(GUIDE_PARAM), "STUDIO_LINK_PARAMS 에 guide");
-assert.equal(new URL(studioSwitchUrl(journeyGuideHref("plan-complete", id), "launch"), origin).searchParams.get(GUIDE_PARAM), null, "탭을 그냥 누르면 지운다");
+assert.equal(new URL(studioSwitchUrl(journeyGuideHref("plan-complete", id), "operations"), origin).searchParams.get(GUIDE_PARAM), null, "탭을 그냥 누르면 지운다");
 assert.equal(new URL(studioSwitchUrl(`/plan/studio?planId=a&tab=chat`, "homepage", { params: { guide: "plan-complete" } }), origin).searchParams.get(GUIDE_PARAM), "plan-complete", "링크가 실어 오면 싣는다");
 
 /* 예전 화면 주소에 실은 guide 는 작업실로 보낼 때 그대로 따라간다 */

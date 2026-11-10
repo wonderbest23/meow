@@ -8,7 +8,7 @@ import { Check, ChevronDown, ChevronRight, FolderClosed } from "lucide-react";
 import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan, type PlanTitleNotice } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
-import { isStudioTab, stepForStudioTab, studioHref, studioTabForStep, STUDIO_PATH, STUDIO_REDIRECT } from "../../lib/plan-builder/studio";
+import { stepForStudioTab, studioHref, studioTabForStep, studioTabParam, STUDIO_PATH, STUDIO_REDIRECT } from "../../lib/plan-builder/studio";
 import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
 import { planDisplayName } from "../../lib/plan-builder/business-name";
 import { useHomepageStatus } from "./use-homepage";
@@ -27,7 +27,7 @@ type RailHere = JourneyStepId;
 /** 지금 화면이 어디인지(사업 관리 화면은 주소의 tab 으로) */
 function stepFor(pathname: string, tab: string | null): RailHere | null {
   /* 작업실은 주소의 tab 이 지금 칸(작업실이 탭을 바꿀 때 WORKSPACE_TAB_EVENT 를 보낸다) */
-  if (pathname.startsWith(STUDIO_PATH)) return isStudioTab(tab) ? stepForStudioTab(tab) : "chat";
+  if (pathname.startsWith(STUDIO_PATH)) return stepForStudioTab(studioTabParam(tab) ?? "chat");
   if (pathname.startsWith("/plan/chat")) return "chat";
   if (pathname.startsWith("/plan/document")) return "document";
   if (pathname.startsWith("/plan/homepage")) return "homepage";
@@ -53,8 +53,8 @@ function jump(id: string) {
 export const LOCKED_GUIDE: Record<Exclude<JourneyStepId, "chat">, { message: string; back: number; label: string }> = {
   document: { message: "사업 방향 정리를 마쳐야 사업계획서를 만들 수 있어요.", back: 0, label: "대화로 가기" },
   homepage: { message: "사업계획서를 완성해야 홈페이지를 만들 수 있어요.", back: 1, label: "사업계획서로 가기" },
-  /* 유지보수(홈페이지 고치기·문의·실적)는 홈페이지를 공개한 뒤부터 — 2026-11-02 사장님: 단계는 순서대로 */
-  care: { message: "홈페이지를 공개하면 유지보수를 쓸 수 있어요.", back: 2, label: "홈페이지로 가기" },
+  /* 유지보수는 대화를 마치면 열린다(공개 전에는 개업 준비 할 일만 · 2026-11-10) */
+  care: { message: "사업 방향 정리를 마쳐야 유지보수를 쓸 수 있어요.", back: 0, label: "대화로 가기" },
   /* 단계 이름은 journey-steps.ts 한 곳에서 — 운영 중인 사업은 lockedGuide 가 '운영 개선'으로 바꾼다 */
   launch: { message: `사업 방향 정리를 마쳐야 ${JOURNEY_LABELS.launch}를 쓸 수 있어요.`, back: 0, label: "대화로 가기" },
 };
@@ -74,7 +74,10 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
   const workspaceOpen = !shouldResumeBusinessChat(plan);
   /* 단계 목록은 journey.ts 한 곳에서 — '개업 준비'는 사업 관리 화면이 열릴 때만 보인다(번호는 보이는 순서대로) */
   const allSteps = useMemo(() => journeySteps(plan, homepage), [plan, homepage]);
-  const steps = useMemo(() => allSteps.filter(step => step.id !== "launch" || workspaceOpen), [allSteps, workspaceOpen]);
+  const inStudio = pathname.startsWith(STUDIO_PATH);
+  const toStudio = inStudio || STUDIO_REDIRECT;
+  /* 작업실에서는 개업 준비가 유지보수 안의 할 일이라 따로 두지 않는다(같은 곳으로 가는 줄이 둘이 된다 · 2026-11-10) */
+  const steps = useMemo(() => allSteps.filter(step => step.id !== "launch" || (workspaceOpen && !toStudio)), [allSteps, workspaceOpen, toStudio]);
   const [locked, setLocked] = useState<{ message: string; href: string; label: string } | null>(null);
   // 앱에서는 홈페이지 화면에 '내 도메인 연결' 칸이 없다(웹 전용 상품) — 목차에서도 뺀다
   const [inApp, setInApp] = useState(false);
@@ -84,8 +87,6 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
    * 작업실 안이면 단계 링크도 작업실 주소로 — 같은 사업이면 작업실이 이동 대신 탭을 바꾸고, 다른 사업이면 그 사업의 작업실로.
    * 작업실이 켜져 있으면(STUDIO_REDIRECT) 작업실 밖(내 사업 · 예전 화면)에서도 작업실로 바로 — 예전 화면을 거쳐 다시 보내지 않게
    */
-  const inStudio = pathname.startsWith(STUDIO_PATH);
-  const toStudio = inStudio || STUDIO_REDIRECT;
   const stepHref = (id: JourneyStepId, href: string) => (toStudio ? studioHref(plan.id, studioTabForStep(id)) : href);
   const lockDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (locked && lockDialog.current && !lockDialog.current.open) lockDialog.current.showModal(); }, [locked]);

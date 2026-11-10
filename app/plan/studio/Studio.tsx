@@ -20,12 +20,12 @@ import hub from "../BusinessHub.module.css";
 import styles from "./Studio.module.css";
 import { sendStudioCommand, StudioNavContext, StudioPaneContext, type StudioCommand, type StudioComposeRequest, type StudioEditHandler, type StudioEditPreviewChapters, type StudioEditTarget, type StudioNav, type StudioPane } from "./StudioContext";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan } from "../../../lib/plan-builder/plan-store";
-import { journeySteps, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type JourneyState, type JourneyStepId } from "../../../lib/plan-builder/journey";
+import { journeySteps, launchProgress, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type JourneyState, type JourneyStepId } from "../../../lib/plan-builder/journey";
 import { businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
 import { launchStatus, launchSteps, readLaunch } from "../../../lib/plan-builder/business-launch";
 import { readCoach } from "../../../lib/plan-builder/coach";
 import { businessDisplayName, draftBusinessTitle } from "../../../lib/plan-builder/business-name";
-import { isStudioTab, newChatHref, studioChatComplete, studioChips, studioLockedStep, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTarget, STUDIO_REDIRECT, STUDIO_TAB_LABELS, studioHref, type StudioChip, type StudioTab, type StudioTarget } from "../../../lib/plan-builder/studio";
+import { newChatHref, studioChatComplete, studioChips, studioLockedStep, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTabParam, studioTarget, STUDIO_REDIRECT, STUDIO_TAB_LABELS, studioHref, type StudioChip, type StudioTab, type StudioTarget } from "../../../lib/plan-builder/studio";
 import type { IntakeSnapshot } from "../../../lib/plan-builder/intake-types";
 import { trackFunnel } from "../../../lib/funnel/client";
 import { askConfirm, showCopyText, showNotice } from "../../../components/confirm-dialog";
@@ -65,14 +65,14 @@ type TabSource = "click" | "link" | "auto";
 type IntakeCount = { answered: number; total: number; complete: boolean; designRunning: boolean };
 
 /* 미리보기 판의 페이지 — 위 막대 페이지 선택(PC) · 머리의 페이지 이름 알약(휴대폰)이 고른다. 예전 네 칸 탭을 흡수했다 */
-const RIGHT_TABS: RightTab[] = ["plan", "homepage", "launch", "operations"];
-/* 휴대폰 미리보기 머리의 주 단추 — 보는 페이지마다 하나(계획서 내려받기 · 홈페이지 공개하기 · 개업 준비 다음 단계 · 유지보수 기록 추가) */
+const RIGHT_TABS: RightTab[] = ["plan", "homepage", "operations"];
+/* 휴대폰 미리보기 머리의 주 단추 — 보는 페이지마다 하나(계획서 내려받기 · 홈페이지 공개하기 · 유지보수 기록 추가). 공개 전 유지보수는 개업 준비 할 일이라 LAUNCH_PRIMARY */
 const PRIMARY: Record<RightTab, { label: string; command: StudioCommand }> = {
   plan: { label: "내려받기", command: "plan-download" },
   homepage: { label: "공개하기", command: "homepage-publish" },
-  launch: { label: "다음 단계", command: "launch-next" },
   operations: { label: "기록 추가", command: "operations-add" },
 };
+const LAUNCH_PRIMARY: { label: string; command: StudioCommand } = { label: "다음 단계", command: "launch-next" };
 const LEAVE_MESSAGE = "저장하지 않은 수정이 있어요. 이 화면을 나가면 고친 내용이 사라져요. 나갈까요?";
 /* 작성이 멈춘 상태(아직 안 쓴 장이 남았는데 작업이 끝남) — GenerationProgress 와 같은 기준 */
 const GENERATION_FAILED = ["errored", "terminated", "complete"];
@@ -83,7 +83,7 @@ const FRESH_LOCK: Lock = { message: "대화를 마치면 열려요", back: "chat
 /* 다른 창에서 같은 사업을 고쳤을 수 있다 — 이 창으로 돌아오면 보이는 칸을 다시 읽는다. 창을 자주 오가도 이 간격에 한 번만 */
 const WAKE_REFRESH_MS = 5_000;
 /* 칸 ↔ 그 칸이 저장 안 한 수정을 알리는 이름(useStudioDirty) — 고치는 중인 칸은 돌아와도 다시 읽지 않는다 */
-const PANE_DIRTY_ID: Record<RightTab, string> = { plan: "plan-document", homepage: "homepage", launch: "workspace-launch", operations: "workspace-operations" };
+const PANE_DIRTY_ID: Record<RightTab, string> = { plan: "plan-document", homepage: "homepage", operations: "workspace-operations" };
 
 /* 화면 폭 — CSS 의 1024px 기준과 같다(칸을 만들고 inert 를 거는 판단에 쓴다) */
 const WIDE_QUERY = "(min-width: 1024px)";
@@ -149,16 +149,17 @@ export default function Studio() {
   /* ── 탭 ─────────────────────────────────────────────── */
   /* 탭을 왜 바꿨는지(눌렀다 · 링크 · 칸이 요청) — 깔때기 이벤트(studio_tab_view)에 싣는다 */
   const tabSource = useRef<TabSource>("click");
-  const [tab, setTab] = useState<StudioTab>(() => (isStudioTab(urlTab) ? urlTab : "chat"));
+  const [tab, setTab] = useState<StudioTab>(() => studioTabParam(urlTab) ?? "chat");
   /* 주소의 탭이 바뀌면(뒤로 가기·다른 곳의 replaceState) 따라간다 — 탭이 빠진 주소는 지금 탭 그대로 */
   const seenUrlTab = useRef(urlTab);
   useEffect(() => {
     if (seenUrlTab.current === urlTab) return;
     seenUrlTab.current = urlTab;
-    if (isStudioTab(urlTab)) { tabSource.current = "link"; setTab(urlTab); }
+    const next = studioTabParam(urlTab);
+    if (next) { tabSource.current = "link"; setTab(next); }
   }, [urlTab]);
   /* PC 에서 주소 탭이 '대화'일 때 오른쪽에 보일 칸 — 마지막으로 연 오른쪽 탭(처음엔 사업계획서) */
-  const [lastRight, setLastRight] = useState<RightTab>(() => (isStudioTab(urlTab) && urlTab !== "chat" ? urlTab : "plan"));
+  const [lastRight, setLastRight] = useState<RightTab>(() => { const first = studioTabParam(urlTab); return first && first !== "chat" ? first : "plan"; });
   useEffect(() => { if (tab !== "chat") setLastRight(tab); }, [tab]);
   const rightTab: RightTab = tab === "chat" ? lastRight : tab;
   const wide = useSyncExternalStore(subscribeWide, readWide, serverWide);
@@ -742,7 +743,7 @@ export default function Studio() {
   const live = !missing && (!chatDone || designRunning || generationRunning);
   const pageOptions: PageOption[] = RIGHT_TABS.map(id => ({
     id,
-    label: id === "launch" && plan ? launchLabel(plan) : STUDIO_TAB_LABELS[id],
+    label: STUDIO_TAB_LABELS[id],
     done: tabDone(id),
     current: tabCurrent(id),
     locked: locks[id]?.message ?? null,
@@ -840,7 +841,9 @@ export default function Studio() {
    * 휴대폰 머리(시안 MChat) — 대화: ✕(44 원, 첫 화면으로) · 사업명 알약 44 ▾(사업 전환 · 이름 바꾸기) · ›(44 원, 미리보기로).
    * 미리보기도 같은 자리 · 같은 모양: ‹(44 원, 대화로) · 페이지 이름 알약 ▾(페이지 바꾸기 · 도구) · 주 단추. 돌아가기는 늘 왼쪽 위에 있고 아래 막대는 없다(2026-11-10 사장님)
    */
-  const primary = PRIMARY[rightTab];
+  /* 유지보수 칸 앞쪽이 개업 준비인 동안(공개 전 · 준비가 남음)은 주 단추도 개업 준비 다음 단계 — BusinessWorkspace 의 careOpen · launchFront 와 같은 조건 */
+  const launchFront = !isSamplePlan(planId) && (homepage !== "published" || (!!plan && launchProgress(plan) !== "done"));
+  const primary = rightTab === "operations" && launchFront ? LAUNCH_PRIMARY : PRIMARY[rightTab];
   const mobileHead = chatVisible ? <header className={styles.mHead}>
     <Link className={styles.round44} href="/plan" aria-label="첫 화면으로" title="첫 화면으로"><X aria-hidden="true" /></Link>
     <BizMenu planId={planId} title={businessTitle} canRename={!!plan && !isSamplePlan(planId) && !missing} onRenamed={setTitle} className={styles.namePill} align="center"
@@ -906,11 +909,6 @@ export default function Studio() {
 
 function sampleTitle(planId: string, title: string): string {
   return isSamplePlan(planId) ? title.replace(/^샘플(\s*·\s*)/, "예시$1") : title;
-}
-
-/* 운영 중인 사업은 4단계 이름이 '운영 개선'(journeySteps 와 같은 이름) */
-function launchLabel(plan: Plan): string {
-  return journeySteps(plan, null).find(step => step.id === "launch")?.label ?? STUDIO_TAB_LABELS.launch;
 }
 
 /** 칸 하나 — 칸 제목(낭독기용, 탭을 바꾸면 초점이 온다)과 이 칸의 작업실 정보(useStudioPane) */

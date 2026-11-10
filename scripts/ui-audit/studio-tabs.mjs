@@ -11,7 +11,7 @@ const b = await browser();
 for (const W of widths) {
   const p = await open(b, uid, `/plan/studio?planId=${planId}&tab=plan`, { width: W });
   await sleep(5000);
-  for (const [name, re] of [["plan", /계획서/], ["launch", /개업 준비/], ["ops", /유지보수/]]) {
+  for (const [name, re] of [["plan", /계획서/], ["ops", /유지보수/]]) {
     const c = await p.evaluate(re => { const t = [...document.querySelectorAll("[role=tab]")].find(t => new RegExp(re).test(t.innerText) && t.getBoundingClientRect().width > 0); t?.click(); return t?.innerText; }, re.source);
     await sleep(3500);
     const st = await p.evaluate(() => ({ url: location.search, sel: [...document.querySelectorAll("[role=tab][aria-selected=true]")].map(t => t.innerText.replace(/\s+/g, " ")), panels: [...document.querySelectorAll("section[id^=studio-panel-]")].filter(s => s.getBoundingClientRect().width > 0).map(s => { const r = s.getBoundingClientRect(); return s.id + `@${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}x${Math.round(r.height)} sh=${s.scrollHeight}`; }), heads: [...document.querySelectorAll("section[id^=studio-panel-] h1, section[id^=studio-panel-] h2, section[id^=studio-panel-] h3")].filter(h => { const r = h.getBoundingClientRect(); return r.width > 1 && r.top < innerHeight; }).map(h => h.innerText.trim().slice(0, 30)).slice(0, 8) }));

@@ -81,17 +81,17 @@ const GUIDES: Record<JourneyGuideCode, GuideRow> = {
     prefill: "홈페이지 첫 화면에 넣을 한 줄 소개를 세 가지 제안해 주세요",
     actions: (planId, context) => [
       { label: "홈페이지 초안 만들기", href: studioHref(planId, "homepage") },
-      { label: `${journeyLabel("launch", context.operating)} 먼저 하기`, href: studioHref(planId, "launch") },
+      { label: `${journeyLabel("launch", context.operating)} 먼저 하기`, href: studioHref(planId, "operations") },
     ],
   },
   /* J3 홈페이지 공개 → 개업 준비 이어가기 */
   "homepage-published": {
     stage: "J3",
-    tab: "launch",
+    tab: "operations",
     message: () => "홈페이지가 공개됐어요! 이제 실제로 문을 열 준비를 해요. 업종 신고 → 사업자등록 → 결제 방법 → 첫 홍보 순서예요. 오른쪽 목록에서 위에서부터 하나씩 하시면 돼요.",
     prefill: "제 업종은 사업자등록 전에 따로 신고해야 하는 게 있나요?",
     actions: (planId, context) => [
-      { label: "첫 준비 단계 열기", href: studioHref(planId, "launch", context.launchStep ? { step: context.launchStep } : {}) },
+      { label: "첫 준비 단계 열기", href: studioHref(planId, "operations", context.launchStep ? { step: context.launchStep } : {}) },
       /* 문의 알림 번호는 홈페이지 화면의 '접수된 문의' 칸(#hk-leads)에서 정한다 */
       { label: "손님 문의 알림 받을 번호 확인", href: studioHref(planId, "homepage", {}, "hk-leads") },
     ],
@@ -99,7 +99,7 @@ const GUIDES: Record<JourneyGuideCode, GuideRow> = {
   /* J4 사업자등록 단계 도달 → 사업자등록 준비하기. 여기서 신청되지 않는다 — 실제 신청은 홈택스나 세무서 */
   registration: {
     stage: "J4",
-    tab: "launch",
+    tab: "operations",
     step: "registration",
     message: () => "이제 사업자등록 차례예요. 여기서 신청이 되지는 않고, 세무서에 가져갈 사업 설명과 질문지를 함께 준비해요. 실제 신청은 홈택스나 관할 세무서에서 하시면 돼요.",
     prefill: REGISTRATION_PROMPT,
@@ -107,7 +107,7 @@ const GUIDES: Record<JourneyGuideCode, GuideRow> = {
       { label: "등록 상담 질문지 만들기", href: businessChatHref(planId, REGISTRATION_PROMPT) },
       { label: "국세청 안내 열기", href: LAUNCH_SOURCES.registration.url, external: true },
       /* 주소로는 완료 표시를 할 수 없다 — 그 단계를 열어 '완료'를 누르게 한다 */
-      { label: "이미 등록했어요 · 완료 표시하기", href: studioHref(planId, "launch", { step: "registration" }) },
+      { label: "이미 등록했어요 · 완료 표시하기", href: studioHref(planId, "operations", { step: "registration" }) },
     ],
   },
   /* J5 개업 준비 완료 → 운영 화면 열기. 주간 리포트 켜기는 홈페이지 화면의 '접수된 문의' 칸(#hk-leads)에 있다 */
@@ -118,7 +118,7 @@ const GUIDES: Record<JourneyGuideCode, GuideRow> = {
     prefill: "첫 한 달 동안 매주 확인할 일을 정리해 주세요",
     actions: planId => [
       { label: "주간 리포트 켜기", href: studioHref(planId, "homepage", {}, "hk-leads") },
-      { label: "운영 기록 남기기", href: studioHref(planId, "launch", { step: "review" }) },
+      { label: "운영 기록 남기기", href: studioHref(planId, "operations", { step: "review" }) },
     ],
   },
   /*

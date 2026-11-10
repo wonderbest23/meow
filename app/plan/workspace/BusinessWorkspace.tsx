@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -9,7 +9,7 @@ import PlanLoading from "../PlanLoading";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
 import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
 import { isCoachJobActive, readCoachJob } from "../../../lib/plan-builder/coach-job-types";
-import { journeyLabel, journeyNext } from "../../../lib/plan-builder/journey";
+import { journeyLabel, journeyNext, launchProgress } from "../../../lib/plan-builder/journey";
 import { JOURNEY_LABELS } from "../../../lib/plan-builder/journey-steps";
 import { currentBusinessDesign, currentNextAction } from "../../../lib/plan-builder/coach";
 import { businessDisplayName } from "../../../lib/plan-builder/business-name";
@@ -179,6 +179,11 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
   const action=hub?.coach ? currentNextAction(hub.coach) : undefined;
   const done=plan && action ? actionStatus(plan,action.action) : "pending";
   const chat=plan ? businessChatHref(plan.id) : "/plan/chat?new=1";
+  /* 점검·실적(유지보수 본문)이 열리는지 — 작업실 칸은 홈페이지를 공개한 뒤부터, 예전 화면은 늘 */
+  const careOpen=!embedded || homepage.status==="published" || (!!plan && isSamplePlan(plan.id));
+  /* 개업 준비가 남은 사업은 유지보수 칸 맨 앞에 펼쳐 두고, 마친 사업은 맨 아래에 접어 둔다(예시 사업은 기록부터). 열 때 한 번만 정한다 — 마지막 단계를 마치는 순간 자리가 바뀌지 않게 */
+  const launchFront=useMemo(()=>!!plan && !isSamplePlan(plan.id) && launchProgress(plan)!=="done",[plan?.id]);
+  const launchBlock=plan ? <><LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} />{action && <p className={styles.tabLink}><AppButton variant="text" className={`${styles.textButton} ${styles.textButtonNav}`} onClick={()=>tab("action")}>대화에서 정한 할 일 보기<ChevronRight size={16} aria-hidden="true" /></AppButton></p>}</> : null;
   /*
    * 메일·문자 링크를 다른 기기에서 열면 사업을 찾지 못한다 — 로그인하지 않은 경우면 로그인 후 이 화면으로 돌아오게 한다.
    * (예전엔 '먼저 사업을 선택해 주세요'만 있어 로그인할 길이 없었다)
@@ -230,10 +235,14 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
         {embedded && paneView && view !== paneView && <p className={styles.tabLink}><AppButton type="button" variant="text" className={styles.textButton} onClick={() => void tab(paneView)}>← {paneView === "operations" ? "유지보수" : journeyLabel("launch", hub.coach?.stage === "operating")}로 돌아가기</AppButton></p>}
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={async ()=>{ if (!expertDirty || await askConfirm({ title: "기본 모드로 돌아갈까요?", message: EXPERT_LEAVE, cancelLabel: "계속 작성", confirmLabel: "저장하지 않고 돌아가기" })) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
         <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? JOURNEY_LABELS.document : view==="operations" ? "유지보수" : view==="launch" ? journeyLabel("launch", hub.coach?.stage === "operating") : "다음 할 일"}>
-          {view==="operations" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} sample={isSamplePlan(plan.id)} />}
+          {/* 작업실 유지보수 칸 — 공개 전에는 개업 준비 할 일을 위에 펼쳐 두고, 공개한 뒤에는 점검·실적 아래에 접어 둔다(2026-11-10 4쪽 → 3쪽) */}
+          {view==="operations" && embedded && (!careOpen || launchFront) && launchBlock}
+          {view==="operations" && embedded && !careOpen && <p className={styles.muted}>홈페이지를 공개하면 매주 점검과 실적 기록이 열려요.</p>}
+          {view==="operations" && careOpen && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} sample={isSamplePlan(plan.id)} />}
           {/* 실적 기록이 먼저, 맡길 일(마케팅) 상담 신청은 그 아래 — 예전엔 서비스 판매 카드가 기록보다 위에 있었다 */}
-          {view==="operations" && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} chatRecord={hub.coach?.stage === "operating" ? chatRecordFrom(plan.answers as Record<string, Record<string, unknown>>) : null} />}
-          {view==="operations" && <NextServices key={`services-${plan.id}`} plan={plan} homepagePublished={homepage.status === "published"} hasHomepage={homepage.status === "draft" || homepage.status === "published"} />}
+          {view==="operations" && careOpen && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} chatRecord={hub.coach?.stage === "operating" ? chatRecordFrom(plan.answers as Record<string, Record<string, unknown>>) : null} />}
+          {view==="operations" && careOpen && <NextServices key={`services-${plan.id}`} plan={plan} homepagePublished={homepage.status === "published"} hasHomepage={homepage.status === "draft" || homepage.status === "published"} />}
+          {view==="operations" && embedded && careOpen && !launchFront && <details open={new URLSearchParams(window.location.search).has("step")}><summary>{journeyLabel("launch", hub.coach?.stage === "operating")}</summary>{launchBlock}</details>}
           {view==="summary" && expert && hub.coach && <ExpertEditor key={plan.id} plan={plan} onSaved={setPlan} onDirtyChange={setExpertDirty} />}
           {view==="summary" && (!expert || !hub.coach) && <WorkspaceSummary headingRef={heading} description={design?.startingPlan.scope || hub.coach?.business.description || "만들어 둔 사업계획서를 이어서 볼 수 있어요."} stale={hub.stale} fields={hub.coach?.fields}>
             {hub.coach ? <><AppButton variant="primary" className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}<ChevronRight size={18} aria-hidden="true" /></AppButton>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <AppButton variant="primary" className={styles.primary} onClick={openLegacy}>사업계획서 이어보기</AppButton>}
@@ -255,7 +264,7 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
           </>}
           {/* '기간별 실적과 개선 리포트 보기'는 위 '유지보수' 탭과 같은 곳이라 뺐다 — 예전엔 두 링크가 띄어쓰기 없이 한 줄로 붙어 보였다(대표 요청 2026-10-15) */}
           {/* '대화에서 정한 할 일 보기'는 준비 과정 아래로 — 제목 위에 붙어 휴대폰에서 첫 줄을 차지했다(r37 휴대폰 점검) */}
-          {view==="launch" && <><LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} />{action && <p className={styles.tabLink}><AppButton variant="text" className={`${styles.textButton} ${styles.textButtonNav}`} onClick={()=>tab("action")}>대화에서 정한 할 일 보기<ChevronRight size={16} aria-hidden="true" /></AppButton></p>}</>}
+          {view==="launch" && launchBlock}
           {view==="action" && <>
             <h2 ref={heading} tabIndex={-1}>{done==="done" ? "하나를 마쳤어요" : done==="skipped" ? "이 일은 나중에 해요" : "지금은 이것 하나만"}</h2>
             <p className={`${styles.muted} ${styles.actionLead}`}>실행은 선택 사항이에요. 하지 않아도 사업안과 자료는 그대로 남아요.</p>

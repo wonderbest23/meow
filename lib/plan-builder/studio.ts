@@ -1,5 +1,5 @@
 /*
- * 사업 작업실(/plan/studio) — 왼쪽은 대화, 오른쪽은 [사업계획서 | 홈페이지 | 개업 준비 | 유지보수] 탭.
+ * 사업 작업실(/plan/studio) — 왼쪽은 대화, 오른쪽은 [사업계획서 | 홈페이지 | 유지보수] 탭(개업 준비는 유지보수 안의 할 일 — 2026-11-10 4쪽 → 3쪽).
  * 예전 화면 주소(/plan/chat · /plan/document · /plan/homepage · /plan/workspace)는 그대로 두고,
  * 작업실 안에서 그 주소로 가는 링크는 이동 대신 탭 바꾸기로 바꾼다(studioTarget).
  * 화면 코드에 기대지 않는 순수 함수만 둔다 — 테스트: scripts/studio-navigation.test.ts
@@ -7,7 +7,7 @@
 import { JOURNEY_LABELS, journeyLabel, journeyShortLabel, type JourneyStepId } from "./journey-steps";
 import type { HomepageStatus, JourneyState } from "./journey";
 
-export const STUDIO_TABS = ["chat", "plan", "homepage", "launch", "operations"] as const;
+export const STUDIO_TABS = ["chat", "plan", "homepage", "operations"] as const;
 export type StudioTab = typeof STUDIO_TABS[number];
 
 /** 작업실 입구를 여는 플래그 — 끄면 예전 화면 그대로(되돌리기는 플래그만 끄면 된다) */
@@ -29,20 +29,22 @@ export const STUDIO_TAB_LABELS: Record<StudioTab, string> = {
   chat: JOURNEY_LABELS.chat,
   plan: JOURNEY_LABELS.document,
   homepage: JOURNEY_LABELS.homepage,
-  launch: JOURNEY_LABELS.launch,
   operations: JOURNEY_LABELS.care,
 };
 
 export function isStudioTab(value: unknown): value is StudioTab {
   return typeof value === "string" && (STUDIO_TABS as readonly string[]).includes(value);
 }
+/** 주소의 tab 값 → 작업실 탭. 예전 주소의 tab=launch(개업 준비)는 유지보수로 넘긴다 */
+export function studioTabParam(value: unknown): StudioTab | null {
+  return value === "launch" ? "operations" : isStudioTab(value) ? value : null;
+}
 
 /** 왼쪽 메뉴의 단계(journey) ↔ 작업실 탭 */
-const STEP_TAB: Record<JourneyStepId, StudioTab> = { chat: "chat", document: "plan", homepage: "homepage", launch: "launch", care: "operations" };
+const STEP_TAB: Record<JourneyStepId, StudioTab> = { chat: "chat", document: "plan", homepage: "homepage", launch: "operations", care: "operations" };
+const TAB_STEP: Record<StudioTab, JourneyStepId> = { chat: "chat", plan: "document", homepage: "homepage", operations: "care" };
 export function studioTabForStep(step: JourneyStepId): StudioTab { return STEP_TAB[step]; }
-export function stepForStudioTab(tab: StudioTab): JourneyStepId {
-  return (Object.keys(STEP_TAB) as JourneyStepId[]).find(step => STEP_TAB[step] === tab) ?? "chat";
-}
+export function stepForStudioTab(tab: StudioTab): JourneyStepId { return TAB_STEP[tab]; }
 
 /** 작업실 주소 — extra 는 각 칸이 읽는 값(edit · start · step 등)을 그대로 실어 나른다 */
 export function studioHref(planId: string, tab: StudioTab = "chat", extra: Record<string, string> = {}, hash = ""): string {
@@ -55,9 +57,7 @@ export type StudioTarget = { tab: StudioTab; params: Record<string, string>; has
 
 /** 사업 관리 화면의 탭 중 작업실 탭이 있는 것 — 사업 요약·문서 탭(summary · documents)은 작업실에 없어 예전 화면으로 간다 */
 function workspaceTab(tab: string | null): StudioTab | null {
-  if (tab === "operations") return "operations";
-  if (tab === "launch" || tab === "action" || tab === null || tab === "") return "launch";
-  return null;
+  return tab === "operations" || tab === "launch" || tab === "action" || tab === null || tab === "" ? "operations" : null;
 }
 
 /**
@@ -84,8 +84,7 @@ export function studioTarget(href: string, planId: string, origin = "https://one
       return tab ? { tab, params, hash } : null;
     }
     case STUDIO_PATH: {
-      const tab = url.searchParams.get("tab");
-      return { tab: isStudioTab(tab) ? tab : "chat", params, hash };
+      return { tab: studioTabParam(url.searchParams.get("tab")) ?? "chat", params, hash };
     }
     default: return null;
   }
@@ -211,15 +210,14 @@ export function studioSteps<T extends { id: JourneyStepId; state: JourneyState }
 
 /**
  * 작업실 오른쪽 탭이 아직 막혔는지 — 막혔으면 안내할 단계(왼쪽 메뉴 LOCKED_GUIDE 의 키), 열렸으면 null.
- * 계획서·홈페이지는 앞 단계를 마쳐야(왼쪽 메뉴와 같은 규칙, steps 는 studioSteps 를 얹은 것), 개업 준비·유지보수는
+ * 계획서·홈페이지는 앞 단계를 마쳐야(왼쪽 메뉴와 같은 규칙, steps 는 studioSteps 를 얹은 것), 유지보수(개업 준비 할 일 포함)는
  * 사업 관리 화면이 열려야(workspaceOpen — 작업실은 대화를 마쳤는지까지 함께 본다) 열린다.
  */
 export function studioLockedStep(tab: StudioTab, steps: ReadonlyArray<{ id: JourneyStepId; state: JourneyState }>, workspaceOpen: boolean): Exclude<JourneyStepId, "chat"> | null {
   const step = stepForStudioTab(tab);
   if (step === "chat") return null;
-  if (step === "launch") return workspaceOpen ? null : step;
-  /* 유지보수는 홈페이지를 공개한 뒤부터(홈페이지를 고치고 문의·실적을 관리하는 단계) — 2026-11-02 사장님: 순서대로 열리게. 개업 준비는 홈페이지(유료) 없이도 연다 */
-  if (step === "care") return workspaceOpen && steps.find(item => item.id === "homepage")?.state === "done" ? null : step;
+  /* 유지보수는 대화를 마치면 열린다 — 공개 전에는 개업 준비 할 일만, 점검·실적은 공개한 뒤(칸 안에서 나눈다 · 2026-11-10 4쪽 → 3쪽) */
+  if (step === "care") return workspaceOpen ? null : step;
   const index = steps.findIndex(item => item.id === step);
   if (index <= 0) return null;
   return steps[index].state !== "todo" || steps[index - 1].state === "done" ? null : step;
@@ -317,8 +315,8 @@ export function studioStatusText(input: StudioStatusInput): string {
    * 칸 안이 이미 말하는 상태는 머리줄에 되풀이하지 않는다(r37 글 점검) — 끝난 계획서('문서 완성'), 홈페이지 공개 여부(주소창 이름표),
    * 진행 중이거나 끝난 개업 준비(칸 안 '2 / 11')는 빈 글(머리줄 상태 줄을 숨긴다). 할 일이 남았을 때만 말한다.
    */
-  if (tab === "operations") return `${JOURNEY_LABELS.care} · 실적과 개선 기록`;
-  if (tab === "launch") return launchDone || launchRunning ? "" : launchText;
+  /* 유지보수 칸 — 공개 전에는 개업 준비 할 일이 보인다 */
+  if (tab === "operations") return homepage === "published" ? `${JOURNEY_LABELS.care} · 실적과 개선 기록` : launchDone || launchRunning ? "" : launchText;
   if (tab === "homepage") return homepage === "draft" || homepage === "published" ? "" : homepageText;
   /* 칸 이름을 앞에 — '사업계획서 · 수정 내용 반영 필요'. 홈페이지 · 개업 준비 글은 이미 칸 이름으로 시작한다 */
   if (tab === "plan") return input.stale ? `${JOURNEY_LABELS.document} · ${documentText}` : "";

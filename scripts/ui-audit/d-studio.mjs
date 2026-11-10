@@ -100,7 +100,7 @@ await run("plan", async () => {
 await run("tabs", async () => {
   const p = await go(FULL, `/plan/studio?planId=${FULLPLAN}`, 5000);
   await sweep(p, { screen: "studio-chat-done", width: W, maxSteps: 8 });
-  for (const [name, re] of [["hp-unpaid", /홈페이지/], ["launch", /개업/]]) {
+  for (const [name, re] of [["hp-unpaid", /홈페이지/], ["launch", /유지보수/]]) {
     const ok = await tab(p, re); await sleep(3500); if (!ok) { console.log("no tab", name); continue; }
     await sweep(p, { screen: name, width: W, maxSteps: 10 });
   }
