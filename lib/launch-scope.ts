@@ -7,7 +7,7 @@
  */
 export const CLOSED_PAGE_PREFIXES: readonly string[] = [
   "/dev",            // 개발용 시험 화면
-  "/plan/proposal",  // PPT 제안서 편집 — PPT 자동 생성이 꺼져 있어 '준비 중'만 보인다
+  "/plan/proposal",  // PPT 제안서 편집 — 아직 열지 않았다(내려받기 창에서도 들어가는 길을 뺐다)
 ];
 
 export const CLOSED_API_PREFIXES: readonly string[] = [
@@ -26,9 +26,8 @@ export const CLOSED_API_PREFIXES: readonly string[] = [
   "/api/presentations", // 옛 '프로젝트' 화면의 발표자료 AI
   "/api/brand",         // 옛 로고 이미지 생성
   "/api/health/domain", // 부르는 곳 없음 — 부를 때마다 Cloudflare API 를 써 한도를 깎을 수 있었다
-  // PPT 자동 생성이 꺼져 있어 쓰지 않는 제안서·발표자료(화면에서도 감췄다)
+  // 제안서 편집(화면에서도 감췄다). PPT 만들기·내려받기(/api/plan/deck)는 2026-11-10 열었다
   "/api/plan/proposal",
-  "/api/plan/deck",
 ];
 
 /** 동적 주소(프로젝트 번호가 들어가는 옛 기능) */
