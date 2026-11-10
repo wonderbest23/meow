@@ -12,7 +12,7 @@ function Text({ node }: { node: Extract<ProposalSceneNode, { type: "text" }> }) 
 }
 function Chart({ node }: { node: Extract<ProposalSceneNode, { type: "chart" }> }) {
   const { chart, options: box } = node, scale = proposalChartScale(chart);
-  const colors = ["#2266cf", "#328071", "#bf694b"];
+  const colors = ["#0f82f5", "#328071", "#bf694b"];
   const x = (box.x + box.w * .1) * U, y = (box.y + box.h * .05) * U, w = box.w * .87 * U, h = box.h * .73 * U;
   const valueY = (value: number) => y + h - (value - scale.min) / (scale.max - scale.min) * h;
   const ticks = Array.from({ length: Math.round((scale.max - scale.min) / scale.step) + 1 }, (_, i) => scale.min + i * scale.step);
@@ -28,7 +28,12 @@ function Chart({ node }: { node: Extract<ProposalSceneNode, { type: "chart" }> }
 }
 function Node({ node }: { node: ProposalSceneNode }) {
   const o = node.options;
-  if (node.type === "shape") return node.shape === "line" ? <line x1={o.x * U} y1={o.y * U} x2={(o.x + o.w) * U} y2={(o.y + o.h) * U} stroke={`#${node.options.line.color}`} strokeWidth={1} /> : <rect x={o.x * U} y={o.y * U} width={o.w * U} height={o.h * U} fill={`#${node.options.fill?.color ?? "FFFFFF"}`} />;
+  if (node.type === "shape") {
+    const fill = `#${node.options.fill?.color ?? "FFFFFF"}`;
+    if (node.shape === "line") return <line x1={o.x * U} y1={o.y * U} x2={(o.x + o.w) * U} y2={(o.y + o.h) * U} stroke={`#${node.options.line.color}`} strokeWidth={1} />;
+    if (node.shape === "ellipse") return <ellipse cx={(o.x + o.w / 2) * U} cy={(o.y + o.h / 2) * U} rx={o.w / 2 * U} ry={o.h / 2 * U} fill={fill} />;
+    return <rect x={o.x * U} y={o.y * U} width={o.w * U} height={o.h * U} rx={(node.options.rectRadius ?? 0) * U} fill={fill} />;
+  }
   if (node.type === "image") {
     const v = proposalImageViewport(node.options), crop = v.crop;
     if (crop) return <svg x={v.x * U} y={v.y * U} width={v.w * U} height={v.h * U} viewBox={`${crop.x} ${crop.y} ${crop.w} ${crop.h}`} preserveAspectRatio="none"><image href={v.data} width={1} height={1} preserveAspectRatio="none"><title>{v.altText}</title></image></svg>;
@@ -42,7 +47,7 @@ function Node({ node }: { node: ProposalSceneNode }) {
     let x = o.x;
     return row.map((cell, colIndex) => {
       const left = x; const width = node.options.colW[colIndex]; x += width;
-      return <g key={`${rowIndex}-${colIndex}`}><rect x={left * U} y={top * U} width={width * U} height={height * U} fill={`#${cell.options.fill.color}`} stroke="#dce2e9" strokeWidth={.7} /><foreignObject x={(left + .16) * U} y={(top + .09) * U} width={(width - .32) * U} height={(height - .18) * U}><div style={{ height: "100%", display: "flex", alignItems: "center", color: `#${cell.options.color}`, fontSize: cell.options.fontSize / 72 * U, fontFamily: '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif', fontWeight: cell.options.bold ? 700 : 400, lineHeight: 1.16, overflowWrap: "anywhere" }}>{cell.text}</div></foreignObject></g>;
+      return <g key={`${rowIndex}-${colIndex}`}><rect x={left * U} y={top * U} width={width * U} height={height * U} fill={`#${cell.options.fill.color}`} stroke={`#${node.options.border.color}`} strokeWidth={.7} /><foreignObject x={(left + .16) * U} y={(top + .09) * U} width={(width - .32) * U} height={(height - .18) * U}><div style={{ height: "100%", display: "flex", alignItems: "center", color: `#${cell.options.color}`, fontSize: cell.options.fontSize / 72 * U, fontFamily: '"Malgun Gothic", "Apple SD Gothic Neo", sans-serif', fontWeight: cell.options.bold ? 700 : 400, lineHeight: 1.16, overflowWrap: "anywhere" }}>{cell.text}</div></foreignObject></g>;
     });
   })}</g>;
 }
@@ -64,7 +69,7 @@ export default function ProposalCanvas({ scene, selected, onSelect, onChange, re
     onChange(current.element, next);
   }
   return <div ref={root} className={styles.canvas} aria-label="제안서 슬라이드 미리보기">
-    <svg viewBox="0 0 1333 750" aria-hidden="true"><rect width="1333" height="750" fill="white" />{scene.nodes.map(node => <Node key={node.id} node={node} />)}</svg>
+    <svg viewBox="0 0 1333 750" aria-hidden="true"><rect width="1333" height="750" fill={`#${scene.background}`} />{scene.nodes.map(node => <Node key={node.id} node={node} />)}</svg>
     {!readOnly && scene.nodes.flatMap((node, index) => {
       if (!("element" in node && node.element)) return [];
       const element = node.element, box = node.options;

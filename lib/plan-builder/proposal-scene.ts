@@ -1,125 +1,150 @@
 import type { DeckPlan, DeckSlide } from "./deck-plan";
-import { PURPOSE_LABELS, SECTOR_PROFILES, type ProposalLayout } from "./proposal-blueprint";
+import { PURPOSE_LABELS, type ProposalLayout } from "./proposal-blueprint";
 import { validateProposalBox, type ProposalElement, type ProposalChart, type ProposalBox, type ProposalImage } from "./proposal-revision";
 import { proposalChartSchema } from "./proposal-editor";
 
 
 export type SceneTextOptions = { x: number; y: number; w: number; h: number; fontFace: string; fontSize: number; color: string; bold?: boolean; margin: number; valign: "top"; lineSpacingMultiple: number; paraSpaceAfter?: number; align?: "left" | "center" | "right" };
-export type SceneShapeOptions = { x: number; y: number; w: number; h: number; line: { color?: string; width?: number; type?: "none" }; fill?: { color: string } };
+export type SceneShape = "line" | "rect" | "roundRect" | "ellipse";
+export type SceneShapeOptions = { x: number; y: number; w: number; h: number; line: { color?: string; width?: number; type?: "none" }; fill?: { color: string }; rectRadius?: number };
 export type SceneImageOptions = { data: string; x: number; y: number; w: number; h: number; sizing: { type: "cover" | "contain"; w: number; h: number }; altText: string; crop?: ProposalImage["crop"]; sourceWidth?: number; sourceHeight?: number };
 export type SceneTableCell = { text: string; options: { color: string; fill: { color: string }; fontSize: number; bold: boolean } };
 export type SceneTableOptions = { x: number; y: number; w: number; h: number; rowH: number[]; colW: number[]; fontFace: string; fontSize: number; color: string; margin: [number, number, number, number]; border: { type: "solid"; color: string; pt: number }; valign: "middle"; autoPage: false };
 export type ProposalSceneNode = { id: string } & (
   | { type: "text"; text: string; options: SceneTextOptions; element?: ProposalElement }
-  | { type: "shape"; shape: "line" | "rect"; options: SceneShapeOptions }
+  | { type: "shape"; shape: SceneShape; options: SceneShapeOptions }
   | { type: "image"; options: SceneImageOptions; element: "image" }
   | { type: "table"; rows: SceneTableCell[][]; options: SceneTableOptions; element: "table" }
   | { type: "chart"; chart: ProposalChart; options: ProposalBox; element: "chart" });
-export type ProposalScene = { nodes: ProposalSceneNode[]; notes: string };
+export type ProposalScene = { nodes: ProposalSceneNode[]; notes: string; background: string };
 type SceneSlide = {
   background: { color: string };
   addText(value: string, options: SceneTextOptions, element?: ProposalElement): void;
-  addShape(shape: "line" | "rect", options: SceneShapeOptions): void;
+  addShape(shape: SceneShape, options: SceneShapeOptions): void;
   addImage(options: SceneImageOptions): void;
   addTable(rows: SceneTableCell[][], options: SceneTableOptions): void;
   addChart(chart: ProposalChart, options: ProposalBox): void;
   addNotes(notes: string): void;
 };
-type ScenePptx = { ShapeType: { line: "line"; rect: "rect" }; addSlide(): SceneSlide };
+type ScenePptx = { ShapeType: { [K in SceneShape]: K }; addSlide(): SceneSlide };
 
-const C = { ink: "202631", muted: "637083", blue: "2266CF", line: "DCE2E9", pale: "F3F6FA", white: "FFFFFF" };
+/** blue fills and large type; deep is the same hue dark enough for small text. */
+const C = { ink: "1F2329", muted: "5B6573", blue: "0F82F5", deep: "0B63C4", soft: "BBDCFF", tint: "E8F3FF", line: "D9E2EC", pale: "F4F8FD", white: "FFFFFF" };
 const FONT = "Malgun Gothic";
 const X = .72;
 const WIDTH = 11.89;
+const TOP = 3.05;
 
-function text(slide: SceneSlide, value: string, x: number, y: number, w: number, h: number, size = 16, color = C.ink, bold = false, element?: ProposalElement) {
-  slide.addText(value, { x, y, w, h, fontFace: FONT, fontSize: size, color, bold, margin: 0, valign: "top", lineSpacingMultiple: 1.16, paraSpaceAfter: 0 }, element);
+function fits(value: string, w: number, h: number, font: number) {
+  const capacity = w * 72 / font;
+  if (capacity <= 0) return false;
+  let lines = 0;
+  for (const line of value.split("\n")) {
+    const units = [...line].reduce((sum, char) => sum + (/[^\u0000-ÿ]/.test(char) ? 1 : /[MW@]/.test(char) ? .85 : .53), 0);
+    lines += Math.max(1, Math.ceil(units / capacity));
+  }
+  return !value || lines * font * 1.16 <= h * 72 + 1;
 }
-function placedText(slide: SceneSlide, item: DeckSlide, key: "title" | "lead", x: number, y: number, w: number, h: number, size: number, color = C.ink, bold = false) {
-  const box = item.placement?.[key];
-  if (box) {
-    validateProposalBox(box);
-    slide.addText(item[key] ?? "", { ...box, fontFace: FONT, fontSize: size, color, bold, margin: 0, valign: "top", lineSpacingMultiple: 1.16 }, key);
-  } else slide.addText(item[key] ?? "", { x, y, w, h, fontFace: FONT, fontSize: size, color, bold, margin: 0, valign: "top", lineSpacingMultiple: 1.16 }, key);
+/** Largest size every value fits at, by the same estimate the layout check uses; the last size is the floor. */
+const fitSize = (values: string[], w: number, h: number, sizes: number[]) => sizes.find(size => values.every(value => fits(value, w, h, size))) ?? sizes[sizes.length - 1];
+
+function text(slide: SceneSlide, value: string, x: number, y: number, w: number, h: number, size = 16, color = C.ink, bold = false, element?: ProposalElement, align?: SceneTextOptions["align"]) {
+  slide.addText(value, { x, y, w, h, fontFace: FONT, fontSize: size, color, bold, margin: 0, valign: "top", lineSpacingMultiple: 1.16, paraSpaceAfter: 0, ...(align ? { align } : {}) }, element);
+}
+function placedText(slide: SceneSlide, item: DeckSlide, key: "title" | "lead", x: number, y: number, w: number, h: number, sizes: number[], color = C.ink, bold = false) {
+  const placed = item.placement?.[key];
+  if (placed) validateProposalBox(placed);
+  const box = placed ?? { x, y, w, h }, value = item[key] ?? "";
+  slide.addText(value, { ...box, fontFace: FONT, fontSize: fitSize([value], box.w, box.h, sizes), color, bold, margin: 0, valign: "top", lineSpacingMultiple: 1.16 }, key);
 }
 function line(pptx: ScenePptx, slide: SceneSlide, x: number, y: number, w: number, color = C.line) {
   slide.addShape(pptx.ShapeType.line, { x, y, w, h: 0, line: { color, width: .7 } });
 }
-function rect(pptx: ScenePptx, slide: SceneSlide, x: number, y: number, w: number, h: number, color: string) {
-  slide.addShape(pptx.ShapeType.rect, { x, y, w, h, line: { type: "none" }, fill: { color } });
+function rect(pptx: ScenePptx, slide: SceneSlide, x: number, y: number, w: number, h: number, color: string, radius = 0) {
+  slide.addShape(radius ? pptx.ShapeType.roundRect : pptx.ShapeType.rect, { x, y, w, h, line: { type: "none" }, fill: { color }, ...(radius ? { rectRadius: radius } : {}) });
+}
+function dot(pptx: ScenePptx, slide: SceneSlide, x: number, y: number, size: number, color: string) {
+  slide.addShape(pptx.ShapeType.ellipse, { x, y, w: size, h: size, line: { type: "none" }, fill: { color } });
 }
 
-function chrome(pptx: ScenePptx, slide: SceneSlide, plan: DeckPlan, item: DeckSlide, index: number) {
-  const blueprint = plan.blueprint!;
-  text(slide, plan.brandName, X, .34, 4, .23, 10, C.muted, true);
-  text(slide, item.eyebrow, 8.1, .34, 4.51, .3, 10, C.muted, false, "eyebrow");
-  line(pptx, slide, X, .81, WIDTH);
-  rect(pptx, slide, X, .79, WIDTH * ((index + 1) / plan.slides.length), .035, C.blue);
-  line(pptx, slide, X, 6.99, WIDTH);
-  text(slide, `${item.appendix ? "부록  " : ""}${SECTOR_PROFILES[blueprint.sector].label}`, X, 7.1, 9, .25, 9, C.muted);
-  text(slide, `${String(index + 1).padStart(2, "0")} / ${plan.slides.length}`, 11.86, 7.1, .75, .25, 9, C.muted);
+function chrome(pptx: ScenePptx, slide: SceneSlide, plan: DeckPlan, item: DeckSlide, index: number, dark: boolean) {
+  const color = dark ? C.white : C.muted;
+  text(slide, plan.brandName, X, .3, 3.55, .25, fitSize([plan.brandName], 3.55, .25, [11, 10, 9]), dark ? C.white : C.deep, true);
+  text(slide, item.eyebrow, 4.365, .3, 4.6, .3, fitSize([item.eyebrow], 4.6, .3, [11, 10]), color, false, "eyebrow", "center");
+  text(slide, `${item.appendix ? "부록 · " : ""}${String(index + 1).padStart(2, "0")} / ${plan.slides.length}`, 10.61, .3, 2, .25, 11, color, false, undefined, "right");
+  line(pptx, slide, X, .72, WIDTH, dark ? C.soft : C.line);
 }
 
 function heading(slide: SceneSlide, item: DeckSlide) {
-  placedText(slide, item, "title", X, 1.05, WIDTH, .98, 30, C.ink, true);
-  if (item.lead) placedText(slide, item, "lead", X, 2.05, WIDTH, .65, 15, C.muted);
+  placedText(slide, item, "title", X, 1.0, WIDTH, 1.12, [34, 30], C.ink, true);
+  if (item.lead) placedText(slide, item, "lead", X, 2.2, WIDTH, .65, [18, 15], C.muted);
 }
 
 function drawCover(pptx: ScenePptx, slide: SceneSlide, plan: DeckPlan, item: DeckSlide) {
-  text(slide, PURPOSE_LABELS[plan.blueprint!.purpose], X, 1.25, 7, .35, 16, C.blue, true);
-  placedText(slide, item, "title", X, 2.0, item.image ? 6.2 : WIDTH, 1.65, 42, C.ink, true);
-  placedText(slide, { ...item, lead: item.lead ?? plan.slogan }, "lead", X, 3.92, item.image ? 6.0 : 10.7, .95, 19, C.muted);
+  if (!item.image) {
+    dot(pptx, slide, 8.4, 1.0, 4.2, C.tint);
+    dot(pptx, slide, 7.75, 3.7, 1.25, C.soft);
+    dot(pptx, slide, 11.9, 1.05, .5, C.blue);
+  }
+  const label = PURPOSE_LABELS[plan.blueprint!.purpose], pill = label.length * .22 + .5;
+  rect(pptx, slide, X, 1.2, pill, .46, C.tint, .23);
+  text(slide, label, X, 1.31, pill, .26, 14, C.deep, true, undefined, "center");
+  placedText(slide, item, "title", X, 2.0, item.image ? 6.2 : WIDTH, 1.65, [46, 42], C.ink, true);
+  placedText(slide, { ...item, lead: item.lead ?? plan.slogan }, "lead", X, 3.92, item.image ? 6.0 : 10.7, .95, [21, 19], C.muted);
   if (item.image) {
     const box = item.placement?.image ?? { x: 7.45, y: 1.24, w: 5.16, h: 4.08 };
     validateProposalBox(box);
     slide.addImage(imageOptions(item.image, box));
   }
-  line(pptx, slide, X, 5.55, WIDTH, C.blue);
   const roles = ["summary", "offering", "roadmap"].flatMap(role => { const slot = plan.blueprint!.slots.find(slot => slot.role === role); return slot ? [slot] : []; });
   roles.forEach((slot, index) => {
     const x = X + index * 4.08;
-    text(slide, `0${index + 1}`, x, 5.85, .45, .25, 12, C.blue, true);
-    text(slide, slot.title, x + .62, 5.8, 3.08, .42, 17, C.ink, true);
+    rect(pptx, slide, x, 5.68, 3.73, .74, C.pale, .14);
+    text(slide, `0${index + 1}`, x + .26, 5.93, .45, .25, 13, C.deep, true);
+    text(slide, slot.title, x + .8, 5.87, 2.75, .36, fitSize([slot.title], 2.75, .36, [17, 15, 13]), C.ink, true);
   });
 }
 
 function drawSummary(pptx: ScenePptx, slide: SceneSlide, item: DeckSlide) {
-  placedText(slide, item, "title", X, 1.2, WIDTH, 1.04, 32, C.ink, true);
-  placedText(slide, item, "lead", X, 2.5, 7.25, 2.15, 25, C.blue, true);
+  placedText(slide, item, "title", X, 1.0, WIDTH, 1.12, [34, 30], C.ink, true);
+  placedText(slide, item, "lead", X, 2.5, 7.25, 2.15, [27, 25], C.blue, true);
   const rows = (item.points ?? []).slice(0, 4);
+  if (!rows.length) return;
+  rect(pptx, slide, 8.2, 2.3, 4.41, rows.length * 1.06 + .3, C.pale, .16);
+  const labelSize = fitSize(rows.map(point => point.label), 3.85, .3, [15, 13, 12]), detailSize = fitSize(rows.map(point => point.detail), 3.85, .56, [16, 14, 13, 12]);
   rows.forEach((point, index) => {
-    const y = 2.48 + index * .94;
-    line(pptx, slide, 8.5, y - .15, 4.11);
-    text(slide, point.label, 8.5, y, 4.11, .32, 13, C.muted, true, pointElement(point, index, "label"));
-    text(slide, point.detail, 8.5, y + .36, 4.11, .52, 13, C.ink, false, pointElement(point, index, "detail"));
+    const y = 2.56 + index * 1.06;
+    if (index) line(pptx, slide, 8.48, y - .13, 3.85);
+    text(slide, point.label, 8.48, y, 3.85, .3, labelSize, C.muted, true, pointElement(point, index, "label"));
+    text(slide, point.detail, 8.48, y + .36, 3.85, .56, detailSize, C.ink, false, pointElement(point, index, "detail"));
+  });
+}
+
+/** Equal cards across the body; text sizes are shared so the row reads as one set. */
+function cards(pptx: ScenePptx, slide: SceneSlide, points: NonNullable<DeckSlide["points"]>, steps: boolean) {
+  const count = Math.max(1, points.length), gap = .3, pad = .26, w = (WIDTH - gap * (count - 1)) / count, inner = w - pad * 2;
+  const labelSize = fitSize(points.map(point => point.label), inner, .86, [24, 21, 19, 17]), detailSize = fitSize(points.map(point => point.detail), inner, 1.75, [19, 17, 15, 14, 13, 12]);
+  points.forEach((_, index) => rect(pptx, slide, X + index * (w + gap), TOP, w, 3.85, C.pale, .16));
+  if (steps && points.length > 1) line(pptx, slide, X + pad + .25, TOP + .51, (points.length - 1) * (w + gap), C.blue);
+  points.forEach((point, index) => {
+    const x = X + index * (w + gap) + pad;
+    if (steps) {
+      dot(pptx, slide, x, TOP + .26, .5, C.blue);
+      text(slide, String(index + 1), x, TOP + .38, .5, .25, 14, C.white, true, undefined, "center");
+    } else text(slide, String(index + 1).padStart(2, "0"), x, TOP + .26, inner, .5, 26, C.blue, true);
+    text(slide, point.label, x, TOP + .98, inner, .86, labelSize, C.ink, true, pointElement(point, index, "label"));
+    text(slide, point.detail, x, TOP + 1.92, inner, 1.75, detailSize, C.muted, false, pointElement(point, index, "detail"));
   });
 }
 
 function drawColumns(pptx: ScenePptx, slide: SceneSlide, item: DeckSlide) {
   heading(slide, item);
-  const points = item.points?.length ? item.points : [{ label: "확인할 내용", detail: item.note ?? "원문에서 추가 확인이 필요한 항목입니다" }];
-  const w = (WIDTH - .38 * (points.length - 1)) / points.length;
-  points.forEach((point, index) => {
-    const x = X + index * (w + .38);
-    text(slide, String(index + 1).padStart(2, "0"), x, 3.13, w, .5, 27, C.blue, true);
-    line(pptx, slide, x, 3.91, w);
-    text(slide, point.label, x, 4.16, w, .8, 19, C.ink, true, pointElement(point, index, "label"));
-    text(slide, point.detail, x, 5.04, w, 1.53, 14, C.muted, false, pointElement(point, index, "detail"));
-  });
+  cards(pptx, slide, item.points?.length ? item.points : [{ label: "확인할 내용", detail: item.note ?? "원문에서 추가 확인이 필요한 항목입니다" }], false);
 }
 
 function drawProcess(pptx: ScenePptx, slide: SceneSlide, item: DeckSlide) {
   heading(slide, item);
-  const points = item.points ?? [];
-  const w = (WIDTH - .4 * Math.max(0, points.length - 1)) / Math.max(1, points.length);
-  line(pptx, slide, X, 3.3, WIDTH, C.blue);
-  points.forEach((point, index) => {
-    const x = X + index * (w + .4);
-    rect(pptx, slide, x, 3.08, .46, .46, C.blue);
-    text(slide, String(index + 1), x + .13, 3.15, .25, .25, 14, C.white, true);
-    text(slide, point.label, x, 3.93, w, .86, 20, C.ink, true, pointElement(point, index, "label"));
-    text(slide, point.detail, x, 4.96, w, 1.6, 14, C.muted, false, pointElement(point, index, "detail"));
-  });
+  cards(pptx, slide, item.points ?? [], true);
 }
 
 function drawTable(pptx: ScenePptx, slide: SceneSlide, item: DeckSlide, timeline = false) {
@@ -130,40 +155,43 @@ function drawTable(pptx: ScenePptx, slide: SceneSlide, item: DeckSlide, timeline
     headers: [timeline ? "단계" : "항목", timeline ? "완료 조건" : "내용"], rows: (item.points ?? []).map(point => [point.label, point.detail]),
   });
   if (!table.rows.length) return;
+  const colW = WIDTH / table.headers.length, rowH = [.55, ...table.rows.map(() => Math.min(.85, 3.3 / table.rows.length))];
+  const fontSize = [18, 16, 14].find(size => [table.headers, ...table.rows].every((row, ri) => row.every(cell => fits(cell, colW - .32, rowH[ri] - .18, size)))) ?? 13;
   const rows: SceneTableCell[][] = [
-    table.headers.map(header => ({ text: header, options: { bold: true, color: C.white, fill: { color: C.blue }, fontSize: 13 } })),
-    ...table.rows.map((row, rowIndex) => row.map((cell, colIndex) => ({ text: cell, options: { color: colIndex === 0 ? C.ink : C.muted, bold: colIndex === 0, fill: { color: rowIndex % 2 === 0 ? C.pale : C.white }, fontSize: 13 } }))),
+    table.headers.map(header => ({ text: header, options: { bold: true, color: C.deep, fill: { color: C.tint }, fontSize } })),
+    ...table.rows.map(row => row.map((cell, colIndex) => ({ text: cell, options: { color: colIndex === 0 ? C.ink : C.muted, bold: colIndex === 0, fill: { color: C.white }, fontSize } }))),
   ];
-  const rowH = [.5, ...table.rows.map(() => Math.min(.8, 3.2 / table.rows.length))];
   slide.addTable(rows, {
-    x: X, y: 2.96, w: WIDTH, h: rowH.reduce((sum, value) => sum + value, 0), rowH, colW: table.headers.map(() => WIDTH / table.headers.length),
-    fontFace: FONT, fontSize: 13, color: C.ink, margin: [.09 * 72, .16 * 72, .09 * 72, .16 * 72],
-    border: { type: "solid", color: C.line, pt: .5 }, valign: "middle", autoPage: false,
+    x: X, y: TOP, w: WIDTH, h: rowH.reduce((sum, value) => sum + value, 0), rowH, colW: table.headers.map(() => colW),
+    fontFace: FONT, fontSize, color: C.ink, margin: [.09 * 72, .16 * 72, .09 * 72, .16 * 72],
+    border: { type: "solid", color: C.soft, pt: .5 }, valign: "middle", autoPage: false,
   });
 }
 
 function drawEvidence(pptx: ScenePptx, slide: SceneSlide, item: DeckSlide) {
   if (!item.image) { drawTable(pptx, slide, item); return; }
   heading(slide, item);
-  const box = item.placement?.image ?? { x: X, y: 2.94, w: 7, h: 3.56 };
+  const box = item.placement?.image ?? { x: X, y: TOP, w: 7, h: 3.56 };
   validateProposalBox(box);
   slide.addImage(imageOptions(item.image, box));
   (item.points ?? []).forEach((point, index) => {
-    const spacing = 3.6 / Math.max(1, item.points!.length), y = 3.0 + index * spacing;
+    const spacing = 3.6 / Math.max(1, item.points!.length), y = TOP + .06 + index * spacing;
     text(slide, point.label, 8.17, y, 4.44, .35, 16, C.ink, true, pointElement(point, index, "label"));
     text(slide, point.detail, 8.17, y + .4, 4.44, spacing - .45, 13, C.muted, false, pointElement(point, index, "detail"));
   });
 }
 
 function drawClosing(pptx: ScenePptx, slide: SceneSlide, item: DeckSlide) {
-  placedText(slide, item, "title", X, 1.42, WIDTH, 1.28, 35, C.ink, true);
-  if (item.lead) placedText(slide, item, "lead", X, 2.94, WIDTH, .86, 19, C.muted);
-  (item.points ?? []).forEach((point, index) => {
-    const y = 4.0 + index * .68;
-    line(pptx, slide, X, y - .12, WIDTH);
-    text(slide, String(index + 1).padStart(2, "0"), X, y, .55, .36, 15, C.blue, true);
-    text(slide, point.label, 1.56, y, 3.23, .46, 17, C.ink, true, pointElement(point, index, "label"));
-    text(slide, point.detail, 5.12, y + .02, 7.49, .48, 14, C.muted, false, pointElement(point, index, "detail"));
+  placedText(slide, item, "title", X, 1.42, WIDTH, 1.36, [40, 35], C.white, true);
+  if (item.lead) placedText(slide, item, "lead", X, 2.94, WIDTH, .86, [21, 19], C.tint);
+  const points = item.points ?? [];
+  const labelSize = fitSize(points.map(point => point.label), 3.2, .36, [17, 15]), detailSize = fitSize(points.map(point => point.detail), 7.3, .48, [17, 15, 14, 13]);
+  points.forEach((point, index) => {
+    const y = 4.0 + index * .7, oneLine = fits(point.detail, 7.3, .26, detailSize);
+    rect(pptx, slide, X, y, WIDTH, .62, C.white, .12);
+    text(slide, String(index + 1).padStart(2, "0"), X + .26, y + .18, .55, .3, 15, C.deep, true);
+    text(slide, point.label, 1.62, y + .16, 3.2, .36, labelSize, C.ink, true, pointElement(point, index, "label"));
+    text(slide, point.detail, 5.12, y + (oneLine ? .19 : .07), 7.3, oneLine ? .3 : .48, detailSize, C.muted, false, pointElement(point, index, "detail"));
   });
 }
 
@@ -173,9 +201,10 @@ function appendScenes(pptx: ScenePptx, plan: DeckPlan) {
   plan.slides.forEach((item, index) => {
     if (item.id !== plan.blueprint!.slots[index].id) throw new Error("invalid_editorial_slide_id");
     const slide = pptx.addSlide();
-    slide.background = { color: C.white };
-    chrome(pptx, slide, plan, item, index);
     const layout: ProposalLayout = plan.blueprint!.slots[index].layout;
+    const closing = layout === "closing";
+    slide.background = { color: closing ? C.blue : C.white };
+    chrome(pptx, slide, plan, item, index, closing);
     if (layout === "cover") drawCover(pptx, slide, plan, item);
     else if (layout === "summary") drawSummary(pptx, slide, item);
     else if (layout === "columns") drawColumns(pptx, slide, item);
@@ -185,8 +214,8 @@ function appendScenes(pptx: ScenePptx, plan: DeckPlan) {
     else if (layout === "chart") {
       heading(slide, item);
       if (proposalChartSchema.safeParse(item.chart).success && item.chart) {
-        slide.addChart(item.chart, { x: X, y: 2.95, w: WIDTH, h: 3.35 });
-        text(slide, `${item.chart.basis === "actual" ? "실제 실적" : "예상"} (${item.chart.unit})  ${item.chart.source}`, X, 6.53, WIDTH, .32, 11, C.muted);
+        slide.addChart(item.chart, { x: X, y: TOP, w: WIDTH, h: 3.4 });
+        text(slide, `${item.chart.basis === "actual" ? "실제 실적" : "예상"} (${item.chart.unit})  ${item.chart.source}`, X, 6.58, WIDTH, .32, 11, C.muted);
       }
     }
     else drawClosing(pptx, slide, item);
@@ -204,13 +233,14 @@ function appendScenes(pptx: ScenePptx, plan: DeckPlan) {
 export function proposalScenes(plan: DeckPlan): ProposalScene[] {
   const scenes: ProposalScene[] = [];
   const pptx: ScenePptx = {
-    ShapeType: { line: "line", rect: "rect" },
+    ShapeType: { line: "line", rect: "rect", roundRect: "roundRect", ellipse: "ellipse" },
     addSlide() {
       const item = plan.slides[scenes.length];
-      const scene: ProposalScene = { nodes: [], notes: "" };
+      const scene: ProposalScene = { nodes: [], notes: "", background: C.white };
       scenes.push(scene);
       return {
-        background: { color: "FFFFFF" },
+        get background() { return { color: scene.background }; },
+        set background(value) { scene.background = value.color; },
         addText(text, options, element) { scene.nodes.push({ id: `${item.id}:${element ?? `text-${scene.nodes.length}`}`, type: "text", text, options: { ...options, ...(element ? item.placement?.[element] : {}), ...(element && item.alignment?.[element] ? { align: item.alignment[element] } : {}) }, ...(element ? { element } : {}) }); },
         addShape(shape, options) { scene.nodes.push({ id: `${item.id}:rule-${scene.nodes.length}`, type: "shape", shape, options }); },
         addImage(options) { scene.nodes.push({ id: `${item.id}:image`, type: "image", options, element: "image" }); },
@@ -252,16 +282,6 @@ export function proposalChartScale(chart: ProposalChart) {
 }
 export function proposalLayoutIssues(plan: DeckPlan, scenes = proposalScenes(plan)): ProposalLayoutIssue[] {
   const issues: ProposalLayoutIssue[] = [];
-  const fits = (value: string, w: number, h: number, font: number) => {
-    const capacity = w * 72 / font;
-    if (capacity <= 0) return false;
-    let lines = 0;
-    for (const line of value.split("\n")) {
-      const units = [...line].reduce((sum, char) => sum + (/[^\u0000-\u00ff]/.test(char) ? 1 : /[MW@]/.test(char) ? .85 : .53), 0);
-      lines += Math.max(1, Math.ceil(units / capacity));
-    }
-    return !value || lines * font * 1.16 <= h * 72 + 1;
-  };
   scenes.forEach((scene, index) => {
     const slide = plan.slides[index];
     const issue = (element: string, code: ProposalLayoutIssue["code"], message: string) => issues.push({ slideId: slide.id!, element, code, message });
