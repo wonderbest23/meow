@@ -10,12 +10,19 @@
 export const FREE_SECTION_COUNT = 0;
 
 /**
+ * 결제 전 '사업계획서 만들기'가 한 번 써서 보여 주는 첫 항목 수(대표 결정 2026-11-10: 한 문장 → 바로 초안).
+ * 대화 경로(app/api/plan/chat 의 prepare)만 쓴다 — 다른 생성 경로(generate·queue)는 FREE_SECTION_COUNT 대로 결제한 문서만 쓴다.
+ * 그래서 결제 전에는 다시 쓰기가 없고, 문서 수는 아래 FREE_PLAN_LIMIT 로 묶인다.
+ */
+export const PREVIEW_SECTION_COUNT = 1;
+
+/**
  * 결제 없이 AI 본문을 맛볼 수 있는 문서 수.
  *
  * 무료 2개 섹션은 '문서마다' 열린다. 그런데 문서는 몇 개든 만들 수 있어서,
  * 문서를 열 개 만들면 결제 없이 본문 스무 개가 나갔다 — 그만큼이 실비다.
  * 사업 아이템을 몇 개 견주어 보는 것은 정상적인 사용이라 문서 만들기 자체를
  * 막지는 않는다. 대신 '무료로 본문을 써 본 문서'를 세 개까지만 센다.
- * 계정당 무료 생성은 3 × 2 = 6회가 상한이 된다.
+ * 계정당 무료 생성은 3 × 2 = 6회가 상한이 된다(지금은 3 × PREVIEW_SECTION_COUNT = 3회).
  */
 export const FREE_PLAN_LIMIT = 3;

@@ -4,7 +4,7 @@ import { settleTransition } from "../../../lib/client/view-transition";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, MoreHorizontal, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, List, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, X } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -20,12 +20,12 @@ import hub from "../BusinessHub.module.css";
 import styles from "./Studio.module.css";
 import { sendStudioCommand, StudioNavContext, StudioPaneContext, type StudioCommand, type StudioComposeRequest, type StudioEditHandler, type StudioEditPreviewChapters, type StudioEditTarget, type StudioNav, type StudioPane } from "./StudioContext";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan } from "../../../lib/plan-builder/plan-store";
-import { journeySteps, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type JourneyState, type JourneyStepId } from "../../../lib/plan-builder/journey";
+import { journeySteps, launchProgress, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type JourneyState, type JourneyStepId } from "../../../lib/plan-builder/journey";
 import { businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
 import { launchStatus, launchSteps, readLaunch } from "../../../lib/plan-builder/business-launch";
 import { readCoach } from "../../../lib/plan-builder/coach";
 import { businessDisplayName, draftBusinessTitle } from "../../../lib/plan-builder/business-name";
-import { isStudioTab, newChatHref, studioChatComplete, studioChips, studioLockedStep, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTarget, STUDIO_REDIRECT, STUDIO_TAB_LABELS, studioHref, type StudioChip, type StudioTab, type StudioTarget } from "../../../lib/plan-builder/studio";
+import { newChatHref, studioChatComplete, studioChips, studioLockedStep, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTabParam, studioTarget, STUDIO_REDIRECT, STUDIO_TAB_LABELS, studioHref, type StudioChip, type StudioTab, type StudioTarget } from "../../../lib/plan-builder/studio";
 import type { IntakeSnapshot } from "../../../lib/plan-builder/intake-types";
 import { trackFunnel } from "../../../lib/funnel/client";
 import { askConfirm, showCopyText, showNotice } from "../../../components/confirm-dialog";
@@ -64,15 +64,15 @@ type TabSource = "click" | "link" | "auto";
 /* designRunning — 대화 칸이 사업 방향을 정리하는 중(사업안 만들기 작업이 도는 중) */
 type IntakeCount = { answered: number; total: number; complete: boolean; designRunning: boolean };
 
-/* 미리보기 판의 페이지 — 위 막대 페이지 선택(PC) · 아래 막대 … 메뉴(휴대폰)가 고른다. 예전 네 칸 탭을 흡수했다 */
-const RIGHT_TABS: RightTab[] = ["plan", "homepage", "launch", "operations"];
-/* 휴대폰 아래 막대의 파란 주 단추 — 보는 페이지마다 하나(계획서 내려받기 · 홈페이지 공개하기 · 개업 준비 다음 단계 · 유지보수 기록 추가) */
+/* 미리보기 판의 페이지 — 위 막대 페이지 선택(PC) · 머리의 페이지 이름 알약(휴대폰)이 고른다. 예전 네 칸 탭을 흡수했다 */
+const RIGHT_TABS: RightTab[] = ["plan", "homepage", "operations"];
+/* 휴대폰 미리보기 머리의 주 단추 — 보는 페이지마다 하나(계획서 내려받기 · 홈페이지 공개하기 · 유지보수 기록 추가). 공개 전 유지보수는 개업 준비 할 일이라 LAUNCH_PRIMARY */
 const PRIMARY: Record<RightTab, { label: string; command: StudioCommand }> = {
   plan: { label: "내려받기", command: "plan-download" },
   homepage: { label: "공개하기", command: "homepage-publish" },
-  launch: { label: "다음 단계", command: "launch-next" },
   operations: { label: "기록 추가", command: "operations-add" },
 };
+const LAUNCH_PRIMARY: { label: string; command: StudioCommand } = { label: "다음 단계", command: "launch-next" };
 const LEAVE_MESSAGE = "저장하지 않은 수정이 있어요. 이 화면을 나가면 고친 내용이 사라져요. 나갈까요?";
 /* 작성이 멈춘 상태(아직 안 쓴 장이 남았는데 작업이 끝남) — GenerationProgress 와 같은 기준 */
 const GENERATION_FAILED = ["errored", "terminated", "complete"];
@@ -83,7 +83,7 @@ const FRESH_LOCK: Lock = { message: "대화를 마치면 열려요", back: "chat
 /* 다른 창에서 같은 사업을 고쳤을 수 있다 — 이 창으로 돌아오면 보이는 칸을 다시 읽는다. 창을 자주 오가도 이 간격에 한 번만 */
 const WAKE_REFRESH_MS = 5_000;
 /* 칸 ↔ 그 칸이 저장 안 한 수정을 알리는 이름(useStudioDirty) — 고치는 중인 칸은 돌아와도 다시 읽지 않는다 */
-const PANE_DIRTY_ID: Record<RightTab, string> = { plan: "plan-document", homepage: "homepage", launch: "workspace-launch", operations: "workspace-operations" };
+const PANE_DIRTY_ID: Record<RightTab, string> = { plan: "plan-document", homepage: "homepage", operations: "workspace-operations" };
 
 /* 화면 폭 — CSS 의 1024px 기준과 같다(칸을 만들고 inert 를 거는 판단에 쓴다) */
 const WIDE_QUERY = "(min-width: 1024px)";
@@ -149,16 +149,17 @@ export default function Studio() {
   /* ── 탭 ─────────────────────────────────────────────── */
   /* 탭을 왜 바꿨는지(눌렀다 · 링크 · 칸이 요청) — 깔때기 이벤트(studio_tab_view)에 싣는다 */
   const tabSource = useRef<TabSource>("click");
-  const [tab, setTab] = useState<StudioTab>(() => (isStudioTab(urlTab) ? urlTab : "chat"));
+  const [tab, setTab] = useState<StudioTab>(() => studioTabParam(urlTab) ?? "chat");
   /* 주소의 탭이 바뀌면(뒤로 가기·다른 곳의 replaceState) 따라간다 — 탭이 빠진 주소는 지금 탭 그대로 */
   const seenUrlTab = useRef(urlTab);
   useEffect(() => {
     if (seenUrlTab.current === urlTab) return;
     seenUrlTab.current = urlTab;
-    if (isStudioTab(urlTab)) { tabSource.current = "link"; setTab(urlTab); }
+    const next = studioTabParam(urlTab);
+    if (next) { tabSource.current = "link"; setTab(next); }
   }, [urlTab]);
   /* PC 에서 주소 탭이 '대화'일 때 오른쪽에 보일 칸 — 마지막으로 연 오른쪽 탭(처음엔 사업계획서) */
-  const [lastRight, setLastRight] = useState<RightTab>(() => (isStudioTab(urlTab) && urlTab !== "chat" ? urlTab : "plan"));
+  const [lastRight, setLastRight] = useState<RightTab>(() => { const first = studioTabParam(urlTab); return first && first !== "chat" ? first : "plan"; });
   useEffect(() => { if (tab !== "chat") setLastRight(tab); }, [tab]);
   const rightTab: RightTab = tab === "chat" ? lastRight : tab;
   const wide = useSyncExternalStore(subscribeWide, readWide, serverWide);
@@ -742,7 +743,7 @@ export default function Studio() {
   const live = !missing && (!chatDone || designRunning || generationRunning);
   const pageOptions: PageOption[] = RIGHT_TABS.map(id => ({
     id,
-    label: id === "launch" && plan ? launchLabel(plan) : STUDIO_TAB_LABELS[id],
+    label: STUDIO_TAB_LABELS[id],
     done: tabDone(id),
     current: tabCurrent(id),
     locked: locks[id]?.message ?? null,
@@ -775,14 +776,18 @@ export default function Studio() {
   };
   const shareTitle = publicUrl ? "홈페이지 주소 나누기" : "홈페이지를 공개하면 주소를 나눌 수 있어요";
   const toolItems: PopMenuItem[] = [
-    /* 휴대폰 홈페이지 — 칸 위 '저장 · 공개하기' 줄을 접었으니 저장은 여기서(공개하기는 아래 막대 파란 단추) */
+    /* 휴대폰 홈페이지 — 칸 위 '저장 · 공개하기' 줄을 접었으니 저장은 여기서(공개하기는 위 막대 주 단추) */
     ...(!wide && rightTab === "homepage" && !locks.homepage ? [{ key: "save", label: "홈페이지 저장", icon: <Save />, onSelect: () => sendStudioCommand("homepage-save") }] : []),
-    { key: "download", label: "사업계획서 내려받기", icon: <Download />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 내려받을 수 있어요", onSelect: () => runPlan("plan-download") },
-    { key: "summary", label: "한 장 요약", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => runPlan("plan-summary") },
-    { key: "records", label: "실적과 개선 기록", icon: <ClipboardList />, disabled: !!locks.operations, title: locks.operations?.message, onSelect: () => pickPage("operations") },
+    /* 휴대폰 미리보기는 계획서 칸의 위 줄이 없다 — 목차 · 한 장 요약은 여기서. 내려받기(위 막대 주 단추) · 실적 기록(위 '유지보수')은 겹쳐서 뺐다 */
+    ...(rightTab === "plan" ? [
+      { key: "toc", label: "목차", icon: <List />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-toc") },
+      { key: "summary", label: "한 장 요약", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") },
+      /* 고치는 길은 대화 하나 — 손으로 고치기는 장마다 두지 않고 여기 한 곳(2026-11-10) */
+      { key: "edit", label: "직접 고치기", icon: <PenLine />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => runPlan("plan-edit") },
+    ] : []),
     { key: "refresh", label: "새로고침", icon: <RotateCw />, disabled: !planId, onSelect: refreshView },
     ...(openHref ? [{ key: "open", label: "새 창에서 열기", icon: <ExternalLink />, href: openHref, external: true }] : []),
-    { key: "share", label: "홈페이지 주소 나누기", icon: <Share2 />, disabled: !publicUrl, title: publicUrl ? undefined : shareTitle, onSelect: () => void share() },
+    ...(publicUrl ? [{ key: "share", label: "홈페이지 주소 나누기", icon: <Share2 />, onSelect: () => void share() }] : []),
   ];
 
   /*
@@ -833,9 +838,12 @@ export default function Studio() {
   </header>;
 
   /*
-   * 휴대폰 대화 화면 머리(56px, 시안 MChat) — ✕(44 원, 첫 화면으로) · 사업명 알약 44 ▾(사업 전환 · 이름 바꾸기) · ›(44 원, 미리보기로).
-   * 미리보기 화면은 머리 없이 전체 화면 + 아래 100px 막대.
+   * 휴대폰 머리(시안 MChat) — 대화: ✕(44 원, 첫 화면으로) · 사업명 알약 44 ▾(사업 전환 · 이름 바꾸기) · ›(44 원, 미리보기로).
+   * 미리보기도 같은 자리 · 같은 모양: ‹(44 원, 대화로) · 페이지 이름 알약 ▾(페이지 바꾸기 · 도구) · 주 단추. 돌아가기는 늘 왼쪽 위에 있고 아래 막대는 없다(2026-11-10 사장님)
    */
+  /* 유지보수 칸 앞쪽이 개업 준비인 동안(공개 전 · 준비가 남음)은 주 단추도 개업 준비 다음 단계 — BusinessWorkspace 의 careOpen · launchFront 와 같은 조건 */
+  const launchFront = !isSamplePlan(planId) && (homepage !== "published" || (!!plan && launchProgress(plan) !== "done"));
+  const primary = rightTab === "operations" && launchFront ? LAUNCH_PRIMARY : PRIMARY[rightTab];
   const mobileHead = chatVisible ? <header className={styles.mHead}>
     <Link className={styles.round44} href="/plan" aria-label="첫 화면으로" title="첫 화면으로"><X aria-hidden="true" /></Link>
     <BizMenu planId={planId} title={businessTitle} canRename={!!plan && !isSamplePlan(planId) && !missing} onRenamed={setTitle} className={styles.namePill} align="center"
@@ -843,21 +851,18 @@ export default function Studio() {
     <button type="button" className={styles.round44} aria-label={`미리보기 보기${anyUnread ? " (새 소식)" : ""}`} title={chatOnly ? "대화를 마치면 열려요" : "미리보기 보기"} disabled={chatOnly || missing} onClick={() => selectTab(lastRight, { focus: "heading" })}>
       <ChevronRight aria-hidden="true" />{anyUnread && <i className={styles.dot} aria-hidden="true" />}
     </button>
-  </header> : null;
-
-  /* 휴대폰 미리보기 아래 68px 막대(lovable 실측) — 왼쪽 ‹ 대화 알약 36 / 오른쪽 … 36 원(페이지 바꾸기 · 내려받기 · 요약 등) · 파랑 주 단추 36. 마이크는 대화 칸에만(2026-11-02 사장님) */
-  const primary = PRIMARY[rightTab];
-  const bottomBar = !wide && rightVisible && !missing ? <nav className={styles.bottomBar} aria-label="미리보기 도구">
-    <button type="button" className={styles.backPill} onClick={() => selectTab("chat", { focus: "heading" })}><ChevronLeft aria-hidden="true" />대화{unread.includes("chat") && <i className={styles.dot} aria-hidden="true" />}</button>
-    <span className={styles.grow} />
-    <PopMenu placement="above" align="end" buttonClassName={styles.round48} buttonLabel={`더 보기 — 페이지 바꾸기 · 내려받기 · 요약${anyUnread ? " (새 소식)" : ""}`} buttonTitle="더 보기" menuLabel="미리보기 메뉴"
-      label={<><MoreHorizontal aria-hidden="true" />{RIGHT_TABS.some(id => unread.includes(id) && id !== rightTab) && <i className={styles.dot} aria-hidden="true" />}</>}
+  </header> : missing ? null : <header className={styles.mHead}>
+    <button type="button" className={styles.round44} aria-label={`대화로 돌아가기${unread.includes("chat") ? " (새 소식)" : ""}`} title="대화로 돌아가기" onClick={() => selectTab("chat", { focus: "heading" })}>
+      <ChevronLeft aria-hidden="true" />{unread.includes("chat") && <i className={styles.dot} aria-hidden="true" />}
+    </button>
+    <PopMenu align="center" buttonClassName={styles.namePill} buttonLabel={`${pageOptions.find(item => item.id === rightTab)?.label ?? ""} — 페이지 바꾸기 · 도구${anyUnread ? " (새 소식)" : ""}`} buttonTitle="페이지 바꾸기 · 도구" menuLabel="미리보기 메뉴"
+      label={<><span className={styles.bizTitle}>{pageOptions.find(item => item.id === rightTab)?.label}</span><ChevronDown aria-hidden="true" />{RIGHT_TABS.some(id => unread.includes(id) && id !== rightTab) && <i className={styles.dot} aria-hidden="true" />}</>}
       groups={[
         { key: "pages", heading: "페이지", items: pageOptions.map(item => ({ key: item.id, label: item.label, current: item.id === rightTab, title: item.locked ?? undefined, ariaLabel: `${item.label}${item.done ? " (완료)" : ""}${item.locked ? ` (${item.locked})` : ""}${item.unread ? " (새 소식)" : ""}`, onSelect: () => pickPage(item.id) })) },
         { key: "tools", heading: "도구", items: toolItems },
       ]} />
-    <button type="button" className={styles.primary48} disabled={!!locks[rightTab]} title={locks[rightTab]?.message} onClick={() => sendStudioCommand(primary.command)}>{primary.label}</button>
-  </nav> : null;
+    <button type="button" className={styles.primary44} disabled={!!locks[rightTab]} title={locks[rightTab]?.message} onClick={() => sendStudioCommand(primary.command)}>{primary.label}</button>
+  </header>;
 
   /* 예시 사업 · 대화 없는 사업의 대화 칸 안내 아래 — 대화 칸(BusinessIntake)이 없어 여기서 같은 말풍선을 그린다 */
   const noteGuideTurn = noteGuide && plan && plan.id === planId ? <div className={styles.noteGuide}><JourneyGuideTurn guide={journeyGuide(noteGuide, planId, journeyGuideContext(plan))} /></div> : null;
@@ -888,7 +893,7 @@ export default function Studio() {
                 : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !locks[rightTab] ? rightTab : null} />}
           </Pane>
 
-          {/* 미리보기 판 — PC 는 r16 흰 판(대화 열 오른쪽), 휴대폰은 전체 화면 + 아래 100px 막대 */}
+          {/* 미리보기 판 — PC 는 r16 흰 판(대화 열 오른쪽), 휴대폰은 머리 아래 전체 화면 */}
           <div className={styles.rightCol} data-visible={rightVisible || undefined} inert={!rightVisible}>
             <div className={styles.panes}>
               {RIGHT_TABS.map(id => <Pane key={id} id={id} planId={planId} visible={rightVisible && rightTab === id} nav={navSeq[id] ?? 0} refresh={refreshSeq[id] ?? 0} className={styles.pane} headingRef={headingRef(id)}>
@@ -896,7 +901,6 @@ export default function Studio() {
               </Pane>)}
             </div>
           </div>
-          {bottomBar}
         </div>}
       </BusinessAppChrome>
     </main>
@@ -905,11 +909,6 @@ export default function Studio() {
 
 function sampleTitle(planId: string, title: string): string {
   return isSamplePlan(planId) ? title.replace(/^샘플(\s*·\s*)/, "예시$1") : title;
-}
-
-/* 운영 중인 사업은 4단계 이름이 '운영 개선'(journeySteps 와 같은 이름) */
-function launchLabel(plan: Plan): string {
-  return journeySteps(plan, null).find(step => step.id === "launch")?.label ?? STUDIO_TAB_LABELS.launch;
 }
 
 /** 칸 하나 — 칸 제목(낭독기용, 탭을 바꾸면 초점이 온다)과 이 칸의 작업실 정보(useStudioPane) */

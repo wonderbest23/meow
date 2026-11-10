@@ -81,13 +81,13 @@ async function main() {
       await saveHook(args[1], args[2]);
       return store.savePlanState(...args);
     } });
-    let owner = "", authenticated = true, paid = true;
+    let owner = "", authenticated = true, paid = true, freeLimit = false;
     let accessHook: () => Promise<void> = async () => undefined;
     mock("../lib/api-auth", { requireGuestIdentity: async () => ({ hash: owner, userId: authenticated ? "fixture-user" : null }) });
     mock("../lib/rate-limit", { enforceRateLimit: async () => null });
     mock("../lib/plan-builder/access", {
       resolvePlanAccess: async () => { await accessHook(); return { authenticated, paid, paidPlanIds: new Set<string>() }; },
-      freePlanLimitReached: () => false,
+      freePlanLimitReached: () => freeLimit,
       checkSectionAccess: (_access: unknown, key: string) => ["overview/summary", "overview/problem"].includes(key) ? "ok" : "locked",
     });
     const attempts: Dispatch[] = [], workflows = new Map<string, string>();
@@ -124,7 +124,7 @@ async function main() {
     async function check(name: string, run: () => Promise<void>) {
       owner = `prepare-test-${randomUUID()}`;
       authenticated = paid = quotaAvailable = bindingAvailable = true;
-      quotaThrows = statusUnavailable = false; quotaReads = 0;
+      quotaThrows = statusUnavailable = freeLimit = false; quotaReads = 0;
       usage = { count: 0, error: null }; packs = { data: [], error: null }; orders = { data: [], error: null };
       attempts.length = networkCalls.length = 0; workflows.clear();
       saveHook = async () => undefined; accessHook = async () => undefined; createHook = async () => undefined;
@@ -367,12 +367,20 @@ async function main() {
       assert.equal(attempts.length, 2);
     });
 
-    await check("unpaid plans are sent to payment and never start a workflow (no free trial)", async () => {
+    await check("unpaid plans get the first section once, then are sent to payment", async () => {
       paid = false;
-      const id = await seed(), saved = (await read(id)).state;
-      const response = await prepare(id);
-      assert.equal(response.status, 402); assert.equal(response.body.code, "payment_required");
-      assert.deepEqual((await read(id)).state, saved); assert.equal(attempts.length, 0);
+      const id = await seed();
+      assert.equal((await prepare(id)).status, 200);
+      const { keys } = (await read(id)).generation!;
+      assert.equal(keys.length, 1, "only the first section is written before payment"); assert.equal(attempts.length, 1);
+      await mutate(id, plan => { plan.sections[keys[0]] = { markdown: "First", html: "<p>First</p>", generatedAt: new Date().toISOString(), coachRevision: 2 }; });
+      const saved = (await read(id)).state;
+      const again = await prepare(id);
+      assert.equal(again.status, 402); assert.equal(again.body.code, "payment_required");
+      assert.deepEqual((await read(id)).state, saved); assert.equal(attempts.length, 1, "no second free run");
+      freeLimit = true;
+      const other = await seed(), limited = await prepare(other);
+      assert.equal(limited.status, 402, "the free document limit sends new plans to payment"); assert.equal(attempts.length, 1);
     });
 
     await check("a finished run with a skipped section resumes it at the same revision, still free", async () => {

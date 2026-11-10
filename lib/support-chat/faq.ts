@@ -8,8 +8,8 @@ const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
  * 예전 문구는 '새 문서 시작에서 유형 고르기', '이 섹션 만들기', /plan/start, 샘플 3부, 늘 되는 PPT 를 안내해
  * 상담 도우미(AI)까지 없는 기능을 약속했다.
  */
-/* 무료 체험은 없다(소유자 결정 2026-10-09) — 사업계획서 본문은 결제 후에만 쓴다 */
-const FREE_RULE = "사업계획서 문서 작성과 파일 내려받기는 결제한 뒤에 시작해요(문서를 무료로 써 보는 체험은 없어요). 결제 전에는 완성 예시로 결과물을 미리 볼 수 있어요";
+/* 결제 전에는 첫 항목 하나만 먼저 써서 보여 준다(대표 결정 2026-11-10, free-tier.ts PREVIEW_SECTION_COUNT) — 약관 3조와 같은 말 */
+const FREE_RULE = "사업계획서는 결제 전에 첫 항목 하나를 먼저 써서 보여 드려요. 나머지 항목 작성과 파일 내려받기는 결제한 뒤에 시작해요. 완성 예시로 결과물을 미리 볼 수도 있어요";
 const FILES = PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word";
 /* 앱 안 결제 안내 — 카드·웹 결제는 말하지 않는다(App Store 3.1.1) */
 const APP_PAY_METHOD = "앱에서는 스토어 결제로 결제해요. 아이폰은 App Store(Apple), 안드로이드는 Google Play 결제창이 열리고, 결제가 확인되면 바로 열려요.";

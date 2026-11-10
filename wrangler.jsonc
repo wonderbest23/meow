@@ -60,6 +60,8 @@
     "INTAKE_LIVE_COMMENT": "1",
     // 첫 사업 설명에 맞춘 답변 추천 칩(시험 기능). 끄려면 "0".
     "INTAKE_ANSWER_SUGGESTIONS": "1",
+    // 한 문장 → 바로 초안(시험 기능): 사업 문장 뒤 나머지 질문을 업종 기준표로 채워 묻지 않는다. 끄려면 "0".
+    "INTAKE_ESTIMATE": "1",
     // 사용 한도를 워커 인스턴스별 메모리가 아니라 DB 공유 카운터(마이그레이션 0018 bump_rate_limit)로 센다. DB 오류 시 메모리 한도로 내려간다.
     "RATE_LIMIT_BACKEND": "supabase",
     // 추천 칩에만 쓰는 모델. 비워 두면 기본 텍스트 모델(Opus)을 쓴다.

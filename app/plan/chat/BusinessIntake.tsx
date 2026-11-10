@@ -300,7 +300,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const [editState, dispatchEdit] = useReducer(studioEditReducer, { planId: null, turns: [] });
   const [requestQueue, setRequestQueue] = useState<{ planId: string | null; items: QueuedStudioRequest[] }>({ planId: null, items: [] });
   const studioTail = useRef<HTMLDivElement>(null);
-  /* 결제 여부를 '사업계획서 만들기'가 보일 때 미리 알아 둔다 — 결제 전이면 누르는 즉시 결제 화면으로(서버 왕복 두 번을 건너뛴다). 작성 여부는 서버가 다시 막는다 */
+  /* 결제 여부를 '사업계획서 만들기'·'전체 받기'가 보일 때 미리 알아 둔다 — 결제 전에 첫 항목을 이미 받았으면 누르는 즉시 결제 화면으로(서버 왕복 두 번을 건너뛴다). 작성 여부는 서버가 다시 막는다 */
   const [payAccess, setPayAccess] = useState<{ planId: string; paid: boolean; authenticated: boolean } | null>(null);
   const router = useRouter();
   /* 화면 안 이동 — 작업실 안에서는 같은 사업의 화면이면 탭만 바꾸고(나머지는 작업실이 실제로 이동), 밖에서는 예전처럼 router */
@@ -606,7 +606,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
         setStatus("conflict"); setError(data?.message || "다른 곳에서 이 사업의 내용이 바뀌었어요. 최신 내용을 불러온 뒤 답변을 다시 확인해 주세요."); return;
       }
       if (data?.loginRequired) setLoginGate(true);
-      // 결제 전 계획서는 작성하지 않는다(무료 체험 없음) — 이 사업의 결제 화면으로 보낸다. 결제가 끝나면 ?start=1 로 돌아와 이어서 작성한다.
+      // 결제 전에는 첫 항목만 쓴다(free-tier.ts PREVIEW_SECTION_COUNT) — 그 뒤는 이 사업의 결제 화면으로 보낸다. 결제가 끝나면 ?start=1 로 돌아와 이어서 작성한다.
       if (response.status === 402 && data?.code === "payment_required" && pending.command.action === "prepare" && planRef.current) {
         writeDraft({ ...draftRef.current, pending: null });
         leavingForPay.current = true;
@@ -741,7 +741,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     /* 계획서가 있는 사업에서 [계획서에 반영하기]를 눌러 실패해도 지난 실패로 숨기지 않는다(점검 r42: 503 이 나도 아무 안내 없이 단추만 돌아왔다) */
     setPreparing(true); setChatSent(true);
     const current = planRef.current;
-    if (current && payAccess?.planId === current.planId && payAccess.authenticated && !payAccess.paid) {
+    if (current?.hasDocuments && payAccess?.planId === current.planId && payAccess.authenticated && !payAccess.paid) {
       leavingForPay.current = true;
       navigate(payHref(current));
       return;
@@ -1027,6 +1027,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const started = prepared || generating;
   const nextStep = plan ? intakeNextStep(plan, started) : null;
   const prepareVisible = nextStep === "prepare" && !!plan && !plan.hasDocuments;
+  const resumeVisible = nextStep === "prepare" && !!plan?.hasDocuments && !!plan.missingSections;
   /*
    * '사업계획서 만들기' 아래에 가격을 미리 보여 준다 — 눌러야 결제 화면에서야 값을 알았다(여정 점검 2026-10-22).
    * 앱에서는 스토어가 값을 정하므로 웹 가격을 적지 않는다. 이미 결제한 사업이면 바로 작성한다고만 알린다.
@@ -1034,9 +1035,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const [inApp, setInApp] = useState(false);
   useEffect(() => { setInApp(nativePlatform() !== null); }, []);
   const paidPlan = !!plan && payAccess?.planId === plan.planId && payAccess.paid;
-  const payNote = paidPlan ? "몇 분 걸려요" : inApp ? undefined : `${PACKAGE_AMOUNT.toLocaleString("ko-KR")}원 결제 후 작성 · 홈페이지까지 ${BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원`;
+  const unpaidPlan = !!plan && payAccess?.planId === plan.planId && !payAccess.paid;
+  // 결제 전: 첫 항목은 먼저 써서 보여 주고(값은 전체 값만), 그 뒤 '전체 받기'에서 홈페이지 묶음 값까지 알린다
+  const payNote = paidPlan ? "몇 분 걸려요" : plan?.hasDocuments ? inApp ? undefined : `${PACKAGE_AMOUNT.toLocaleString("ko-KR")}원 · 홈페이지까지 ${BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원` : inApp ? "첫 항목 먼저 보기" : `첫 항목 먼저 보기 · 전체 ${PACKAGE_AMOUNT.toLocaleString("ko-KR")}원`;
   useEffect(() => {
-    if (!prepareVisible || !plan) return;
+    if (!prepareVisible && !resumeVisible || !plan) return;
     let alive = true;
     router.prefetch(payHref(plan));
     fetch(`/api/plan/access?${new URLSearchParams({ planType: plan.planType, planId: plan.planId }).toString()}`, { cache: "no-store" })
@@ -1048,7 +1051,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
       .catch(() => undefined);
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 사업이 바뀌거나 단계가 보일 때만
-  }, [prepareVisible, plan?.planId]);
+  }, [prepareVisible, resumeVisible, plan?.planId]);
   /* 결제 직후(?start=1)에는 손님이 다시 누르지 않아도 사업계획서 작성을 한 번 시작한다 — 결제 결과 화면이 여기로 보낸다 */
   const autoStarted = useRef(false);
   useEffect(() => {
@@ -1244,7 +1247,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     return () => cancelAnimationFrame(frame);
   }, [runShown, scrollToCurrent]);
   const studioTurn = studioRun ?? (embedded && plan && justFinished
-    ? <GenerationFinishedTurn planId={plan.planId} onPlan={() => showPlan(plan.planId)} onHomepage={() => navigate(homepageHref(plan.planId))} /> : null);
+    ? <GenerationFinishedTurn onPlan={() => showPlan(plan.planId)} onHomepage={() => navigate(homepageHref(plan.planId))} /> : null);
 
   /*
    * ── 작업실 3단계: 대화로 고치기 · 계획서를 쓰는 동안 보낸 요청 ──────────
@@ -1749,7 +1752,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
             {!locked && memoPending && <AppButton type="button" variant="text" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</AppButton>}
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview}>
               {/* 쓰는 동안 받아 둔 요청을 보내 채팅 수정 화면이 되어도 마무리 말(계획서 보기 · 홈페이지 만들기)을 먼저 남기고 그 아래에 제안 카드 */}
-              {editTurn && !replyTurn ? <>{studioTurn}<EditChatTurn pro={pro} chapters={editChapters} snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : locked && !replyTurn ? <>{studioTurn ?? <DocumentLockedTurn pro={pro} planId={plan.planId} chatEdit={COACH_EDIT_CHAT} onChatEdit={embedded ? () => { follow.current = true; focusComposer(); } : undefined} />}{nextStep === "prepare" && !studioRun && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || amountConfirmation || sectorConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat cardLabel={questionCardLabel} cardFoot={questionCardFoot} question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={answerBlocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onCarry={carryDraft} onComposer={focusComposer} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</AppButton></section> : <section className={styles.complete}>
+              {editTurn && !replyTurn ? <>{studioTurn}<EditChatTurn pro={pro} chapters={editChapters} snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : locked && !replyTurn ? <>{studioTurn ?? <DocumentLockedTurn pro={pro} planId={plan.planId} chatEdit={COACH_EDIT_CHAT} onChatEdit={embedded ? () => { follow.current = true; focusComposer(); } : undefined} />}{nextStep === "prepare" && !studioRun && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || amountConfirmation || sectorConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat cardLabel={questionCardLabel} cardFoot={questionCardFoot} question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={answerBlocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onCarry={carryDraft} onComposer={focusComposer} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</AppButton></section> : <section className={styles.complete}>
                 {designRunning || designStarting ? <DesignProgress snapshot={plan} announce /> : <>
                 {pro && (nextStep === "prepare" || nextStep === "open") && <WorkLog items={[designLogItem(plan)]} />}
                 <ChatSpeaker />
@@ -1760,7 +1763,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
                 {(nextStep === "prepare" || nextStep === "open") && !(coach && currentIdentity(plan)) && <DesignDirection snapshot={plan} continued={!!currentIdentity(plan)} />}
                 {!nextStep && refinement && <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "살펴볼 사업 정하기" : "사업 소개 정하기"}<ChevronRight size={17} aria-hidden="true" /></AppButton>}
                 {/* 작업실 안: 작성 중이면 진행 카드, 방금 끝났으면 마무리 말이 다음 단계 단추 자리를 대신한다 */}
-                {studioTurn ?? <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce minimal={coach && !!currentIdentity(plan)} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}
+                {studioTurn ?? <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce minimal={coach && !!currentIdentity(plan)} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}
                 </>}
                 {generating && generation.state && !embedded && <AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => setGenerationOpen(true)}>사업계획서 작성 중 {generation.state.done}/{generation.state.total} · 진행 보기</AppButton>}
                 {!signedIn && <p className={styles.guestSaveNote}>로그인하지 않으면 이 브라우저에만 저장돼요. <Link href={loginHref}>로그인</Link>하면 다른 기기·브라우저에서도 이어서 볼 수 있어요.</p>}

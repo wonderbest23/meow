@@ -81,11 +81,11 @@ for (const path of ["app/globals.css", "app/release-20260916.css", "app/puck-int
 assert.match(globals, /input,\s*textarea,\s*select\s*\{\s*font-size:\s*max\(16px,\s*1rem\)\s*!important;/, "휴대폰 입력칸이 16px 고정이거나 16px 밑으로 내려갈 수 있다(iOS 확대)");
 
 const studio = css("app/plan/studio/Studio.module.css");
-// lovable 구조 2단계 — 휴대폰 탭 줄은 없다. 위 막대 · 휴대폰 머리 · 아래 막대는 높이를 최소값으로만 둔다(글자를 키우면 늘어난다)
+// lovable 구조 2단계 — 휴대폰 탭 줄은 없다. 위 막대 · 휴대폰 머리(대화 · 미리보기)는 높이를 최소값으로만 둔다(글자를 키우면 늘어난다)
 assert.match(studio, /\.topBar \{ min-height:48px;/, "PC 작업실 위 막대 높이가 고정이라 글자를 키우면 단추가 밀려난다");
 assert.match(studio, /\.toolbar \{[^}]*flex-wrap:wrap;[^}]*min-height:48px;/, "PC 미리보기 막대가 줄을 바꾸지 않아 단추가 화면 밖으로 밀린다");
 assert.match(studio, /\.mHead \{[^}]*min-height:44px;/, "휴대폰 대화 머리 높이가 고정이라 글자를 키우면 잘린다");
-assert.match(studio, /\.bottomBar \{[^}]*min-height:calc\(68px/, "휴대폰 아래 막대 높이가 고정이라 글자를 키우면 잘린다");
+assert.match(studio, /\.primary44 \{[^}]*min-height:44px;/, "휴대폰 미리보기 머리의 주 단추 높이가 고정이라 글자를 키우면 잘린다");
 assert.match(css("app/plan/chat/page.module.css"), /\.header \{ min-height:80px;/, "머리줄 높이가 고정이라 제목·부제가 잘린다");
 
 console.log("font scale s1: ok");

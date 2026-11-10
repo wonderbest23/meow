@@ -58,7 +58,8 @@ import { PLAN_EDIT_MAX_LENGTH, planChapterComposeRequest, planChapterEditLabel, 
   assert.match(workspace, /useStudioCommand\("plan-edit", /, "위 막대 ⋯ 의 '사업계획서 직접 고치기'");
   assert.match(workspace, /className=\{styles\.pager\} aria-label="문서 장 이동"/, "아래 가운데 떠 있는 장 넘기기");
   assert.match(workspace, /!summaryMode && !continuous && !studioPc && <nav className=\{styles\.paging\}/, "예전 이전 장·다음 장 줄은 새 화면에서 뺀다");
-  assert.match(workspace, /const directInChapter = directEditable && !studioPc;/, "새 화면의 '직접 고치기'는 얇은 줄에 하나만");
+  assert.match(workspace, /const directInChapter = directEditable && !studioHeader;/, "작업실의 '직접 고치기'는 장 머리가 아니라 메뉴에 하나만(PC 얇은 줄 · 휴대폰 페이지 알약)");
+  assert.match(readFileSync(new URL("../app/plan/studio/Studio.tsx", import.meta.url), "utf8"), /key: "edit", label: "직접 고치기", icon: <PenLine \/>, disabled: !planTools/, "휴대폰 페이지 알약 메뉴에 '직접 고치기'");
   assert.match(workspace, /previewFactChanges\(/, "대화 수정 제안을 본문에 미리 겹쳐 보인다");
   assert.match(workspace, /const previewOn = EDIT_CHAT && studioPc && factEditable && ready && !props\.writing;/, "미리보기 읽기는 새 화면에서만");
   assert.match(css, /\.pager \{ position:sticky; bottom:16px;/);

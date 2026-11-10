@@ -21,7 +21,6 @@ const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
 const SAMPLE_PLAN = "/plan/document?planId=sample_coffee";
 const SAMPLE_HOMEPAGE = "/plan/homepage?planId=sample_coffee";
 /* 예시 사업의 개업 준비·유지보수 — 작업실에서 로그인 없이 열린다(유지보수는 예시 실적 기록을 보기 전용으로 보여 준다, sample-operations.ts) */
-const SAMPLE_LAUNCH = studioHref("sample_coffee", "launch");
 const SAMPLE_OPERATIONS = studioHref("sample_coffee", "operations");
 /* 새 대화 — 작업실이 켜져 있으면 작업실의 새 대화로(newChatHref) */
 const NEW_CHAT = newChatHref();
@@ -61,7 +60,7 @@ function afterCards(signedIn: boolean | null) {
   const mine = signedIn === true;
   return [
     { id: "after-homepage", href: SAMPLE_HOMEPAGE, title: "내 사업 홈페이지", body: "사업계획서로 홈페이지 초안을 바로 만들어요.", action: "예시 홈페이지 보기" },
-    { id: "after-launch", href: mine ? "/plan" : SAMPLE_LAUNCH, title: JOURNEY_LABELS.launch, body: "신고·등록부터 홍보까지 할 일 목록으로 안내해요.", action: mine ? "내 사업 열기" : "예시 보기" },
+    { id: "after-launch", href: mine ? "/plan" : SAMPLE_OPERATIONS, title: JOURNEY_LABELS.launch, body: "신고·등록부터 홍보까지 할 일 목록으로 안내해요.", action: mine ? "내 사업 열기" : "예시 보기" },
     { id: "after-ops", href: mine ? "/plan" : SAMPLE_OPERATIONS, title: JOURNEY_LABELS.care, body: "문을 연 뒤 매출과 할 일을 기록해요.", action: mine ? "내 사업 열기" : "예시 보기" },
   ];
 }

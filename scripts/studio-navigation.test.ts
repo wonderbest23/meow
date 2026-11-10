@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { STUDIO_TABS, STUDIO_TAB_LABELS, isEntryMode, isStudioTab, newChatEntryHref, newChatHref, stepForStudioTab, studioChatComplete, studioChips, studioEntryHref, studioHref, studioLockedStep, studioNewHref, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTarget } from "../lib/plan-builder/studio";
+import { STUDIO_TABS, STUDIO_TAB_LABELS, isEntryMode, isStudioTab, newChatEntryHref, newChatHref, stepForStudioTab, studioChatComplete, studioChips, studioEntryHref, studioHref, studioLockedStep, studioNewHref, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTabParam, studioTarget } from "../lib/plan-builder/studio";
 import { businessChatHref, documentHref, workspaceHref } from "../lib/plan-builder/business-hub";
 import { careHref, homepageHref, launchHref } from "../lib/plan-builder/journey";
 import { JOURNEY_ORDER, journeyPrepLabel } from "../lib/plan-builder/journey-steps";
@@ -30,10 +30,13 @@ const origin = "http://localhost:8083";
 assert.deepEqual(studioTarget(businessChatHref(id), id, origin), { tab: "chat", params: {}, hash: "" });
 assert.deepEqual(studioTarget(documentHref(id), id, origin), { tab: "plan", params: {}, hash: "" });
 assert.deepEqual(studioTarget(homepageHref(id), id, origin), { tab: "homepage", params: {}, hash: "" });
-assert.deepEqual(studioTarget(launchHref(id), id, origin), { tab: "launch", params: {}, hash: "" });
+assert.deepEqual(studioTarget(launchHref(id), id, origin), { tab: "operations", params: {}, hash: "" }, "개업 준비는 유지보수 칸 안에 있다");
 assert.deepEqual(studioTarget(careHref(id), id, origin), { tab: "operations", params: {}, hash: "" });
-assert.equal(studioTarget(workspaceHref(id), id, origin)?.tab, "launch", "탭 없는 사업 관리 주소는 개업 준비");
-assert.equal(studioTarget(`${workspaceHref(id)}&tab=action`, id, origin)?.tab, "launch");
+assert.equal(studioTarget(workspaceHref(id), id, origin)?.tab, "operations", "탭 없는 사업 관리 주소는 유지보수(개업 준비를 담는다)");
+assert.equal(studioTarget(`${workspaceHref(id)}&tab=action`, id, origin)?.tab, "operations");
+assert.equal(studioTarget(`/plan/studio?planId=${id}&tab=launch`, id, origin)?.tab, "operations", "예전 작업실 주소 tab=launch 는 유지보수로");
+assert.equal(studioTabParam("launch"), "operations");
+assert.equal(studioTabParam("nope"), null);
 assert.equal(studioTarget(`${workspaceHref(id)}&tab=summary`, id, origin), null, "작업실에 없는 사업 요약 탭은 예전 화면으로");
 assert.equal(studioTarget(`${workspaceHref(id)}&tab=documents`, id, origin), null);
 assert.equal(studioTarget(`/plan/document/?planId=${encodeURIComponent(id)}`, id, origin)?.tab, "plan", "끝의 / 는 같은 화면");
@@ -43,7 +46,7 @@ assert.deepEqual(studioTarget(`/plan/document?planId=${encodeURIComponent(id)}&e
 assert.deepEqual(studioTarget(`/plan/chat?planId=${encodeURIComponent(id)}&start=1`, id, origin), { tab: "chat", params: { start: "1" }, hash: "" });
 assert.deepEqual(studioTarget(`/plan/chat?planId=${encodeURIComponent(id)}&edit=chat`, id, origin), { tab: "chat", params: { edit: "chat" }, hash: "" });
 assert.deepEqual(studioTarget(`${careHref(id)}&step=marketing`, id, origin), { tab: "operations", params: { step: "marketing" }, hash: "" });
-assert.deepEqual(studioTarget(`${launchHref(id)}&step=marketing`, id, origin), { tab: "launch", params: { step: "marketing" }, hash: "" });
+assert.deepEqual(studioTarget(`${launchHref(id)}&step=marketing`, id, origin), { tab: "operations", params: { step: "marketing" }, hash: "" });
 assert.deepEqual(studioTarget(businessChatHref(id, "상품을 다듬어 주세요"), id, origin), { tab: "chat", params: { prompt: "상품을 다듬어 주세요" }, hash: "" });
 assert.equal(studioTarget(`${origin}/plan/homepage?planId=${encodeURIComponent(id)}`, id, origin)?.tab, "homepage", "같은 사이트의 전체 주소도");
 
@@ -68,7 +71,7 @@ assert.equal(studioTarget("http://[::1", id, origin), null, "고장 난 주소")
 /* 예전 화면 → 작업실 입구 */
 assert.equal(studioEntryHref(`/plan/document?planId=a&edit=facts#sec-2`, origin), "/plan/studio?planId=a&tab=plan&edit=facts#sec-2");
 assert.equal(studioEntryHref(careHref("a"), origin), "/plan/studio?planId=a&tab=operations");
-assert.equal(studioEntryHref(workspaceHref("a"), origin), "/plan/studio?planId=a&tab=launch");
+assert.equal(studioEntryHref(workspaceHref("a"), origin), "/plan/studio?planId=a&tab=operations");
 assert.equal(studioEntryHref("/plan/chat?new=1", origin), null);
 assert.equal(studioEntryHref("/plan/pay?planId=a", origin), null);
 
@@ -106,10 +109,11 @@ assert.equal(studioEntryHref("/plan/pay?planId=a", origin), null);
 }
 
 /* 탭 목록 · 단계 ↔ 탭 */
-assert.deepEqual([...STUDIO_TABS], ["chat", "plan", "homepage", "launch", "operations"]);
+assert.deepEqual([...STUDIO_TABS], ["chat", "plan", "homepage", "operations"]);
 assert.ok(isStudioTab("plan") && !isStudioTab("care") && !isStudioTab(null));
-for (const step of JOURNEY_ORDER) assert.equal(stepForStudioTab(studioTabForStep(step)), step, step);
-assert.deepEqual(JOURNEY_ORDER.map(studioTabForStep), ["chat", "plan", "homepage", "launch", "operations"]);
+/* 개업 준비는 유지보수 칸 안에 있어 되돌리면 유지보수다 */
+for (const step of JOURNEY_ORDER) assert.equal(stepForStudioTab(studioTabForStep(step)), step === "launch" ? "care" : step, step);
+assert.deepEqual(JOURNEY_ORDER.map(studioTabForStep), ["chat", "plan", "homepage", "operations", "operations"]);
 
 /* 작업실 화면 — 소스 점검(브라우저 없이 확인할 수 있는 약속만) */
 {
@@ -144,8 +148,8 @@ assert.deepEqual(JOURNEY_ORDER.map(studioTabForStep), ["chat", "plan", "homepage
   assert.equal(studioRedirectHref(`/plan/document?planId=a&edit=facts#sec-2`, origin), "/plan/studio?planId=a&tab=plan&edit=facts#sec-2");
   assert.equal(studioRedirectHref(homepageHref("a"), origin), "/plan/studio?planId=a&tab=homepage", "손님 문의 알림 메일");
   assert.equal(studioRedirectHref(careHref("a"), origin), "/plan/studio?planId=a&tab=operations", "주간 리포트 메일");
-  assert.equal(studioRedirectHref(`${launchHref("a")}&step=marketing`, origin), "/plan/studio?planId=a&tab=launch&step=marketing");
-  assert.equal(studioRedirectHref(`${workspaceHref("a")}&tab=action`, origin), "/plan/studio?planId=a&tab=launch");
+  assert.equal(studioRedirectHref(`${launchHref("a")}&step=marketing`, origin), "/plan/studio?planId=a&tab=operations&step=marketing");
+  assert.equal(studioRedirectHref(`${workspaceHref("a")}&tab=action`, origin), "/plan/studio?planId=a&tab=operations");
   // 사업 관리의 요약 · 문서 탭과 탭 없는 주소(기본이 사업 요약)는 작업실에 없어 그대로
   assert.equal(studioRedirectHref(workspaceHref("a"), origin), null, "탭 없는 사업 관리 = 사업 요약");
   assert.equal(studioRedirectHref(`${workspaceHref("a")}&tab=summary`, origin), null);
@@ -187,7 +191,7 @@ assert.equal(studioRedirectHref("/plan/chat?new=1&entry=startup", origin), "/pla
 assert.ok(isEntryMode("startup") && !isEntryMode("1") && !isEntryMode(null));
 
 /* 단계 이름은 한 곳(journey-steps) — 작업실 탭 · 머리줄 칩 · 부제가 같은 이름 */
-assert.equal(STUDIO_TAB_LABELS.launch, "개업 준비");
+assert.equal("launch" in STUDIO_TAB_LABELS, false, "개업 준비는 따로 탭이 없다");
 assert.equal(journeyPrepLabel(), "개업·운영", "휴대폰 넷째 탭은 개업 준비와 유지보수를 함께 담는다");
 assert.equal(journeyPrepLabel(true), "운영");
 assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
@@ -200,7 +204,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
     { id: "launch" as const, state: launch }, { id: "care" as const, state: care },
   ];
   const states = (list: ReturnType<typeof studioChips>) => list.map(chip => chip.state);
-  assert.deepEqual(studioChips(null).map(chip => [chip.step, chip.tab, chip.label]), [["chat", "chat", "대화"], ["document", "plan", "계획서"], ["homepage", "homepage", "홈페이지"], ["launch", "launch", "개업 준비"]]);
+  assert.deepEqual(studioChips(null).map(chip => [chip.step, chip.tab, chip.label]), [["chat", "chat", "대화"], ["document", "plan", "계획서"], ["homepage", "homepage", "홈페이지"], ["launch", "operations", "개업 준비"]]);
   assert.deepEqual(states(studioChips(null)), ["current", "upcoming", "upcoming", "upcoming"], "새 대화는 대화가 지금 단계");
   assert.deepEqual(states(studioChips(steps("done", "active", "todo", "todo"))), ["done", "current", "upcoming", "upcoming"]);
   assert.deepEqual(states(studioChips(steps("done", "done", "active", "todo"))), ["done", "done", "current", "upcoming"]);
@@ -235,12 +239,12 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo"), design: true }), "사업 방향 정리됨 · 계획서 만들 차례");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true }), "수정 내용 반영 필요");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true, generation: { done: 0, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 0/10 항목", "다시 쓰는 중");
-  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "launch" }), "개업 준비 · 시작 전", "개업 준비 칸에서 홈페이지 상태를 말하지 않는다");
-  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "operations" }), "유지보수 · 실적과 개선 기록", "유지보수 칸에서 개업 준비 진행을 말하지 않는다");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "operations" }), "개업 준비 · 시작 전", "공개 전 유지보수 칸은 개업 준비를 말한다");
+  assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "operations" }), "유지보수 · 실적과 개선 기록", "유지보수 칸에서 개업 준비 진행을 말하지 않는다");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "plan" }), "", "끝난 계획서 칸은 머리줄 상태를 숨긴다(r37 — 칸 안이 이미 말한다)");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), stale: true, tab: "plan" }), "사업계획서 · 수정 내용 반영 필요");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "homepage" }), "", "홈페이지 공개 여부는 주소창 이름표 한 곳에서만(r37)");
-  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "launch" }), "", "진행 수는 칸 안 '2 / 9' 한 곳에서만(r37)");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "operations" }), "", "진행 수는 칸 안 '2 / 9' 한 곳에서만(r37)");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), tab: "homepage" }), "홈페이지 · 만들기 전");
 
   /* 작업실의 대화 완료 — 첫 답(coach.ready)만으로는 끝나지 않는다: 사업안 · 계획서 장 · 쓰는 중 · 핵심 질문 모두 답함 중 하나 */
@@ -268,14 +272,12 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   // 막힌 탭 — 대화가 안 끝났으면 계획서는 막히고(왼쪽 메뉴 문구), 개업 준비 · 유지보수는 사업 관리가 열려야
   assert.equal(studioLockedStep("plan", readyOnly, false), "document");
   assert.equal(studioLockedStep("homepage", readyOnly, false), "homepage");
-  assert.equal(studioLockedStep("launch", readyOnly, false), "launch");
   assert.equal(studioLockedStep("operations", readyOnly, false), "care");
   assert.equal(studioLockedStep("chat", readyOnly, false), null);
   const designed = studioSteps(steps("done", "todo", "todo", "todo"), true);
   assert.equal(studioLockedStep("plan", designed, true), null, "대화를 마치면 계획서가 열린다");
   assert.equal(studioLockedStep("homepage", designed, true), "homepage", "홈페이지는 계획서를 마쳐야");
-  assert.equal(studioLockedStep("launch", designed, true), null);
-  assert.equal(studioLockedStep("operations", designed, true), "care", "유지보수는 홈페이지를 공개해야(2026-11-02)");
+  assert.equal(studioLockedStep("operations", designed, true), null, "유지보수는 대화를 마치면 열린다 — 공개 전에는 개업 준비를 보여 준다");
   assert.equal(studioLockedStep("operations", studioSteps(steps("done", "done", "done", "todo"), true), true), null, "홈페이지를 공개하면 유지보수가 열린다");
   assert.equal(studioLockedStep("plan", studioSteps(steps("done", "active", "todo", "todo"), true), true), null, "문서가 이미 있으면 막히지 않는다");
   assert.equal(studioLockedStep("homepage", studioSteps(steps("done", "done", "todo", "todo"), true), true), null);
@@ -286,10 +288,10 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
   const studio = read("../app/plan/studio/Studio.tsx");
   const redirect = read("../app/plan/studio/StudioRedirect.tsx");
-  // lovable 구조 2단계 — 휴대폰 네 칸 탭 줄은 없다. 페이지는 아래 막대 … 메뉴(휴대폰) · 위 막대 페이지 선택(PC)에서 고른다(예전 '준비' 이름도 쓰지 않는다)
+  // lovable 구조 2단계 — 휴대폰 네 칸 탭 줄은 없다. 페이지는 머리의 페이지 이름 알약(휴대폰) · 위 막대 페이지 선택(PC)에서 고른다(예전 '준비' 이름도 쓰지 않는다)
   assert.ok(!studio.includes("styles.narrowTabs"), "휴대폰 네 칸 탭 줄을 다시 그리지 않는다");
   assert.ok(!studio.includes('prep: "준비"'), "휴대폰 탭 이름 '준비'를 다시 쓰지 않는다");
-  assert.match(studio, /const RIGHT_TABS: RightTab\[\] = \["plan", "homepage", "launch", "operations"\];/);
+  assert.match(studio, /const RIGHT_TABS: RightTab\[\] = \["plan", "homepage", "operations"\];/);
   // 예전 4개 화면 감싸기는 모두 StudioRedirect 로 — 보낼 때는 본문을 그리지 않는다(홈페이지 자동 생성 · AI 비용 방지)
   for (const page of ["chat", "document", "homepage", "workspace"]) assert.match(read(`../app/plan/${page}/page.tsx`), /<StudioRedirect fallback=/, page);
   assert.match(redirect, /const target = STUDIO_REDIRECT \? studioRedirectHref\(/);
@@ -409,11 +411,12 @@ console.log("studio navigation ok");
   // 가운데 알약 — PC 에서만 통로를 준다(휴대폰은 칸이 자기 안에 그린다) · 보이는 칸의 것만 · 같은 것을 다시 주면 무시
   assert.match(studio, /setHeaderCenter: wide \? setHeaderCenter : undefined,/);
   assert.match(studio, /const centerSlot = \(id: StudioTab\) => \{\n\s*const node = centerNodes\[id\];\n\s*if \(!node \|\| !isVisible\(id\)\) return null;/);
-  // 휴대폰 미리보기 아래 막대 — ‹ 대화 · 마이크 · … · 파란 주 단추(계획서 내려받기 · 홈페이지 공개하기 · 개업 준비 다음 단계)
+  // 휴대폰 미리보기 머리 — ‹ · 페이지 이름 알약 · 주 단추(계획서 내려받기 · 홈페이지 공개하기 · 개업 준비 다음 단계)
   assert.match(studio, /plan: \{ label: "내려받기", command: "plan-download" \}/);
   assert.match(studio, /homepage: \{ label: "공개하기", command: "homepage-publish" \}/);
-  assert.match(studio, /launch: \{ label: "다음 단계", command: "launch-next" \}/);
-  // 휴대폰 미리보기는 칸 위에 아래 막대와 같은 단추를 두지 않는다 — 계획서 '내려받기' 칩, 홈페이지 '저장 · 공개하기' 줄(저장은 … 메뉴로)
+  assert.match(studio, /LAUNCH_PRIMARY[^\n]*\{ label: "다음 단계", command: "launch-next" \}/);
+  assert.match(studio, /rightTab === "operations" && launchFront \? LAUNCH_PRIMARY : PRIMARY\[rightTab\]/, "개업 준비가 앞에 있는 동안 유지보수 칸의 주 단추는 다음 단계");
+  // 휴대폰 미리보기는 칸 위에 머리와 같은 단추를 두지 않는다 — 계획서 '내려받기' 칩, 홈페이지 '저장 · 공개하기' 줄(저장은 … 메뉴로)
   assert.match(read("../app/plan/document/DocumentWorkspace.tsx"), /onDownload=\{grouped\.length && !nav\?\.toolbarTools \? \(\) => setModal\("download"\) : undefined\}/);
   assert.match(read("../app/plan/homepage/HomepageScreen.tsx"), /studioHeader && nav\?\.toolbarTools \? <div className=\{`\$\{styles\.studioNarrowBar\} \$\{paneHeader\.narrowOnly\}`\}>\{previewSwitch\}\{publishedMenu\(styles\.headerPrimary\)\}<\/div>/);
   assert.match(read("../app/plan/homepage/HomepageScreen.tsx"), /useStudioCommand\("homepage-save",/);
