@@ -49,6 +49,35 @@ async function main() {
   assert.doesNotMatch(`${cafeApp.answers.customer} ${cafeApp.answers.offer} ${cafeApp.answers.channel}`, /커피|손님|네이버 예약/);
   assert.equal(estimateIntake("옷가게를 하고 싶어요").answers.channel, "매장 방문");
 
+  // 문장 읽기: 사용자가 이미 적은 고객·가격·자금·시간·목표·양·인원은 짐작하지 않고 그대로 읽는다
+  const { readSentence } = await import("../lib/plan-builder/intake-sentence");
+  const together = "동업자·가족과 함께";
+  const reads: [string, Record<string, unknown>][] = [
+    ["20~30대 여성 직장인을 위한 샐러드 가게를 열고 싶어요", { customer: "20~30대 여성 직장인" }], ["초등학생 영어 과외를 하려고 해요", { customer: "초등학생" }],
+    ["자본금 3천만원으로 동네 카페를 차리고 싶어요", { budget: 30_000_000 }], ["퇴직금 1억으로 편의점을 하려고 해요", { budget: 100_000_000 }],
+    ["월 매출 1,000만원 목표로 네일샵을 열려고 해요", { goal: "6개월 안에 월 매출 1,000만원" }], ["1년 안에 월 500만원 버는 스마트스토어를 하고 싶어요", { goal: "1년 안에 월 순수익 500만원" }],
+    ["5만원짜리 원데이 클래스를 일주일에 10명 받으려고 해요", { price: 50_000, capacity: { period: "일주일", count: 10 } }], ["회당 8만원 1:1 PT를 주 20시간만 하려고 해요", { price: 80_000, hours: 20 }],
+    ["월 15만원 회원권 필라테스 스튜디오를 열고 싶어요", { price: 150_000, priceMonthly: true }], ["직원 2명 두고 미용실을 열려고 해요", { people: "직원·아르바이트 1~2명" }],
+    ["부부가 함께 국밥집을 차리려고 해요", { people: together }], ["친구랑 같이 수제 버거집을 열려고 해요", { people: together }],
+    // 읽으면 안 되는 것: 월세·월급·구독자 수·연 매출은 가격·자금·목표가 아니고, 창업자 자신과 함께 놀러 오는 친구는 고객·동업자가 아니다
+    ["월세 200만원 상가에서 꽃집을 하려고 해요", {}], ["월급 300만원 받던 직장인인데 빵집을 하고 싶어요", {}], ["구독자 1만 명 유튜브 채널로 수익을 내고 싶어요", {}],
+    ["연 매출 1억 목표로 온라인 쇼핑몰을 하려고 해요", {}], ["친구와 함께 놀러 갈 수 있는 보드게임카페를 하고 싶어요", {}], ["어린이집을 하려고 해요", {}],
+  ];
+  for (const [text, facts] of reads) assert.deepEqual(JSON.parse(JSON.stringify(readSentence(text))), facts, `${text}: 문장에서 읽은 것`);
+  // 읽은 가격에는 건당 비용이 같은 비율로 따라가고, 한 달 값으로 적은 가격은 한 달 회원 수로 센다(건당 자리에 두면 매출이 몇십 배로 부푼다)
+  const coffee = estimateIntake("한 잔 3,500원 테이크아웃 커피 전문점을 하려고 해요").answers;
+  assert.deepEqual([coffee.price, coffee["structure.unitCost"]], ["3500원", "1200원"]);
+  const pilates = estimateIntake("월 15만원 회원권 필라테스 스튜디오를 열고 싶어요").answers;
+  assert.deepEqual([pilates.price, pilates["structure.unitCost"], pilates.capacity], ["150000원", "15000원", "대표자 혼자 / 한 달 36명"]);
+  assert.equal(estimateIntake("5만원짜리 원데이 클래스를 일주일에 10명 받으려고 해요").answers.capacity, "대표자 혼자 / 일주일 10명");
+  const lesson = estimateIntake("회당 4만원 초등학생 영어 과외를 하려고 해요").answers;
+  assert.deepEqual([lesson.price, lesson["structure.unitCost"], lesson.capacity], ["40000원", "2000원", "대표자 혼자 / 한 달 60회"]);
+  assert.equal(estimateIntake("소상공인에게 세무 기장 대행을 월 10만원에 하려고 해요").answers.customer, "소상공인");
+  // 표에 없던 흔한 종류도 '범용'으로 떨어지지 않는다
+  for (const [text, sector] of [["편의점을 하려고 해요", "retail_commerce"], ["태권도장을 열고 싶어요", "education"], ["스크린골프장을 하고 싶어요", "space_hospitality"], ["번역 프리랜서로 일하려고 해요", "b2b_service"], ["동네 약국을 열려고 해요", "retail_commerce"], ["신혼부부 대상 집 정리 서비스를 하려고 해요", "local_service"], ["배달 대행을 하려고 해요", "logistics"]]) {
+    assert.equal(estimateIntake(text).sector, sector, `${text}: 업종`);
+  }
+
   for (const text of ["동네 네일샵을 열려고 해요", "반찬가게를 열고 싶어요", "굿즈 스마트스토어를 운영하려고 해요", "소규모 팀용 예약 관리 SaaS를 만들고 있어요", "무언가 새로 해 보려고 해요", "배달 전문 치킨집을 하려고 해요", "한복 대여점을 하고 싶어요", "요리 유튜브 채널을 키워서 수익을 내고 싶어요"]) {
     const ownerHash = `intake-estimate-${randomUUID()}`;
     const { plan, snapshot } = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: text, revision: 0, requestId: randomUUID() }, off);
@@ -68,6 +97,10 @@ async function main() {
     const price = readCoach(priced.plan.answers)!.fields.find(field => field.key === "price")!;
     assert.deepEqual([price.basis, price.value], ["user", "9900원"]);
   }
+  // 문장에 적은 자금·시간은 초안에 들어간다(적지 않았으면 위처럼 비워 둔다)
+  const stated = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "자본금 3천만원으로 주 20시간만 하는 네일샵을 열려고 해요", revision: 0, requestId: randomUUID() }, off);
+  const statedFields = readCoach(stated.plan.answers)!.fields;
+  assert.deepEqual(["budget", "hoursPerWeek"].map(key => statedFields.find(field => field.key === key)?.value), ["30000000원", "20시간"]);
   assert.deepEqual(network, [], "네트워크 호출 0");
   console.log("intake-estimate: 8 businesses drafted from one sentence (AI 0회)");
 }

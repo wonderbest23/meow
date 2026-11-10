@@ -846,7 +846,7 @@ const ESTIMATE_SUFFIX = ":estimate";
 
 /**
  * 한 문장만 받은 새 사업의 나머지 핵심 질문을 자체 기준표(intake-estimate)로 채운다 — 묻지 않고 바로 초안으로 간다.
- * 채운 값은 '제안'이라 사용자가 답하면 그 답이 이긴다. 예산·주당 시간은 개인 사정이라 짐작하지 않고 '미정'으로 둔다.
+ * 채운 값은 '제안'이라 사용자가 답하면 그 답이 이긴다. 예산·주당 시간은 개인 사정이라 짐작하지 않는다 — 문장에 적혀 있을 때만 쓰고 아니면 '미정'으로 둔다.
  * 문서를 쓰기 전에는 사업 문장이 바뀌면 지난 짐작도 새 문장을 따라 바뀐다. 쓴 뒤에는 건드리지 않는다.
  */
 export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake: IntakeState, requestId: string, at: string) {
@@ -864,8 +864,8 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   let filled = 0;
   for (const question of intakeQuestions(intake, coach)) {
     if (question.id === "industry" || question.id === "business" || !open(question.id)) continue;
-    if (question.id === "budget" || question.id === "hoursPerWeek") { intake.answers[question.id] = { status: "unknown", value: null, messageId, at }; continue; }
     const guess = answers[question.id];
+    if (!guess && (question.id === "budget" || question.id === "hoursPerWeek")) { intake.answers[question.id] = { status: "unknown", value: null, messageId, at }; continue; }
     if (!guess) continue;
     try {
       const value = validatedAnswer(question, guess);
