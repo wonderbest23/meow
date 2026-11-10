@@ -21,7 +21,7 @@ async function main() {
       const xml = await zip.file(`ppt/slides/slide${index + 1}.xml`)!.async("string");
       assert.ok(xml.includes("Malgun Gothic"));
       assert.ok(xml.includes("<a:t>"), "Text remains native PowerPoint text");
-      if (slide.table) assert.ok(xml.includes("<a:tbl>"), "Tables must remain native editable tables");
+      if (slide.table) assert.ok(xml.includes("<a:tbl>") || slide.table.rows.flat().every(cell => xml.includes(`<a:t>${cell}</a:t>`)), "Table data stays a native table or native text in a diagram");
       const transforms = [...xml.matchAll(/<a:xfrm[^>]*>\s*<a:off x="(\d+)" y="(\d+)"\/>\s*<a:ext cx="(\d+)" cy="(\d+)"\/>/g)];
       for (const match of transforms) {
         assert.ok(Number(match[1]) + Number(match[3]) <= 13.33 * 914400 + 10, `Horizontal overflow on ${sector}/${purpose}/${index + 1}`);

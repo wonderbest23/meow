@@ -37,7 +37,7 @@ export function appendEditorialDeck(pptx: PptxGenJS, plan: DeckPlan) {
   }
   for (const scene of scenes) {
     const slide = pptx.addSlide();
-    slide.background = { color: "FFFFFF" };
+    slide.background = { color: scene.background };
     for (const node of scene.nodes) {
       if (node.type === "text") slide.addText(node.text, { ...node.options, objectName: node.id, breakLine: false });
       else if (node.type === "shape") slide.addShape(pptx.ShapeType[node.shape], node.options);
@@ -49,7 +49,7 @@ export function appendEditorialDeck(pptx: PptxGenJS, plan: DeckPlan) {
       else if (node.type === "chart") {
         const scale = proposalChartScale(node.chart);
         slide.addChart(node.chart.type === "line" ? pptx.ChartType.line : pptx.ChartType.bar, node.chart.series.map(series => ({ name: series.name, labels: node.chart.categories, values: series.values })), {
-          ...node.options, objectName: node.id, barDir: "col", barGrouping: "clustered", chartColors: ["2266CF", "328071", "BF694B"], showLegend: true, legendPos: "b", legendFontFace: "Malgun Gothic", legendFontSize: 11,
+          ...node.options, objectName: node.id, barDir: "col", barGrouping: "clustered", chartColors: ["0F82F5", "328071", "BF694B"], showLegend: true, legendPos: "b", legendFontFace: "Malgun Gothic", legendFontSize: 11,
           showTitle: false, showValue: false,
           catAxisLabelFontFace: "Malgun Gothic", catAxisLabelFontSize: 11, catAxisLabelColor: "637083", catAxisLabelRotate: 0,
           valAxisLabelFontFace: "Malgun Gothic", valAxisLabelFontSize: 10, valAxisLabelColor: "637083", valAxisMinVal: scale.min, valAxisMaxVal: scale.max, valAxisMajorUnit: scale.step,
