@@ -29,10 +29,16 @@ function Chart({ node }: { node: Extract<ProposalSceneNode, { type: "chart" }> }
 function Node({ node }: { node: ProposalSceneNode }) {
   const o = node.options;
   if (node.type === "shape") {
-    const fill = `#${node.options.fill?.color ?? "FFFFFF"}`;
-    if (node.shape === "line") return <line x1={o.x * U} y1={o.y * U} x2={(o.x + o.w) * U} y2={(o.y + o.h) * U} stroke={`#${node.options.line.color}`} strokeWidth={1} />;
-    if (node.shape === "ellipse") return <ellipse cx={(o.x + o.w / 2) * U} cy={(o.y + o.h / 2) * U} rx={o.w / 2 * U} ry={o.h / 2 * U} fill={fill} />;
-    return <rect x={o.x * U} y={o.y * U} width={o.w * U} height={o.h * U} rx={(node.options.rectRadius ?? 0) * U} fill={fill} />;
+    const fill = node.options.fill, stroke = node.options.line.color;
+    const paint = { fill: fill ? `#${fill.color}` : "none", fillOpacity: 1 - (fill?.transparency ?? 0) / 100, stroke: stroke ? `#${stroke}` : "none", strokeWidth: (node.options.line.width ?? .7) / 72 * U };
+    if (node.shape === "line") return <line x1={o.x * U} y1={o.y * U} x2={(o.x + o.w) * U} y2={(o.y + o.h) * U} {...paint} />;
+    if (node.shape === "ellipse") return <ellipse cx={(o.x + o.w / 2) * U} cy={(o.y + o.h / 2) * U} rx={o.w / 2 * U} ry={o.h / 2 * U} {...paint} />;
+    if (node.shape === "chevron") {
+      // Same outline PowerPoint draws for a chevron at its default notch.
+      const a = Math.min(o.w, o.h) / 2;
+      return <polygon points={[[0, 0], [o.w - a, 0], [o.w, o.h / 2], [o.w - a, o.h], [0, o.h], [a, o.h / 2]].map(([x, y]) => `${(o.x + x) * U},${(o.y + y) * U}`).join(" ")} {...paint} />;
+    }
+    return <rect x={o.x * U} y={o.y * U} width={o.w * U} height={o.h * U} rx={(node.options.rectRadius ?? 0) * U} {...paint} />;
   }
   if (node.type === "image") {
     const v = proposalImageViewport(node.options), crop = v.crop;
