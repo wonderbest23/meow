@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowUp, BatteryFull, Check, ChevronLeft, ChevronRight, Ellipsis, FileCheck2, FileText, FolderOpen, MessageCircle, Paperclip, Signal, Wifi } from "lucide-react";
+import { ArrowDownToLine, ArrowUp, BatteryFull, Check, ChevronLeft, ChevronRight, Ellipsis, FileCheck2, FileText, FolderOpen, MessageCircle, Plus, Signal, Wifi } from "lucide-react";
 import styles from "./home-phone-story.module.css";
 import { CoachMessage, CoachResultCard, CoachWelcome } from "./coach-chat-ui";
 import chatUi from "./coach-chat-ui.module.css";
@@ -33,7 +33,7 @@ function PhoneScreen() {
         <div className={styles.generatedBrief}><CoachResultCard label="함께 정리한 사업안" title={business} description="고객 · 상품 · 비용 · 시작 방법" /></div>
         <div className={styles.typingDots}><i /><i /><i /></div>
       </div>
-      <div className={`${styles.composer} ${chatUi.composerShell}`}><Paperclip /><span><span className={styles.typedText}>{Array.from(message).map((letter, index) => <span key={index} style={{ "--letter": index } as React.CSSProperties}>{letter}</span>)}</span><span className={styles.composerPlaceholder}>메시지를 입력하세요</span></span><div className={`${styles.sendButton} ${chatUi.sendButton}`}><ArrowUp /><i className={styles.tapRing} /></div></div>
+      <div className={`${styles.composer} ${chatUi.composerShell}`}><Plus /><span><span className={styles.typedText}>{Array.from(message).map((letter, index) => <span key={index} style={{ "--letter": index } as React.CSSProperties}>{letter}</span>)}</span><span className={styles.composerPlaceholder}>메시지를 입력하세요</span></span><div className={`${styles.sendButton} ${chatUi.sendButton}`}><ArrowUp /><i className={styles.tapRing} /></div></div>
     </div>
     <div className={styles.briefView}>
       <div className={styles.briefScroll}><div className={styles.briefContent}>

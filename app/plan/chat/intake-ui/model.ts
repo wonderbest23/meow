@@ -519,6 +519,19 @@ export function candidateConflict(snapshot: IntakeSnapshot, candidate: IntakeCan
   return { current, changed, requiresOverwrite: current !== candidate.value && (changed || current !== null) };
 }
 
+/** 첨부한 문서는 대화에 '[첨부 자료: 이름]' 머리표 + 본문으로 저장된다 — 서버가 받는 길이(8,000자)까지만 */
+export const attachmentMessage = (name: string, text: string) => `[첨부 자료: ${name.replace(/[\]\n]/g, " ").trim().slice(0, 80) || "문서"}]\n${text.trim()}`.slice(0, 8000);
+export const attachmentName = (text: string) => /^\[첨부 자료: ([^\]\n]{1,80})\]\n/.exec(text)?.[1] ?? null;
+
+/** '모두 반영'으로 한 번에 넣는 후보 — 항목마다 첫 후보만, 이미 저장한 답을 바꿔야 하는 것은 하나씩 확인하게 남긴다 */
+export function bulkCandidateIds(snapshot: IntakeSnapshot): string[] {
+  const seen = new Set<string>();
+  return snapshot.intake.candidates.filter(candidate => {
+    if (candidate.status !== "pending" || seen.has(candidate.fieldKey) || candidateConflict(snapshot, candidate).requiresOverwrite) return false;
+    seen.add(candidate.fieldKey); return true;
+  }).map(candidate => candidate.id).slice(0, 24);
+}
+
 export function plainText(value: unknown): string {
   if (typeof value !== "string") return "";
   const text = value.trim();

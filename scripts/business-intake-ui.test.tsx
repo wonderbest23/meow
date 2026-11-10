@@ -17,7 +17,7 @@ import { budgetSentence, mentionedAnswer, mentionsSolo } from "../app/plan/chat/
 import { readChatResponse } from "../lib/http/read-chat-response";
 import { generationEta } from "../lib/plan-builder/generation-progress";
 import { coachAmount } from "../lib/plan-builder/coach-feasibility";
-import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption } from "../app/plan/chat/intake-ui/model";
+import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption, attachmentMessage, attachmentName, bulkCandidateIds } from "../app/plan/chat/intake-ui/model";
 
 const scope = "test-owner-guest";
 const id = "plan_ui-fixture";
@@ -284,6 +284,14 @@ async function main() {
   assert.deepEqual(candidateConflict(withBusiness, candidate), { current: "직접 수정한 값", changed: true, requiresOverwrite: true });
   assert.equal(candidateConflict(withBusiness, { ...candidate, value: "직접 수정한 값" }).requiresOverwrite, false);
   assert.equal(candidateConflict(original, candidate).requiresOverwrite, true, "Deletion during extraction also requires consent");
+  // 모두 반영: 항목마다 첫 후보만, 저장한 답을 덮어써야 하는 후보는 하나씩 확인하게 남긴다
+  const fresh = (id: string, fieldKey: IntakeCandidate["fieldKey"]): IntakeCandidate => ({ id, fieldKey, value: "새 값", quote: "원문", noteId: "note1", baseValue: null, status: "pending" });
+  const many = { ...withBusiness, intake: { ...withBusiness.intake, candidates: [candidate, fresh("c2", "customer"), fresh("c3", "customer"), fresh("c4", "offer"), { ...fresh("c5", "problem"), status: "rejected" as const }] } };
+  assert.deepEqual(bulkCandidateIds(many), ["c2", "c4"]);
+  const sent = attachmentMessage("계획]서.docx", "  본문\n둘째 줄  " + "가".repeat(9000));
+  assert.equal(sent.length, 8000, "server message limit");
+  assert.equal(attachmentName(sent), "계획 서.docx");
+  assert.equal(attachmentName("[메모] 그냥 쓴 글"), null);
   assert.equal(shouldAcceptSnapshot(original, { ...original, coach: { ...original.coach, revision: 1 } }), false);
   assert.equal(shouldAcceptSnapshot(original, { ...original, updatedAt: "2026-09-15T00:00:00.000Z" }), false);
   assert.equal(shouldAcceptSnapshot(original, { ...original, planId: "other" }), false);

@@ -275,7 +275,7 @@ export function activePlan(state?: PlanState): Plan | null {
  */
 const AUTH_FLAG = "oneul-plan-authed";
 
-function readAuthFlag(): boolean {
+export function readAuthFlag(): boolean {
   try {
     return localStorage.getItem(AUTH_FLAG) === "1";
   } catch {

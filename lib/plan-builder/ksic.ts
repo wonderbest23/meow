@@ -380,6 +380,7 @@ export function searchKsic(text: string, options: { limit?: number; minLevel?: K
 
 const SHOP_SUFFIX = /^(.+?)(학원|교실|교습소|공부방|전문점|가게|스튜디오|센터|공방|샵|숍)$/u;
 const VISIT_PREFIX = /^(출장|방문)(.+)$/u;
+const WEAK_SYNONYMS = new Set(["스튜디오"]);
 const ONE_CHAR_SHOP = /^(?:집|방|가게|샵|숍|전문점)?$/u;
 const STRICT_ONE_CHAR = new Set(["빵", "꽃", "떡", "옷", "펫"]);
 
@@ -412,7 +413,8 @@ function searchKsicText(text: string, options: { limit?: number; minLevel?: Ksic
       : STRICT_ONE_CHAR.has(k) ? q === k || [...tokens].some(t => t.startsWith(k) && ONE_CHAR_SHOP.test(t.slice(k.length)))
       : q === k || [...tokens].some(t => t === k || (t.startsWith(k) && t.length <= k.length + 2));
     // 같은 키 안에서는 먼저 적은 코드가 앞에 온다('빵'은 제과점부터)
-    if (hit) KSIC_SYNONYMS[key].forEach((code, index) => add(code, 100 + k.length * 2 - index * 0.01, "synonym"));
+    // 가게 꼬리말만으로 걸린 후보는 가장 약한 근거다 — 'PT 스튜디오'·'녹음 스튜디오'에 사진 촬영업이 먼저 나왔다(2026-11-10)
+    if (hit) KSIC_SYNONYMS[key].forEach((code, index) => add(code, (WEAK_SYNONYMS.has(key) ? 20 : 100 + k.length * 2) - index * 0.01, "synonym"));
   }
   // 2) 이름 토큰: 일반 단어는 제외하고 공식 이름과 대조
   for (const t of [...tokens]) if (NAME_STOPWORDS.has(t)) tokens.delete(t);
