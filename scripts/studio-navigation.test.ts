@@ -286,7 +286,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
   const studio = read("../app/plan/studio/Studio.tsx");
   const redirect = read("../app/plan/studio/StudioRedirect.tsx");
-  // lovable 구조 2단계 — 휴대폰 네 칸 탭 줄은 없다. 페이지는 아래 막대 … 메뉴(휴대폰) · 위 막대 페이지 선택(PC)에서 고른다(예전 '준비' 이름도 쓰지 않는다)
+  // lovable 구조 2단계 — 휴대폰 네 칸 탭 줄은 없다. 페이지는 머리의 페이지 이름 알약(휴대폰) · 위 막대 페이지 선택(PC)에서 고른다(예전 '준비' 이름도 쓰지 않는다)
   assert.ok(!studio.includes("styles.narrowTabs"), "휴대폰 네 칸 탭 줄을 다시 그리지 않는다");
   assert.ok(!studio.includes('prep: "준비"'), "휴대폰 탭 이름 '준비'를 다시 쓰지 않는다");
   assert.match(studio, /const RIGHT_TABS: RightTab\[\] = \["plan", "homepage", "launch", "operations"\];/);
@@ -409,11 +409,11 @@ console.log("studio navigation ok");
   // 가운데 알약 — PC 에서만 통로를 준다(휴대폰은 칸이 자기 안에 그린다) · 보이는 칸의 것만 · 같은 것을 다시 주면 무시
   assert.match(studio, /setHeaderCenter: wide \? setHeaderCenter : undefined,/);
   assert.match(studio, /const centerSlot = \(id: StudioTab\) => \{\n\s*const node = centerNodes\[id\];\n\s*if \(!node \|\| !isVisible\(id\)\) return null;/);
-  // 휴대폰 미리보기 아래 막대 — ‹ 대화 · 마이크 · … · 파란 주 단추(계획서 내려받기 · 홈페이지 공개하기 · 개업 준비 다음 단계)
+  // 휴대폰 미리보기 머리 — ‹ · 페이지 이름 알약 · 주 단추(계획서 내려받기 · 홈페이지 공개하기 · 개업 준비 다음 단계)
   assert.match(studio, /plan: \{ label: "내려받기", command: "plan-download" \}/);
   assert.match(studio, /homepage: \{ label: "공개하기", command: "homepage-publish" \}/);
   assert.match(studio, /launch: \{ label: "다음 단계", command: "launch-next" \}/);
-  // 휴대폰 미리보기는 칸 위에 아래 막대와 같은 단추를 두지 않는다 — 계획서 '내려받기' 칩, 홈페이지 '저장 · 공개하기' 줄(저장은 … 메뉴로)
+  // 휴대폰 미리보기는 칸 위에 머리와 같은 단추를 두지 않는다 — 계획서 '내려받기' 칩, 홈페이지 '저장 · 공개하기' 줄(저장은 … 메뉴로)
   assert.match(read("../app/plan/document/DocumentWorkspace.tsx"), /onDownload=\{grouped\.length && !nav\?\.toolbarTools \? \(\) => setModal\("download"\) : undefined\}/);
   assert.match(read("../app/plan/homepage/HomepageScreen.tsx"), /studioHeader && nav\?\.toolbarTools \? <div className=\{`\$\{styles\.studioNarrowBar\} \$\{paneHeader\.narrowOnly\}`\}>\{previewSwitch\}\{publishedMenu\(styles\.headerPrimary\)\}<\/div>/);
   assert.match(read("../app/plan/homepage/HomepageScreen.tsx"), /useStudioCommand\("homepage-save",/);

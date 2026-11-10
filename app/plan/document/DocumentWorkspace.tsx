@@ -451,7 +451,7 @@ export default function DocumentWorkspace(props: Props) {
     setSummaryMode(next); setEditing(false); setContinuous(false); setModal(null);
     scroller()?.scrollTo({ top: 0 });
   }, !!pane && ready);
-  /* 휴대폰 작업실은 위 줄을 숨겨(아래 data-bar-hidden) 목차를 아래 막대 … 메뉴에서 연다 */
+  /* 휴대폰 작업실은 위 줄을 숨겨(아래 data-bar-hidden) 목차를 머리의 페이지 이름 알약 메뉴에서 연다 */
   useStudioCommand("plan-toc", () => setModal("toc"), !!pane && ready && grouped.length > 0);
   /* 5단계 — 위 막대 ⋯ 메뉴의 '사업계획서 직접 고치기'(칸 위 얇은 줄의 단추와 같다) */
   useStudioCommand("plan-edit", () => { if (!grouped.length || (factEditable && props.writing)) return; directEdit(); }, !!pane && ready && grouped.length > 0);
