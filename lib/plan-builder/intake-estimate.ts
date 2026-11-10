@@ -1,6 +1,6 @@
 import { localFieldSuggestions, rankedSectors } from "./local-suggestions";
 import { SUGGESTION_FIELDS } from "./answer-suggestion-fields";
-import { businessKind } from "./business-kinds";
+import { businessKind, type BusinessKind } from "./business-kinds";
 import { monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { readSentence } from "./intake-sentence";
 import type { ProposalSector } from "./proposal-blueprint";
@@ -30,12 +30,22 @@ export const SECTOR_BASELINES: Record<ProposalSector, Baseline> = {
   general: { price: 30_000, unitCost: 3_000, cost: 1_000_000, capacity: "일주일 10건" },
 };
 
-/** 질문 id → 짐작한 답(문자열). 고를 문구가 없는 질문은 빠진다 — 그 질문은 평소처럼 묻는다. */
-export function estimateIntake(text: string, chosen?: ProposalSector): { sector: ProposalSector; answers: Record<string, string> } {
+/** 낱말 규칙(kind-rules.ruleKind)의 모양. 표가 커서 서버 쪽 호출자가 넘겨준다 — 여기서 import 하면 화면 묶음에 딸려 들어간다 */
+export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: string) => boolean) => (BusinessKind & { ksic: string; word: string }) | null;
+
+/**
+ * 질문 id → 짐작한 답(문자열). 고를 문구가 없는 질문은 빠진다 — 그 질문은 평소처럼 묻는다.
+ * chosen·chosenKsic 은 사용자가 이미 고른 업종·분류다(짐작이 그것을 뒤집지 않는다). ksic 은 낱말 규칙으로 찾았을 때만 온다.
+ */
+export function estimateIntake(text: string, chosen?: ProposalSector, rules?: KindRules, chosenKsic?: string | null): { sector: ProposalSector; ksic: string | null; answers: Record<string, string> } {
   const ranked = rankedSectors(text);
-  const sector = chosen ?? ranked[0];
-  // 세부 업종(치킨집·꽃집)을 찾으면 그 줄의 답과 숫자를, 못 찾으면 업종 한 줄 기준값과 칩에서 고른 답을 쓴다
-  const kind = businessKind(text, sector);
+  // 세부 업종을 찾으면 그 줄의 답과 숫자를 쓴다: 손으로 쓴 사전(치킨집·꽃집) → 낱말 규칙(수만 개) → 못 찾으면 업종 한 줄 기준값과 칩에서 고른 답
+  const hand = businessKind(text, chosen ?? ranked[0]);
+  const found = rules?.(text, (sector, ksic) => chosenKsic ? ksic === chosenKsic : !chosen || sector === chosen) ?? null;
+  // 사전에도 있지만 낱말 규칙이 그 낱말을 품은 더 긴 낱말로 맞았으면(청소 → 입주청소, 학원 → 운전면허학원) 더 구체적인 규칙 줄을 쓴다
+  const handWord = hand?.word.toLowerCase().replace(/\s/g, "") ?? "";
+  const rule = !hand || (found && found.sector === hand.sector && found.word.length > handWord.length && found.word.includes(handWord)) ? found : null;
+  const kind = rule ?? hand, sector = rule?.sector ?? chosen ?? ranked[0];
   const base = kind ?? SECTOR_BASELINES[sector];
   const read = readSentence(text);
   // 한 달 값으로 적은 가격('월 15만원')인데 건당으로 세는 업종이면 감당하는 양도 한 달 회원 수로 바꾼다 — 건당 자리에 그대로 두면 매출이 몇십 배로 부푼다
@@ -65,5 +75,5 @@ export function estimateIntake(text: string, chosen?: ProposalSector): { sector:
   if (read.customer && !answers.customer?.includes(read.customer)) answers.customer = read.customer;
   // 가게·매장이라고 적었으면 온라인 장터가 아니라 매장에서 판다
   if (/가게|매장|점포|오프라인/.test(text) && !/온라인|스토어|쇼핑몰/.test(text) && answers.channel?.includes("오픈마켓")) answers.channel = "매장 방문";
-  return { sector, answers };
+  return { sector, ksic: rule?.ksic ?? null, answers };
 }

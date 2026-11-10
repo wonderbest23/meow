@@ -75,7 +75,7 @@ if (command === "check" && file) {
   const order = all.map((row, index) => index).sort((a, b) => (all[a].code < "45" ? 1 : 0) - (all[b].code < "45" ? 1 : 0) || a - b);
   const words = {};
   for (const index of order) for (const word of all[index].words) if ((words[word] ??= []).length < 3) words[word].push(index);
-  const json = JSON.stringify({ rows: all.map(row => [row.code, row.offer, row.customer, row.problem, row.channel, row.price, row.unitCost, row.cost, row.capacity]), words });
+  const json = JSON.stringify({ rows: all.map(row => [row.code, row.offer, row.customer, row.problem, row.channel, row.price, row.unitCost, row.cost, row.capacity]), words: Object.entries(words).map(([word, rows]) => [word, ...rows]) });
   const gzip = gzipSync(json).length;
   console.log(`${all.length}줄 · 낱말 ${Object.keys(words).length}개 · ${(json.length / 1024).toFixed(0)}KB(글자 수) · gzip ${(gzip / 1024).toFixed(0)}KB`);
   if (gzip > MAX_GZIP) { console.log(`gzip ${gzip} > ${MAX_GZIP} — 묶음이 너무 큼`); process.exit(1); }

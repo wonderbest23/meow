@@ -31,6 +31,14 @@ async function main() {
   }
   assert.deepEqual(estimateIntake("동네 네일샵을 열려고 해요"), estimateIntake("동네 네일샵을 열려고 해요"), "같은 문장이면 같은 짐작");
 
+  // 낱말 규칙(수만 개): 모든 줄이 분류에 묶여 있고, 실제 계산 함수로 감당하는 양에서 본전을 넘긴다
+  const { ruleKind, KIND_RULE_ROWS } = await import("../lib/plan-builder/kind-rules");
+  const { sectorForKsic } = await import("../lib/plan-builder/ksic");
+  for (const [ksic, offer, , , , price, unitCost, cost, capacity] of KIND_RULE_ROWS) {
+    const volume = monthlyVolumeFromCapacity(capacity)?.volume ?? 0;
+    assert.ok(sectorForKsic(ksic) && volume * (price - unitCost) > cost, `${ksic} ${offer}: 감당하는 양으로 월 고정비를 넘긴다`);
+  }
+
   // 세부 업종 사전: 흔한 창업 문장이 '범용'으로 떨어지지 않고 그 종류의 답을 받는다
   const kinds: [string, string, RegExp][] = [
     ["배달 전문 치킨집을 하려고 해요", "food_beverage", /치킨/], ["필라테스 스튜디오를 열고 싶어요", "local_service", /필라테스 수업/], ["꽃집을 열고 싶어요", "local_service", /꽃다발/],
@@ -48,6 +56,13 @@ async function main() {
   assert.equal(cafeApp.sector, "software");
   assert.doesNotMatch(`${cafeApp.answers.customer} ${cafeApp.answers.offer} ${cafeApp.answers.channel}`, /커피|손님|네이버 예약/);
   assert.equal(estimateIntake("옷가게를 하고 싶어요").answers.channel, "매장 방문");
+
+  // 낱말 규칙: 사전에 없는 업종은 규칙 줄로, 사전 낱말을 품은 더 긴 낱말(청소 → 입주청소)은 더 구체적인 규칙 줄로, 그 밖에는 사전 그대로
+  const ruled = (text: string) => estimateIntake(text, undefined, ruleKind);
+  assert.deepEqual([ruled("양봉 시작하려고요").ksic, ruled("동네 퀵 배송 대행").ksic, ruled("심리 카운셀러").ksic], ["01299", "49402", "86909"]);
+  assert.match(ruled("입주 청소 서비스를 시작하려고 해요").answers.offer, /입주·이사 청소/);
+  assert.equal(ruled("굿즈 스마트스토어를 운영하려고 해요").ksic, null);
+  assert.doesNotMatch(ruled("라이프 스타일 편집숍").answers.offer, /타일 작업/);
 
   // 문장 읽기: 사용자가 이미 적은 고객·가격·자금·시간·목표·양·인원은 짐작하지 않고 그대로 읽는다
   const { readSentence } = await import("../lib/plan-builder/intake-sentence");

@@ -360,7 +360,7 @@ function nameMatchAllowed(code: string, text: string) {
  * "카페 사장님을 위한 인스타그램 콘텐츠 대행"이 커피 전문점으로 잡혔다(운영 테스트 2026-09-29).
  * 고객 부분에서 찾은 후보는 점수를 낮춰, 실제로 하는 일(뒷부분)의 업종이 먼저 오게 한다.
  */
-const CUSTOMER_PHRASE = /^([\s\S]+?)(?:을|를)?\s*(?:위한|대상으로|대상의|상대로)\s+([\s\S]+)$/u;
+export const CUSTOMER_PHRASE = /^([\s\S]+?)(?:을|를)?\s*(?:위한|대상으로|대상의|상대로)\s+([\s\S]+)$/u;
 const CUSTOMER_WEIGHT = 0.4;
 
 export function searchKsic(text: string, options: { limit?: number; minLevel?: KsicLevel } = {}): KsicMatch[] {

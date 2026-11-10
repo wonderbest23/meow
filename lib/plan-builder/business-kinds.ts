@@ -43,7 +43,7 @@ export const BUSINESS_KINDS: readonly (readonly [RegExp, BusinessKind])[] = [
   kind(/세차|광택|썬팅/, "local_service", "차를 직접 관리할 시간이 없는 운전자", "세차하러 갈 시간이 없고 예약이 번거로움", "{} 서비스", "숨고·당근 등 지역 앱", 40_000, 5_000, 500_000, "일주일 20건"),
   kind(/(?:스마트폰|휴대폰|핸드폰|아이폰|컴퓨터|노트북|가전|자전거|시계|구두)\s*(?:수리|수선)/, "local_service", "기기·물건이 고장 난 동네 주민·직장인", "공식 센터는 비싸고 오래 걸림", "{}(당일 처리)", "네이버 검색·플레이스", 60_000, 25_000, 1_000_000, "일주일 20건"),
   kind(/자동차\s*정비|카센터|정비소|(?:자동차|차량)\s*수리|타이어/, "local_service", "차를 타는 동네 운전자", "정비 비용과 작업 내용을 믿기 어려움", "차량 정비·소모품 교환", "네이버 검색·플레이스", 80_000, 40_000, 3_000_000, "하루 5건"),
-  kind(/인테리어|시공|도배|장판|타일|수리|수선|설치/, "local_service", "집·매장을 고치려는 가구·소상공인", "가격이 불투명하고 작업 범위·책임이 불명확함", "{} 작업(견적 후 방문)", "숨고·당근 등 지역 앱", 300_000, 120_000, 1_000_000, "일주일 4건"),
+  kind(/인테리어|시공|도배|장판|(?<!스)타일|수리|수선|설치/, "local_service", "집·매장을 고치려는 가구·소상공인", "가격이 불투명하고 작업 범위·책임이 불명확함", "{} 작업(견적 후 방문)", "숨고·당근 등 지역 앱", 300_000, 120_000, 1_000_000, "일주일 4건"),
   kind(/세탁|빨래방/, "local_service", "1인 가구·직장인", "집에서 하기 어려운 이불·대량 빨래", "세탁·건조", "매장 방문", 6_000, 1_500, 2_000_000, "하루 30건"),
   kind(/꽃집|플라워|꽃다발|화원/, "local_service", "기념일·행사 선물을 찾는 직장인", "원하는 분위기·예산에 맞는 꽃을 바로 구하기 어려움", "꽃다발·꽃바구니 주문 제작", "인스타그램·SNS", 40_000, 16_000, 1_500_000, "일주일 20건"),
   kind(/요양원|요양\s*시설|주간\s*보호|데이\s*케어/, "local_service", "돌봄이 필요한 어르신과 그 가족", "낮 동안 믿고 맡길 시설이 부족함", "어르신 돌봄 시설(월 이용료)", "지역 커뮤니티·당근·맘카페", 900_000, 500_000, 4_000_000, "한 달 15명"),
@@ -106,10 +106,10 @@ export const BUSINESS_KINDS: readonly (readonly [RegExp, BusinessKind])[] = [
 ];
 
 /** 문장에 맞는 첫 세부 업종. sector 를 주면 그 업종의 줄만 본다(카페용 앱은 카페가 아니다 — 업종 규칙이 이미 가른 것을 뒤집지 않는다) */
-export function businessKind(text: string, sector?: ProposalSector): BusinessKind | null {
+export function businessKind(text: string, sector?: ProposalSector): (BusinessKind & { word: string }) | null {
   for (const [test, found] of BUSINESS_KINDS) {
     const hit = (!sector || found.sector === sector) && text.match(test);
-    if (hit) { const word = hit[0].replace(/[^가-힣a-z0-9 ]/gi, "").trim(); return { ...found, offer: found.offer.replace("{}", word) }; }
+    if (hit) { const word = hit[0].replace(/[^가-힣a-z0-9 ]/gi, "").trim(); return { ...found, offer: found.offer.replace("{}", word), word }; }
   }
   return null;
 }

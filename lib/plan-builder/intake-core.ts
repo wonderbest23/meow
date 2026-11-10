@@ -8,7 +8,7 @@ import { calculateFinancials, financialsToReference } from "./financials";
 import { acceptsFreeChoice, FREE_CHOICE_MAX_CHARS, amountCheckPrompt, coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
 import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
-import { estimateIntake } from "./intake-estimate";
+import { estimateIntake, type KindRules } from "./intake-estimate";
 import { playbookForKsic, playbookForText } from "./industry-playbooks";
 import { businessTypeFor } from "./business-types";
 import { KSIC_SYNONYMS, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
@@ -849,14 +849,15 @@ const ESTIMATE_SUFFIX = ":estimate";
  * 채운 값은 '제안'이라 사용자가 답하면 그 답이 이긴다. 예산·주당 시간은 개인 사정이라 짐작하지 않는다 — 문장에 적혀 있을 때만 쓰고 아니면 '미정'으로 둔다.
  * 문서를 쓰기 전에는 사업 문장이 바뀌면 지난 짐작도 새 문장을 따라 바뀐다. 쓴 뒤에는 건드리지 않는다.
  */
-export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake: IntakeState, requestId: string, at: string) {
+export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake: IntakeState, requestId: string, at: string, rules?: KindRules) {
   const business = coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim();
   if (intake.mode !== "startup" || !business) return;
   const messageId = `${requestId}${ESTIMATE_SUFFIX}`, drafted = Object.keys(plan.sections).length > 0;
   const open = (id: string) => { const answer = intake.answers[id]; return !answer || !drafted && answer.messageId.endsWith(ESTIMATE_SUFFIX); };
-  const { sector, answers } = estimateIntake(business, open("industry") ? undefined : intake.sector);
+  const { sector, ksic, answers } = open("industry") ? estimateIntake(business, undefined, rules) : estimateIntake(business, intake.sector, rules, intake.ksic);
   if (open("industry")) {
-    intake.sector = sector; intake.ksic = null;
+    // 낱말 규칙으로 찾은 분류도 짐작이다 — 값·수량 이름(월 회비·프로젝트 1건)이 그 분류를 따르게 넣어 두고, 사용자가 업종을 고르면 그것으로 바뀐다
+    intake.sector = sector; intake.ksic = ksic;
     coach.business.industry = intakeSectorOptions.find(option => option.value === sector)?.label ?? sector;
     intake.answers.industry = { status: "answered", value: sector, messageId, at };
     syncIntakeDetails(plan, intake);
