@@ -3,6 +3,7 @@ import { resolvePlanAccess } from "../../../../lib/plan-builder/access";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { coachDocumentSnapshot } from "../../../../lib/plan-builder/coach-document";
+import { overviewFields } from "../../../../lib/plan-builder/document-context";
 import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummary } from "../../../../lib/plan-builder/executive-summary";
 import { documentIndustryLabel } from "../../../../lib/plan-builder/business-launch";
 
@@ -144,6 +145,7 @@ export async function POST(req: Request) {
     generatedAt: new Date().toISOString(),
     sample: false,
     coverFields,
+    overviewFields: overviewFields({ ...biz, name: biz.name || title }, body.planType, new Date()),
   };
 
   /*

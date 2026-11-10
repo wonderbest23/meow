@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import JSZip from "jszip";
-import { lexPlanMarkdown, renderPlanMarkdown } from "../lib/plan-builder/markdown";
+import { lexPlanMarkdown, renderPlanMarkdown, splitLeadLabel } from "../lib/plan-builder/markdown";
+import { overviewFields } from "../lib/plan-builder/document-context";
 import { restoreRangeTildes } from "../lib/plan-builder/range-tildes";
 import { isAmountCell, isShortCell, tableHeaderLabels, withTableCellLabels } from "../lib/plan-builder/table-cells";
 import { splitCircledSteps } from "../lib/plan-builder/text-steps";
@@ -45,6 +46,21 @@ async function main() {
   assert.ok(xml.includes("조심스러운 경우 통장 누적"), "Word chart has its title");
   assert.ok(/<w:jc w:val="right"\/><\/w:pPr><w:r>(?:(?!<\/w:p>).)*450원/.test(xml), "Word right-aligns an amount column");
   assert.ok((await renderPdf([doc], project, font)).subarray(0, 5).toString() === "%PDF-", "PDF renders");
+
+  // 1b. 공문서 양식: 일반 현황 표는 넘긴 값만, 첫 장 머리 아래 한 번. 굵은 머리말만 '□ 소제목'이 된다.
+  const overview = overviewFields({ name: "아침 빵집", industry: "빵집", region: " ", stage: "사업 기획" }, "일반 사업계획서");
+  assert.deepEqual(overview.map(field => field.label), ["사업명", "업종", "진행 단계", "계획 유형"], "empty fields and the missing date are left out");
+  const formDoc = { ...doc, markdown: "# 제목\n\n## 1. 사업 개요\n\n**핵심 고객.** 30대 직장인입니다.\n\n## 2. 시장\n\n본문 중 **굵은 말**은 그대로입니다." };
+  const wordXml = async (meta: typeof project & { overviewFields?: typeof overview }) => (await JSZip.loadAsync(await renderDocx([formDoc], meta, font))).file("word/document.xml")!.async("string");
+  const formXml = await wordXml({ ...project, overviewFields: overview });
+  assert.equal(formXml.split("일반 현황").length - 1, 1, "the overview table appears once");
+  assert.ok(formXml.includes("사업 기획") && formXml.includes("□ ") && !/0B7254/i.test(formXml), "entered values, box headings, no green");
+  assert.ok(!(await wordXml(project)).includes("일반 현황"), "no overview table without fields");
+  assert.ok((await renderPdf([formDoc], { ...project, overviewFields: overview }, font)).subarray(0, 5).toString() === "%PDF-");
+  const firstParagraph = (text: string) => (lexPlanMarkdown(text)[0] as Tokens.Paragraph).tokens;
+  assert.equal(splitLeadLabel(firstParagraph("**핵심 고객.** 30대 직장인입니다."))?.label, "핵심 고객");
+  assert.equal(splitLeadLabel(firstParagraph("**핵심 고객** 30대 직장인입니다.")), null, "a bold phrase that starts a sentence is not a heading");
+  assert.equal(splitLeadLabel(firstParagraph("**1.** 첫 단계입니다.")), null);
 
   // 5. PDF line breaks: no line starts with closing punctuation; words are not split when a space is available.
   const sentence = "그 짧은 순간에 갓 구운 빵을 기다리지 않고 집어 갈 수 있으면 우리 가게를 고를 이유가 생깁니다. 손님이 몇 시에 지나가는지는 아직 기록이 없습니다.";

@@ -13,6 +13,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { renderPdf, renderDocx, type BusinessDocument, type DocumentProjectMeta } from "../lib/delivery/document-renderer";
 import { chaptersForType } from "../lib/plan-builder/blueprint";
 import { SAMPLE_DOCS } from "../lib/plan-builder/samples";
+import { overviewFields } from "../lib/plan-builder/document-context";
 
 /** 라우트와 같은 규칙 — 챕터(##) > 섹션(###) > 본문 소제목(####~) */
 function demoteHeadings(markdown: string): string {
@@ -78,6 +79,8 @@ for (const doc of SAMPLE_DOCS) {
       ...(doc.industry ? [{ label: "업종", value: doc.industry }] : []),
       { label: "구성", value: `${grouped.length}개 챕터 · ${sectionCount}개 섹션` },
     ],
+    /* 일반 현황 — 샘플이 가진 값만(대표자·사업자번호 같은 칸은 지어내지 않는다) */
+    overviewFields: overviewFields({ name: title, industry: doc.industry }, doc.planType, new Date("2026-08-12T00:00:00.000Z")),
   };
 
   const pdf = await renderPdf([document], project);

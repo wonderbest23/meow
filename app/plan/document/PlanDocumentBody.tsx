@@ -11,7 +11,8 @@ import { hydrateFromServer, lastHydrationFailed, assembleSections, activePlan, l
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import { coachDocumentSnapshot, completedDocumentKey } from "../../../lib/plan-builder/coach-document";
-import { documentContext } from "../../../lib/plan-builder/document-context";
+import { documentContext, overviewFields } from "../../../lib/plan-builder/document-context";
+import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import { useDeckExport } from "./use-deck-export";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { useDocumentEdits } from "./use-document-edits";
@@ -54,6 +55,7 @@ export function PlanDocumentBody() {
   const [title, setTitle] = useState("사업계획서");
   const [identity, setIdentity] = useState<{ headline: string; pitch: string } | undefined>(undefined);
   const [planType, setPlanType] = useState("");
+  const [overview, setOverview] = useState<Array<{ label: string; value: string }>>([]);
   const [exporting, setExporting] = useState<"pdf" | "docx" | "pptx" | null>(null);
   const [deckError, setDeckError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -177,6 +179,8 @@ export function PlanDocumentBody() {
         const identityNow = coachState ? currentBusinessDesign(coachState)?.identity : undefined;
         setIdentity(identityNow ? { headline: identityNow.headline, pitch: identityNow.pitch } : undefined);
         setPlanType(p.planType);
+        /* 샘플은 내 사업 정보가 아니라 샘플이 가진 값만 */
+        setOverview(overviewFields(isSamplePlan(p.id) ? { name: p.title.replace(/^샘플\s*·\s*/, ""), industry: SAMPLE_DOCS.find(d => d.id === p.id)?.industry } : { ...documentContext(s, p.id)?.business, name: businessDisplayName(p.title) }, p.planType));
         setIsSample(isSamplePlan(p.id));
         if (!isSamplePlan(p.id)) {
           fetch(`/api/plan/access?planType=${encodeURIComponent(p.planType)}&planId=${encodeURIComponent(p.id)}`)
@@ -412,7 +416,7 @@ export function PlanDocumentBody() {
     generation.restart();
     if (pane && studioNav?.markActivity) { selfMarked.current = true; studioNav.markActivity("plan"); }
   };
-  return <DocumentWorkspace onReflected={onReflected}onFactsSaved={reloadSections} writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
+  return <DocumentWorkspace onReflected={onReflected}onFactsSaved={reloadSections} writing={writing} freshKeys={freshKeys} title={title} identity={identity} overview={overview} planId={documentPlanId} planType={planType} ready={ready}
     summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
       if (!documentPlanId) return;

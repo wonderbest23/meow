@@ -4,6 +4,7 @@ import {
   BorderStyle,
   Document,
   Footer,
+  Header,
   HeadingLevel,
   Packer,
   PageBreak,
@@ -19,11 +20,11 @@ import {
   type ITableCellOptions,
 } from "docx";
 import type { Token, Tokens } from "marked";
-import { lexPlanMarkdown } from "../plan-builder/markdown";
+import { lexPlanMarkdown, splitLeadLabel } from "../plan-builder/markdown";
 import { CHART_FENCE_LANG, chartScale, parseChartSpec, shortWon, type ChartPoint } from "../plan-builder/chart";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { renderLightweightPdf } from "./lightweight-pdf";
+import { renderLightweightPdf, SELF_NUMBERED } from "./lightweight-pdf";
 import { subsetTrueType, glyphIdsForText } from "./font-subset";
 import { summaryBasisLabel, type ExecutiveSummary } from "../plan-builder/executive-summary";
 
@@ -48,15 +49,27 @@ export type DocumentProjectMeta = {
    * 지정하지 않으면 기존 기본 항목(프로젝트·목표 고객·수익 방식·문서 버전)을 사용한다.
    */
   coverFields?: Array<{ label: string; value: string }>;
+  /** 첫 장 머리의 '일반 현황' 표 항목(선택) — 입력받은 값만 넣는다. 주면 첫 장을 새 쪽에서 시작한다. */
+  overviewFields?: Array<{ label: string; value: string }>;
 };
 
+// 공문서 양식처럼 검정·회색만 쓴다(PDF 와 같은 값)
 const colors = {
-  ink: "18342A",
-  muted: "65766F",
-  line: "D9E4DF",
-  pale: "EFF7F3",
-  accent: "0B7254",
-  warning: "FFF5D6",
+  ink: "111111",
+  body: "222222",
+  muted: "5F6368",
+  line: "9AA0A6",
+  pale: "F1F2F4",
+};
+const rule = (color: string, size: number, space = 0) => ({ style: BorderStyle.SINGLE, color, size, space });
+/** 양식 표 테두리 — 위·아래는 검정, 안쪽은 회색 */
+const formBorders = {
+  top: rule(colors.ink, 10),
+  bottom: rule(colors.ink, 6),
+  left: rule(colors.line, 4),
+  right: rule(colors.line, 4),
+  insideHorizontal: rule(colors.line, 4),
+  insideVertical: rule(colors.line, 4),
 };
 
 const docxFont = "NanumGothic";
@@ -102,7 +115,7 @@ function docxRuns(tokens: Token[] | undefined, fallback = ""): TextRun[] {
       return [new TextRun({ text: token.text, font: "Consolas", shading: { type: ShadingType.CLEAR, fill: "EEF2F0" } })];
     }
     if (token.type === "link") {
-      return [new TextRun({ text: `${inlineText(token.tokens, token.text)} (${token.href})`, color: colors.accent, underline: {} })];
+      return [new TextRun({ text: `${inlineText(token.tokens, token.text)} (${token.href})`, color: colors.ink, underline: {} })];
     }
     if (token.type === "br") return [new TextRun({ break: 1 })];
     if ("tokens" in token && Array.isArray(token.tokens)) return docxRuns(token.tokens, "text" in token ? String(token.text) : "");
@@ -113,17 +126,64 @@ function docxRuns(tokens: Token[] | undefined, fallback = ""): TextRun[] {
 type CellAlign = "left" | "right" | "center";
 const docxAlign = (align: CellAlign) => align === "right" ? AlignmentType.RIGHT : align === "center" ? AlignmentType.CENTER : AlignmentType.LEFT;
 
-function docxTableCell(text: string, header: boolean, align: CellAlign = "left"): TableCell {
+function docxTableCell(text: string, header: boolean, align: CellAlign = "left", extra: Partial<ITableCellOptions> = {}): TableCell {
   const options: ITableCellOptions = {
+    ...extra,
     shading: header ? { type: ShadingType.CLEAR, fill: colors.pale } : undefined,
     margins: { top: 100, bottom: 100, left: 120, right: 120 },
     children: [new Paragraph({
-      alignment: docxAlign(align),
-      children: [new TextRun({ text, bold: header, size: header ? 19 : 18, color: header ? colors.ink : "263D34", font: docxFont })],
+      // 머리칸은 양식처럼 가운데(숫자 열은 오른쪽 그대로)
+      alignment: header && align === "left" ? AlignmentType.CENTER : docxAlign(align),
+      children: [new TextRun({ text, bold: header, size: header ? 19 : 18, color: header ? colors.ink : colors.body, font: docxFont })],
       spacing: { after: 0 },
     })],
   };
   return new TableCell(options);
+}
+
+/** 표지·일반 현황의 '항목 | 값' 표 — pairs 가 2면 한 줄에 두 쌍을 놓는다 */
+function fieldTable(fields: Array<{ label: string; value: string }>, pairs: 1 | 2, width = 100): Table {
+  const labelWidth = pairs === 2 ? 16 : 28;
+  const rows: TableRow[] = [];
+  for (let index = 0; index < fields.length; index += pairs) {
+    const row = fields.slice(index, index + pairs);
+    rows.push(new TableRow({
+      cantSplit: true,
+      children: row.flatMap((field) => [
+        docxTableCell(field.label, true, "center", { width: { size: labelWidth, type: WidthType.PERCENTAGE } }),
+        // 짝이 안 맞는 마지막 칸은 남은 너비를 다 쓴다
+        docxTableCell(field.value, false, "left", row.length < pairs ? { columnSpan: 3 } : { width: { size: 100 / pairs - labelWidth, type: WidthType.PERCENTAGE } }),
+      ]),
+    }));
+  }
+  return new Table({ width: { size: width, type: WidthType.PERCENTAGE }, alignment: AlignmentType.CENTER, borders: formBorders, rows });
+}
+
+/** '□ 소제목' 줄 — 본문 안 작은 제목과 굵은 머리말 문단이 같이 쓴다 */
+function boxHeading(runs: TextRun[]): Paragraph {
+  return new Paragraph({
+    heading: HeadingLevel.HEADING_3,
+    children: [new TextRun({ text: "□ ", font: docxFont }), ...runs],
+    keepNext: true,
+    keepLines: true,
+    spacing: { before: 200, after: 100 },
+  });
+}
+
+/** 목록 — 'ㅇ', 안쪽은 '-'. 목차 줄('1.1 …')은 표시 없이 둔다(PDF 와 같은 규칙) */
+function listBlocks(list: Tokens.List, level = 0): Paragraph[] {
+  return list.items.flatMap((item, index) => {
+    const numbered = SELF_NUMBERED.test(item.text);
+    const mark = numbered ? "" : list.ordered ? `${index + 1}. ` : level ? "- " : "ㅇ ";
+    return [
+      new Paragraph({
+        children: [...(mark ? [new TextRun({ text: mark, font: docxFont })] : []), ...docxRuns(item.tokens.filter((child) => child.type !== "list"), item.text)],
+        indent: { left: 300 + level * 280 + (mark ? 260 : 0), hanging: mark ? 260 : 0 },
+        spacing: { after: numbered ? 20 : 80, line: numbered ? 280 : 310 },
+      }),
+      ...item.tokens.flatMap((child) => child.type === "list" ? listBlocks(child as Tokens.List, level + 1) : []),
+    ];
+  });
 }
 
 /** 막대 한 칸 — 공백에 음영을 넣어 길이로 크기를 표현한다(Word에 그림을 넣지 않고 그린다). */
@@ -194,10 +254,11 @@ function chartTable(points: ChartPoint[], breakEvenMonth: number | null): Table 
   });
 }
 
-function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
+function docxBlocks(document: BusinessDocument, overviewFields?: DocumentProjectMeta["overviewFields"]): Array<Paragraph | Table> {
   const blocks: Array<Paragraph | Table> = [];
   const tokens = lexPlanMarkdown(document.markdown);
   let skippedTitle = false;
+  let overviewPending = !!overviewFields?.length;
 
   for (const token of tokens) {
     if (token.type === "heading") {
@@ -205,18 +266,46 @@ function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
         skippedTitle = true;
         continue;
       }
-      const level = token.depth <= 2 ? HeadingLevel.HEADING_1 : token.depth === 3 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
+      if (token.depth >= 4) {
+        blocks.push(boxHeading(docxRuns(token.tokens, token.text)));
+        continue;
+      }
+      // 첫 장('1. …')은 새 쪽에서 시작하고 바로 아래에 일반 현황 표를 둔다
+      const firstChapter = overviewPending && token.depth <= 2 && /^\d+\.\s/.test(token.text);
       blocks.push(new Paragraph({
-        heading: level,
+        heading: token.depth <= 2 ? HeadingLevel.HEADING_1 : HeadingLevel.HEADING_2,
         children: docxRuns(token.tokens, token.text),
         // 제목만 쪽 끝에 홀로 남지 않게 다음 문단과 붙여 둔다
         keepNext: true,
         keepLines: true,
-        spacing: { before: token.depth <= 2 ? 300 : 200, after: 100 },
+        pageBreakBefore: firstChapter,
+        // 장 제목 띠 — 위는 굵은 검정 줄, 아래는 가는 줄
+        ...(token.depth <= 2 ? {
+          shading: { type: ShadingType.CLEAR, fill: colors.pale },
+          border: { top: rule(colors.ink, 14, 5), bottom: rule(colors.ink, 4, 5) },
+        } : {}),
+        spacing: { before: token.depth <= 2 ? 360 : 240, after: token.depth <= 2 ? 200 : 100 },
       }));
+      if (firstChapter) {
+        overviewPending = false;
+        blocks.push(boxHeading([new TextRun({ text: "일반 현황", font: docxFont })]));
+        blocks.push(fieldTable(overviewFields!, 2));
+        blocks.push(new Paragraph({ text: "", spacing: { after: 140 } }));
+      }
       continue;
     }
     if (token.type === "paragraph") {
+      const lead = splitLeadLabel(token.tokens);
+      if (lead) {
+        blocks.push(boxHeading([new TextRun({ text: lead.label, font: docxFont })]));
+        const [head, ...tail] = lead.rest;
+        if (!lead.rest.some((rest) => rest.raw.trim())) continue;
+        blocks.push(new Paragraph({
+          children: docxRuns(head.type === "text" ? [{ ...head, text: head.text.trimStart() } as Token, ...tail] : lead.rest),
+          spacing: { after: 150, line: 340 },
+        }));
+        continue;
+      }
       blocks.push(new Paragraph({
         children: docxRuns(token.tokens, token.text),
         spacing: { after: 150, line: 340 },
@@ -225,25 +314,16 @@ function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
     }
     if (token.type === "blockquote") {
       blocks.push(new Paragraph({
-        children: [new TextRun({ text: inlineText(token.tokens, token.text), color: "6B5D2A", font: docxFont })],
-        shading: { type: ShadingType.CLEAR, fill: colors.warning },
-        border: { left: { color: "D9B949", size: 18, style: BorderStyle.SINGLE, space: 8 } },
+        children: [new TextRun({ text: inlineText(token.tokens, token.text), color: colors.muted, font: docxFont })],
+        shading: { type: ShadingType.CLEAR, fill: colors.pale },
+        border: { left: rule(colors.ink, 18, 8) },
         indent: { left: 180 },
         spacing: { before: 80, after: 180, line: 320 },
       }));
       continue;
     }
     if (token.type === "list") {
-      const list = token as Tokens.List;
-      list.items.forEach((item, index) => {
-        blocks.push(new Paragraph({
-          children: docxRuns(item.tokens, item.text),
-          bullet: list.ordered ? undefined : { level: 0 },
-          numbering: list.ordered ? { reference: "delivery-numbering", level: 0, instance: index } : undefined,
-          indent: { left: 300, hanging: 160 },
-          spacing: { after: 80, line: 310 },
-        }));
-      });
+      blocks.push(...listBlocks(token as Tokens.List));
       continue;
     }
     if (token.type === "table") {
@@ -253,6 +333,7 @@ function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
       const aligns = table.header.map((_, column): CellAlign => table.align[column] === "center" ? "center" : table.align[column] === "right" ? "right" : "left");
       blocks.push(new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: formBorders,
         rows: rows.map((row, rowIndex) => new TableRow({
           tableHeader: rowIndex === 0,
           cantSplit: true,
@@ -295,46 +376,42 @@ function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
   return blocks;
 }
 
-function coverBlocks(document: BusinessDocument, project: DocumentProjectMeta, first: boolean): Paragraph[] {
+function coverBlocks(document: BusinessDocument, project: DocumentProjectMeta, first: boolean): Array<Paragraph | Table> {
+  const fields = project.coverFields?.length ? project.coverFields : [
+    { label: "프로젝트", value: project.title },
+    { label: "목표 고객", value: project.customer },
+    { label: "수익 방식", value: project.model },
+    { label: "문서 버전", value: document.versionLabel },
+  ];
   return [
     ...(!first ? [new Paragraph({ children: [new PageBreak()] })] : []),
+    // 제목을 굵은 검정 줄 두 개 사이에 가운데로 둔다
     new Paragraph({
-      children: [new TextRun({ text: "창업 실행 캔버스", bold: true, color: colors.accent, size: 22, font: docxFont })],
-      spacing: { before: first ? 900 : 200, after: 900 },
+      alignment: AlignmentType.CENTER,
+      border: { top: rule(colors.ink, 18, 24) },
+      children: [new TextRun({ text: document.title, bold: true, color: colors.ink, size: 48, font: docxFont })],
+      spacing: { before: first ? 2600 : 2000, after: 160 },
     }),
     new Paragraph({
-      children: [new TextRun({ text: document.title, bold: true, color: colors.ink, size: 42, font: docxFont })],
-      spacing: { after: 180 },
-    }),
-    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      border: { bottom: rule(colors.ink, 18, 24) },
       children: [new TextRun({ text: document.type, color: colors.muted, size: 23, font: docxFont })],
-      spacing: { after: 700 },
+      spacing: { after: 2000 },
     }),
-    ...(project.coverFields?.length
-      ? project.coverFields.map((field, index) =>
-          new Paragraph({
-            children: [new TextRun({ text: `${field.label}  ${field.value}`, bold: index === 0, size: index === 0 ? 20 : 19, font: docxFont })],
-            spacing: { after: index === 0 ? 100 : 80 },
-          }),
-        )
-      : [
-          new Paragraph({ children: [new TextRun({ text: `프로젝트  ${project.title}`, bold: true, size: 20, font: docxFont })], spacing: { after: 100 } }),
-          new Paragraph({ children: [new TextRun({ text: `목표 고객  ${project.customer}`, size: 19, font: docxFont })], spacing: { after: 80 } }),
-          new Paragraph({ children: [new TextRun({ text: `수익 방식  ${project.model}`, size: 19, font: docxFont })], spacing: { after: 80 } }),
-          new Paragraph({ children: [new TextRun({ text: `문서 버전  ${document.versionLabel}`, size: 19, font: docxFont })], spacing: { after: 80 } }),
-        ]),
-    new Paragraph({ children: [new TextRun({ text: `생성일  ${new Date(project.generatedAt).toLocaleDateString("ko-KR")}`, size: 19, font: docxFont })], spacing: { after: 500 } }),
+    fieldTable([...fields, { label: "작성일", value: new Date(project.generatedAt).toLocaleDateString("ko-KR") }], 1, 70),
     new Paragraph({
       children: [new TextRun({
         text: project.sample
           ? "이 문서는 화면 검증용 가상 사례입니다. 실제 사업 판단에는 사용할 수 없습니다."
           : "확정 표시가 없는 시장 수치와 가정은 인터뷰, 계약서, 견적서 또는 공식 자료로 다시 확인해야 합니다.",
-        color: "6B5D2A",
+        color: colors.muted,
         size: 18,
         font: docxFont,
       })],
-      shading: { type: ShadingType.CLEAR, fill: colors.warning },
-      spacing: { after: 100 },
+      shading: { type: ShadingType.CLEAR, fill: colors.pale },
+      border: { top: rule(colors.line, 4, 6), bottom: rule(colors.line, 4, 6), left: rule(colors.line, 4, 6), right: rule(colors.line, 4, 6) },
+      indent: { left: 120, right: 120 },
+      spacing: { before: 2000, after: 100 },
     }),
     new Paragraph({ children: [new PageBreak()] }),
   ];
@@ -352,7 +429,7 @@ function deliveryFontData(fontData?: DeliveryFontData) {
 function collectDeliveryText(documents: BusinessDocument[], project: DocumentProjectMeta): string {
   const parts: string[] = [
     // 표지·바닥글·메타에서 쓰는 고정 라벨(coverBlocks/footer/Document)
-    "창업 실행 캔버스 프로젝트 목표 고객 수익 방식 문서 버전 생성일 전체 창업 실행 문서 한국 초보 창업자를 위한 실행 문서 년 월 일 (단위: 원) 개월차 월 흑자 전환",
+    "창업 실행 캔버스 프로젝트 목표 고객 수익 방식 문서 버전 작성일 일반 현황 □ ㅇ ※ - 전체 창업 실행 문서 한국 초보 창업자를 위한 실행 문서 년 월 일 (단위: 원) 개월차 월 흑자 전환",
     // 숫자·영문·문장부호 안전망
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,·|()[]{}<>-–—:;/%~!?\"'`@#&*+=₩$…“”‘’",
     project.title,
@@ -361,7 +438,7 @@ function collectDeliveryText(documents: BusinessDocument[], project: DocumentPro
     project.sector,
     new Date(project.generatedAt).toLocaleDateString("ko-KR"),
     // 커스텀 표지 항목(라벨·값)도 서브셋 대상에 포함
-    ...(project.coverFields?.flatMap((f) => [f.label, f.value]) ?? []),
+    ...([...(project.coverFields ?? []), ...(project.overviewFields ?? [])].flatMap((f) => [f.label, f.value])),
   ];
   for (const document of documents) {
     parts.push(document.title, document.type, document.versionLabel, document.markdown);
@@ -378,7 +455,7 @@ export async function renderDocx(
   const onePage = documents.length === 1 && !!documents[0].executiveSummary;
   const children = documents.flatMap((document, index) => document.executiveSummary ? summaryDocxBlocks(document.executiveSummary) : [
     ...coverBlocks(document, project, index === 0),
-    ...docxBlocks(document),
+    ...docxBlocks(document, project.overviewFields),
   ]);
   // 실제 쓰인 글리프만 담은 서브셋을 임베드한다(4MB → 수백KB). 실패 시 전체 폰트로 폴백.
   const fullFont = deliveryFontData(fontData);
@@ -388,31 +465,43 @@ export async function renderDocx(
     title: documents.length === 1 ? documents[0].title : `${project.title} 전체 창업 실행 문서`,
     description: "한국 초보 창업자를 위한 실행 문서",
     fonts: [{ name: docxFont, data: embeddedFont }],
-    numbering: {
-      config: [{
-        reference: "delivery-numbering",
-        levels: [{ level: 0, format: "decimal", text: "%1.", alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 360, hanging: 180 } } } }],
-      }],
-    },
     styles: {
       default: {
-        document: { run: { font: docxFontAttributes, language: { value: "ko-KR", eastAsia: "ko-KR" }, size: 20, color: "263D34" }, paragraph: { spacing: { line: 320 } } },
+        document: { run: { font: docxFontAttributes, language: { value: "ko-KR", eastAsia: "ko-KR" }, size: 20, color: colors.body }, paragraph: { spacing: { line: 320 } } },
         heading1: { run: { font: docxFontAttributes, language: { value: "ko-KR", eastAsia: "ko-KR" }, size: 30, bold: true, color: colors.ink } },
         heading2: { run: { font: docxFontAttributes, language: { value: "ko-KR", eastAsia: "ko-KR" }, size: 25, bold: true, color: colors.ink } },
-        heading3: { run: { font: docxFontAttributes, language: { value: "ko-KR", eastAsia: "ko-KR" }, size: 22, bold: true, color: colors.accent } },
+        heading3: { run: { font: docxFontAttributes, language: { value: "ko-KR", eastAsia: "ko-KR" }, size: 21, bold: true, color: colors.ink } },
       },
     },
     sections: [{
-      properties: { page: { ...(onePage ? { size: { width: 11906, height: 16838 } } : {}), margin: { top: onePage ? 760 : 900, right: 900, bottom: onePage ? 760 : 900, left: 900 } } },
+      // 상세 문서는 표지에 머리말·쪽 번호를 찍지 않는다
+      properties: { titlePage: !onePage, page: { ...(onePage ? { size: { width: 11906, height: 16838 } } : {}), margin: { top: onePage ? 760 : 900, right: 900, bottom: onePage ? 760 : 900, left: 900 } } },
       children,
-      footers: {
+      headers: onePage ? undefined : {
+        default: new Header({ children: [new Paragraph({
+          border: { bottom: rule(colors.line, 4, 4) },
+          children: [new TextRun({ text: documents.length === 1 ? documents[0].title : project.title, color: colors.muted, size: 15, font: docxFont })],
+        })] }),
+        first: new Header({ children: [new Paragraph("")] }),
+      },
+      footers: onePage ? {
         default: new Footer({ children: [new Paragraph({
           alignment: AlignmentType.RIGHT,
           children: [
-            new TextRun({ text: `${project.title}  |  `, color: colors.muted, size: 16, font: docxFont }),
-            new TextRun({ children: [PageNumber.CURRENT], color: colors.muted, size: 16 }),
+            new TextRun({ text: `${project.title}  |  `, color: "65766F", size: 16, font: docxFont }),
+            new TextRun({ children: [PageNumber.CURRENT], color: "65766F", size: 16 }),
           ],
         })] }),
+      } : {
+        default: new Footer({ children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new TextRun({ text: "- ", color: colors.muted, size: 16, font: docxFont }),
+            new TextRun({ children: [PageNumber.CURRENT], color: colors.muted, size: 16 }),
+            new TextRun({ text: " -", color: colors.muted, size: 16, font: docxFont }),
+          ],
+        })] }),
+        first: new Footer({ children: [new Paragraph("")] }),
       },
     }],
   });
