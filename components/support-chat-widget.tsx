@@ -872,10 +872,10 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
                         onClick={() => trackFunnel("consult_cta_click", { variant: "main" })}
                       >
                         <Sparkles />
-                        {/* 무료로 되는 데(사업 방향 정리)까지만 말한다 — 사업계획서 문서는 결제 후에 쓴다(무료 체험 없음) */}
+                        {/* 약관 3조와 같은 말 — 사업 방향 정리는 무료, 사업계획서는 첫 항목만 먼저 보여 주고 나머지는 결제 후 */}
                         <span>
                           <strong>이 내용으로 사업계획서 시작하기</strong>
-                          <small>사업 방향 정리까지는 무료예요 · 사업계획서 문서는 결제 후 작성해요</small>
+                          <small>사업 방향 정리까지는 무료예요 · 사업계획서는 첫 항목을 먼저 보고 결제해요</small>
                         </span>
                       </a>
                     )}

@@ -75,7 +75,7 @@ assert.ok(refund.sections.some((section) => section.paragraphs?.some((paragraph)
 const refundText = JSON.stringify(refund);
 for (const expected of ["reportaproblem.apple.com", "44,250원", "5,940원", "연결을 완료한 날부터 7일 이내", "충전일부터 1년", "승인 취소", "3영업일 이내"]) assert.ok(refundText.includes(expected), expected);
 const upgradedPolicy = applyCurrentPlatformPolicy({ ...complete, policyEffectiveDate: "2026-07-19", refundAfterSupply: "이전 기준" });
-assert.equal(upgradedPolicy.policyEffectiveDate, "2026-10-14");
+assert.equal(upgradedPolicy.policyEffectiveDate, "2026-11-10");
 assert.match(upgradedPolicy.serviceSupplyTiming, /NicePay/);
 assert.match(upgradedPolicy.refundAfterSupply, /단순 변심/);
 

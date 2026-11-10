@@ -27,8 +27,8 @@ assert.equal(productAmount("bundle", ""), BUNDLE_PRODUCT_AMOUNT);
 assert.equal(productName("bundle"), BUNDLE_PRODUCT_NAME);
 // 공개 문서(약관·사업자 정보)의 가격도 같은 값을 쓴다
 const terms = JSON.stringify(createLegalDocument("terms", defaultPlatformLegalSettings));
-for (const text of ["49,000원", "19,000원", "사업계획서 + 홈페이지: 59,000원", "같은 사업의 사업계획서를 결제한 경우에만", "다시 생성 10회 추가: 9,900원", "무료로 써 보는 체험은 제공하지 않습니다"]) assert.ok(terms.includes(text), text);
-for (const stale of ["69,000원", "99,000원", "4,900원", "무료 체험은 사업자등록"]) assert.ok(!terms.includes(stale), stale);
+for (const text of ["49,000원", "19,000원", "사업계획서 + 홈페이지: 59,000원", "같은 사업의 사업계획서를 결제한 경우에만", "다시 생성 10회 추가: 9,900원", "결제 전에 첫 항목 하나를 먼저 작성해 보여 드리며(회원당 문서 3개까지)"]) assert.ok(terms.includes(text), text);
+for (const stale of ["69,000원", "99,000원", "4,900원", "무료 체험은 사업자등록", "무료로 써 보는 체험은 제공하지 않습니다"]) assert.ok(!terms.includes(stale), stale);
 assert.ok(!terms.includes("149,000원"));
 
 console.log(JSON.stringify({ passed: 31 }));

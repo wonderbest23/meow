@@ -3,6 +3,7 @@ import {
   BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, CUSTOM_HOMEPAGE_FROM_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_NAME, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_NAME, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT,
   LEGACY_REGEN_INCLUDED, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, TOKEN_PACK_AMOUNT, TOKEN_PACK_NAME, TOKEN_PACK_TOKENS, TOKEN_VALIDITY_DAYS,
 } from "../payments/domain";
+import { FREE_PLAN_LIMIT } from "../plan-builder/free-tier";
 
 export const PLATFORM_POLICY_VERSION = "2026-07-23";
 
@@ -73,8 +74,9 @@ export const defaultPlatformLegalSettings: PlatformLegalSettings = {
   hostingProvider: "Cloudflare, Inc.",
   /* 2026-10-05: 결제 수단을 카드로 한정(계좌이체 삭제), 제공 범위에서 발표자료(PPT) 삭제
    * 2026-10-09: 가격 개편(묶음 59,000원·홈페이지는 계획서 구매자 전용 19,000원·다시 생성 10회 9,900원), 포함 다시 생성 10회, 무료 체험 없음
-   * 2026-10-14: 아이폰·안드로이드 앱 — 애플 로그인, 앱 안 결제(App Store·Google Play)의 수집 항목·제공 시기·환불 신청 방법 추가 */
-  policyEffectiveDate: "2026-10-14",
+   * 2026-10-14: 아이폰·안드로이드 앱 — 애플 로그인, 앱 안 결제(App Store·Google Play)의 수집 항목·제공 시기·환불 신청 방법 추가
+   * 2026-11-10: 결제 전 사업계획서 첫 항목 미리 보기(회원당 문서 3개까지) — 약관 3조 */
+  policyEffectiveDate: "2026-11-10",
   accountRetention: "회원 탈퇴 시까지 보관하며, 법령상 보존 의무가 있는 정보는 해당 기간 동안 분리 보관합니다.",
   projectRetention: "사용자가 프로젝트를 삭제하거나 회원 탈퇴를 요청할 때까지 보관합니다.",
   infrastructureRecipients: "Supabase, Inc. 및 Cloudflare, Inc.",
@@ -527,7 +529,7 @@ function termsDocument(settings: PlatformLegalSettings, options: LegalDocumentOp
     sections: [
       { title: "1. 목적과 적용", paragraphs: ["이 약관은 운영자와 이용자 사이의 서비스 이용 조건, 권리와 책임을 정합니다. 결제 화면에 별도로 표시한 상품명, 금액, 제공 시기와 환불 조건도 계약 내용에 포함됩니다."] },
       { title: "2. 계정", items: ["이용자는 정확한 이메일로 가입하고 자신의 계정을 안전하게 관리해야 합니다.", "타인의 계정을 사용하거나 계정을 양도할 수 없습니다.", "계정 분실 시 이메일 계정 복구 절차를 이용할 수 있습니다."] },
-      { title: "3. 서비스 제공", items: ["아이디어 탐색과 사업 방향 정리는 사업자등록 여부와 관계없이 무료로 이용할 수 있습니다. 사업계획서 문서 작성은 결제한 뒤에 시작하며, 문서를 무료로 써 보는 체험은 제공하지 않습니다.", `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "결제 승인(앱 안 결제는 스토어 결제 확인)이 맞춤 디지털 결과물 제공 개시 시점이며, 결제 화면에서 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
+      { title: "3. 서비스 제공", items: [`아이디어 탐색과 사업 방향 정리는 사업자등록 여부와 관계없이 무료로 이용할 수 있습니다. 사업계획서는 로그인한 회원에게 결제 전에 첫 항목 하나를 먼저 작성해 보여 드리며(회원당 문서 ${FREE_PLAN_LIMIT}개까지), 나머지 항목 작성과 파일 내려받기는 결제한 뒤에 시작합니다.`, `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "결제 승인(앱 안 결제는 스토어 결제 확인)이 맞춤 디지털 결과물 제공 개시 시점이며, 결제 화면에서 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
       { title: "4. 상품, 가격과 결제", items: [...PRODUCT_ITEMS, TOKEN_PRICE_ITEM, options.inApp ? `결제 방법: ${APP_PAYMENT_METHODS}. 결제수단 정보는 Apple·Google이 직접 처리하며 오늘창업은 받지 않습니다.` : `결제 방법: ${PAYMENT_METHODS}. 카드 결제는 결제대행사 화면에서, 앱 안 결제는 스토어 화면에서 이뤄지며 오늘창업은 카드번호 등 결제수단 정보를 받지 않습니다.`, "도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 결제한 문서 또는 홈페이지에서만 사용할 수 있고 다른 문서·홈페이지나 다른 계정으로 옮길 수 없습니다."] },
       { title: "5. 인공지능 결과", paragraphs: ["일부 결과는 생성형 인공지능이 작성한 초안입니다. 이용자는 실제 사업에 사용하기 전에 사실관계, 수치, 권리침해 여부와 관계 법령을 확인해야 합니다. 운영자는 고의 또는 중대한 과실이 없는 한 이용자가 확인 없이 결과를 사용해 발생한 손해를 책임지지 않습니다."] },
       { title: "6. 맞춤 제작과 환불 제한(사업계획서·홈페이지)", paragraphs: [settings.refundAfterSupply, "결제 전 완성 결과 예시와 제공 항목을 확인할 수 있습니다. 결제 화면에서는 제작 시작 시점과 단순 변심 환불 제한을 별도로 알리고 전자적 동의를 받습니다."] },
