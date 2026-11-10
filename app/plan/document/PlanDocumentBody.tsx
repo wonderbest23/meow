@@ -136,7 +136,7 @@ export function PlanDocumentBody() {
     /* 예시는 읽기 전용 — 갱신·검토 안내를 띄우지 않는다 */
     setContextNotice(isSamplePlan(plan.id) ? "" : snapshot?.stale.length ? "바꾼 답이 아직 계획서에 들어가지 않았어요" : snapshot?.manualReview.length ? "직접 고친 항목이 있어요. 바꾼 답과 맞는지 한 번 확인해 주세요" : "");
   }
-  // PPT 자동 생성이 꺼져 있으면 제작 상태를 묻지 않는다(오픈 범위 밖 — lib/launch-scope.ts)
+  // PPT 자동 생성이 꺼져 있으면 제작 상태를 묻지 않는다
   const deck = useDeckExport(documentPlanId, PPT_GENERATION_VERIFIED && !isSample && !!access?.paid, title);
   const edits = useDocumentEdits((key, section) => {
     setSections(current => current.map(item => item.key === key ? { ...item, markdown: section.markdown, html: section.html } : item));
