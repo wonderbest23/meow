@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useReducer, useRef, 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
-import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, Mic, Plus, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, Mic, Paperclip, Plus, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
@@ -27,7 +27,7 @@ import { GenerationCard, GenerationDialog, generationFinished, generationStalled
 import { InlineLogin } from "../../../components/login-dialog";
 import { ResourcePanel } from "./intake-ui/ResourcePanel";
 import { IdeaExploration } from "./intake-ui/IdeaExploration";
-import { businessDescriptionText, incompleteChoiceText, nextRefinementQuestion, questionPromptText } from "./intake-ui/model";
+import { attachmentMessage, businessDescriptionText, incompleteChoiceText, nextRefinementQuestion, questionPromptText } from "./intake-ui/model";
 import { composerEnterSends, composerLimitNote, resultUpdateNotice, resumeSummary, visibleComposerText } from "./intake-ui/guidance";
 import { nativePlatform } from "../../../lib/native-app";
 import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/domain";
@@ -1647,7 +1647,24 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   useStudioCommand("chat-summary", () => { if (!plan) return; setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }, embedded && !!plan);
   /* 고른 선택지 알약이 내 말풍선으로 옮겨 가는 짧은 전환(6단계) — 대화 칸이 그려진 뒤에 붙인다 */
   useChipFlight(conversation, loaded && !!(plan || newEntry));
+  /* 문서 첨부 — 올린 글에서 답을 찾아 미리 채운다(서버가 바로 정리를 시작한다). 예전엔 ＋ 단추가 첨부처럼 보이기만 했다 */
+  const attachInput = useRef<HTMLInputElement>(null);
+  async function attach(file: File) {
+    if (file.size > 1024 * 1024) { setError("1MB 이하의 워드 또는 텍스트 문서를 첨부해 주세요."); return; }
+    try {
+      let contents: string;
+      if (/\.docx$/i.test(file.name)) {
+        const res = await fetch("/api/plan/chat/attachment", { method: "POST", body: file }); const data = await readChatResponse<{ text: string; message?: string }>(res); if (!res.ok) throw new Error(data.message); contents = data.text;
+      } else if (/\.(txt|md)$/i.test(file.name)) contents = await file.text();
+      else throw new Error("워드(.docx) 또는 텍스트(.txt, .md) 문서를 첨부해 주세요.");
+      if (!contents.trim()) throw new Error("문서에서 글을 찾지 못했어요.");
+      const message = attachmentMessage(file.name, contents);
+      void send({ action: "message", message }, { text: message });
+    } catch (caught) { setError(caught instanceof Error && caught.message || "파일을 읽지 못했어요."); }
+  }
+  const attachField = <input ref={attachInput} type="file" hidden accept=".docx,.txt,.md" aria-label="문서 첨부" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) void attach(file); }} />;
   const plusItems: PopMenuItem[] = [
+    ...(plan && !locked && !blocked && !editTarget ? [{ key: "attach", label: "문서 첨부 (워드 · 텍스트)", icon: <Paperclip />, onSelect: () => attachInput.current?.click() }] : []),
     ...(plan && summaryToggle ? [{ key: "answers", label: view === "summary" ? "대화로 돌아가기" : "지금까지 답 보기", icon: <ListChecks />, onSelect: () => { if (view === "summary") setView("input"); else openSummary(); } }] : []),
     { key: "new", label: "새 대화 시작", icon: <SquarePen />, href: newChatHref() },
   ];
@@ -1667,10 +1684,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
    * 누르면 지금 질문(입력칸으로) · 지금까지 답 보기.
    */
   const questionPill = questionTarget && !modePill
-    ? <PopMenu placement="above" align="end" buttonClassName={styles.modePill} buttonLabel={`답하는 중: ${questionTarget} — 더 보기`} menuLabel="지금 답하는 질문" groups={[{ key: "question", items: [{ key: "current", label: questionTarget, icon: <Target />, current: true, onSelect: () => focusComposer() }, ...plusItems.filter(item => item.key !== "new")] }]} label={<><span className={styles.modePillLabel} data-question-target title={questionTarget}><span className={styles.modePillHint}>답하는 중:</span> {questionTarget}</span><ChevronDown aria-hidden="true" /></>} />
+    ? <PopMenu placement="above" align="end" buttonClassName={styles.modePill} buttonLabel={`답하는 중: ${questionTarget} — 더 보기`} menuLabel="지금 답하는 질문" groups={[{ key: "question", items: [{ key: "current", label: questionTarget, icon: <Target />, current: true, onSelect: () => focusComposer() }, ...plusItems.filter(item => item.key === "answers")] }]} label={<><span className={styles.modePillLabel} data-question-target title={questionTarget}><span className={styles.modePillHint}>답하는 중:</span> {questionTarget}</span><ChevronDown aria-hidden="true" /></>} />
     : null;
   const micButton = dictation.supported ? <button type="button" className={styles.composerRound} aria-label={dictation.listening ? "말로 적기 멈추기" : "말로 적기"} aria-pressed={dictation.listening} title={dictation.listening ? "듣고 있어요 · 누르면 멈춰요" : "말로 적기"} disabled={!loaded || loadFailed || ownerChanged || (!studioRoute && !!replyTurn)} onClick={dictation.toggle}><Mic aria-hidden="true" /></button> : null;
-  const plusMenu = <PopMenu placement="above" align="start" buttonClassName={styles.composerRound} buttonLabel="더 보기 — 지금까지 답 보기 · 새 대화" buttonTitle="더 보기" menuLabel="대화 더 보기" groups={[{ key: "more", items: plusItems }]} label={<Plus aria-hidden="true" />} />;
+  const plusMenu = <>{attachField}<PopMenu placement="above" align="start" buttonClassName={styles.composerRound} buttonLabel="더 보기 — 문서 첨부 · 지금까지 답 보기 · 새 대화" buttonTitle="더 보기" menuLabel="대화 더 보기" groups={[{ key: "more", items: plusItems }]} label={<Plus aria-hidden="true" />} /></>;
   /* 보내기 단추 — 예전 모양은 입력칸 오른쪽, PC 는 입력 카드 아래 줄 오른쪽 */
   const sendButton = <button type="submit" className={styles.sendButton} aria-label={studioRoute ? studioRoute === "queue" ? "기다리는 요청으로 보내기" : "보내기" : sendLabel} title={studioRoute ? "보내기" : sendLabel} disabled={studioRoute ? studioSendDisabled || !visibleComposerText(studioText) : !loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{!studioRoute && (busy && !answerQueueOpen || replyTurn) ? <LoaderCircle size={20} className={styles.spinner} /> : !studioRoute && askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>;
   return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined} data-studio-pro={pro || undefined} data-keyboard={keyboardOpen || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={embedded ? undefined : summaryToggle}>

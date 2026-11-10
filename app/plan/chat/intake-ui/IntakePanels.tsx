@@ -8,12 +8,12 @@ import { Fragment, useEffect, useRef, useState, type FormEvent, type KeyboardEve
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { LoadingStatus, Spinner } from "../../PlanLoading";
-import { ArrowRight, Check, CheckCircle2, ChevronRight, Copy, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Store, X } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, ChevronRight, Copy, FileText, Lightbulb, ListFilter, LoaderCircle, Paperclip, PencilLine, Plus, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion, type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
 import { amountRanges, rangeMidpoint, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
-import { answerText, assembleHybridText, hybridComplete, incompleteChoiceText, COUNT_PREFIX, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, optionGroups, PERIOD_PRESETS, periodDates, periodDisplay, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
+import { answerText, assembleHybridText, hybridComplete, incompleteChoiceText, COUNT_PREFIX, candidateConflict, attachmentName, bulkCandidateIds, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, optionGroups, PERIOD_PRESETS, periodDates, periodDisplay, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
 import { mentionedAnswer, mentionsSolo, undecidedHelp } from "./guidance";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
 import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
@@ -691,7 +691,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
         {sectionEdit?.tag && <p className={styles.bubbleTag}><StatusBadge tone="neutral">{sectionEdit.tag}</StatusBadge></p>}
         {/* 내 말풍선 — 누르면(휴대폰) 또는 마우스를 올리면(PC) 아래에 작은 아이콘 줄(복사 · 고치기)이 나타난다(lovable 6단계). 평소엔 숨긴다 */}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role} tabIndex={message.role === "user" ? 0 : undefined}>
-          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={questionPromptText(text.replace(/(?:아래 )?"계획서 (?:다시 작성하기|에 반영하기)"/, "\"계획서에 반영하기\""))} /></> : <p>{sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)}</p>}
+          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={questionPromptText(text.replace(/(?:아래 )?"계획서 (?:다시 작성하기|에 반영하기)"/, "\"계획서에 반영하기\""))} /></> : attachmentName(text) ? <p data-attachment><Paperclip size={14} aria-hidden="true" /> {attachmentName(text)}</p> : <p>{sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)}</p>}
         </article>
         {message.role === "user" && <div className={styles.userActions} data-user-actions>
           <CopyButton text={sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)} />
@@ -739,6 +739,7 @@ export function ExtractionReview({ snapshot, disabled, onCommand }: { snapshot: 
   const conflict = candidateConflict(snapshot, candidate);
   const version = JSON.stringify([candidate.id, candidate.value, conflict.current, snapshot.coach.revision]);
   const approved = approvedVersion === version;
+  const bulk = bulkCandidateIds(snapshot);
   return <section className={styles.review} aria-labelledby="intake-review-heading">
     <ChatSpeaker />
     <h3 id="intake-review-heading">메모의 이 내용을 반영할까요?</h3>
@@ -757,6 +758,8 @@ export function ExtractionReview({ snapshot, disabled, onCommand }: { snapshot: 
       <AppButton type="button" variant="secondary" className={styles.secondaryButton} disabled={disabled} onClick={() => onCommand({ action: "confirm-extraction", rejectIds: [candidate.id] })}><X size={17} aria-hidden="true" />반영하지 않기</AppButton>
       <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={disabled || conflict.requiresOverwrite && !approved} onClick={() => onCommand({ action: "confirm-extraction", candidateIds: [candidate.id], overwriteIds: conflict.requiresOverwrite ? [candidate.id] : [] })}><Check size={17} aria-hidden="true" />이 내용 반영</AppButton>
     </div>
+    {/* 문서를 올리면 후보가 여럿 나온다 — 하나씩 누르지 않고 한 번에(고친 답은 나중에 말풍선에서 바꿀 수 있다) */}
+    {bulk.length > 1 && <AppButton type="button" variant="text" className={styles.textButton} disabled={disabled} onClick={() => onCommand({ action: "confirm-extraction", candidateIds: bulk })}>찾은 내용 {bulk.length}개 모두 반영</AppButton>}
   </section>;
 }
 

@@ -3,8 +3,8 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, ChevronRight, ArrowUp, ChevronDown, Mic, MoreHorizontal, Plus, Search } from "lucide-react";
-import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
+import { ArrowRight, ChevronRight, ArrowUp, ChevronDown, Mic, Lightbulb, MoreHorizontal, Plus, Search } from "lucide-react";
+import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, readAuthFlag, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
 import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
@@ -84,6 +84,9 @@ export default function PlanList() {
     // hydrateFromServer 는 실패해도 기기 저장본을 돌려준다 — 실패 여부는 따로 확인한다
     const refresh = () => { void hydrateFromServer().then(s => { if (alive) { setState(s); setError(lastHydrationFailed() ? failed : ""); } }).catch(() => { if (alive) { setState(loadState()); setError(failed); } }); };
     retry.current = refresh;
+    /* 이 기기에 저장된 목록이 있으면 먼저 보여 주고 서버 것으로 바꾼다 — 들어올 때마다 '내 사업을 불러오고 있어요'를 기다렸다. 비어 있으면 서버 답을 기다린다(다른 기기에서 만든 사업을 '없음'으로 보이지 않게) */
+    const cached = loadState();
+    if (readAuthFlag() && cached.plans.some(p => !isSamplePlan(p.id))) setState(cached);
     refresh();
     const visible = () => { if (!document.hidden) refresh(); };
     window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", visible);
@@ -91,7 +94,7 @@ export default function PlanList() {
   }, []);
   // 로그인 여부 — 모르면(null) 로딩, 아니면(false) 로그인 화면으로. 확인에 실패하면 로딩이 '늦어지고 있어요'로 바뀌고 다시 시도가 새로 불러온다
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  useEffect(() => { let alive = true; loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}); return () => { alive = false; }; }, []);
+  useEffect(() => { let alive = true; if (readAuthFlag()) setSignedIn(true); /* 직전에 로그인돼 있던 기기는 확인을 기다리지 않고 화면부터 그린다 — 풀렸으면 아래 확인이 로그인 화면으로 보낸다 */ loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}); return () => { alive = false; }; }, []);
   useEffect(() => { if (signedIn === false) router.replace("/account?next=%2Fplan"); }, [signedIn, router]);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
   const plans = allPlans;
@@ -270,7 +273,7 @@ function Composer() {
   return <form className={home.composer} onSubmit={send} aria-busy={sending || undefined}>
     <TextArea ref={field} className={home.composerField} aria-label="어떤 사업을 시작할지 적어 주세요" placeholder={`예: ${EXAMPLE_IDEA}`} rows={1} maxLength={LANDING_IDEA_MAX} value={text} onChange={event => setText(event.target.value)} onKeyDown={onKey} />
     <div className={home.composerBar}>
-      <button type="button" className={home.circle} aria-label="예시 문장 넣기" title="예시 문장 넣기" onClick={() => { setText(EXAMPLE_IDEA); field.current?.focus(); }}><Plus size={18} aria-hidden="true" /></button>
+      <button type="button" className={home.circle} aria-label="예시 문장 넣기" title="예시 문장 넣기" onClick={() => { setText(EXAMPLE_IDEA); field.current?.focus(); }}><Lightbulb size={18} aria-hidden="true" /></button>
       <span className={home.spacer} />
       <details className={home.mode} onKeyDown={event => { const menu = event.currentTarget; if (event.key === "Escape" && menu.open) { event.preventDefault(); menu.open = false; menu.querySelector("summary")?.focus(); } }}>
         <summary className={home.modePill} aria-label="시작 방식 고르기 — 지금: 사업계획서">사업계획서<ChevronDown size={14} aria-hidden="true" /></summary>
