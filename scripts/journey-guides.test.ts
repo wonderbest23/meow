@@ -67,8 +67,8 @@ for (const code of JOURNEY_GUIDE_CODES) {
     assert.ok(guide.message.length > 0);
   }
 }
-assert.match(journeyGuide("design-ready", id).message, /결제/, "계획서 작성은 결제 뒤 — 무료 장이 없다(free-tier.ts)");
-assert.match(readFileSync(new URL("../lib/plan-builder/free-tier.ts", import.meta.url), "utf8"), /FREE_SECTION_COUNT = 0/, "결제 안내의 근거");
+assert.match(journeyGuide("design-ready", id).message, /결제/, "첫 항목만 결제 전, 나머지는 결제 뒤(free-tier.ts)");
+assert.match(readFileSync(new URL("../lib/plan-builder/free-tier.ts", import.meta.url), "utf8"), /PREVIEW_SECTION_COUNT = 1/, "결제 안내의 근거");
 assert.match(journeyGuide("launch-done", id, { operating: true }).message, /^운영 개선 목록/, "운영 중이면 4단계 이름이 운영 개선");
 assert.match(journeyGuide("launch-done", id).message, /^개업 준비 목록/);
 assert.equal(journeyGuide("first-lead", id).message, "첫 문의를 축하드려요! 빨리 연락할수록 좋아요.");

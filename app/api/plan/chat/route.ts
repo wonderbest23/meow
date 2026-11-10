@@ -12,7 +12,8 @@ import { reconcileCoachJob } from "../../../../lib/plan-builder/coach-job-status
 import { serverPersistenceMode } from "../../../../lib/persistence";
 import { loadPlanState, savePlanState, type ServerPlan } from "../../../../lib/plan-builder/plan-server-store";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
-import { checkSectionAccess, resolvePlanAccess } from "../../../../lib/plan-builder/access";
+import { checkSectionAccess, freePlanLimitReached, resolvePlanAccess } from "../../../../lib/plan-builder/access";
+import { PREVIEW_SECTION_COUNT } from "../../../../lib/plan-builder/free-tier";
 import { COACH_KEY, COACH_TYPES, readCoach, coachDocumentRevision } from "../../../../lib/plan-builder/coach";
 import { coachDocumentSnapshot } from "../../../../lib/plan-builder/coach-document";
 import { resolvePlanAllowance, resolveRegenQuota } from "../../../../lib/plan-builder/regen-quota";
@@ -168,13 +169,16 @@ async function preparePlan(ownerHash: string, planId: string | undefined, input:
       const access = await resolvePlanAccess(plan.planType, plan.id);
       if (!access.authenticated) return json({ message: "대화는 보관했어요. 로그인 후 초안을 만들 수 있어요.", login: true }, 401);
       if (receipt?.accepted) return json({ plan: publicPlan(plan), started: true, paid: receipt.paid });
-      // 무료 체험은 없다(소유자 결정 2026-10-09) — 사업계획서 본문은 결제한 계획서만 쓴다. 화면은 이 응답을 받으면 결제 화면으로 보낸다.
-      if (!access.paid) return json({ code: "payment_required", message: "사업계획서 문서는 결제 후에 작성해요. 결제 화면으로 이동할게요.", pay: true }, 402);
+      // 결제 전에는 첫 항목만 한 번 써서 보여 준다(free-tier.ts PREVIEW_SECTION_COUNT) — 이미 썼거나 무료 문서 수를 넘겼으면 결제로. 화면은 이 응답을 받으면 결제 화면으로 보낸다.
+      const allKeys = chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`));
+      const previewKeys = allKeys.slice(0, PREVIEW_SECTION_COUNT);
+      const previewLeft = previewKeys.some(key => !plan.sections[key]?.markdown) && !freePlanLimitReached(plan.id, state.plans, access.paidPlanIds);
+      if (!access.paid && !previewLeft) return json({ code: "payment_required", message: "나머지 항목은 결제 후에 작성해요. 결제 화면으로 이동할게요.", pay: true }, 402);
       if (coach.revision !== input.revision) return prepareConflict();
       if (!coach.ready) return json({ message: "먼저 어떤 사업인지 대화로 알려 주세요." }, 400);
       const coachJob = readCoachJob(plan.answers);
       if (isCoachJobActive(coachJob) && !isCoachJobStale(coachJob!)) return prepareConflict();
-      const keys = chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`)).filter(key => checkSectionAccess(access, key) === "ok");
+      const keys = access.paid ? allKeys.filter(key => checkSectionAccess(access, key) === "ok") : previewKeys;
       const workflow = await binding();
       if (!workflow) return prepareUnavailable();
       const revision = coachDocumentRevision(coach);

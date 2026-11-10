@@ -64,12 +64,12 @@ type GuideRow = {
 };
 
 const GUIDES: Record<JourneyGuideCode, GuideRow> = {
-  /* J1 사업 시작 → 사업계획서 이어가기. 계획서 작성은 결제 뒤에 한다(무료 장 없음 — free-tier.ts FREE_SECTION_COUNT = 0) */
+  /* J1 사업 시작 → 사업계획서 이어가기. 결제 전에는 첫 항목만 써서 보여 주고 나머지는 결제 뒤에 쓴다(free-tier.ts PREVIEW_SECTION_COUNT = 1) */
   "design-ready": {
     stage: "J1",
     tab: "plan",
     /* 결제로 이끄는 단추는 대화 칸의 '사업계획서 만들기' 하나 — 같은 일 칩·미리 넣는 문장은 뺐다(2026-11-07 사장님) */
-    message: () => "사업안 정리가 끝났어요 👏 위의 '사업계획서 만들기'를 누르면 결제 후 바로 이 내용으로 장마다 차례로 써 드려요.",
+    message: () => "사업안 정리가 끝났어요 👏 위의 '사업계획서 만들기'를 누르면 첫 항목을 먼저 써서 보여 드려요. 나머지는 결제 후에 이어서 써요.",
     prefill: null,
     actions: () => [],
   },

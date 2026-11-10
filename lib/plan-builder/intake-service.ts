@@ -12,7 +12,7 @@ import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
+import { applyIntakeAnswer, applyIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
 import { EDITABLE_FACT_IDS } from "./fact-highlight";
@@ -117,6 +117,8 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         if (command.questionId !== "business" || typeof command.value !== "string" || !command.value.trim() || command.unknown) throw new IntakeError("invalid_start", "처음 이야기할 사업 내용을 입력해 주세요");
         // Persist the first typed answer and new conversation in the same CAS write.
         applyIntakeAnswer(plan, coach, intake, { ...command, action: "answer" }, at);
+        // 한 문장 → 바로 초안(시험 기능, INTAKE_ESTIMATE=1): 나머지 핵심 질문을 자체 기준표로 채운다
+        if (process.env.INTAKE_ESTIMATE === "1") applyIntakeEstimates(plan, coach, intake, command.requestId, at);
       }
       if (command.message) storeDeferredNote(coach, intake, command, at);
       coach.stage = intake.mode === "operating" ? "operating" : intake.mode === "exploring" && !coach.fields.some(field => field.key === "business") ? "exploring" : "startup";
@@ -130,6 +132,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       assertAmountConfirmed(intake, coach, command);
       const beforeAnswers = structuredClone(intake.answers);
       applyIntakeAnswer(plan, coach, intake, command, at);
+      if (process.env.INTAKE_ESTIMATE === "1" && command.questionId === "business" && !command.unknown) applyIntakeEstimates(plan, coach, intake, command.requestId, at);
       // 계획서가 있으면 고친 금액을 본문에 바로 바꿔 넣는다(AI 없음). 계산된 다른 값은 다시 작성하기로 맞춘다.
       patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);
     }

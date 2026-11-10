@@ -8,6 +8,7 @@ import { calculateFinancials, financialsToReference } from "./financials";
 import { acceptsFreeChoice, FREE_CHOICE_MAX_CHARS, amountCheckPrompt, coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
 import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
+import { estimateIntake } from "./intake-estimate";
 import { playbookForKsic, playbookForText } from "./industry-playbooks";
 import { businessTypeFor } from "./business-types";
 import { KSIC_SYNONYMS, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
@@ -727,9 +728,9 @@ export function autoBusinessName(value: string, limit = 60): string {
   return `${(space > limit / 2 ? head.slice(0, space) : head).trimEnd()}…`;
 }
 
-function setField(coach: CoachState, key: CoachField["key"], value: string | null, messageId: string, quote: string) {
+function setField(coach: CoachState, key: CoachField["key"], value: string | null, messageId: string, quote: string, basis: CoachField["basis"] = "user") {
   const fields = coach.fields.filter(field => field.key !== key);
-  if (value !== null) fields.push({ key, value, basis: "user", messageId, quote });
+  if (value !== null) fields.push({ key, value, basis, messageId, quote });
   coach.fields = fields;
   if (key === "business") {
     coach.business.description = value ?? "";
@@ -839,6 +840,41 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
   coach.messages.push({ id: command.requestId, role: "user", text: `${question.label}: ${command.unknown ? "아직 미정" : ksicName ? `${ksicName} (${ksicSectorLabel(intake.ksic, intake.sector, selected ?? quote)})` : selected ?? quote}`, at });
   // Supplementary prose stays an unconfirmed note, in the same atomic answer save.
   if (command.message?.trim()) storeIntakeNote(coach, intake, { ...command, requestId: `${command.requestId}:context`, noteIntent: "memo" }, at);
+}
+
+const ESTIMATE_SUFFIX = ":estimate";
+
+/**
+ * 한 문장만 받은 새 사업의 나머지 핵심 질문을 자체 기준표(intake-estimate)로 채운다 — 묻지 않고 바로 초안으로 간다.
+ * 채운 값은 '제안'이라 사용자가 답하면 그 답이 이긴다. 예산·주당 시간은 개인 사정이라 짐작하지 않고 '미정'으로 둔다.
+ * 문서를 쓰기 전에는 사업 문장이 바뀌면 지난 짐작도 새 문장을 따라 바뀐다. 쓴 뒤에는 건드리지 않는다.
+ */
+export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake: IntakeState, requestId: string, at: string) {
+  const business = coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim();
+  if (intake.mode !== "startup" || !business) return;
+  const messageId = `${requestId}${ESTIMATE_SUFFIX}`, drafted = Object.keys(plan.sections).length > 0;
+  const open = (id: string) => { const answer = intake.answers[id]; return !answer || !drafted && answer.messageId.endsWith(ESTIMATE_SUFFIX); };
+  const { sector, answers } = estimateIntake(business, open("industry") ? undefined : intake.sector);
+  if (open("industry")) {
+    intake.sector = sector; intake.ksic = null;
+    coach.business.industry = intakeSectorOptions.find(option => option.value === sector)?.label ?? sector;
+    intake.answers.industry = { status: "answered", value: sector, messageId, at };
+    syncIntakeDetails(plan, intake);
+  }
+  let filled = 0;
+  for (const question of intakeQuestions(intake, coach)) {
+    if (question.id === "industry" || question.id === "business" || !open(question.id)) continue;
+    if (question.id === "budget" || question.id === "hoursPerWeek") { intake.answers[question.id] = { status: "unknown", value: null, messageId, at }; continue; }
+    const guess = answers[question.id];
+    if (!guess) continue;
+    try {
+      const value = validatedAnswer(question, guess);
+      intake.answers[question.id] = { status: "answered", value, messageId, at, quote: guess };
+      if (question.fieldKey) setField(coach, question.fieldKey, `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, messageId, "", "proposal");
+      filled += 1;
+    } catch { /* 형식이 안 맞는 짐작은 버린다 — 그 질문은 평소처럼 묻는다 */ }
+  }
+  if (filled && !coach.messages.some(message => message.id === messageId)) coach.messages.push({ id: messageId, role: "assistant", text: "나머지는 같은 업종 기준값으로 먼저 채웠어요. 다르면 눌러서 고칠 수 있어요.", at });
 }
 
 export function applyIntakeCandidates(coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {

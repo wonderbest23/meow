@@ -681,7 +681,9 @@ async function main() {
   assert.ok(opened.includes("사업계획서 문서 열기</a>") && !opened.includes("작성하기</button>") && !opened.includes("정리하기</button>"), "after the documents exist the step is opening them");
   const resumeMissing = nextMarkup({ hasDocuments: true, missingSections: 8 }, currentDesign);
   assert.ok(resumeMissing.includes("남은 8개 항목 이어서 작성하기</button>") && !resumeMissing.includes("계획서에 반영하기") && !resumeMissing.includes("다시 생성 횟수"), "unwritten sections resume without a rewrite confirm");
-  assert.ok(needsPlan.includes("결제한 뒤에 작성을 시작해요") && !needsPlan.includes("무료로 만들어요"), "the first document step says it starts after payment (no free trial)");
+  assert.ok(needsPlan.includes("결제 전에는 첫 항목만 먼저 써서 보여 드려요") && !needsPlan.includes("무료로 만들어요"), "the first document step says only the first section comes before payment");
+  const unpaidResume = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ hasDocuments: true, missingSections: 9 }, currentDesign)} prepared={false} disabled={false} aiBusy={false} unpaid payNote="49,000원 · 홈페이지까지 59,000원" onDesign={noop} onPrepare={noop} />);
+  assert.ok(unpaidResume.includes("전체 받기 →</button>") && unpaidResume.includes("49,000원 · 홈페이지까지 59,000원") && !unpaidResume.includes("이어서 작성하기"), "after the first section an unpaid plan shows one pay button with the price");
   const staleDocument = nextMarkup({ hasDocuments: true, documentStatus: "stale" }, currentDesign);
   assert.ok(staleDocument.includes("계획서에 반영하기</button>") && !staleDocument.includes("이전 계획서 보기") && !staleDocument.includes("진행 단계") && !staleDocument.includes("다시 생성 횟수"), "a stale document shows one rewrite button; the cost note waits for the confirm popup");
   // 반영하기 전에 비용을 먼저 보여 준다(다시 쓸 항목 수 · 대화는 무료)
@@ -719,10 +721,10 @@ async function main() {
   assert.ok(operatingResult.includes("이렇게 바꿔 봐요") && !operatingResult.includes("이렇게 시작해요") && operatingResult.includes("새 이름 추천 보기") && !operatingResult.includes("동네찬방"), "operating results keep the current name first");
   assert.ok(operatingResult.includes("지금 가게 이름") && operatingResult.includes('aria-label="지금 가게 이름"'), "operating results ask the current shop name in a plain input");
   for (const text of ["AI 제안", "이유 하나", "키프리스", "<details", "설명 문장"]) assert.ok(!result.includes(text), `result should not include: ${text}`);
-  const pricedPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal payNote="49,000원 결제 후 작성 · 홈페이지까지 59,000원" onDesign={noop} onPrepare={noop} />);
-  assert.ok(pricedPrepare.includes("49,000원 결제 후 작성 · 홈페이지까지 59,000원"), "the plan button shows the price before payment");
+  const pricedPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal payNote="첫 항목 먼저 보기 · 전체 49,000원" onDesign={noop} onPrepare={noop} />);
+  assert.ok(pricedPrepare.includes("첫 항목 먼저 보기 · 전체 49,000원"), "the plan button shows the price before payment");
   const minimalPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal onDesign={noop} onPrepare={noop} />);
-  assert.ok(minimalPrepare.includes("사업계획서 만들기</button>") && minimalPrepare.includes("결제하면 바로 작성을 시작해요") && !minimalPrepare.includes("진행 단계"), "the result screen ends with one plan button");
+  assert.ok(minimalPrepare.includes("사업계획서 만들기</button>") && minimalPrepare.includes("몇 분 걸려요.") && !minimalPrepare.includes("진행 단계"), "the result screen ends with one plan button");
   // 사업 방향 정리 중: 마지막 답을 보낸 순간부터 막대와 단계가 보인다(작업 접수 전에도)
   const starting = renderToStaticMarkup(<DesignProgress snapshot={nextSnapshot({}, { design: undefined })} />);
   assert.ok(starting.includes('role="progressbar"') && starting.includes("답변 모으기") && starting.includes("시작 범위 제안하기") && starting.includes("보통 30~40초"), "design progress shows a bar and steps before the job is accepted");
