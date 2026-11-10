@@ -44,6 +44,14 @@
 .chapterHeading { margin:0 0 32px; }
 .chapterHeading > span { color:var(--app-muted); font-size:.6875rem; font-weight:600; }
 .chapterHeading h2 { font-size:1.4375rem; line-height:1.45; margin:8px 0 0; font-weight:700; word-break:keep-all; overflow-wrap:anywhere; }
+/* 일반 현황 — 공문서 양식처럼 위아래 굵은 줄, 왼쪽 칸은 회색 */
+.overview { width:100%; margin:0 0 38px; border-collapse:collapse; border-top:2px solid var(--app-text); border-bottom:1px solid var(--app-text); font-size:.875rem; line-height:1.6; }
+.overview caption { caption-side:top; text-align:left; margin:0 0 10px; color:var(--app-text); font-size:.9375rem; font-weight:600; }
+.overview caption::before { content:"□ "; }
+.overview :is(th,td) { padding:9px 12px; border-top:1px solid var(--app-line); text-align:left; vertical-align:top; word-break:keep-all; overflow-wrap:anywhere; }
+.overview tr:first-child :is(th,td) { border-top:0; }
+.overview th { width:7.5em; background:var(--app-raised); color:var(--app-text); font-weight:600; white-space:nowrap; }
+.overview td { color:var(--app-body); }
 .section { margin:0 0 38px; scroll-margin-top:20px; min-width:0; }
 .section h3 { display:flex; gap:10px; font-size:1.125rem; line-height:1.5; margin:0 0 16px; font-weight:600; word-break:keep-all; overflow-wrap:anywhere; }
 .section h3 > span { font-size:.8125rem; color:var(--app-muted); padding-top:4px; flex-shrink:0; }

@@ -1,5 +1,5 @@
 import type { Token, Tokens } from "marked";
-import { lexPlanMarkdown } from "../plan-builder/markdown";
+import { lexPlanMarkdown, splitLeadLabel } from "../plan-builder/markdown";
 import { summaryBasisLabel, type ExecutiveSummary } from "../plan-builder/executive-summary";
 import { CHART_FENCE_LANG, parseChartSpec, chartScale, chartTicks, shortWon } from "../plan-builder/chart";
 import { subsetTrueType } from "./font-subset";
@@ -20,6 +20,8 @@ type PdfProjectInput = {
   sample: boolean;
   /** 표지 항목을 직접 지정(선택). 없으면 기본 항목을 쓴다. */
   coverFields?: Array<{ label: string; value: string }>;
+  /** 첫 장 머리의 '일반 현황' 표 항목(선택) — 입력받은 값만 넣는다 */
+  overviewFields?: Array<{ label: string; value: string }>;
 };
 
 const PAGE_WIDTH = 595.28;
@@ -44,9 +46,18 @@ const CHART_HEIGHT = 168;
 const KEEP_TABLE_WHOLE = 180;
 /** 쪽을 넘겨 나누는 문단은 앞뒤 쪽에 이만큼 줄을 남긴다 */
 const MIN_SPLIT_LINES = 2;
+/* 공문서 양식 — 검정·회색만 쓴다(차트만 화면과 같은 색) */
+const INK = "111111";
+const BODY = "222222";
+const MUTED = "5F6368";
+const BORDER = "9AA0A6";
+const FILL = "F1F2F4";
+/** '1.1 한눈에 보기'처럼 스스로 번호를 단 목록 항목(목차) — 글머리표를 또 붙이지 않는다 */
+export const SELF_NUMBERED = /^\d+(\.\d+)+\s/;
 
+/** 장(2단계)은 띠 제목, 절(3단계)은 굵은 번호 제목, 그 아래는 '□' 소제목 */
 function headingStyle(depth: number) {
-  return { size: depth <= 2 ? 17 : depth === 3 ? 13 : 11, gap: depth <= 2 ? 12 : 7 };
+  return { size: depth <= 2 ? 14 : depth === 3 ? 12.5 : 10.5, gap: depth <= 2 ? 14 : depth === 3 ? 10 : 6 };
 }
 
 function inlineText(tokens: Token[] | undefined, fallback = ""): string {
@@ -177,19 +188,23 @@ function utf16Hex(codePoint: number) {
   return `${high.toString(16).padStart(4, "0")}${low.toString(16).padStart(4, "0")}`.toUpperCase();
 }
 
-type PdfPage = { commands: string[]; cursor: number };
+type PdfPage = { commands: string[]; cursor: number; kind: "cover" | "summary" | "body"; title: string; chapter: string };
 
 class PdfLayout {
   readonly pages: PdfPage[] = [];
   readonly unicodeByGlyph = new Map<number, number>();
   private page: PdfPage;
+  /* 새 쪽이 물려받는 값 — 쪽 머리(문서 이름 · 장 이름)와 쪽 번호 모양을 정한다 */
+  private kind: PdfPage["kind"] = "body";
+  private title = "";
+  private chapter = "";
 
   constructor(private readonly font: TrueTypeFont) {
     this.page = this.newPage();
   }
 
   private newPage() {
-    const page = { commands: [], cursor: TOP };
+    const page: PdfPage = { commands: [], cursor: TOP, kind: this.kind, title: this.title, chapter: this.chapter };
     this.pages.push(page);
     this.page = page;
     return page;
@@ -267,7 +282,7 @@ class PdfLayout {
       const baseline = PAGE_HEIGHT - top - index * lineHeight - size;
       const spare = Math.max(0, width - this.textWidth(line, size));
       const lineX = x + (options.align === "right" ? spare : options.align === "center" ? spare / 2 : 0);
-      const command = `BT /F1 ${size.toFixed(2)} Tf ${rgb(options.color ?? "263D34")} rg 1 0 0 1 ${lineX.toFixed(2)} ${baseline.toFixed(2)} Tm <${this.encoded(line)}> Tj ET`;
+      const command = `BT /F1 ${size.toFixed(2)} Tf ${rgb(options.color ?? BODY)} rg 1 0 0 1 ${lineX.toFixed(2)} ${baseline.toFixed(2)} Tm <${this.encoded(line)}> Tj ET`;
       this.page.commands.push(command);
       if (options.bold) this.page.commands.push(command.replace(`${lineX.toFixed(2)} ${baseline.toFixed(2)} Tm`, `${(lineX + 0.22).toFixed(2)} ${baseline.toFixed(2)} Tm`));
     });
@@ -303,41 +318,69 @@ class PdfLayout {
   rect(x: number, top: number, width: number, height: number, fill: string, stroke?: string) {
     const y = PAGE_HEIGHT - top - height;
     const operation = stroke ? "B" : "f";
-    const strokeColor = stroke ? `${rgb(stroke)} RG ` : "";
+    const strokeColor = stroke ? `${rgb(stroke)} RG 0.6 w ` : "";
     this.page.commands.push(`q ${rgb(fill)} rg ${strokeColor}${x.toFixed(2)} ${y.toFixed(2)} ${width.toFixed(2)} ${height.toFixed(2)} re ${operation} Q`);
   }
 
-  rule(top: number, color = "D9E4DF") {
+  rule(top: number, color = BORDER, weight = 0.8, x = LEFT, width = CONTENT_WIDTH) {
     const y = PAGE_HEIGHT - top;
-    this.page.commands.push(`q ${rgb(color)} RG 0.8 w ${LEFT} ${y.toFixed(2)} m ${(PAGE_WIDTH - LEFT).toFixed(2)} ${y.toFixed(2)} l S Q`);
+    this.page.commands.push(`q ${rgb(color)} RG ${weight} w ${x.toFixed(2)} ${y.toFixed(2)} m ${(x + width).toFixed(2)} ${y.toFixed(2)} l S Q`);
+  }
+
+  /**
+   * 항목표(표지 · 일반 현황) — 회색 항목 칸과 값 칸. pairs 가 2면 한 줄에 두 쌍을 놓고, 홀수로 남은 마지막 항목은 줄 끝까지 넓힌다.
+   * top 에서부터 그리고 높이를 돌려준다.
+   */
+  private fieldGrid(fields: Array<[string, string]>, pairs: 1 | 2, x: number, width: number, top: number) {
+    const size = 9;
+    const labelWidth = pairs === 2 ? 74 : 96;
+    let y = top;
+    for (let index = 0; index < fields.length; index += pairs) {
+      const row = fields.slice(index, index + pairs);
+      const cellWidth = width / row.length;
+      const valueWidth = cellWidth - labelWidth;
+      const lines = Math.max(...row.map(([, value]) => this.wrap(value, valueWidth - TABLE_PAD * 2, size).length));
+      const height = Math.max(26, lines * 13 + 12);
+      const inset = (count: number) => Math.max(4, (height - ((count - 1) * 13 + size * 0.9)) / 2 - size * 0.24);
+      row.forEach(([label, value], column) => {
+        const cellX = x + column * cellWidth;
+        this.rect(cellX, y, labelWidth, height, FILL, BORDER);
+        this.drawText(label, cellX + 4, y + inset(1), { size, color: INK, width: labelWidth - 8, lineHeight: 13, bold: true, align: "center" });
+        this.rect(cellX + labelWidth, y, valueWidth, height, "FFFFFF", BORDER);
+        this.drawText(value, cellX + labelWidth + TABLE_PAD, y + inset(lines), { size, width: valueWidth - TABLE_PAD * 2, lineHeight: 13 });
+      });
+      y += height;
+    }
+    this.rule(top, INK, 1.2, x, width);
+    this.rule(y, INK, 0.8, x, width);
+    return y - top;
   }
 
   cover(document: PdfDocumentInput, project: PdfProjectInput, first: boolean) {
-    if (!first) this.addPage();
-    this.drawText("창업 실행 캔버스", LEFT, 70, { size: 11, color: "0B7254", bold: true });
-    this.drawText(document.title, LEFT, 145, { size: 28, color: "18342A", width: CONTENT_WIDTH, bold: true, lineHeight: 38 });
-    this.drawText(document.type, LEFT, 225, { size: 12, color: "65766F", width: CONTENT_WIDTH });
-    this.rule(265);
-    const details = project.coverFields?.length
-      ? [
-          ...project.coverFields.map((f) => [f.label, f.value] as [string, string]),
-          ["생성일", new Date(project.generatedAt).toLocaleDateString("ko-KR")] as [string, string],
-        ]
-      : [
-          ["프로젝트", project.title], ["목표 고객", project.customer], ["수익 방식", project.model],
-          ["문서 버전", document.versionLabel], ["생성일", new Date(project.generatedAt).toLocaleDateString("ko-KR")],
-        ];
-    details.forEach(([label, value], index) => {
-      const top = 300 + index * 35;
-      this.drawText(label, LEFT, top, { size: 8, color: "65766F", width: 76 });
-      this.drawText(value, 140, top - 1, { size: 10, color: "263D34", width: PAGE_WIDTH - 194, bold: index === 0 });
-    });
-    this.rect(LEFT, 500, CONTENT_WIDTH, 66, "FFF5D6");
-    this.drawText(project.sample ? "이 문서는 화면 검증용 가상 사례입니다. 실제 사업 판단에는 사용할 수 없습니다." : "확정 표시가 없는 시장 수치와 가정은 인터뷰, 계약서, 견적서 또는 공식 자료로 다시 확인해야 합니다.", 70, 516, { size: 9, color: "6B5D2A", width: CONTENT_WIDTH - 32, lineHeight: 14 });
+    this.kind = "cover";
+    if (first) this.page.kind = "cover"; else this.addPage();
+    const titleLines = this.wrap(document.title, CONTENT_WIDTH - 40, 26).length;
+    const typeTop = 218 + titleLines * 36 + 10;
+    this.rule(190, INK, 2);
+    this.drawText(document.title, LEFT + 20, 218, { size: 26, color: INK, width: CONTENT_WIDTH - 40, bold: true, lineHeight: 36, align: "center" });
+    this.drawText(document.type, LEFT, typeTop, { size: 12, color: MUTED, align: "center" });
+    this.rule(typeTop + 46, INK, 2);
+    const date: [string, string] = ["작성일", new Date(project.generatedAt).toLocaleDateString("ko-KR")];
+    const details: Array<[string, string]> = project.coverFields?.length
+      ? [...project.coverFields.map((f) => [f.label, f.value] as [string, string]), date]
+      : [["프로젝트", project.title], ["목표 고객", project.customer], ["수익 방식", project.model], ["문서 버전", document.versionLabel], date];
+    const gridTop = Math.max(430, typeTop + 100);
+    const noticeTop = Math.max(650, gridTop + this.fieldGrid(details, 1, LEFT + 60, CONTENT_WIDTH - 120, gridTop) + 36);
+    this.rect(LEFT, noticeTop, CONTENT_WIDTH, 50, FILL, BORDER);
+    this.drawText(project.sample ? "이 문서는 화면 검증용 가상 사례입니다. 실제 사업 판단에는 사용할 수 없습니다." : "확정 표시가 없는 시장 수치와 가정은 인터뷰, 계약서, 견적서 또는 공식 자료로 다시 확인해야 합니다.", LEFT + 16, noticeTop + 12, { size: 9, color: MUTED, width: CONTENT_WIDTH - 32, lineHeight: 14 });
+    this.kind = "body";
+    this.title = document.title;
+    this.chapter = "";
     this.addPage();
   }
 
   summary(summary: ExecutiveSummary) {
+    this.kind = this.page.kind = "summary";
     const firstPageCount = this.pages.length;
     this.text(summary.title, { size: 19, color: "171C24", bold: true, gap: 6 });
     this.text(`한 장 사업 요약 | ${summary.planType}`, { size: 9, color: "596579", gap: 10 });
@@ -351,9 +394,44 @@ class PdfLayout {
     if (this.pages.length !== firstPageCount) throw new Error("EXECUTIVE_SUMMARY_OVERFLOW");
   }
 
-  private headingHeight(token: Tokens.Heading) {
-    const { size, gap } = headingStyle(token.depth);
-    return gap + this.wrap(inlineText(token.tokens, token.text), CONTENT_WIDTH, size).length * size * 1.55 + 8;
+  private headingLines(text: string, depth: number) {
+    const { size } = headingStyle(depth);
+    return depth <= 2 ? this.wrap(text, CONTENT_WIDTH - 24, size).length : this.wrap(depth >= 4 ? `□ ${text}` : text, CONTENT_WIDTH, size).length;
+  }
+
+  private headingHeight(text: string, depth: number) {
+    const { size, gap } = headingStyle(depth);
+    return gap + this.headingLines(text, depth) * size * 1.55 + (depth <= 2 ? 26 : depth === 3 ? 7 : 5);
+  }
+
+  private heading(text: string, depth: number) {
+    const { size, gap } = headingStyle(depth);
+    this.page.cursor += gap;
+    if (depth > 2) {
+      this.text(depth >= 4 ? `□ ${text}` : text, { size, color: INK, bold: true, gap: depth === 3 ? 7 : 5 });
+      return;
+    }
+    // 장 제목 띠 — 위는 굵은 검정 줄, 아래는 가는 줄
+    const lines = this.headingLines(text, depth);
+    const height = lines * size * 1.55 + 14;
+    const top = this.page.cursor;
+    this.rect(LEFT, top, CONTENT_WIDTH, height, FILL);
+    this.rule(top, INK, 1.6);
+    this.rule(top + height, INK, 0.6);
+    this.drawText(text, LEFT + 12, top + (height - ((lines - 1) * size * 1.55 + size * 0.9)) / 2 - size * 0.24, { size, color: INK, width: CONTENT_WIDTH - 24, bold: true });
+    this.page.cursor += height + 12;
+  }
+
+  private list(list: Tokens.List, level = 0) {
+    list.items.forEach((item, index) => {
+      const text = inlineText(item.tokens.filter((child) => child.type !== "list"), item.text);
+      const mark = list.ordered ? `${index + 1}.` : level ? "-" : "ㅇ";
+      const numbered = SELF_NUMBERED.test(text);
+      // 목차 줄('1.1 …')은 표시 없이 촘촘하게 — 한 장에 들어가도록
+      this.text(numbered ? text : `${mark} ${text}`, { indent: 12 + level * 14, gap: numbered ? 2 : 5 });
+      // 안쪽 목록은 한 칸 들여 '-' 로 잇는다(예전엔 PDF 에서 빠졌다)
+      for (const child of item.tokens) if (child.type === "list") this.list(child as Tokens.List, level + 1);
+    });
   }
 
   /** tokens[index] 부터 '떼어 놓으면 안 되는 앞부분'의 높이 — 제목이면 다음 덩어리의 첫 부분까지 더한다 */
@@ -363,13 +441,20 @@ class PdfLayout {
     const nextIndex = () => { for (let i = index + 1; i < tokens.length; i += 1) if (tokens[i].type !== "space") return i; return -1; };
     if (token.type === "heading") {
       const next = nextIndex();
-      return this.headingHeight(token as Tokens.Heading) + (next >= 0 && depth < 3 ? this.leadHeight(tokens, next, depth + 1) : 0);
+      return this.headingHeight(inlineText(token.tokens, token.text), token.depth) + (next >= 0 && depth < 3 ? this.leadHeight(tokens, next, depth + 1) : 0);
     }
     // 문단·목록은 쪽을 넘겨 나뉠 수 있으므로 첫 몇 줄만(제목과 함께 둘 만큼)
-    if (token.type === "paragraph") return Math.min(3, this.wrap(inlineText(token.tokens, token.text), CONTENT_WIDTH, 10).length) * 15.5 + 8;
+    if (token.type === "paragraph") {
+      const lead = splitLeadLabel(token.tokens);
+      const body = lead ? inlineText(lead.rest) : inlineText(token.tokens, token.text);
+      const next = nextIndex();
+      // 머리말('□ 문제')만 있는 문단은 소제목처럼 다음 덩어리와 함께 잰다
+      return (lead ? this.headingHeight(lead.label, 4) : 0)
+        + (body ? Math.min(3, this.wrap(body, CONTENT_WIDTH, 10).length) * 15.5 + 8 : next >= 0 && depth < 3 ? this.leadHeight(tokens, next, depth + 1) : 0);
+    }
     if (token.type === "list") {
       const first = (token as Tokens.List).items[0];
-      return first ? Math.min(3, this.wrap(`· ${inlineText(first.tokens, first.text)}`, CONTENT_WIDTH - 12, 10).length) * 15.5 + 5 : 0;
+      return first ? Math.min(3, this.wrap(`ㅇ ${inlineText(first.tokens, first.text)}`, CONTENT_WIDTH - 12, 10).length) * 15.5 + 5 : 0;
     }
     if (token.type === "blockquote") return Math.max(38, this.wrap(inlineText(token.tokens, token.text), CONTENT_WIDTH - 32, 9).length * 14 + 20) + 10;
     if (token.type === "table") {
@@ -381,25 +466,47 @@ class PdfLayout {
     return 24;
   }
 
-  blocks(document: PdfDocumentInput) {
+  blocks(document: PdfDocumentInput, overviewFields?: Array<{ label: string; value: string }>) {
     const tokens = lexPlanMarkdown(document.markdown);
     let skippedTitle = false;
+    let overview = overviewFields?.length ? overviewFields : null;
     for (const [index, token] of tokens.entries()) {
       if (token.type === "heading") {
         if (!skippedTitle && token.depth === 1) { skippedTitle = true; continue; }
-        const { size, gap } = headingStyle(token.depth);
+        const text = inlineText(token.tokens, token.text);
+        if (token.depth <= 2) this.chapter = text;
+        if (overview && token.depth === 2 && /^\d+\.\s/.test(text)) {
+          // 첫 장은 새 쪽에서 시작하고(목차와 나눈다) 장 제목 바로 아래에 '일반 현황' 표를 둔다
+          if (this.page.cursor > TOP) this.newPage(); else this.page.chapter = text;
+          this.heading(text, 2);
+          this.heading("일반 현황", 4);
+          this.page.cursor += this.fieldGrid(overview.map((field) => [field.label, field.value]), 2, LEFT, CONTENT_WIDTH, this.page.cursor) + 14;
+          overview = null;
+          continue;
+        }
         /*
          * 제목은 다음 덩어리와 같은 쪽에 둔다 — 제목 바로 뒤가 또 제목(장 → 절)이거나 표면, 그 뒤 첫 덩어리까지 함께 잰다.
          * (실제 생성 2026-10-22: '2.2 핵심 고객'만 5쪽 맨 아래에 남고 본문은 6쪽에서 시작했다.)
          */
         const together = this.leadHeight(tokens, index);
-        this.ensure(together <= PAGE_BODY ? together : this.headingHeight(token as Tokens.Heading) + 24);
-        this.page.cursor += gap;
-        this.text(inlineText(token.tokens, token.text), { size, color: token.depth <= 2 ? "18342A" : "0B7254", bold: true, gap: 8 });
+        this.ensure(together <= PAGE_BODY ? together : this.headingHeight(text, token.depth) + 24);
+        if (token.depth <= 2 && this.page.cursor === TOP) this.page.chapter = text;
+        this.heading(text, token.depth);
         continue;
       }
       if (token.type === "paragraph") {
-        this.text(inlineText(token.tokens, token.text));
+        const lead = splitLeadLabel(token.tokens);
+        if (lead) {
+          // 굵은 머리말로 시작하는 문단('**문제.** …')은 머리말을 '□ 문제' 줄로 올린다
+          const rest = inlineText(lead.rest);
+          this.ensure(Math.min(this.leadHeight(tokens, index), PAGE_BODY));
+          this.heading(lead.label, 4);
+          if (rest) this.text(rest);
+          continue;
+        }
+        // 목차의 장 이름처럼 통째로 굵은 문단은 굵게 둔다
+        const allBold = token.tokens?.length === 1 && token.tokens[0].type === "strong";
+        this.text(inlineText(token.tokens, token.text), allBold ? { bold: true, color: INK } : undefined);
         continue;
       }
       if (token.type === "blockquote") {
@@ -408,15 +515,14 @@ class PdfLayout {
         const height = Math.max(38, lines.length * 14 + 20);
         this.ensure(height + 10);
         const top = this.page.cursor;
-        this.rect(LEFT, top, CONTENT_WIDTH, height, "FFF5D6");
-        this.rect(LEFT, top, 4, height, "D9B949");
-        this.drawText(text, 70, top + 9, { size: 9, color: "6B5D2A", width: CONTENT_WIDTH - 32, lineHeight: 14 });
+        this.rect(LEFT, top, CONTENT_WIDTH, height, FILL);
+        this.rect(LEFT, top, 3, height, INK);
+        this.drawText(text, 70, top + 9, { size: 9, width: CONTENT_WIDTH - 32, lineHeight: 14 });
         this.page.cursor += height + 10;
         continue;
       }
       if (token.type === "list") {
-        const list = token as Tokens.List;
-        list.items.forEach((item, index) => this.text(`${list.ordered ? `${index + 1}.` : "·"} ${inlineText(item.tokens, item.text)}`, { indent: 12, gap: 5 }));
+        this.list(token as Tokens.List);
         this.page.cursor += 3;
         continue;
       }
@@ -438,7 +544,7 @@ class PdfLayout {
           if (spec) this.planChart(spec.points, spec.breakEvenMonth, spec.kind, spec.title);
           continue;
         }
-        this.text(token.text, { size: 8, color: "45544E", indent: 12 });
+        this.text(token.text, { size: 8, color: MUTED, indent: 12 });
       }
     }
   }
@@ -461,7 +567,7 @@ class PdfLayout {
     this.ensure(caption + height + 16);
     // 화면 차트와 같은 제목을 단다 — 제목이 없으면 무슨 선인지 알 수 없었다
     if (caption) {
-      this.drawText(title, LEFT, this.page.cursor, { size: 9, color: "18342A", bold: true, width: CONTENT_WIDTH - 60 });
+      this.drawText(title, LEFT, this.page.cursor, { size: 9, color: INK, bold: true, width: CONTENT_WIDTH - 60 });
       this.drawText("(단위: 원)", LEFT + Math.min(CONTENT_WIDTH - 60, this.textWidth(title, 9) + 6), this.page.cursor + 1, { size: 7.5, color: "8B95A1", width: 60 });
       this.page.cursor += caption;
     }
@@ -589,19 +695,24 @@ class PdfLayout {
       let x = LEFT;
       values.forEach((value, columnIndex) => {
         const width = widths[columnIndex];
-        this.rect(x, top, width, height, header ? "EFF7F3" : "FFFFFF", "D9E4DF");
-        this.drawText(value, x + TABLE_PAD, top + inset, { size, color: "263D34", width: width - TABLE_PAD * 2, lineHeight: 12, bold: header, align: aligns[columnIndex] });
+        this.rect(x, top, width, height, header ? FILL : "FFFFFF", BORDER);
+        // 머리줄은 가운데(숫자 열은 값과 같은 쪽)
+        this.drawText(value, x + TABLE_PAD, top + inset, { size, color: header ? INK : BODY, width: width - TABLE_PAD * 2, lineHeight: 12, bold: header, align: header && aligns[columnIndex] === "left" ? "center" : aligns[columnIndex] });
         x += width;
       });
+      // 표 위아래는 검정 줄로 닫는다(공문서 표)
+      if (header) this.rule(top, INK, 1.2);
       this.page.cursor += height;
     };
     rows.forEach((row, rowIndex) => {
       if (rowIndex > 0 && this.page.cursor + row.height + 3 > PAGE_HEIGHT - BOTTOM) {
+        this.rule(this.page.cursor, INK, 0.8);
         this.newPage();
         drawRow(rows[0], true);
       } else this.ensure(row.height + 3);
       drawRow(row, rowIndex === 0);
     });
+    this.rule(this.page.cursor, INK, 0.8);
     this.page.cursor += 12;
   }
 
@@ -609,10 +720,19 @@ class PdfLayout {
     this.pages.forEach((page, index) => {
       const previous = this.page;
       this.page = page;
-      const pageText = `${index + 1} / ${this.pages.length}`;
-      this.drawText(projectTitle, LEFT, 28, { size: 7.5, color: "718078", width: CONTENT_WIDTH });
-      const pageWidth = this.textWidth(pageText, 7.5);
-      this.drawText(pageText, PAGE_WIDTH - LEFT - pageWidth, PAGE_HEIGHT - 39, { size: 7.5, color: "718078", width: pageWidth + 2 });
+      if (page.kind === "summary") {
+        const pageText = `${index + 1} / ${this.pages.length}`;
+        this.drawText(projectTitle, LEFT, 28, { size: 7.5, color: "718078", width: CONTENT_WIDTH });
+        const pageWidth = this.textWidth(pageText, 7.5);
+        this.drawText(pageText, PAGE_WIDTH - LEFT - pageWidth, PAGE_HEIGHT - 39, { size: 7.5, color: "718078", width: pageWidth + 2 });
+      } else if (page.kind === "body") {
+        // 쪽 머리: 문서 이름 · 장 이름(한 줄만), 쪽 번호는 아래 가운데 '- n -'
+        const half = CONTENT_WIDTH / 2 - 8;
+        this.drawText(this.wrap(page.title, half, 7.5)[0] ?? "", LEFT, 32, { size: 7.5, color: MUTED, width: half });
+        this.drawText(this.wrap(page.chapter, half, 7.5)[0] ?? "", LEFT + CONTENT_WIDTH - half, 32, { size: 7.5, color: MUTED, width: half, align: "right" });
+        this.rule(47, BORDER, 0.5);
+        this.drawText(`- ${index + 1} -`, LEFT, PAGE_HEIGHT - 39, { size: 8, color: MUTED, align: "center" });
+      }
       this.page = previous;
     });
   }
@@ -683,7 +803,7 @@ export function renderLightweightPdf(documents: PdfDocumentInput[], project: Pdf
       layout.summary(document.executiveSummary);
     } else {
       layout.cover(document, project, index === 0);
-      layout.blocks(document);
+      layout.blocks(document, project.overviewFields);
     }
   });
   layout.addFooters(project.title);

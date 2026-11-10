@@ -33,6 +33,20 @@ export function lexPlanMarkdown(markdown: string): Token[] {
 }
 
 /**
+ * 굵은 머리말로 시작하는 문단('**문제.** …')을 머리말과 나머지로 나눈다 — PDF·Word 가 머리말을 '□ 문제' 소제목 줄로 올린다.
+ * 문장 속 강조('**새벽커피**는 …')와 번호를 단 줄(목차 '**1. 사업 개요**')은 나누지 않는다:
+ * 굵은 글자가 문단 전체이거나 마침표·쌍점으로 끝나는 짧은 말일 때만.
+ */
+export function splitLeadLabel(tokens: Token[] | undefined): { label: string; rest: Token[] } | null {
+  const [first, ...rest] = tokens ?? [];
+  if (first?.type !== "strong") return null;
+  const text = (first as Tokens.Strong).text.trim();
+  if (text.length > 40 || /^\d+\./.test(text)) return null;
+  if (rest.some((token) => token.raw.trim()) && !/[.:]$/.test(text)) return null;
+  return { label: text.replace(/[.:]$/, "").trim(), rest };
+}
+
+/**
  * 플랜 전용 마크다운 인스턴스.
  * ```plan-chart 펜스는 코드 블록이 아니라 인라인 SVG 차트로 그리고,
  * 나머지 코드 블록은 기본 렌더러에 맡긴다(false 반환).

@@ -50,6 +50,8 @@ const readWide = () => window.matchMedia(WIDE_QUERY).matches;
 type Props = {
   title: string; planId: string | null; planType: string; ready: boolean;
   identity?: { headline: string; pitch: string };
+  /** 일반 현황 — 첫 장 머리 아래 표(입력한 값만) */
+  overview?: Array<{ label: string; value: string }>;
   completionKey: string | null;
   /** 모든 항목이 써졌는지 — 다음 단계 칸을 띄우는 기준 */
   allWritten?: boolean;
@@ -579,6 +581,7 @@ export default function DocumentWorkspace(props: Props) {
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter} data-changing={(studioPc && list.some(section => previews.has(section.key))) || undefined}>
                 <DocumentChapterHeading number={index + 1} title={name} pc={studioPc} lead={studioPc && index === 0 ? props.identity : undefined}
                   actions={studioPc && list.some(section => previews.has(section.key)) ? <><StatusBadge tone="info">대화로 고치는 중</StatusBadge>{chapterActions(index, name)}</> : chapterActions(index, name)} />
+                {index === 0 && !!props.overview?.length && <table className={styles.overview}><caption>일반 현황</caption><tbody>{props.overview.map(field => <tr key={field.label}><th scope="row">{field.label}</th><td>{field.value}</td></tr>)}</tbody></table>}
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
                   <DocumentSectionHeading number={props.numbering.get(section.key)?.num} title={section.sectionTitle} />
                   <div className={styles.body} data-fresh={props.freshKeys?.has(section.key) || undefined}>{factMode
