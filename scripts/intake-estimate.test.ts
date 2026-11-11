@@ -116,7 +116,13 @@ async function main() {
     assert.equal(estimateIntake(text).sector, sector, `${text}: 업종`);
   }
 
-  for (const text of ["동네 네일샵을 열려고 해요", "반찬가게를 열고 싶어요", "굿즈 스마트스토어를 운영하려고 해요", "소규모 팀용 예약 관리 SaaS를 만들고 있어요", "무언가 새로 해 보려고 해요", "배달 전문 치킨집을 하려고 해요", "한복 대여점을 하고 싶어요", "요리 유튜브 채널을 키워서 수익을 내고 싶어요"]) {
+  // 종류를 못 찾은 문장은 짐작으로 채우지 않는다 — 업종부터 묻는다
+  {
+    const { snapshot } = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "무언가 새로 해 보려고 해요", revision: 0, requestId: randomUUID() }, off);
+    assert.equal(snapshot.coreComplete, false, "모르는 사업은 묻는다");
+    assert.equal(estimateIntake("무언가 새로 해 보려고 해요").matched, false);
+  }
+  for (const text of ["동네 네일샵을 열려고 해요", "반찬가게를 열고 싶어요", "굿즈 스마트스토어를 운영하려고 해요", "소규모 팀용 예약 관리 SaaS를 만들고 있어요", "배달 전문 치킨집을 하려고 해요", "한복 대여점을 하고 싶어요", "요리 유튜브 채널을 키워서 수익을 내고 싶어요"]) {
     const ownerHash = `intake-estimate-${randomUUID()}`;
     const { plan, snapshot } = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: text, revision: 0, requestId: randomUUID() }, off);
     assert.equal(snapshot.coreComplete, true, `${text}: 한 문장으로 핵심 질문이 모두 채워진다`);

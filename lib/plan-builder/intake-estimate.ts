@@ -47,7 +47,7 @@ export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: str
  * 질문 id → 짐작한 답(문자열). 고를 문구가 없는 질문은 빠진다 — 그 질문은 평소처럼 묻는다.
  * chosen·chosenKsic 은 사용자가 이미 고른 업종·분류다(짐작이 그것을 뒤집지 않는다). ksic 은 낱말 규칙으로 찾았을 때만 온다.
  */
-export function estimateIntake(text: string, chosen?: ProposalSector, rules?: KindRules, chosenKsic?: string | null): { sector: ProposalSector; ksic: string | null; answers: Record<string, string> } {
+export function estimateIntake(text: string, chosen?: ProposalSector, rules?: KindRules, chosenKsic?: string | null): { sector: ProposalSector; ksic: string | null; /** 사전·규칙에서 사업 종류를 찾았는지 — 못 찾았으면 파는 것·고객은 짐작하지 않고 묻게 둔다 */ matched: boolean; answers: Record<string, string> } {
   // 흔한 표기 차이는 사전 표기로 맞춘 뒤 찾는다
   const spelled = text.replace(/까페/g, "카페").replace(/찌게/g, "찌개");
   // 문장이 앱·프로그램으로 끝나면 파는 것은 소프트웨어다 — 이때는 손님 업종 낱말('학원 전용')이 종류를 정하는 단서라 빼지 않는다
@@ -95,8 +95,8 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
     const own = text.trim().replace(/[.!?~\s]*$/, "").replace(/\s*(?:[을를]\s*)?(?:(?:창업|개발|제작|출시|운영)\s*)?(?:(?:만들|하려|해보|준비|시작|생각)[가-힣\s]*)?$/, "").trim();
     if (own.length >= 4 && own.length <= 30) {
       answers.offer = own;
-      // 관리·솔루션·외주 같은 말이 있으면 쓰는 쪽은 개인이 아니라 사업체다
-      if (rule && !rule.named) answers.customer = /솔루션|saas|관리|외주|유지\s?보수|자동|b2b|erp|pos|키오스크|기업|업체|매장/i.test(text) ? "자영업자·소규모 매장" : "개인 사용자";
+      // 누가 쓰는지는 문장에 없으면 짐작하지 않는다 — 고객 질문을 그대로 묻는다
+      if (rule && !rule.named) { if (hand?.customer) answers.customer = hand.customer; else delete answers.customer; }
     }
   }
   // 사용자가 적은 고객이 표의 고객 문구에 이미 들어 있으면 더 자세한 표 문구를 둔다. 종류를 찾았는데 문장 속 낱말 하나뿐이면('유아용품'의 유아) 그 종류의 고객(아이 키우는 부모)을 둔다
@@ -106,5 +106,7 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   if (learner && answers.customer && !answers.customer.includes(learner) && LEARNER_IN_CUSTOMER.test(answers.customer)) answers.customer = answers.customer.replace(LEARNER_IN_CUSTOMER, learner);
   // 가게·매장이라고 적었으면 온라인 장터가 아니라 매장에서 판다
   if (/가게|매장|점포|오프라인/.test(text) && !/온라인|스토어|쇼핑몰/.test(text) && answers.channel?.includes("오픈마켓")) answers.channel = "매장 방문";
-  return { sector, ksic: rule?.ksic ?? null, answers };
+  // 종류를 못 찾았으면 업종 표의 넓은 답(1회 서비스·개인 소비자)을 채우지 않는다 — 그 두 질문은 평소처럼 묻는다. 문장에 적은 고객은 둔다
+  if (!kind) { if (sector !== "software") delete answers.offer; if (!read.customer) delete answers.customer; }
+  return { sector, ksic: rule?.ksic ?? null, matched: !!kind, answers };
 }
