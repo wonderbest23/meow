@@ -35,6 +35,9 @@ const KIND_NOISE = /[가-힣a-z]+(?:\s*사장님들?)?(?:에게|한테)\s|[가-�
 
 /** 파는 곳만 가리키는 낱말 — 사전이 이미 종류를 찾았으면 이 낱말로 뒤집지 않는다(굿즈 스마트스토어 → 굿즈) */
 const CHANNEL_WORD = /^(?:스마트스토어|오픈마켓|온라인쇼핑몰|쇼핑몰|쿠팡|라이브커머스)/;
+/** 문장에 적은 배우는 사람의 나이대 — 교육 업종에서 종류의 고객 문구 속 나이대(중·고등학생)를 이걸로 바꾼다 */
+const LEARNERS: readonly (readonly [RegExp, string])[] = [[/유아|유치부|미취학/, "5~7세 아이"], [/초중등|초·중등/, "초·중학생"], [/초등|어린이|키즈/, "초등학생"], [/중등|중학/, "중학생"], [/고등|고3|수험생/, "고등학생"], [/성인|직장인/, "성인·직장인"]];
+const LEARNER_IN_CUSTOMER = /(?:초·?중·?고등?|초·?중등?|중·?고등?|초등|중|고등)학생|5~7세 아이|성인·직장인|^(?:유아|어린이|초중등|초등|중등|고등|성인|직장인)$/;
 const TOOL_TAIL = /(?:앱|어플|소프트웨어|솔루션|플랫폼|saas|관리\s*(?:프로그램|시스템))(?:\s*(?:개발|제작|서비스|창업|스타트업))?$/i;
 
 /** 낱말 규칙(kind-rules.ruleKind)의 모양. 표가 커서 서버 쪽 호출자가 넘겨준다 — 여기서 import 하면 화면 묶음에 딸려 들어간다 */
@@ -88,6 +91,9 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   }
   // 사용자가 적은 고객이 표의 고객 문구에 이미 들어 있으면 더 자세한 표 문구를 둔다. 종류를 찾았는데 문장 속 낱말 하나뿐이면('유아용품'의 유아) 그 종류의 고객(아이 키우는 부모)을 둔다
   if (read.customer && !(read.customerLoose && kind) && !answers.customer?.includes(read.customer)) answers.customer = read.customer;
+  // 교육: 문장에 적은 나이대(초등·어린이·성인)가 종류의 고객 문구와 다르면 그 자리만 바꾼다('수학에서 자꾸 막히는 중·고등학생' → 초등학생)
+  const learner = sector === "education" ? LEARNERS.find(([test]) => test.test(text))?.[1] : undefined;
+  if (learner && answers.customer && !answers.customer.includes(learner) && LEARNER_IN_CUSTOMER.test(answers.customer)) answers.customer = answers.customer.replace(LEARNER_IN_CUSTOMER, learner);
   // 가게·매장이라고 적었으면 온라인 장터가 아니라 매장에서 판다
   if (/가게|매장|점포|오프라인/.test(text) && !/온라인|스토어|쇼핑몰/.test(text) && answers.channel?.includes("오픈마켓")) answers.channel = "매장 방문";
   return { sector, ksic: rule?.ksic ?? null, answers };

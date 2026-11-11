@@ -78,6 +78,8 @@ async function main() {
   // 사업체를 상대로 하는 일은 앞의 업종이 고객이고, 납품은 받는 곳이 고객이다
   assert.deepEqual(["병원 마케팅 대행사", "카페 창업 컨설팅", "반찬 공장 차려서 마트에 납품"].map((text) => ruled(text).answers.customer), ["병원 운영자", "카페 창업을 준비하는 사람", "마트"]);
   assert.notEqual(ruled("동네 카페 창업").answers.customer, "카페 운영자");
+  // 교육: 문장에 적은 나이대가 종류의 고객 문구 속 나이대를 바꾼다
+  assert.match(ruled("초등 수학 학원 차리려고요").answers.customer, /초등학생/);
   // 혼자서는 못 하는 종류는 인원을 그 종류 값으로 잡는다 — 문장에 혼자 한다고 적었으면 그 말이 먼저다
   assert.deepEqual(["요양원 창업", "돼지국밥집", "동네 꽃집", "혼자 하는 1인 국밥집", "김치 제조 공장", "김치 담가서 온라인 판매"].map((text) => ruled(text).answers.capacity.split(" / ")[0]), ["직원 3명 이상", "직원·아르바이트 1~2명", "대표자 혼자", "대표자 혼자", "직원·아르바이트 1~2명", "대표자 혼자"]);
 
