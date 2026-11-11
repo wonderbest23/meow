@@ -75,6 +75,9 @@ async function main() {
   // 납품·도매·OEM은 소매 채널이 아니라 거래처 영업이다. 도매시장에서 떼다 파는 가게는 그대로다
   assert.deepEqual(["김치 제조 공장, 식당 납품용", "커피 원두 로스팅해서 도매 납품", "향초 디퓨저 OEM 제조"].map((text) => ruled(text).answers.channel), Array(3).fill("직접 영업·기존 거래처"));
   assert.notEqual(ruled("도매시장에서 과일 떼다 파는 과일가게").answers.channel, "직접 영업·기존 거래처");
+  // 문장에 적은 전문 분야는 파는 것 뒤에 남긴다. 이미 든 말(전기 자전거)·파는 방식(배달 전문)은 붙이지 않는다
+  assert.deepEqual(["독립서점, 그림책 전문", "PT 전문 소규모 헬스장", "소형견 전문 애견 미용실"].map((text) => ruled(text).answers.offer.split(" · ")[1]), ["그림책 전문", "PT 전문", "소형견 전문"]);
+  for (const text of ["전기자전거 전문 자전거 판매점", "배달 전문 치킨집", "돈까스 전문점 창업", "중고등 수학 전문 보습학원"]) assert.ok(!ruled(text).answers.offer.includes(" · "), text);
   // 가게·병원·학원 운영자가 쓰는 프로그램은 개인용 앱 값이 아니다. 개인용 앱은 그대로다
   assert.deepEqual(["병원 EMR 프로그램 개발", "동네 헬스장 회원 관리 앱", "가계부 앱"].map((text) => ruled(text).answers.price), ["33000원", "33000원", "4900원"]);
   assert.equal(ruled("미용실 예약 관리 서비스").sector, "software");
