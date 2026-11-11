@@ -51,6 +51,8 @@ function read(path) {
     if (price < 100 || unitCost >= price || cost < 100_000) bad("price ≥ 100, unitCost < price, cost ≥ 10만원");
     else if (profit <= 0) bad(`적자: 한 달 ${volume} × (${price} − ${unitCost}) ≤ ${cost}`);
     else if (profit > 20_000_000 || volume * price > 100_000_000) bad(`과장: 한 달 남는 돈 ${profit.toLocaleString()}원 / 매출 ${(volume * price).toLocaleString()}원`);
+    // 직원이 있어야 하는 종류는 고정비에 그 사람들 급여가 들어 있어야 한다(1명 월 220만원 어림)
+    if (people && cost < Number(people) * 2_200_000) bad(`고정비 ${cost.toLocaleString()}원: 직원 ${people === "3" ? "3명 이상" : "1~2명"} 급여가 빠짐 (${(Number(people) * 2_200_000).toLocaleString()}원 이상)`);
     if (["subscription", "project", "commission"].includes(target.revenue) && amount[1] !== "한 달") bad(`${target.revenue} 분류는 capacity가 '한 달 N…'`);
     if (target.revenue === "subscription" && amount[3] !== "명") bad("subscription 분류는 capacity 단위가 '명'");
     if (target.revenue === "per_hour" && amount[3] !== "시간") bad("per_hour 분류는 capacity 단위가 '시간'");

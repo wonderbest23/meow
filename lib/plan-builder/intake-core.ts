@@ -225,6 +225,8 @@ export function intakeQuestions(intake: IntakeState, coach: CoachState, ideas = 
         return { ...base, ...(basis ? { period: basis, prompt: `${basis}에 드는 ${costWords} 같은 비용은 얼마쯤인가요?` } : {}), ...(question.options ? { options: question.options } : {}) };
       }
       if (question.kind !== "text" || question.options?.length) return question;
+      // 세부 업종을 이미 골랐으면 업종 전체 보기는 맞지 않는다(요양 시설을 골랐는데 네일·꽃집) — 보기 없이 적게 둔다
+      if (question.id === "business" && intake.ksic) { const { hint: _hint, ...plain } = question; return plain; }
       const options = sectorChipOptions(sector, question.id, intake.mode);
       if (question.id === "capacity" && structure && options.length) {
         const order = capacityUnitOrder(structure);
