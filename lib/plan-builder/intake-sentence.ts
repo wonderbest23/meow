@@ -44,7 +44,7 @@ function readCustomer(text: string): { customer: string; loose?: boolean } | und
   if (venue) return { customer: venue[2] === "창업" ? `${venue[1]} 창업을 준비하는 사람` : `${venue[1]} 운영자` };
   const supplied = text.match(SUPPLIED);
   if (supplied) return { customer: `납품받는 ${supplied[1]}` };
-  if (SUPPLY_WORK.test(text)) return { customer: "납품받는 업체" };
+  if (SUPPLY_WORK.test(text)) return { customer: /oem|odm|하청|임가공/i.test(text) ? "자기 상표로 팔 제품을 맡기는 판매 업체" : "납품받는 매장·식당·유통업체" };
   for (const who of text.matchAll(WHO_RUN)) {
     if (!FOUNDER.test(text.slice(who.index + who[0].length)) && !/(?:저는|제가|나는|내가)\s?$/.test(text.slice(0, who.index))) return { customer: who[0].trim(), loose: /^(?:영?유아|아기|어린이|아동|키즈|노인|어르신|시니어|성인)$/.test(who[0].trim()) };
   }
@@ -68,6 +68,8 @@ const PERIOD: Record<string, "하루" | "일주일" | "한 달"> = { 하루: "�
 const TOGETHER = /둘이서?|셋이서?|동업|(?<!신혼)부부(?!\s*(?:대상|[를을]|에게|상담|클리닉|모임))|(?:친구|가족|남편|아내|언니|오빠|형|누나|동생|엄마|어머니|아버지|아빠|부모님)(?:와|과|랑|이랑|하고)\s?(?:같이|함께|둘이)\s?(?:[가-힣]+\s){0,2}?[가-힣]*(?:창업|운영|시작|열|차리|차려|하려|해\s?보|하고\s?싶|만들|준비|꾸리)/;
 /** 혼자 한다고 말한 문장 — '1인 가구'·'1인분'은 고객·양 이야기라 보지 않는다 */
 export const SOLO = /(?:^|[^\d])1인(?!\s*(?:가구|분|용|당|석|실|세대|기준))|(?:혼자|나\s*홀로|홀로)\s*(?:서\s*)?(?:운영|하|할|해|일|시작|창업|꾸려)/;
+// 사람 수를 숫자로 적었으면(직원 4명, 기사 5명) 그 수로 가른다
+const STAFF_COUNT = /(?:직원|알바|아르바이트생?|기사|강사|선생님?|디자이너|개발자|조리사|요양\s?보호사|인력|팀원)\s?(\d{1,3})\s?명/;
 const STAFF = /(?:직원|알바|아르바이트)(?:생)?\s?(?:\d명|한\s?명|두\s?명|[을를]\s?(?:두고|쓰고|고용|뽑))/;
 
 export function readSentence(text: string): SentenceFacts {
@@ -96,6 +98,7 @@ export function readSentence(text: string): SentenceFacts {
   const hours = text.match(/(?:주|일주일에?|매주|주당)\s?(\d{1,3})\s?시간/);
   if (hours && Number(hours[1]) > 0 && Number(hours[1]) <= 168) facts.hours = Number(hours[1]);
   if (TOGETHER.test(text)) facts.people = "동업자·가족과 함께";
+  else if (STAFF_COUNT.test(text)) facts.people = Number(text.match(STAFF_COUNT)![1]) >= 3 ? "직원 3명 이상" : "직원·아르바이트 1~2명";
   else if (STAFF.test(text)) facts.people = "직원·아르바이트 1~2명";
   else if (SOLO.test(text)) facts.people = "대표자 혼자";
   return facts;

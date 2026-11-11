@@ -80,7 +80,8 @@ async function main() {
   assert.notEqual(ruled("동네 카페 창업").answers.customer, "카페 운영자");
   // 소프트웨어는 적은 말이 곧 파는 것이다. 납품·주문자 상표는 받는 업체가 고객이다
   assert.equal(ruled("공유 주차장 예약 플랫폼").answers.offer, "공유 주차장 예약 플랫폼");
-  assert.deepEqual(["김치 제조 공장, 식당 납품용", "향초 디퓨저 OEM 제조"].map((text) => ruled(text).answers.customer), ["납품받는 식당", "납품받는 업체"]);
+  assert.deepEqual(["김치 제조 공장, 식당 납품용", "향초 디퓨저 OEM 제조"].map((text) => ruled(text).answers.customer), ["납품받는 식당", "자기 상표로 팔 제품을 맡기는 판매 업체"]);
+  assert.equal(ruled("포장이사 업체, 직원 4명").answers.capacity.split(" / ")[0], "직원 3명 이상");
   // 교육: 문장에 적은 나이대가 종류의 고객 문구 속 나이대를 바꾼다
   assert.match(ruled("초등 수학 학원 차리려고요").answers.customer, /초등학생/);
   // 혼자서는 못 하는 종류는 인원을 그 종류 값으로 잡는다 — 문장에 혼자 한다고 적었으면 그 말이 먼저다
