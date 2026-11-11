@@ -8,6 +8,8 @@ import { parseWonAmount } from "./answer-number";
  */
 export type SentenceFacts = {
   customer?: string;
+  /** 고객이라고 짚어 말하지 않은(~대상·~에게·~을 위한) 나이대 낱말 하나(유아·노인·성인) — 쓰는 사람일 뿐 돈 내는 사람은 따로일 때가 많다 */
+  customerLoose?: boolean;
   price?: number;
   /** '월 9,900원'처럼 한 달 값으로 적은 가격 — 건당 가격을 쓰는 업종에는 그대로 넣으면 안 된다 */
   priceMonthly?: boolean;
@@ -26,13 +28,13 @@ const FOUNDER = /^\s?(?:인데|이고|이며|입니다|이에요|예요|이지�
 const PERSON = new RegExp(`${WHO}|님|고객|손님|사람|주민|가족|커플|부부|엄마|아빠|부모|환자|학생|[가-힣]인$|팀$|회사|업체|매장|가게|병원|학원|식당|카페|[가-힣]{2}자$|아기|아이$`);
 const MARKED = /(?:^|[\s,])((?:[가-힣A-Za-z0-9~·]+\s?){1,3}?)\s?(대상|[을를]\s?위한|에게)/;
 
-function readCustomer(text: string): string | undefined {
+function readCustomer(text: string): { customer: string; loose?: boolean } | undefined {
   const marked = text.match(MARKED);
   // 장소·주어('동네에서', '저는')는 고객 앞에 붙은 말이라 뗀다
   const phrase = marked?.[1].trim().replace(/^.*(?:에서|에는|으로|저는|제가|저희는|우리는|이고|인데|이며|이지만)\s/, "").trim();
-  if (phrase && phrase.length >= 2 && (marked![2] !== "대상" && marked![2] !== "에게" ? PERSON.test(phrase) : true)) return phrase;
+  if (phrase && phrase.length >= 2 && (marked![2] !== "대상" && marked![2] !== "에게" ? PERSON.test(phrase) : true)) return { customer: phrase };
   for (const who of text.matchAll(WHO_RUN)) {
-    if (!FOUNDER.test(text.slice(who.index + who[0].length)) && !/(?:저는|제가|나는|내가)\s?$/.test(text.slice(0, who.index))) return who[0].trim();
+    if (!FOUNDER.test(text.slice(who.index + who[0].length)) && !/(?:저는|제가|나는|내가)\s?$/.test(text.slice(0, who.index))) return { customer: who[0].trim(), loose: /^(?:영?유아|아기|어린이|아동|키즈|노인|어르신|시니어|성인)$/.test(who[0].trim()) };
   }
   return undefined;
 }
@@ -58,8 +60,8 @@ const STAFF = /(?:직원|알바|아르바이트)(?:생)?\s?(?:\d명|한\s?명|�
 
 export function readSentence(text: string): SentenceFacts {
   const facts: SentenceFacts = {};
-  const customer = readCustomer(text);
-  if (customer) facts.customer = customer;
+  const who = readCustomer(text);
+  if (who) { facts.customer = who.customer; if (who.loose) facts.customerLoose = true; }
   let previousEnd = 0;
   for (const match of text.matchAll(AMOUNT)) {
     const token = match[0].replace(/\s/g, ""), start = match.index, end = start + match[0].length;

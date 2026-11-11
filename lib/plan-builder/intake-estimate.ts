@@ -83,8 +83,8 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
     const guess = kind?.[field] || localFieldSuggestions(text, field, [sector], "startup")[0];
     if (guess) answers[field] = guess;
   }
-  // 사용자가 적은 고객이 표의 고객 문구에 이미 들어 있으면 더 자세한 표 문구를 둔다
-  if (read.customer && !answers.customer?.includes(read.customer)) answers.customer = read.customer;
+  // 사용자가 적은 고객이 표의 고객 문구에 이미 들어 있으면 더 자세한 표 문구를 둔다. 종류를 찾았는데 문장 속 낱말 하나뿐이면('유아용품'의 유아) 그 종류의 고객(아이 키우는 부모)을 둔다
+  if (read.customer && !(read.customerLoose && kind) && !answers.customer?.includes(read.customer)) answers.customer = read.customer;
   // 가게·매장이라고 적었으면 온라인 장터가 아니라 매장에서 판다
   if (/가게|매장|점포|오프라인/.test(text) && !/온라인|스토어|쇼핑몰/.test(text) && answers.channel?.includes("오픈마켓")) answers.channel = "매장 방문";
   return { sector, ksic: rule?.ksic ?? null, answers };

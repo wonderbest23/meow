@@ -67,6 +67,9 @@ async function main() {
   assert.deepEqual(["매트리스 소파 방문 청소", "찜닭 가게", "손두부 제조"].map((text) => ruleKind(text)?.word), ["매트리스청소", "찜닭", "두부제조"]);
   assert.equal(ruled("식당 사장님들에게 식자재 납품").ksic, "46329");
   assert.equal(ruled("학원 전용 출결 관리 앱").sector, "software");
+  // 나이대 낱말 하나('유아용품'의 유아)는 종류의 고객(부모)을 덮지 않는다. 짚어 말한 고객('외국인 대상')은 그대로 둔다
+  assert.doesNotMatch(ruled("유아용품 온라인몰").answers.customer, /^유아$/);
+  assert.equal(ruled("외국인 대상 게스트하우스").answers.customer, "외국인");
   // 혼자서는 못 하는 종류는 인원을 그 종류 값으로 잡는다 — 문장에 혼자 한다고 적었으면 그 말이 먼저다
   assert.deepEqual(["요양원 창업", "돼지국밥집", "동네 꽃집", "혼자 하는 1인 국밥집"].map((text) => ruled(text).answers.capacity.split(" / ")[0]), ["직원 3명 이상", "직원·아르바이트 1~2명", "대표자 혼자", "대표자 혼자"]);
 
