@@ -144,8 +144,8 @@ async function main() {
   assert.equal(delivery.label, detailQuestions("b2b_service").find(question => question.id === delivery.questionId)!.label);
   assert.deepEqual([delivery.value, delivery.unit, delivery.period], [12, "days", "per project"]);
   const withStructureDetail = structuredClone(answers);
-  withStructureDetail["intake/details"]["structure.retentionMonths"] = { ...(withStructureDetail["intake/details"]["b2b_service.deliveryDays"] as Record<string, unknown>), value: 12, unit: "개월", period: "구독자 1명" };
-  assert.equal(parse(confirmedIntakeContext(withStructureDetail)).details.find(detail => detail.questionId === "structure.retentionMonths")?.label, "평균 구독 유지 기간", "structure pack answers are labeled in the prompt");
+  withStructureDetail["intake/details"]["structure.retentionMonths"] = { ...(withStructureDetail["intake/details"]["b2b_service.deliveryDays"] as Record<string, unknown>), value: 12, unit: "개월", period: "이용자 1명" };
+  assert.equal(parse(confirmedIntakeContext(withStructureDetail)).details.find(detail => detail.questionId === "structure.retentionMonths")?.label, "평균 이용 기간", "structure pack answers are labeled in the prompt");
   assert.equal(data.details.find(detail => detail.questionId === "b2b_service.paymentTerms")?.valueWithUnit, "17.5 %");
   for (const value of [null, "", []]) {
     const unknown = structuredClone(answers);
@@ -334,7 +334,7 @@ async function main() {
   assert.equal(brief!.capitalPlan.form, "매장 필요"); assert.ok(brief!.capitalPlan.items.some(item => item.includes("보증금")));
   assert.ok(brief!.rules.some(rule => rule.includes("확인 필요")));
   (withKsic.__business_intake.state as Record<string, unknown>).structure = { revenue: "subscription", license: "bogus" };
-  assert(parse(confirmedIntakeContext(withKsic)).ksic?.structure.includes("월 구독"), "user structure overrides reach the prompt");
+  assert(parse(confirmedIntakeContext(withKsic)).ksic?.structure.includes("월 정기 결제"), "user structure overrides reach the prompt");
   assert(parse(confirmedIntakeContext(withKsic)).ksic?.structure.includes("신고·등록 필요"), "invalid override values are ignored");
   (withKsic.__business_intake.state as Record<string, unknown>).ksic = "nope";
   assert.equal(parse(confirmedIntakeContext(withKsic)).ksic ?? null, null);

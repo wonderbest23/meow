@@ -1,0 +1,68 @@
+code	name	path	sector	revenue
+75210	여행사업	사업 지원 서비스업 > 여행사 및 기타 여행 보조 서비스업 > 여행사업	b2b_service	commission
+75290	기타 여행 보조 및 예약 서비스업	사업 지원 서비스업 > 여행사 및 기타 여행 보조 서비스업 > 기타 여행 보조 및 예약 서비스업	b2b_service	project
+75320	보안 시스템 서비스업	사업 지원 서비스업 > 경비, 경호 및 탐정업 > 보안 시스템 서비스업	b2b_service	project
+75330	탐정 및 조사 서비스업	사업 지원 서비스업 > 경비, 경호 및 탐정업 > 탐정 및 조사 서비스업	b2b_service	project
+75911	문서 작성 및 복사업	사업 지원 서비스업 > 기타 사업 지원 서비스업 > 사무 지원 서비스업	b2b_service	project
+75919	기타 사무 지원 서비스업	사업 지원 서비스업 > 기타 사업 지원 서비스업 > 사무 지원 서비스업	b2b_service	project
+75991	콜센터 및 텔레마케팅 서비스업	사업 지원 서비스업 > 기타 사업 지원 서비스업 > 그 외 기타 사업 지원 서비스업	b2b_service	project
+75992	전시, 컨벤션 및 행사 대행업	사업 지원 서비스업 > 기타 사업 지원 서비스업 > 그 외 기타 사업 지원 서비스업	b2b_service	project
+75993	신용 조사 및 추심 대행업	사업 지원 서비스업 > 기타 사업 지원 서비스업 > 그 외 기타 사업 지원 서비스업	b2b_service	project
+75994	포장 및 충전업	사업 지원 서비스업 > 기타 사업 지원 서비스업 > 그 외 기타 사업 지원 서비스업	b2b_service	project
+75995	온라인 활용 마케팅 및 관련 사업지원 서비스업	사업 지원 서비스업 > 기타 사업 지원 서비스업 > 그 외 기타 사업 지원 서비스업	b2b_service	project
+75999	그 외 기타 분류 안된 사업 지원 서비스업	사업 지원 서비스업 > 기타 사업 지원 서비스업 > 그 외 기타 사업 지원 서비스업	b2b_service	project
+76190	기타 운송장비 임대업	임대업; 부동산 제외 > 운송장비 임대업 > 기타 운송장비 임대업	general	rental
+76210	스포츠 및 레크리에이션 용품 임대업	임대업; 부동산 제외 > 개인 및 가정용품 임대업 > 스포츠 및 레크리에이션 용품 임대업	general	rental
+76220	음반 및 비디오물 임대업	임대업; 부동산 제외 > 개인 및 가정용품 임대업 > 음반 및 비디오물 임대업	general	rental
+76291	서적 임대업	임대업; 부동산 제외 > 개인 및 가정용품 임대업 > 기타 개인 및 가정용품 임대업	general	rental
+76292	의류 임대업	임대업; 부동산 제외 > 개인 및 가정용품 임대업 > 기타 개인 및 가정용품 임대업	general	rental
+76299	그 외 기타 개인 및 가정용품 임대업	임대업; 부동산 제외 > 개인 및 가정용품 임대업 > 기타 개인 및 가정용품 임대업	general	rental
+76310	건설 및 토목공사용 기계·장비 임대업	임대업; 부동산 제외 > 산업용 기계 및 장비 임대업 > 건설 및 토목공사용 기계·장비 임대업	general	rental
+76320	컴퓨터 및 사무용 기계·장비 임대업	임대업; 부동산 제외 > 산업용 기계 및 장비 임대업 > 컴퓨터 및 사무용 기계·장비 임대업	general	rental
+76390	기타 산업용 기계 및 장비 임대업	임대업; 부동산 제외 > 산업용 기계 및 장비 임대업 > 기타 산업용 기계 및 장비 임대업	general	rental
+76400	무형 재산권 임대업	임대업; 부동산 제외 > 무형 재산권 임대업 > 무형 재산권 임대업	general	rental
+85501	일반 교과학원	교육 서비스업 > 일반 교습학원 > 일반 교습학원	education	subscription
+85502	방문 교육학원	교육 서비스업 > 일반 교습학원 > 일반 교습학원	education	subscription
+85503	온라인 교육학원	교육 서비스업 > 일반 교습학원 > 일반 교습학원	education	subscription
+85611	태권도 및 무술 교육기관	교육 서비스업 > 기타 교육기관 > 스포츠 및 레크리에이션 교육기관	education	subscription
+85612	기타 스포츠 교육기관	교육 서비스업 > 기타 교육기관 > 스포츠 및 레크리에이션 교육기관	education	subscription
+85613	레크리에이션 교육기관	교육 서비스업 > 기타 교육기관 > 스포츠 및 레크리에이션 교육기관	education	subscription
+85614	청소년 수련시설 운영업	교육 서비스업 > 기타 교육기관 > 스포츠 및 레크리에이션 교육기관	education	subscription
+85621	음악학원	교육 서비스업 > 기타 교육기관 > 예술학원	education	subscription
+85622	미술학원	교육 서비스업 > 기타 교육기관 > 예술학원	education	subscription
+85629	기타 예술학원	교육 서비스업 > 기타 교육기관 > 예술학원	education	subscription
+85631	외국어학원	교육 서비스업 > 기타 교육기관 > 외국어학원 및 기타 교습학원	education	subscription
+85632	기타 교습학원	교육 서비스업 > 기타 교육기관 > 외국어학원 및 기타 교습학원	education	subscription
+85640	사회교육시설	교육 서비스업 > 기타 교육기관 > 사회교육시설	education	subscription
+85650	직원 훈련기관	교육 서비스업 > 기타 교육기관 > 직원 훈련기관	education	subscription
+85661	운전학원	교육 서비스업 > 기타 교육기관 > 기술 및 직업 훈련학원	education	subscription
+85669	기타 기술 및 직업 훈련학원	교육 서비스업 > 기타 교육기관 > 기술 및 직업 훈련학원	education	subscription
+85691	컴퓨터 학원	교육 서비스업 > 기타 교육기관 > 그 외 기타 교육기관	education	subscription
+85699	그 외 기타 분류 안된 교육기관	교육 서비스업 > 기타 교육기관 > 그 외 기타 교육기관	education	subscription
+85701	교육관련 자문 및 평가업	교육 서비스업 > 교육 지원 서비스업 > 교육 지원 서비스업	education	per_unit
+85709	기타 교육지원 서비스업	교육 서비스업 > 교육 지원 서비스업 > 교육 지원 서비스업	education	per_unit
+86201	일반의원	보건업 > 의원 > 의원	general	per_unit
+86202	치과의원	보건업 > 의원 > 의원	general	per_unit
+86203	한의원	보건업 > 의원 > 의원	general	per_unit
+86204	방사선 진단 및 병리 검사 의원	보건업 > 의원 > 의원	general	per_unit
+86300	공중 보건 의료업	보건업 > 공중 보건 의료업 > 공중 보건 의료업	general	per_unit
+86901	앰뷸런스 서비스업	보건업 > 기타 보건업 > 기타 보건업	general	per_unit
+86902	유사 의료업	보건업 > 기타 보건업 > 기타 보건업	general	per_unit
+86909	그 외 기타 보건업	보건업 > 기타 보건업 > 기타 보건업	general	per_unit
+87111	노인 요양 복지시설 운영업	사회복지 서비스업 > 거주 복지시설 운영업 > 노인 거주 복지시설 운영업	local_service	subscription
+87112	노인 양로 복지시설 운영업	사회복지 서비스업 > 거주 복지시설 운영업 > 노인 거주 복지시설 운영업	local_service	subscription
+87121	신체 부자유자 거주 복지시설 운영업	사회복지 서비스업 > 거주 복지시설 운영업 > 심신 장애인 거주 복지시설 운영업	local_service	subscription
+87122	정신 질환, 정신 지체 및 약물 중독자 거주 복지시설 운영업	사회복지 서비스업 > 거주 복지시설 운영업 > 심신 장애인 거주 복지시설 운영업	local_service	subscription
+87131	아동 및 부녀자 거주 복지시설 운영업	사회복지 서비스업 > 거주 복지시설 운영업 > 기타 거주 복지시설 운영업	local_service	subscription
+87139	그 외 기타 거주 복지시설 운영업	사회복지 서비스업 > 거주 복지시설 운영업 > 기타 거주 복지시설 운영업	local_service	subscription
+87210	보육시설 운영업	사회복지 서비스업 > 비거주 복지시설 운영업 > 보육시설 운영업	local_service	subscription
+87291	직업 재활원 운영업	사회복지 서비스업 > 비거주 복지시설 운영업 > 기타 비거주 복지 서비스업	local_service	subscription
+87292	종합복지관 운영업	사회복지 서비스업 > 비거주 복지시설 운영업 > 기타 비거주 복지 서비스업	local_service	subscription
+87293	방문 복지서비스 제공업	사회복지 서비스업 > 비거주 복지시설 운영업 > 기타 비거주 복지 서비스업	local_service	subscription
+87294	사회복지 상담 서비스 제공업	사회복지 서비스업 > 비거주 복지시설 운영업 > 기타 비거주 복지 서비스업	local_service	subscription
+87299	그 외 기타 비거주 복지 서비스업	사회복지 서비스업 > 비거주 복지시설 운영업 > 기타 비거주 복지 서비스업	local_service	subscription
+90110	공연시설 운영업	창작, 예술 및 여가관련 서비스업 > 창작 및 예술관련 서비스업 > 공연시설 운영업	content_media	per_unit
+90121	연극단체	창작, 예술 및 여가관련 서비스업 > 창작 및 예술관련 서비스업 > 공연단체	content_media	per_unit
+90122	무용 및 음악단체	창작, 예술 및 여가관련 서비스업 > 창작 및 예술관련 서비스업 > 공연단체	content_media	per_unit
+90123	기타 공연단체	창작, 예술 및 여가관련 서비스업 > 창작 및 예술관련 서비스업 > 공연단체	content_media	per_unit
+90131	공연 예술가	창작, 예술 및 여가관련 서비스업 > 창작 및 예술관련 서비스업 > 자영 예술가	content_media	per_unit

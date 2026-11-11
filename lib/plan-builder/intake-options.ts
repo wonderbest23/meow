@@ -20,7 +20,7 @@ export const CHIP_LIMITS: Record<string, number> = { customer: 2, problem: 2, ch
 /**
  * Step (group) names used by multi-step chip questions. Single-step sets carry no group.
  * - channel: "common" (6 shared) + "sector" (2 sector slots)
- * - capacity: "people" (5) → "period" (하루·일주일·한 달) → "unit" (건·개·명·좌석·룸·회); the count comes from numberPresets({ id: "capacity" })
+ * - capacity: "people" (6) → "period" (하루·일주일·한 달) → "unit" (건·개·명·좌석·룸·회); the count comes from numberPresets({ id: "capacity" })
  * - goal: "period" → "metric" → "amount" (only when the metric label contains "N원"; "N건" uses numberPresets({ id: "goal" }))
  * - business: "prefill" (startup: 업태 nouns per sector, operating: 8 sentence starters with ○○ placeholders)
  * - problem (operating): "common" (6) + "sector" (2)
@@ -110,7 +110,7 @@ const CHANNEL_SECTOR: SectorTable = {
   content_media: ["크몽·숨고", "포트폴리오 사이트·대행사 제휴"],
   general: ["오픈마켓·플랫폼", "자체 홈페이지"],
 };
-export const CAPACITY_PEOPLE = ["대표자 혼자", "동업자·가족과 함께", "직원·아르바이트 1~2명", "프리랜서·외주와 함께", "필요할 때 일용·외주"] as const;
+export const CAPACITY_PEOPLE = ["대표자 혼자", "동업자·가족과 함께", "직원·아르바이트 1~2명", "직원 3명 이상", "프리랜서·외주와 함께", "필요할 때 일용·외주"] as const;
 export const CAPACITY_PERIODS = ["하루", "일주일", "한 달"] as const;
 const CAPACITY_UNITS: SectorTable = {
   b2b_service: ["건", "회", "명", "개", "좌석·룸"], software: ["명", "건", "개", "회", "좌석·룸"], food_beverage: ["건", "좌석·룸", "개", "명", "회"], retail_commerce: ["개", "건", "명", "회", "좌석·룸"],

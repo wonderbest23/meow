@@ -28,7 +28,7 @@ export type IntakeStructureBrief = {
 const REVENUE_FORMULA: Record<BusinessStructure["revenue"], string> = {
   per_unit: "월 매출 = 판매 1건 가격 × 월 판매 건수",
   per_hour: "월 매출 = 시간당 가격 × 월 청구 시간",
-  subscription: "월 매출 = 월 구독 가격 × 월 구독자 수; 구독자 1명 생애 매출 = 월 구독 가격 × 평균 유지 개월",
+  subscription: "월 매출 = 월 이용료 × 월 이용자 수; 이용자 1명 생애 매출 = 월 이용료 × 평균 유지 개월",
   rental: "월 매출 = 1회 대여·이용 가격 × 월 예상 대여 건수. 예상 건수가 없으면 최대 수용량 × 확인된 이용률로 계산하며, 이미 입력한 예상 건수에는 이용률을 다시 곱하지 않는다. 이용률 미정은 100%가 아니다.",
   commission: "월 매출 = 거래 1건 수수료 × 월 거래 건수; 거래 1건 평균 거래액 = 수수료 ÷ 수수료율",
   project: "월 매출 = 프로젝트 1건 가격 × 월 프로젝트 수; 첫 입금은 문의→계약 기간 뒤",

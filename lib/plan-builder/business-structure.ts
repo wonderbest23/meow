@@ -35,7 +35,7 @@ export type BusinessStructure = {
 export const STRUCTURE_LABELS = {
   payer: { b2c: "개인 고객", b2b: "기업·사업자 고객", b2g: "공공기관 고객", mixed: "개인·기업 고객" },
   offering: { goods: "실물 상품", service: "서비스", software: "소프트웨어", space: "공간 제공", content: "콘텐츠", mixed: "복합 제공" },
-  revenue: { per_unit: "건당 결제", per_hour: "시간당 결제", subscription: "월 구독", rental: "대여·이용료", commission: "거래 수수료", project: "프로젝트 단위 계약", advertising: "광고 수익(이용자 무료)", freemium: "무료+유료 전환", lead_fee: "문의·연결 건당 과금", listing_fee: "입점·등록료", mixed: "복합 수익" },
+  revenue: { per_unit: "건당 결제", per_hour: "시간당 결제", subscription: "월 정기 결제", rental: "대여·이용료", commission: "거래 수수료", project: "프로젝트 단위 계약", advertising: "광고 수익(이용자 무료)", freemium: "무료+유료 전환", lead_fee: "문의·연결 건당 과금", listing_fee: "입점·등록료", mixed: "복합 수익" },
   sides: { one: "한쪽 고객", two: "양면(공급자+이용자)" },
   delivery: { store: "매장 방문", visit: "출장·방문", online: "온라인", delivery: "배송", production: "생산·납품", mixed: "복합 전달" },
   capital: { storefront: "매장 필요", equipment: "설비 필요", remote: "무점포 가능", vehicle: "차량 필요", mixed: "자본 형태 복합" },
@@ -49,7 +49,7 @@ export function structureSummary(structure: BusinessStructure): string[] {
 
 /** 수익 방식이 정하는 가격 질문의 기준 단위. null이면 업종 기본(PRICE_BASIS)을 쓴다. */
 export function revenueBasis(structure: BusinessStructure): string | null {
-  const basis: Partial<Record<BusinessStructure["revenue"], string>> = { subscription: "월 구독 1건", rental: "1회 대여(1박·1시간 등)", per_hour: "1시간", commission: "거래 1건(수수료)", project: "프로젝트 1건", advertising: "월 활성 이용자 1명당 광고 수익", freemium: "유료 플랜 월 1명", lead_fee: "업체에 전달하는 문의 1건", listing_fee: "업체 1곳 월 입점료" };
+  const basis: Partial<Record<BusinessStructure["revenue"], string>> = { subscription: "1명 한 달", rental: "1회 대여(1박·1시간 등)", per_hour: "1시간", commission: "거래 1건(수수료)", project: "프로젝트 1건", advertising: "월 활성 이용자 1명당 광고 수익", freemium: "유료 플랜 월 1명", lead_fee: "업체에 전달하는 문의 1건", listing_fee: "업체 1곳 월 입점료" };
   return basis[structure.revenue] ?? null;
 }
 
@@ -84,7 +84,7 @@ export function licenseHint(structure: BusinessStructure, ksicCode?: string | nu
 /** 수익 방식에 맞춘 금액·수량 항목 라벨. 표시용이며 저장 키(price/volume/unitCost/minutesPerSale)는 그대로다. */
 export function structureFieldLabels(structure: BusinessStructure): Partial<Record<"price" | "volume" | "unitCost" | "minutesPerSale", string>> {
   switch (structure.revenue) {
-    case "subscription": return { price: "월 구독 가격", volume: "월 구독자 수", unitCost: "구독자 1명당 월 비용", minutesPerSale: "구독자 1명 응대 시간" };
+    case "subscription": return { price: "월 이용료", volume: "월 이용자 수", unitCost: "이용자 1명당 월 비용", minutesPerSale: "이용자 1명 응대 시간" };
     case "per_hour": return { price: "시간당 가격", volume: "월 판매 시간", unitCost: "1시간당 비용", minutesPerSale: "1시간 서비스 준비 시간" };
     case "rental": return { price: "1회 대여·이용 가격", volume: "월 대여·이용 건수", unitCost: "1건당 비용", minutesPerSale: "1건 준비·정비 시간" };
     case "commission": return { price: "거래 1건 수수료", volume: "월 거래 건수", unitCost: "거래 1건당 비용", minutesPerSale: "거래 1건 처리 시간" };
