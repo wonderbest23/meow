@@ -84,6 +84,13 @@ async function main() {
   assert.deepEqual(["인테리어 견적 비교 플랫폼", "동네 헬스장 회원 관리 앱"].map((text) => ruled(text).answers.channel), ["검색·블로그 콘텐츠", "직접 영업·업종 커뮤니티"]);
   assert.deepEqual(["판촉물 기념품 기업 납품", "젓갈 제조해서 재래시장에 도매", "기업 출강 엑셀 강의합니다"].map((text) => ruled(text).answers.customer), ["납품받는 기업", "재래시장 상인", "직원 교육을 맡은 기업 인사·교육 담당자"]);
   assert.deepEqual(["전통시장 안에서 족발 장사", "비건 디저트 카페를 열고 싶어요"].map((text) => ruled(text).answers.channel), ["매장 방문", "매장 방문"]);
+  // 뒤에 값을 붙여도 프로그램은 소프트웨어다(값은 파는 것에 넣지 않는다). 넓은 '개인 사용자'는 채우지 않고 묻는다. 수출은 해외 바이어, 하청·임가공은 맞은 줄의 고객
+  assert.deepEqual([ruled("식당 원가 계산 프로그램, 월 1만원").sector, ruled("식당 원가 계산 프로그램, 월 1만원").answers.offer], ["software", "식당 원가 계산 프로그램"]);
+  assert.equal(ruled("화물 배차 앱").answers.customer, undefined);
+  assert.match(ruled("일본으로 김 수출").answers.customer, /해외 바이어/);
+  assert.equal(ruled("수출 중소기업 대상 해외 마케팅 대행").answers.customer, "수출 중소기업");
+  assert.doesNotMatch(ruled("CNC 금속 임가공").answers.customer, /자기 상표/);
+  assert.equal(ruled("흰다리새우 양식장").ksic, "03211");
   // 가게·병원·학원 운영자가 쓰는 프로그램은 개인용 앱 값이 아니다. 개인용 앱은 그대로다
   assert.deepEqual(["병원 EMR 프로그램 개발", "동네 헬스장 회원 관리 앱", "가계부 앱"].map((text) => ruled(text).answers.price), ["33000원", "33000원", "4900원"]);
   assert.equal(ruled("미용실 예약 관리 서비스").sector, "software");
