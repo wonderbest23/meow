@@ -67,6 +67,14 @@ async function main() {
   assert.deepEqual(["매트리스 소파 방문 청소", "찜닭 가게", "손두부 제조"].map((text) => ruleKind(text)?.word), ["매트리스청소", "찜닭", "두부제조"]);
   assert.equal(ruled("식당 사장님들에게 식자재 납품").ksic, "46329");
   // 같은 줄의 낱말이 여럿 맞으면 낱말 하나만 맞은 줄보다 먼저다(참기름·들기름 방앗간은 떡집이 아니다). 긴 낱말 하나(식자재마트)는 짧은 낱말 둘에 지지 않는다
+  // 문장에 적은 파는 곳이 그 종류의 채널을 이긴다(물건·음식만). 매장 손님 문구는 지우고 묻는다. 대행업은 건드리지 않는다
+  assert.deepEqual(["스마트스토어로 여성 의류 판매", "온라인으로만 파는 반찬 가게", "배달 전문 치킨집", "쿠팡에서 생활잡화 위탁판매"].map((text) => ruled(text).answers.channel), ["스마트스토어", "스마트스토어·자사몰", "배달앱", "쿠팡"]);
+  assert.equal(ruled("스마트스토어로 여성 의류 판매").answers.customer, undefined);
+  assert.ok(ruled("배달 전문 치킨집").answers.customer);
+  assert.notEqual(ruled("스마트스토어 운영 대행 해주는 회사").answers.channel, "스마트스토어");
+  // 가게·병원·학원 운영자가 쓰는 프로그램은 개인용 앱 값이 아니다. 개인용 앱은 그대로다
+  assert.deepEqual(["병원 EMR 프로그램 개발", "동네 헬스장 회원 관리 앱", "가계부 앱"].map((text) => ruled(text).answers.price), ["33000원", "33000원", "4900원"]);
+  assert.equal(ruled("미용실 예약 관리 서비스").sector, "software");
   assert.deepEqual(["참기름 들기름 짜는 방앗간", "식자재 마트 창업"].map((text) => ruleKind(text)?.offer), ["국산 참기름 300ml 한 병", "식자재 마트"]);
   // 문장의 낱말이 파는 것에 그대로 든 줄(빙수 → 빙수 한 그릇)이 넓은 낱말의 줄(디저트가게 → 마카롱)보다 먼저다. 어절 토막('판매점'의 매점)은 치지 않는다
   assert.deepEqual(["빙수 전문 디저트 가게", "베이글 전문 베이커리 오픈 예정"].map((text) => ruled(text).answers.offer), ["빙수 한 그릇", "베이글 한 개"]);

@@ -38,7 +38,15 @@ const CHANNEL_WORD = /^(?:스마트스토어|오픈마켓|온라인쇼핑몰|쇼
 /** 문장에 적은 배우는 사람의 나이대 — 교육 업종에서 종류의 고객 문구 속 나이대(중·고등학생)를 이걸로 바꾼다 */
 const LEARNERS: readonly (readonly [RegExp, string])[] = [[/유아|유치부|미취학/, "5~7세 아이"], [/초중등|초·중등/, "초·중학생"], [/초등|어린이|키즈/, "초등학생"], [/중등|중학/, "중학생"], [/고등|고3|수험생/, "고등학생"], [/성인|직장인/, "성인·직장인"]];
 const LEARNER_IN_CUSTOMER = /(?:초·?중·?고등?|초·?중등?|중·?고등?|초등|중|고등)학생|5~7세 아이|성인·직장인|^(?:유아|어린이|초중등|초등|중등|고등|성인|직장인)$/;
-const TOOL_TAIL = /(?:앱|어플|소프트웨어|솔루션|플랫폼|saas|관리\s*(?:프로그램|시스템))(?:\s*(?:개발|제작|서비스|창업|스타트업))?$/i;
+/** 문장에 적은 파는 곳 — 물건·음식을 파는 업종에서 그 종류의 채널(매장 방문) 대신 이것을 둔다 */
+const SOLD_AT: readonly (readonly [RegExp, string])[] = [[/스마트스토어/, "스마트스토어"], [/쿠팡/, "쿠팡"], [/라이브\s*커머스/, "라이브커머스"], [/인스타(?:그램)?\s*(?:공구|마켓|로|에서)/, "인스타그램"], [/배달\s*(?:전문|전용)|배달로?만/, "배달앱"], [/트럭으로|이동\s*판매/, "아파트 장터·길거리"]];
+const SELLS_GOODS: ReadonlySet<ProposalSector> = new Set(["retail_commerce", "food_beverage", "manufacturing"]);
+const ONLINE = /스토어|오픈마켓|쿠팡|인스타|온라인|자사몰|커머스|앱/;
+/** 매장에 들르는 손님을 가리키는 말 — 온라인·배달로 판다고 적었으면 이 고객 문구는 맞지 않는다 */
+const WALK_IN = /동네|퇴근길|근처|인근|산책|구경|들르/;
+/** 가게·병원·학원 운영자가 쓰는 프로그램의 출발값(한 곳당 월 이용료) — 개인용 앱 값(월 5,900원)을 그대로 두지 않는다 */
+const OPERATOR_TOOL: Baseline = { price: 33_000, unitCost: 5_000, cost: 1_500_000, capacity: "한 달 80곳" };
+const TOOL_TAIL = /(?:앱|어플|소프트웨어|솔루션|플랫폼|saas|관리\s*(?:프로그램|시스템)|예약\s*(?:관리\s*)?(?:프로그램|시스템|서비스))(?:\s*(?:개발|제작|서비스|창업|스타트업))?$/i;
 
 /** 낱말 규칙(kind-rules.ruleKind)의 모양. 표가 커서 서버 쪽 호출자가 넘겨준다 — 여기서 import 하면 화면 묶음에 딸려 들어간다 */
 export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: string) => boolean) => (BusinessKind & { ksic: string; word: string; named?: boolean }) | null;
@@ -61,8 +69,9 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   const handWord = hand?.word.toLowerCase().replace(/\s/g, "") ?? "";
   const rule = !hand || (found && (found.word.length >= handWord.length || found.named) && !CHANNEL_WORD.test(found.word) && (hand.sector !== "software" || found.sector === "software")) ? found : null;
   const kind = rule ?? hand, sector = rule?.sector ?? chosen ?? ranked[0];
-  const base = kind ?? SECTOR_BASELINES[sector];
   const read = readSentence(text);
+  const picked = kind ?? SECTOR_BASELINES[sector];
+  const base = sector === "software" && picked.price < 30_000 && /운영자$/.test(read.customer ?? "") ? OPERATOR_TOOL : picked;
   // 한 달 값으로 적은 가격('월 15만원')인데 건당으로 세는 업종이면 감당하는 양도 한 달 회원 수로 바꾼다 — 건당 자리에 그대로 두면 매출이 몇십 배로 부푼다
   const monthly = !!read.priceMonthly && !base.capacity.startsWith("한 달");
   const price = read.price ?? base.price;
@@ -106,6 +115,14 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   if (learner && answers.customer && !answers.customer.includes(learner) && LEARNER_IN_CUSTOMER.test(answers.customer)) answers.customer = answers.customer.replace(LEARNER_IN_CUSTOMER, learner);
   // 가게·매장이라고 적었으면 온라인 장터가 아니라 매장에서 판다
   if (/가게|매장|점포|오프라인/.test(text) && !/온라인|스토어|쇼핑몰/.test(text) && answers.channel?.includes("오픈마켓")) answers.channel = "매장 방문";
+  // 파는 곳을 문장에 적었으면(스마트스토어로·배달 전문·온라인) 그것을 둔다. 물건·음식을 파는 업종만이다('스마트스토어 운영 대행'은 파는 곳이 아니다)
+  const soldAt = SELLS_GOODS.has(sector) ? SOLD_AT.find(([test]) => test.test(text))?.[1] ?? (/온라인|쇼핑몰/.test(text) && !ONLINE.test(answers.channel ?? "") ? "스마트스토어·자사몰" : undefined) : undefined;
+  if (soldAt && soldAt !== answers.channel) {
+    // 매장에 들르는 손님 문구와 '동네에 가게가 없음' 같은 불편은 짐작으로 고쳐 쓰지 않고 그 질문을 그대로 묻는다
+    if (answers.customer !== read.customer && WALK_IN.test(answers.customer ?? "")) delete answers.customer;
+    if (WALK_IN.test(answers.problem ?? "")) delete answers.problem;
+    answers.channel = soldAt;
+  }
   // 종류를 못 찾았으면 업종 표의 넓은 답(1회 서비스·개인 소비자)을 채우지 않는다 — 그 두 질문은 평소처럼 묻는다. 문장에 적은 고객은 둔다
   if (!kind) { if (sector !== "software") delete answers.offer; if (!read.customer) delete answers.customer; }
   return { sector, ksic: rule?.ksic ?? null, matched: !!kind, answers };
