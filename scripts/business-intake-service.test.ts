@@ -303,12 +303,12 @@ async function main() {
       const again = await send(session, { action: "answer", questionId: "industry", value: "software" });
       assert.equal(again.snapshot.ksic, null, "re-answering without a code clears it");
       assert.equal(again.snapshot.intake.sector, "software");
-      // 구조 기본값 반영: 월 구독형 소프트웨어는 가격 기준이 "월 구독 1건", 요약에 구조 라벨이 붙는다
+      // 구조 기본값 반영: 월 구독형 소프트웨어는 가격 기준이 "1명 한 달", 요약에 구조 라벨이 붙는다
       const saasOwner = `intake-ksic-saas2-${randomUUID()}`;
       const saas2 = await saveIntakeCommand(saasOwner, { action: "start", mode: "startup", questionId: "business", value: "소규모 팀용 예약 관리 SaaS를 만들고 있어요", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
       const saasNext = await send({ ownerHash: saasOwner, planId: saas2.plan.id }, { action: "answer", questionId: "industry", value: "software", ksic: "58222" });
-      assert.equal(saasNext.snapshot.questions.find(question => question.id === "price")?.period, "월 구독 1건", "price basis follows the KSIC revenue structure");
-      assert.ok(saasNext.snapshot.ksic?.summary.includes("월 구독"), `summary labels: ${saasNext.snapshot.ksic?.summary.join(",")}`);
+      assert.equal(saasNext.snapshot.questions.find(question => question.id === "price")?.period, "1명 한 달", "price basis follows the KSIC revenue structure");
+      assert.ok(saasNext.snapshot.ksic?.summary.includes("월 정기 결제"), `summary labels: ${saasNext.snapshot.ksic?.summary.join(",")}`);
       assert.equal(saasNext.snapshot.ksic?.licenseHint, null);
       // 구조 기준 상세 팩과 손익 계산: 월 구독 모델은 유지 기간 → 변동비 → 고정비가 업종 상세 앞에 오고, 답이 차면 손익분기·생애 매출이 계산된다(AI 0회)
       const saasSession = { ownerHash: saasOwner, planId: saas2.plan.id };
@@ -319,23 +319,23 @@ async function main() {
       // 변동비·고정비는 추가 팩이 아니라 기본 질문(가격 바로 뒤)에서 묻는다: 손익 계산 세 값이 기본 흐름에서 모두 모인다
       assert.deepEqual(ids.slice(ids.indexOf("price"), ids.indexOf("price") + 3), ["price", "structure.unitCost", "structure.cost"], ids.join(","));
       assert.equal(ids.filter(id => id === "structure.unitCost").length, 1, "no duplicate cost question in the extra pack");
-      assert.equal(withDetails.snapshot.questions.find(question => question.id === "structure.unitCost")?.period, "구독자 1명(월)");
+      assert.equal(withDetails.snapshot.questions.find(question => question.id === "structure.unitCost")?.period, "이용자 1명(월)");
       await send(saasSession, { action: "answer", questionId: "price", value: "30000원" });
       await send(saasSession, { action: "answer", questionId: "capacity", value: "대표자 혼자 / 한 달 50명" });
       await send(saasSession, { action: "answer", questionId: "structure.retentionMonths", value: "12개월" });
       await send(saasSession, { action: "answer", questionId: "structure.unitCost", value: "3000원" });
       const priced = await send(saasSession, { action: "answer", questionId: "structure.cost", value: "100만원" });
-      for (const text of ["월 구독 기준", "손익분기: 월 42명", "구독 유지 평균 12개월", "생애 매출 360,000원", "월 이탈률 약 8%", "매달 신규 약 5명", "월 50명 감당 기준"]) assert.ok(priced.snapshot.financialSummary.includes(text), `${text} in: ${priced.snapshot.financialSummary}`);
+      for (const text of ["월 정기 결제 기준", "손익분기: 월 42명", "이용 기간 평균 12개월", "생애 매출 360,000원", "월 이탈률 약 8%", "매달 신규 약 5명", "월 50명 감당 기준"]) assert.ok(priced.snapshot.financialSummary.includes(text), `${text} in: ${priced.snapshot.financialSummary}`);
       assert.equal(priced.snapshot.intake.answers["structure.retentionMonths"]?.value, 12);
-      assert.equal(priced.snapshot.summary.find(item => item.id === "unitCost")?.label, "구독자 1명당 월 비용");
+      assert.equal(priced.snapshot.summary.find(item => item.id === "unitCost")?.label, "이용자 1명당 월 비용");
       assert.equal(priced.snapshot.coreAnswered, saasNext.snapshot.coreAnswered + 4, "price, capacity and the two core cost answers count toward core progress; the revenue-model extra does not");
       // 문서용 구조 브리프: 수익 모델 산식·입력, 인허가 체크리스트, 초기 자본 항목이 결정적으로 채워진다
       const saasLoaded = await load(saasSession);
       const brief = intakeStructureBrief(saasLoaded.coach, saasLoaded.intake);
       assert.ok(brief.source.startsWith("표준산업분류 58222"), brief.source);
-      assert.equal(brief.revenueModel.kind, "월 구독"); assert.equal(brief.revenueModel.priceBasis, "월 구독 1건");
-      assert.ok(brief.revenueModel.inputs.some(input => input.startsWith("월 구독 가격: 30000원")), brief.revenueModel.inputs.join(" | "));
-      assert.ok(brief.revenueModel.metrics.some(metric => metric === "평균 구독 유지 기간: 12개월"), brief.revenueModel.metrics.join(" | "));
+      assert.equal(brief.revenueModel.kind, "월 정기 결제"); assert.equal(brief.revenueModel.priceBasis, "1명 한 달");
+      assert.ok(brief.revenueModel.inputs.some(input => input.startsWith("월 이용료: 30000원")), brief.revenueModel.inputs.join(" | "));
+      assert.ok(brief.revenueModel.metrics.some(metric => metric === "평균 이용 기간: 12개월"), brief.revenueModel.metrics.join(" | "));
       assert.equal(brief.licenseChecklist.status, "인허가 없음");
       assert.equal(brief.capitalPlan.form, "무점포 가능");
       assert.ok(brief.capitalPlan.inputs.some(input => input.includes("= 3,000,000원")), brief.capitalPlan.inputs.join(" | "));
@@ -362,8 +362,8 @@ async function main() {
       assert.equal(fixed.snapshot.structure?.basis.payer, "ksic", "untouched axes keep the KSIC basis");
       assert.ok(fixed.snapshot.questions.some(question => question.id === "structure.retentionMonths") && !fixed.snapshot.questions.some(question => question.id === "structure.occupancy"), "the structure pack follows the edited revenue model");
       assert.equal((fixed.snapshot.intake.answers["structure.occupancy"] as { value?: unknown } | undefined)?.value, 70, "the inactive answer stays in the question audit");
-      assert.equal(fixed.snapshot.questions.find(question => question.id === "price")?.period, "월 구독 1건");
-      assert.ok((await load(spaceSession)).coach.messages.some(message => message.text.startsWith("사업 구조 수정:") && message.text.includes("월 구독")));
+      assert.equal(fixed.snapshot.questions.find(question => question.id === "price")?.period, "1명 한 달");
+      assert.ok((await load(spaceSession)).coach.messages.some(message => message.text.startsWith("사업 구조 수정:") && message.text.includes("월 정기 결제")));
       await assert.rejects(() => send(spaceSession, { action: "structure", structure: {} }), assertIntakeError("structure_required", 400));
       await assert.rejects(() => send(spaceSession, { action: "structure", structure: { revenue: "weird" } as never }));
       const cleared = await send(session, { action: "structure", structure: { payer: "b2b" } });
@@ -458,7 +458,7 @@ async function main() {
       assert.equal(general.snapshot.structure?.fallback, "unclassified");
       const chosen = await send({ ownerHash: newOwner, planId: fresh.plan.id }, { action: "structure", structure: { revenue: "subscription", payer: "b2b" } });
       assert.equal(chosen.snapshot.structure?.fallback, "unclassified", "the note stays; the user's axes now lead");
-      assert.equal(chosen.snapshot.questions.find(question => question.id === "price")?.period, "월 구독 1건");
+      assert.equal(chosen.snapshot.questions.find(question => question.id === "price")?.period, "1명 한 달");
       assert.equal(calls.length, 0);
     });
 

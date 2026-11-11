@@ -215,7 +215,7 @@ export function intakeQuestions(intake: IntakeState, coach: CoachState, ideas = 
         const hint = sector === "software" ? "무료 모델이면 ‘아직 정하지 않았어요’를 누르고 과금 기준에서 설명해요." : question.hint;
         return { ...question, period, prompt: pricePrompt(period, intake.mode), ...(hint ? { hint } : {}), ...(options.length ? { options } : {}) };
       }
-      // 변동비 문구·단위는 수익 방식(판매 1건·1시간·구독자 1명…)을 따른다. 저장 위치(coach.fields.unitCost)는 같다.
+      // 변동비 문구·단위는 수익 방식(판매 1건·1시간·이용자 1명…)을 따른다. 저장 위치(coach.fields.unitCost)는 같다.
       if (question.id === "structure.unitCost") {
         const base = structureUnitCostQuestion(structure?.revenue);
         // 건당 판매 모델은 바로 앞 가격 질문과 같은 기준(대표 메뉴 1개·상품 1개…)으로 묻는다. 구독·시간제 등은 수익 방식 단위를 따른다.
@@ -555,7 +555,7 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   ];
   if (volume === undefined && !flow) lines.push(`- 월 판매량: 처리량에서 하루·일주일·한 달을 고르면 ${labels.volume}으로 환산해 12개월 손익을 계산합니다.`);
   const retention = structure.revenue === "subscription" ? structureNumber(intake, "structure.retentionMonths") : null;
-  if (retention) lines.push(`- 구독 유지 평균 ${retention}개월 → 구독자 1명 생애 매출 ${won(unitPrice * retention)}, 월 이탈률 약 ${Math.round(100 / retention)}%${volume ? `, 구독자 ${volume.toLocaleString("ko-KR")}명 유지에 매달 신규 약 ${Math.ceil(volume / retention).toLocaleString("ko-KR")}명 필요` : ""}`);
+  if (retention) lines.push(`- 이용 기간 평균 ${retention}개월 → 이용자 1명 생애 매출 ${won(unitPrice * retention)}, 월 이탈률 약 ${Math.round(100 / retention)}%${volume ? `, 이용자 ${volume.toLocaleString("ko-KR")}명 유지에 매달 신규 약 ${Math.ceil(volume / retention).toLocaleString("ko-KR")}명 필요` : ""}`);
   const takeRate = structure.revenue === "commission" ? structureNumber(intake, "structure.takeRate") : null;
   if (takeRate) lines.push(`- 수수료율 ${takeRate}% → 거래 1건 평균 거래액 약 ${won(unitPrice / takeRate * 100)}`);
   if (takeRate === 0) lines.push("- 수수료율 0%: 거래액을 역산하지 않습니다. 입력한 건당 수수료와의 일치 여부를 확인해 주세요.");
@@ -715,7 +715,7 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
     const raw = stripAnswerPeriod(String(value).trim(), question.period);
     const number = question.unit === "원" ? coachAmount(raw) : new RegExp(`^\\d+(?:\\.\\d+)?(?:\\s*${question.unit ?? ""})?$`).test(raw) ? Number.parseFloat(raw) : undefined;
     if (number === undefined || !Number.isFinite(number) || number < 0 || number > 1e14 || question.unit === "%" && number > 100 || question.fieldKey === "hoursPerWeek" && number > 168) throw new IntakeError("invalid_number", "단위에 맞는 0 이상의 숫자를 입력해 주세요. 모르는 값은 미정으로 남겨 주세요");
-    if (question.id.startsWith("structure.") && !validStructureNumber(question.id, number)) throw new IntakeError("invalid_number", question.id === "structure.retentionMonths" ? "평균 구독 유지 기간은 0보다 큰 개월 수로 입력해 주세요" : "해당 지표의 범위에 맞는 숫자를 입력해 주세요");
+    if (question.id.startsWith("structure.") && !validStructureNumber(question.id, number)) throw new IntakeError("invalid_number", question.id === "structure.retentionMonths" ? "평균 이용 기간은 0보다 큰 개월 수로 입력해 주세요" : "해당 지표의 범위에 맞는 숫자를 입력해 주세요");
     return number;
   }
   return String(value).trim();

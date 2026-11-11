@@ -150,7 +150,7 @@ async function main() {
     for (const [revenue, id] of [["rental", "structure.occupancy"], ["commission", "structure.takeRate"], ["project", "structure.salesCycleDays"], ["per_hour", "structure.billableHours"]] as const) {
       assert.equal(structureQuestions("startup", { revenue })[0].id, id, `${revenue} leads with its own metric`);
     }
-    assert.equal(structureUnitCostQuestion("subscription").period, "구독자 1명(월)", "variable cost wording follows the revenue unit");
+    assert.equal(structureUnitCostQuestion("subscription").period, "이용자 1명(월)", "variable cost wording follows the revenue unit");
     assert.equal(structureUnitCostQuestion("per_hour").period, "1시간");
     assert.equal(structureUnitCostQuestion(null).period, "판매 1건");
     const structurePack = allStructureQuestions();
@@ -164,8 +164,8 @@ async function main() {
       assert.ok(selectFirst, `${question.id} answers by ladder or presets, never typing`);
     }
     assert.ok(options.amountRanges("general", "structure.unitCost", "startup").some(range => range.min === 0 && range.max === 0), "variable cost ladder offers 0원 for digital goods");
-    assert.equal(getIntakeQuestion("startup", "software", "structure.retentionMonths", { revenue: "subscription" })?.label, "평균 구독 유지 기간");
-    assert.equal(getIntakeQuestion("startup", "software", "structure.retentionMonths")?.label, "평균 구독 유지 기간", "label lookup works without knowing the structure");
+    assert.equal(getIntakeQuestion("startup", "software", "structure.retentionMonths", { revenue: "subscription" })?.label, "평균 이용 기간");
+    assert.equal(getIntakeQuestion("startup", "software", "structure.retentionMonths")?.label, "평균 이용 기간", "label lookup works without knowing the structure");
     assert.equal(getIntakeQuestion("startup", "software", "structure.occupancy", { revenue: "subscription" }), undefined, "a metric outside the active model is not offered");
     assert.equal(detailQuestions("software").length, 4, "sector packs stay at four");
     assert.equal(options.numberPresetLabel({ id: "local_service.travelMinutes", unit: "분" }, 0), "이동 없음(0분)");

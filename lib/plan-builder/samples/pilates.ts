@@ -275,7 +275,7 @@ export const SAMPLE_ANSWERS: Record<string, Record<string, unknown>> = {
      "at": "2026-09-30T03:54:28.074Z",
      "id": "c9847a62-eeeb-4d5b-9439-5af50ab4f788",
      "role": "user",
-     "text": "구독자 1명당 월 비용: 15000"
+     "text": "이용자 1명당 월 비용: 15000"
     },
     {
      "at": "2026-09-30T03:54:34.613Z",

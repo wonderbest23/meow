@@ -569,7 +569,7 @@ async function main() {
       answer(f, "industry", "software");
       assert.equal(optionsOf("customer")[0].value, "개인 사용자", "a confirmed industry wins over the text guess");
       const price = intakeQuestions(f.intake, f.coach).find(question => question.id === "price")!;
-      assert.equal(price.period, "월 구독 1건"); assert.match(price.prompt, /^월 구독 1건 가격/); assert.equal(price.kind, "number");
+      assert.equal(price.period, "1명 한 달"); assert.match(price.prompt, /^1명 한 달 가격/); assert.equal(price.kind, "number");
       assert.deepEqual(optionsOf("channel").filter(option => option.group === "sector").map(option => option.value), ["검색·블로그 콘텐츠", "앱스토어·런칭 커뮤니티"]);
       assert.equal(optionsOf("channel").filter(option => option.group === "common").length, 6);
       assert.ok(optionsOf("capacity").some(option => option.group === "people") && optionsOf("capacity").some(option => option.group === "unit"));
