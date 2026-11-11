@@ -70,7 +70,10 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   const ranked = tool ? ["software" as const] : rankedSectors(said);
   // 세부 업종을 찾으면 그 줄의 답과 숫자를 쓴다: 손으로 쓴 사전(치킨집·꽃집) → 낱말 규칙(수만 개) → 못 찾으면 업종 한 줄 기준값과 칩에서 고른 답
   const hand = businessKind(said, chosen ?? ranked[0]);
-  const found = rules?.(said, (sector, ksic) => chosenKsic ? ksic === chosenKsic : tool ? sector === "software" : !chosen || sector === chosen) ?? null;
+  // 공장·제조라고 적었으면 같은 낱말의 가게·도매 줄보다 만드는 줄을 먼저 본다('냉동 만두 만드는 식품 공장'이 냉동식품 할인점이 됐다)
+  const makes = !tool && !chosen && !chosenKsic && /공장(?!\s*(?:청소|철거|자동화|설비|부지|임대|매매))|제조/.test(said);
+  // 제조업은 분류 앞 두 자리가 10~34다(식품 제조는 업종 묶음이 음식이라 묶음 이름으로는 못 고른다)
+  const found = (makes ? rules?.(said, (_, ksic) => ksic >= "10" && ksic < "35") : null) ?? rules?.(said, (sector, ksic) => chosenKsic ? ksic === chosenKsic : tool ? sector === "software" : !chosen || sector === chosen) ?? null;
   // 사전에도 있지만 낱말 규칙이 그보다 짧지 않은 낱말로 맞았으면(청소 → 입주청소, 식당 → 식자재납품) 더 구체적인 규칙 줄을 쓴다. 사업자용 앱·프로그램은 예외다(카페용 앱은 카페가 아니다)
   const handWord = hand?.word.toLowerCase().replace(/\s/g, "") ?? "";
   const rule = !hand || (found && (found.word.length >= handWord.length || found.named) && !CHANNEL_WORD.test(found.word) && (hand.sector !== "software" || found.sector === "software")) ? found : null;
@@ -114,13 +117,18 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
       if (rule && !rule.named) { if (hand?.customer) answers.customer = hand.customer; else delete answers.customer; }
     }
   }
+  // 소프트웨어는 동네 가게처럼 지도 검색으로 손님을 만나지 않는다. 가게·병원 운영자가 쓰는 프로그램은 찾아가서 판다
+  if (sector === "software") {
+    if (/운영자$/.test(read.customer ?? "") && /인스타|앱스토어|앱 마켓|플레이스/.test(answers.channel ?? "")) answers.channel = "직접 영업·업종 커뮤니티";
+    else if (/플레이스|매장 방문/.test(answers.channel ?? "")) answers.channel = "검색·블로그 콘텐츠";
+  }
   // 사용자가 적은 고객이 표의 고객 문구에 이미 들어 있으면 더 자세한 표 문구를 둔다. 종류를 찾았는데 문장 속 낱말 하나뿐이면('유아용품'의 유아) 그 종류의 고객(아이 키우는 부모)을 둔다
   if (read.customer && !(read.customerLoose && kind) && !answers.customer?.includes(read.customer.replace(/^납품받는 /, ""))) answers.customer = read.customer;
   // 교육: 문장에 적은 나이대(초등·어린이·성인)가 종류의 고객 문구와 다르면 그 자리만 바꾼다('수학에서 자꾸 막히는 중·고등학생' → 초등학생)
   const learner = sector === "education" ? LEARNERS.find(([test]) => test.test(text))?.[1] : undefined;
   if (learner && answers.customer && !answers.customer.includes(learner) && LEARNER_IN_CUSTOMER.test(answers.customer)) answers.customer = answers.customer.replace(LEARNER_IN_CUSTOMER, learner);
   // 가게·매장이라고 적었으면 온라인 장터가 아니라 매장에서 판다
-  if (/가게|매장|점포|오프라인/.test(text) && !/온라인|스토어|쇼핑몰/.test(text) && answers.channel?.includes("오픈마켓")) answers.channel = "매장 방문";
+  if (/가게|매장|점포|오프라인|카페|식당/.test(text) && !/온라인|스토어|쇼핑몰|택배/.test(text) && /오픈마켓|스마트스토어|쿠팡/.test(answers.channel ?? "")) answers.channel = "매장 방문";
   // 파는 곳을 문장에 적었으면(스마트스토어로·배달 전문·온라인) 그것을 둔다. 물건·음식을 파는 업종만이다('스마트스토어 운영 대행'은 파는 곳이 아니다)
   const soldAt = SELLS_GOODS.has(sector) ? SOLD_AT.find(([test]) => test.test(text))?.[1] ?? (/온라인|쇼핑몰/.test(text) && !ONLINE.test(answers.channel ?? "") ? "스마트스토어·자사몰" : undefined) : undefined;
   if (soldAt && soldAt !== answers.channel) {
@@ -129,6 +137,9 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
     if (WALK_IN.test(answers.problem ?? "")) delete answers.problem;
     answers.channel = soldAt;
   }
+  // 시장 안에서 하는 장사는 배달앱이 아니라 지나는 손님이다. 기업 출강은 개인 수강생이 아니라 회사 교육 담당자다
+  if (/시장\s*(?:안|내|에서)/.test(text) && answers.channel === "배달앱") answers.channel = "매장 방문";
+  if (/출강/.test(text) && kind) { answers.channel = "직접 영업·기존 거래처"; if (!read.customer || /^(?:기업|회사)$/.test(read.customer)) answers.customer = "직원 교육을 맡은 기업 인사·교육 담당자"; }
   // 납품·도매·OEM이라고 적었으면 손님을 모으는 채널(스마트스토어·인스타그램·매장)이 아니라 거래처를 직접 찾아간다
   // shortcut: 값은 그 종류의 소매가 그대로다, 납품가를 따로 적은 줄이 생기면 그 값을 쓴다
   if (SUPPLY.test(text) && !/영업|거래처|견적/.test(answers.channel ?? "")) answers.channel = "직접 영업·기존 거래처";

@@ -78,6 +78,12 @@ async function main() {
   // 문장에 적은 전문 분야는 파는 것 뒤에 남긴다. 이미 든 말(전기 자전거)·파는 방식(배달 전문)은 붙이지 않는다
   assert.deepEqual(["독립서점, 그림책 전문", "PT 전문 소규모 헬스장", "소형견 전문 애견 미용실"].map((text) => ruled(text).answers.offer.split(" · ")[1]), ["그림책 전문", "PT 전문", "소형견 전문"]);
   for (const text of ["전기자전거 전문 자전거 판매점", "배달 전문 치킨집", "돈까스 전문점 창업", "중고등 수학 전문 보습학원"]) assert.ok(!ruled(text).answers.offer.includes(" · "), text);
+  // 공장·제조라고 적으면 만드는 줄이 먼저다(공장이 손님인 문장은 아니다). 소프트웨어 채널은 지도 검색이 아니다. 기업 납품·출강·시장 안 장사
+  assert.equal(ruled("냉동 만두 만드는 식품 공장").ksic, "10709");
+  assert.notEqual(ruled("공장 자동화 설비 유지보수").ksic?.slice(0, 2), "29");
+  assert.deepEqual(["인테리어 견적 비교 플랫폼", "동네 헬스장 회원 관리 앱"].map((text) => ruled(text).answers.channel), ["검색·블로그 콘텐츠", "직접 영업·업종 커뮤니티"]);
+  assert.deepEqual(["판촉물 기념품 기업 납품", "젓갈 제조해서 재래시장에 도매", "기업 출강 엑셀 강의합니다"].map((text) => ruled(text).answers.customer), ["납품받는 기업", "재래시장 상인", "직원 교육을 맡은 기업 인사·교육 담당자"]);
+  assert.deepEqual(["전통시장 안에서 족발 장사", "비건 디저트 카페를 열고 싶어요"].map((text) => ruled(text).answers.channel), ["매장 방문", "매장 방문"]);
   // 가게·병원·학원 운영자가 쓰는 프로그램은 개인용 앱 값이 아니다. 개인용 앱은 그대로다
   assert.deepEqual(["병원 EMR 프로그램 개발", "동네 헬스장 회원 관리 앱", "가계부 앱"].map((text) => ruled(text).answers.price), ["33000원", "33000원", "4900원"]);
   assert.equal(ruled("미용실 예약 관리 서비스").sector, "software");
