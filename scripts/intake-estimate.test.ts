@@ -73,7 +73,7 @@ async function main() {
   assert.doesNotMatch(ruled("유아용품 온라인몰").answers.customer, /^유아$/);
   assert.equal(ruled("외국인 대상 게스트하우스").answers.customer, "외국인");
   // 혼자서는 못 하는 종류는 인원을 그 종류 값으로 잡는다 — 문장에 혼자 한다고 적었으면 그 말이 먼저다
-  assert.deepEqual(["요양원 창업", "돼지국밥집", "동네 꽃집", "혼자 하는 1인 국밥집"].map((text) => ruled(text).answers.capacity.split(" / ")[0]), ["직원 3명 이상", "직원·아르바이트 1~2명", "대표자 혼자", "대표자 혼자"]);
+  assert.deepEqual(["요양원 창업", "돼지국밥집", "동네 꽃집", "혼자 하는 1인 국밥집", "김치 제조 공장", "김치 담가서 온라인 판매"].map((text) => ruled(text).answers.capacity.split(" / ")[0]), ["직원 3명 이상", "직원·아르바이트 1~2명", "대표자 혼자", "대표자 혼자", "직원·아르바이트 1~2명", "대표자 혼자"]);
 
   // 문장 읽기: 사용자가 이미 적은 고객·가격·자금·시간·목표·양·인원은 짐작하지 않고 그대로 읽는다
   const { readSentence } = await import("../lib/plan-builder/intake-sentence");

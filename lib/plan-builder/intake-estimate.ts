@@ -68,12 +68,15 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   const unit = base.capacity.match(/[가-힣·]+$/)?.[0] ?? "건";
   const stated = read.capacity && (!monthly || read.capacity.period === "한 달") ? `${read.capacity.period} ${read.capacity.count}${unit}` : undefined;
   const amount = stated ?? (monthly || each ? `한 달 ${Math.max(1, Math.round((monthlyVolumeFromCapacity(base.capacity)?.volume ?? 1) * base.price / price))}${monthly ? "명" : "회"}` : base.capacity);
+  // '공장'이라고 적었는데 혼자 하는 규모의 줄이 맞았으면 직원을 둔 것으로 본다. 그 줄의 남는 돈이 급여 한 명분(220만원)을 감당할 때만 고정비에도 더한다(적자 초안을 만들지 않게)
+  const factory = !read.people && !kind?.people && /공장(?!\s*(?:청소|철거|자동화|설비|부지|임대|매매))/.test(said);
+  const wage = factory && (monthlyVolumeFromCapacity(base.capacity)?.volume ?? 0) * (base.price - base.unitCost) - base.cost > 2_200_000 ? 2_200_000 : 0;
   const answers: Record<string, string> = {
     price: `${price}원`,
     // 가격을 문장에서 읽었으면 건당 비용도 같은 비율로 맞춘다
     "structure.unitCost": `${price === base.price ? base.unitCost : Math.round(price * base.unitCost / base.price / 100) * 100}원`,
-    "structure.cost": `${base.cost}원`,
-    capacity: `${read.people ?? kind?.people ?? "대표자 혼자"} / ${amount}`,
+    "structure.cost": `${base.cost + wage}원`,
+    capacity: `${read.people ?? kind?.people ?? (factory ? "직원·아르바이트 1~2명" : "대표자 혼자")} / ${amount}`,
     goal: read.goal ?? "6개월 안에 손익분기 도달",
   };
   if (read.budget) answers.budget = `${read.budget}원`;
