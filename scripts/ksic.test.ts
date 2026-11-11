@@ -67,7 +67,7 @@ assert.equal(ksicStructure("A"), undefined, "대분류에는 구조 없음");
 
 // 2b) 구조 → 질문·요약 파생값
 assert.deepEqual(structureSummary(ksicStructure("56221")!), ["개인 고객", "실물 상품", "매장 방문", "건당 결제", "신고·등록 필요"]);
-assert.equal(revenueBasis(ksicStructure("58222")!), "월 구독 1건", "소프트웨어는 월 구독 기준");
+assert.equal(revenueBasis(ksicStructure("58222")!), "1명 한 달", "소프트웨어는 월 구독 기준");
 assert.equal(revenueBasis(ksicStructure("56221")!), null, "건당 결제는 업종 기본 기준 유지");
 assert.equal(revenueBasis(ksicStructure("71531")!), "프로젝트 1건");
 assert.equal(capacityUnitOrder(ksicStructure("68112")!)?.[0], "좌석·룸", "공간 제공은 좌석·룸 단위 우선");
@@ -85,8 +85,8 @@ assert.match(licenseHint(ksicStructure("56221")!, "56221") ?? "", /관할 구청
 assert.match(licenseHint(ksicStructure("66199")!) ?? "", /관할 구청·세무서/, "코드를 모르면 기존 등급 문구");
 assert.ok(isFinanceKsic("66202") && isFinanceKsic("65") && !isFinanceKsic("68222") && !isFinanceKsic(null));
 for (const code of Object.keys(KSIC_DIVISION_STRUCTURES)) assert.equal(structureSummary(KSIC_DIVISION_STRUCTURES[code]).length, 5, `labels for division ${code}`);
-assert.equal(structureFieldLabels(ksicStructure("58222")!).price, "월 구독 가격");
-assert.equal(structureFieldLabels(ksicStructure("58222")!).volume, "월 구독자 수");
+assert.equal(structureFieldLabels(ksicStructure("58222")!).price, "월 이용료");
+assert.equal(structureFieldLabels(ksicStructure("58222")!).volume, "월 이용자 수");
 assert.deepEqual(structureFieldLabels(ksicStructure("56221")!), {}, "건당 결제는 기본 라벨 유지");
 
 // 3) 동의어 사전의 코드는 전부 실제 코드

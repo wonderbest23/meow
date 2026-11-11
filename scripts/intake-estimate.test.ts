@@ -31,6 +31,14 @@ async function main() {
   }
   assert.deepEqual(estimateIntake("동네 네일샵을 열려고 해요"), estimateIntake("동네 네일샵을 열려고 해요"), "같은 문장이면 같은 짐작");
 
+  // 낱말 규칙(수만 개): 모든 줄이 분류에 묶여 있고, 실제 계산 함수로 감당하는 양에서 본전을 넘긴다
+  const { ruleKind, KIND_RULE_ROWS } = await import("../lib/plan-builder/kind-rules");
+  const { sectorForKsic } = await import("../lib/plan-builder/ksic");
+  for (const [ksic, offer, , , , price, unitCost, cost, capacity] of KIND_RULE_ROWS) {
+    const volume = monthlyVolumeFromCapacity(capacity)?.volume ?? 0;
+    assert.ok(sectorForKsic(ksic) && volume * (price - unitCost) > cost, `${ksic} ${offer}: 감당하는 양으로 월 고정비를 넘긴다`);
+  }
+
   // 세부 업종 사전: 흔한 창업 문장이 '범용'으로 떨어지지 않고 그 종류의 답을 받는다
   const kinds: [string, string, RegExp][] = [
     ["배달 전문 치킨집을 하려고 해요", "food_beverage", /치킨/], ["필라테스 스튜디오를 열고 싶어요", "local_service", /필라테스 수업/], ["꽃집을 열고 싶어요", "local_service", /꽃다발/],
@@ -48,6 +56,36 @@ async function main() {
   assert.equal(cafeApp.sector, "software");
   assert.doesNotMatch(`${cafeApp.answers.customer} ${cafeApp.answers.offer} ${cafeApp.answers.channel}`, /커피|손님|네이버 예약/);
   assert.equal(estimateIntake("옷가게를 하고 싶어요").answers.channel, "매장 방문");
+
+  // 낱말 규칙: 사전에 없는 업종은 규칙 줄로, 사전 낱말을 품은 더 긴 낱말(청소 → 입주청소)은 더 구체적인 규칙 줄로, 그 밖에는 사전 그대로
+  const ruled = (text: string) => estimateIntake(text, undefined, ruleKind);
+  assert.deepEqual([ruled("양봉 시작하려고요").ksic, ruled("동네 퀵 배송 대행").ksic, ruled("심리 카운셀러").ksic], ["01299", "49402", "86909"]);
+  assert.match(ruled("입주 청소 서비스를 시작하려고 해요").answers.offer, /입주·이사 청소/);
+  assert.equal(ruled("굿즈 스마트스토어를 운영하려고 해요").ksic, null);
+  assert.doesNotMatch(ruled("라이프 스타일 편집숍").answers.offer, /타일 작업/);
+  // 떨어진 낱말도 잇고(매트리스 … 청소), 낱말 경계를 한 글자만 걸친 것(찜닭 가게의 닭가게)은 버리고, 손님 업종 낱말은 종류로 읽지 않는다
+  assert.deepEqual(["매트리스 소파 방문 청소", "찜닭 가게", "손두부 제조"].map((text) => ruleKind(text)?.word), ["매트리스청소", "찜닭", "두부제조"]);
+  assert.equal(ruled("식당 사장님들에게 식자재 납품").ksic, "46329");
+  // 같은 줄의 낱말이 여럿 맞으면 낱말 하나만 맞은 줄보다 먼저다(참기름·들기름 방앗간은 떡집이 아니다). 긴 낱말 하나(식자재마트)는 짧은 낱말 둘에 지지 않는다
+  assert.deepEqual(["참기름 들기름 짜는 방앗간", "식자재 마트 창업"].map((text) => ruleKind(text)?.offer), ["국산 참기름 300ml 한 병", "식자재 마트"]);
+  // 문장의 낱말이 파는 것에 그대로 든 줄(빙수 → 빙수 한 그릇)이 넓은 낱말의 줄(디저트가게 → 마카롱)보다 먼저다. 어절 토막('판매점'의 매점)은 치지 않는다
+  assert.deepEqual(["빙수 전문 디저트 가게", "베이글 전문 베이커리 오픈 예정"].map((text) => ruled(text).answers.offer), ["빙수 한 그릇", "베이글 한 개"]);
+  assert.doesNotMatch(ruled("무인 반려동물 간식 판매점").answers.offer, /매점/);
+  assert.equal(ruled("학원 전용 출결 관리 앱").sector, "software");
+  // 나이대 낱말 하나('유아용품'의 유아)는 종류의 고객(부모)을 덮지 않는다. 짚어 말한 고객('외국인 대상')은 그대로 둔다
+  assert.doesNotMatch(ruled("유아용품 온라인몰").answers.customer, /^유아$/);
+  assert.equal(ruled("외국인 대상 게스트하우스").answers.customer, "외국인");
+  // 사업체를 상대로 하는 일은 앞의 업종이 고객이고, 납품은 받는 곳이 고객이다
+  assert.deepEqual(["병원 마케팅 대행사", "카페 창업 컨설팅", "반찬 공장 차려서 마트에 납품"].map((text) => ruled(text).answers.customer), ["병원 운영자", "카페 창업을 준비하는 사람", "납품받는 마트"]);
+  assert.notEqual(ruled("동네 카페 창업").answers.customer, "카페 운영자");
+  // 소프트웨어는 적은 말이 곧 파는 것이다. 납품·주문자 상표는 받는 업체가 고객이다
+  assert.equal(ruled("공유 주차장 예약 플랫폼").answers.offer, "공유 주차장 예약 플랫폼");
+  assert.deepEqual(["김치 제조 공장, 식당 납품용", "향초 디퓨저 OEM 제조"].map((text) => ruled(text).answers.customer), ["납품받는 식당", "자기 상표로 팔 제품을 맡기는 판매 업체"]);
+  assert.equal(ruled("포장이사 업체, 직원 4명").answers.capacity.split(" / ")[0], "직원 3명 이상");
+  // 교육: 문장에 적은 나이대가 종류의 고객 문구 속 나이대를 바꾼다
+  assert.match(ruled("초등 수학 학원 차리려고요").answers.customer, /초등학생/);
+  // 혼자서는 못 하는 종류는 인원을 그 종류 값으로 잡는다 — 문장에 혼자 한다고 적었으면 그 말이 먼저다
+  assert.deepEqual(["요양원 창업", "돼지국밥집", "동네 꽃집", "혼자 하는 1인 국밥집", "김치 제조 공장", "김치 담가서 온라인 판매"].map((text) => ruled(text).answers.capacity.split(" / ")[0]), ["직원 3명 이상", "직원·아르바이트 1~2명", "대표자 혼자", "대표자 혼자", "직원·아르바이트 1~2명", "대표자 혼자"]);
 
   // 문장 읽기: 사용자가 이미 적은 고객·가격·자금·시간·목표·양·인원은 짐작하지 않고 그대로 읽는다
   const { readSentence } = await import("../lib/plan-builder/intake-sentence");
@@ -78,7 +116,13 @@ async function main() {
     assert.equal(estimateIntake(text).sector, sector, `${text}: 업종`);
   }
 
-  for (const text of ["동네 네일샵을 열려고 해요", "반찬가게를 열고 싶어요", "굿즈 스마트스토어를 운영하려고 해요", "소규모 팀용 예약 관리 SaaS를 만들고 있어요", "무언가 새로 해 보려고 해요", "배달 전문 치킨집을 하려고 해요", "한복 대여점을 하고 싶어요", "요리 유튜브 채널을 키워서 수익을 내고 싶어요"]) {
+  // 종류를 못 찾은 문장은 짐작으로 채우지 않는다 — 업종부터 묻는다
+  {
+    const { snapshot } = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "무언가 새로 해 보려고 해요", revision: 0, requestId: randomUUID() }, off);
+    assert.equal(snapshot.coreComplete, false, "모르는 사업은 묻는다");
+    assert.equal(estimateIntake("무언가 새로 해 보려고 해요").matched, false);
+  }
+  for (const text of ["동네 네일샵을 열려고 해요", "반찬가게를 열고 싶어요", "굿즈 스마트스토어를 운영하려고 해요", "소규모 팀용 예약 관리 SaaS를 만들고 있어요", "배달 전문 치킨집을 하려고 해요", "한복 대여점을 하고 싶어요", "요리 유튜브 채널을 키워서 수익을 내고 싶어요"]) {
     const ownerHash = `intake-estimate-${randomUUID()}`;
     const { plan, snapshot } = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: text, revision: 0, requestId: randomUUID() }, off);
     assert.equal(snapshot.coreComplete, true, `${text}: 한 문장으로 핵심 질문이 모두 채워진다`);

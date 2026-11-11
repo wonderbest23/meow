@@ -1,6 +1,6 @@
 import { localFieldSuggestions, rankedSectors } from "./local-suggestions";
 import { SUGGESTION_FIELDS } from "./answer-suggestion-fields";
-import { businessKind } from "./business-kinds";
+import { businessKind, type BusinessKind } from "./business-kinds";
 import { monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { readSentence } from "./intake-sentence";
 import type { ProposalSector } from "./proposal-blueprint";
@@ -30,12 +30,37 @@ export const SECTOR_BASELINES: Record<ProposalSector, Baseline> = {
   general: { price: 30_000, unitCost: 3_000, cost: 1_000_000, capacity: "일주일 10건" },
 };
 
-/** 질문 id → 짐작한 답(문자열). 고를 문구가 없는 질문은 빠진다 — 그 질문은 평소처럼 묻는다. */
-export function estimateIntake(text: string, chosen?: ProposalSector): { sector: ProposalSector; answers: Record<string, string> } {
-  const ranked = rankedSectors(text);
-  const sector = chosen ?? ranked[0];
-  // 세부 업종(치킨집·꽃집)을 찾으면 그 줄의 답과 숫자를, 못 찾으면 업종 한 줄 기준값과 칩에서 고른 답을 쓴다
-  const kind = businessKind(text, sector);
+/** 사업 종류가 아닌 낱말 — 손님 업종('식당 사장님들에게', '카페에', '미용실 전용', '농가 대상')과 파는 곳('인스타로', '스마트스토어로'). 종류를 찾을 때만 뺀다 */
+const KIND_NOISE = /[가-힣a-z]+(?:\s*사장님들?)?(?:에게|한테)\s|[가-힣a-z]+\s*(?:전용|대상|납품용)\s|[가-힣a-z]+(?:(?<![미이사비고채활응])용|에)\s|(?:인스타(?:그램)?|유튜브|블로그|스마트스토어|라이브커머스|쿠팡|온라인|트럭)(?:으로|로|에서)\s/gi;
+
+/** 파는 곳만 가리키는 낱말 — 사전이 이미 종류를 찾았으면 이 낱말로 뒤집지 않는다(굿즈 스마트스토어 → 굿즈) */
+const CHANNEL_WORD = /^(?:스마트스토어|오픈마켓|온라인쇼핑몰|쇼핑몰|쿠팡|라이브커머스)/;
+/** 문장에 적은 배우는 사람의 나이대 — 교육 업종에서 종류의 고객 문구 속 나이대(중·고등학생)를 이걸로 바꾼다 */
+const LEARNERS: readonly (readonly [RegExp, string])[] = [[/유아|유치부|미취학/, "5~7세 아이"], [/초중등|초·중등/, "초·중학생"], [/초등|어린이|키즈/, "초등학생"], [/중등|중학/, "중학생"], [/고등|고3|수험생/, "고등학생"], [/성인|직장인/, "성인·직장인"]];
+const LEARNER_IN_CUSTOMER = /(?:초·?중·?고등?|초·?중등?|중·?고등?|초등|중|고등)학생|5~7세 아이|성인·직장인|^(?:유아|어린이|초중등|초등|중등|고등|성인|직장인)$/;
+const TOOL_TAIL = /(?:앱|어플|소프트웨어|솔루션|플랫폼|saas|관리\s*(?:프로그램|시스템))(?:\s*(?:개발|제작|서비스|창업|스타트업))?$/i;
+
+/** 낱말 규칙(kind-rules.ruleKind)의 모양. 표가 커서 서버 쪽 호출자가 넘겨준다 — 여기서 import 하면 화면 묶음에 딸려 들어간다 */
+export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: string) => boolean) => (BusinessKind & { ksic: string; word: string; named?: boolean }) | null;
+
+/**
+ * 질문 id → 짐작한 답(문자열). 고를 문구가 없는 질문은 빠진다 — 그 질문은 평소처럼 묻는다.
+ * chosen·chosenKsic 은 사용자가 이미 고른 업종·분류다(짐작이 그것을 뒤집지 않는다). ksic 은 낱말 규칙으로 찾았을 때만 온다.
+ */
+export function estimateIntake(text: string, chosen?: ProposalSector, rules?: KindRules, chosenKsic?: string | null): { sector: ProposalSector; ksic: string | null; /** 사전·규칙에서 사업 종류를 찾았는지 — 못 찾았으면 파는 것·고객은 짐작하지 않고 묻게 둔다 */ matched: boolean; answers: Record<string, string> } {
+  // 흔한 표기 차이는 사전 표기로 맞춘 뒤 찾는다
+  const spelled = text.replace(/까페/g, "카페").replace(/찌게/g, "찌개");
+  // 문장이 앱·프로그램으로 끝나면 파는 것은 소프트웨어다 — 이때는 손님 업종 낱말('학원 전용')이 종류를 정하는 단서라 빼지 않는다
+  const tool = !chosen && TOOL_TAIL.test(spelled.trim());
+  const said = tool ? spelled : spelled.replace(KIND_NOISE, " ");
+  const ranked = tool ? ["software" as const] : rankedSectors(said);
+  // 세부 업종을 찾으면 그 줄의 답과 숫자를 쓴다: 손으로 쓴 사전(치킨집·꽃집) → 낱말 규칙(수만 개) → 못 찾으면 업종 한 줄 기준값과 칩에서 고른 답
+  const hand = businessKind(said, chosen ?? ranked[0]);
+  const found = rules?.(said, (sector, ksic) => chosenKsic ? ksic === chosenKsic : tool ? sector === "software" : !chosen || sector === chosen) ?? null;
+  // 사전에도 있지만 낱말 규칙이 그보다 짧지 않은 낱말로 맞았으면(청소 → 입주청소, 식당 → 식자재납품) 더 구체적인 규칙 줄을 쓴다. 사업자용 앱·프로그램은 예외다(카페용 앱은 카페가 아니다)
+  const handWord = hand?.word.toLowerCase().replace(/\s/g, "") ?? "";
+  const rule = !hand || (found && (found.word.length >= handWord.length || found.named) && !CHANNEL_WORD.test(found.word) && (hand.sector !== "software" || found.sector === "software")) ? found : null;
+  const kind = rule ?? hand, sector = rule?.sector ?? chosen ?? ranked[0];
   const base = kind ?? SECTOR_BASELINES[sector];
   const read = readSentence(text);
   // 한 달 값으로 적은 가격('월 15만원')인데 건당으로 세는 업종이면 감당하는 양도 한 달 회원 수로 바꾼다 — 건당 자리에 그대로 두면 매출이 몇십 배로 부푼다
@@ -46,12 +71,15 @@ export function estimateIntake(text: string, chosen?: ProposalSector): { sector:
   const unit = base.capacity.match(/[가-힣·]+$/)?.[0] ?? "건";
   const stated = read.capacity && (!monthly || read.capacity.period === "한 달") ? `${read.capacity.period} ${read.capacity.count}${unit}` : undefined;
   const amount = stated ?? (monthly || each ? `한 달 ${Math.max(1, Math.round((monthlyVolumeFromCapacity(base.capacity)?.volume ?? 1) * base.price / price))}${monthly ? "명" : "회"}` : base.capacity);
+  // '공장'이라고 적었는데 혼자 하는 규모의 줄이 맞았으면 직원을 둔 것으로 본다. 그 줄의 남는 돈이 급여 한 명분(220만원)을 감당할 때만 고정비에도 더한다(적자 초안을 만들지 않게)
+  const factory = !read.people && !kind?.people && /공장(?!\s*(?:청소|철거|자동화|설비|부지|임대|매매))/.test(said);
+  const wage = factory && (monthlyVolumeFromCapacity(base.capacity)?.volume ?? 0) * (base.price - base.unitCost) - base.cost > 2_200_000 ? 2_200_000 : 0;
   const answers: Record<string, string> = {
     price: `${price}원`,
     // 가격을 문장에서 읽었으면 건당 비용도 같은 비율로 맞춘다
     "structure.unitCost": `${price === base.price ? base.unitCost : Math.round(price * base.unitCost / base.price / 100) * 100}원`,
-    "structure.cost": `${base.cost}원`,
-    capacity: `${read.people ?? "대표자 혼자"} / ${amount}`,
+    "structure.cost": `${base.cost + wage}원`,
+    capacity: `${read.people ?? kind?.people ?? (factory ? "직원·아르바이트 1~2명" : "대표자 혼자")} / ${amount}`,
     goal: read.goal ?? "6개월 안에 손익분기 도달",
   };
   if (read.budget) answers.budget = `${read.budget}원`;
@@ -61,9 +89,24 @@ export function estimateIntake(text: string, chosen?: ProposalSector): { sector:
     const guess = kind?.[field] || localFieldSuggestions(text, field, [sector], "startup")[0];
     if (guess) answers[field] = guess;
   }
-  // 사용자가 적은 고객이 표의 고객 문구에 이미 들어 있으면 더 자세한 표 문구를 둔다
-  if (read.customer && !answers.customer?.includes(read.customer)) answers.customer = read.customer;
+  // 소프트웨어는 줄마다 값이 비슷해 문장이 가장 정확한 설명이다('공유 주차장 예약 플랫폼'이 '체험·모임 예약 중개'가 됐다) — 파는 것은 적은 말 그대로 두고,
+  // 줄의 낱말이 파는 것에 그대로 들지 않았으면(넓은 낱말로 맞은 줄) 그 줄의 고객 대신 업종의 넓은 고객을 둔다
+  if (sector === "software") {
+    const own = text.trim().replace(/[.!?~\s]*$/, "").replace(/\s*(?:[을를]\s*)?(?:(?:창업|개발|제작|출시|운영)\s*)?(?:(?:만들|하려|해보|준비|시작|생각)[가-힣\s]*)?$/, "").trim();
+    if (own.length >= 4 && own.length <= 30) {
+      answers.offer = own;
+      // 누가 쓰는지는 문장에 없으면 짐작하지 않는다 — 고객 질문을 그대로 묻는다
+      if (rule && !rule.named) { if (hand?.customer) answers.customer = hand.customer; else delete answers.customer; }
+    }
+  }
+  // 사용자가 적은 고객이 표의 고객 문구에 이미 들어 있으면 더 자세한 표 문구를 둔다. 종류를 찾았는데 문장 속 낱말 하나뿐이면('유아용품'의 유아) 그 종류의 고객(아이 키우는 부모)을 둔다
+  if (read.customer && !(read.customerLoose && kind) && !answers.customer?.includes(read.customer.replace(/^납품받는 /, ""))) answers.customer = read.customer;
+  // 교육: 문장에 적은 나이대(초등·어린이·성인)가 종류의 고객 문구와 다르면 그 자리만 바꾼다('수학에서 자꾸 막히는 중·고등학생' → 초등학생)
+  const learner = sector === "education" ? LEARNERS.find(([test]) => test.test(text))?.[1] : undefined;
+  if (learner && answers.customer && !answers.customer.includes(learner) && LEARNER_IN_CUSTOMER.test(answers.customer)) answers.customer = answers.customer.replace(LEARNER_IN_CUSTOMER, learner);
   // 가게·매장이라고 적었으면 온라인 장터가 아니라 매장에서 판다
   if (/가게|매장|점포|오프라인/.test(text) && !/온라인|스토어|쇼핑몰/.test(text) && answers.channel?.includes("오픈마켓")) answers.channel = "매장 방문";
-  return { sector, answers };
+  // 종류를 못 찾았으면 업종 표의 넓은 답(1회 서비스·개인 소비자)을 채우지 않는다 — 그 두 질문은 평소처럼 묻는다. 문장에 적은 고객은 둔다
+  if (!kind) { if (sector !== "software") delete answers.offer; if (!read.customer) delete answers.customer; }
+  return { sector, ksic: rule?.ksic ?? null, matched: !!kind, answers };
 }
