@@ -183,6 +183,8 @@
 .original p { white-space: pre-wrap; font-size: .875rem; }
 .summaryFields { margin: 10px 0 0; }
 .summaryFields > div { padding: 12px 0; border-bottom: 1px solid var(--intake-line); }
+/* 묶음 안 마지막 줄의 선이 묶음 아래 선과 겹쳐 빈 칸이 생긴다(넓은 화면은 카드라 해당 없음) */
+@media (max-width: 900px) { .summaryDetails .summaryFields > div:last-child { border-bottom: 0; padding-bottom: 0; } }
 .summaryFields dt { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 9px; min-height: 32px; font-size: .8125rem; color: var(--app-body); }
 .summaryFields dt > span { font-weight: 700; }
 .summaryFields dt small { font-size: .6875rem; font-weight: 600; color: var(--app-body); }
@@ -190,10 +192,9 @@
 .summaryFields dt small[data-basis="unknown"] { color: var(--app-muted); }
 .summaryFields dt .iconButton { width: 32px; height: 32px; margin-left: auto; }
 .summaryFields dd { margin: 4px 0 0; font-size: .9375rem; line-height: 1.65; font-weight: 500; white-space: pre-wrap; }
-.financial { padding: 22px 0; border-bottom: 1px solid var(--intake-line); }
 .financial h3 { font-size: .8125rem; }
 .financial p { font-size: .75rem; color: var(--intake-muted); white-space: pre-wrap; line-height: 1.8; }
-.design { margin-top: 20px; border-block: 1px solid var(--intake-line); }
+.design { margin-top: 16px; border-top: 1px solid var(--intake-line); }
 .design summary { display: flex; align-items: center; gap: 8px; cursor: pointer; min-height: 50px; font-size: .8125rem; color: var(--app-primary-text); }
 .design summary::after { content: "+"; margin-left: auto; font-size: 1.125rem; }
 .design[open] summary::after { content: "-"; }
@@ -523,6 +524,8 @@
 .rewriteCost[data-short] { background: var(--app-warning-bg); color: var(--app-warning); }
 .rewriteCost a { color: var(--app-selected-text); font-weight: 700; text-decoration: underline; }
 .nextStepHint { display: block; color: var(--intake-muted); font-size: .75rem; line-height: 1.6; }
+/* 단추 옆에 설명이 붙어 줄이 어긋나던 것 — 단추 아래 한 줄로 */
+div.nextStepHint { display: grid; justify-items: start; gap: 6px; padding-top: 16px; }
 @keyframes intake-next-pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(45, 108, 223, .1); } 50% { box-shadow: 0 0 0 9px rgba(45, 108, 223, .04); } }
 
 /* AI 작업 예상 진행률 게이지 */
@@ -579,7 +582,7 @@
 /* 사업 한 줄 정리 — 흰 바탕·옅은 테두리만(대표 요청 2026-10-15: 파란 그라데이션·반짝이가 AI 같다) */
 .identity { display: grid; gap: 10px; margin: 4px 0 8px; padding: 22px 22px 20px; border-radius: 16px; background: var(--intake-surface, var(--app-surface)); border: 1px solid var(--app-line); }
 .identityKicker { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: .8125rem; font-weight: 700; color: var(--app-body); }
-.complete .identityHeadline, .identityHeadline { margin: 0; font-size: clamp(1.375rem, 5.6vw, 1.875rem); line-height: 1.3; font-weight: 800; color: var(--intake-ink); word-break: keep-all; }
+.page .identityHeadline, .complete .identityHeadline, .identityHeadline { margin: 0; font-size: clamp(1.375rem, 5.6vw, 1.875rem); line-height: 1.3; font-weight: 800; color: var(--intake-ink); word-break: keep-all; }
 .complete .identityPitch, .identityPitch { margin: 0; font-size: .96875rem; line-height: 1.6; color: var(--intake-ink); opacity: .82; word-break: keep-all; }
 .identityNames { display: grid; gap: 10px; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--app-line); }
 .identityNames h3 { margin: 0; font-size: .9375rem; }
