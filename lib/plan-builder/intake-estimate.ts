@@ -42,6 +42,10 @@ const LEARNER_IN_CUSTOMER = /(?:초·?중·?고등?|초·?중등?|중·?고등?|
 const SOLD_AT: readonly (readonly [RegExp, string])[] = [[/스마트스토어/, "스마트스토어"], [/쿠팡/, "쿠팡"], [/라이브\s*커머스/, "라이브커머스"], [/인스타(?:그램)?\s*(?:공구|마켓|로|에서)/, "인스타그램"], [/배달\s*(?:전문|전용)|배달로?만/, "배달앱"], [/트럭으로|이동\s*판매/, "아파트 장터·길거리"]];
 /** 거래처에 대 주는 일 — '도매시장에서 떼다 파는' 쪽은 아니다 */
 const SUPPLY = /납품|oem|odm|하청|임가공|도매(?!\s*(?:시장|상가|업체)?에서)/i;
+/** 문장에 적은 전문 분야('여드름 관리 전문', 'PT 전문') — 앞의 한두 어절 */
+const FOCUS = /((?:[가-힣a-z0-9]+\s)?[가-힣a-z0-9]+)\s?(전문|특화)(?![가-힣]*(?:가|의|직))/i;
+/** 전문 분야가 아니라 파는 방식·꾸밈말 */
+const MODE_WORD = /배달|포장|테이크아웃|온라인|출장|방문|예약|경력|분야|지역|동네|소규모|1인|여성|남성|유아|초등|중등|고등|성인/;
 const SELLS_GOODS: ReadonlySet<ProposalSector> = new Set(["retail_commerce", "food_beverage", "manufacturing"]);
 const ONLINE = /스토어|오픈마켓|쿠팡|인스타|온라인|자사몰|커머스|앱/;
 /** 매장에 들르는 손님을 가리키는 말 — 온라인·배달로 판다고 적었으면 이 고객 문구는 맞지 않는다 */
@@ -128,6 +132,13 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 납품·도매·OEM이라고 적었으면 손님을 모으는 채널(스마트스토어·인스타그램·매장)이 아니라 거래처를 직접 찾아간다
   // shortcut: 값은 그 종류의 소매가 그대로다, 납품가를 따로 적은 줄이 생기면 그 값을 쓴다
   if (SUPPLY.test(text) && !/영업|거래처|견적/.test(answers.channel ?? "")) answers.channel = "직접 영업·기존 거래처";
+  // '그림책 전문', '고양이 진료 특화'처럼 문장에 적은 전문 분야가 그 종류의 파는 것에 없으면 뒤에 붙여 둔다 — 줄을 더 잘게 나누지 않아도 적은 말이 초안에 남는다
+  const focus = kind && sector !== "software" && answers.offer ? text.match(FOCUS) : null;
+  if (focus && !MODE_WORD.test(focus[1])) {
+    // 이미 파는 것이나 맞은 낱말에 든 말이면(두 글자만 겹쳐도) 붙이지 않는다 — '전기자전거 전문'을 '전기 자전거'에 또 붙이지 않게
+    const has = `${answers.offer}${kind!.word ?? ""}`.replace(/\s/g, "").toLowerCase(), words = focus[1].toLowerCase().split(" ").filter(word => word.length >= 2);
+    if (words.length && !words.some(word => [...word].some((_, at) => at + 2 <= word.length && has.includes(word.slice(at, at + 2))))) answers.offer = `${answers.offer} · ${focus[1]} ${focus[2]}`;
+  }
   // 종류를 못 찾았으면 업종 표의 넓은 답(1회 서비스·개인 소비자)을 채우지 않는다 — 그 두 질문은 평소처럼 묻는다. 문장에 적은 고객은 둔다
   if (!kind) { if (sector !== "software") delete answers.offer; if (!read.customer) delete answers.customer; }
   return { sector, ksic: rule?.ksic ?? null, matched: !!kind, answers };
