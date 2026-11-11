@@ -68,6 +68,9 @@ async function main() {
   assert.equal(ruled("식당 사장님들에게 식자재 납품").ksic, "46329");
   // 같은 줄의 낱말이 여럿 맞으면 낱말 하나만 맞은 줄보다 먼저다(참기름·들기름 방앗간은 떡집이 아니다). 긴 낱말 하나(식자재마트)는 짧은 낱말 둘에 지지 않는다
   assert.deepEqual(["참기름 들기름 짜는 방앗간", "식자재 마트 창업"].map((text) => ruleKind(text)?.offer), ["국산 참기름 300ml 한 병", "식자재 마트"]);
+  // 문장의 낱말이 파는 것에 그대로 든 줄(빙수 → 빙수 한 그릇)이 넓은 낱말의 줄(디저트가게 → 마카롱)보다 먼저다. 어절 토막('판매점'의 매점)은 치지 않는다
+  assert.deepEqual(["빙수 전문 디저트 가게", "베이글 전문 베이커리 오픈 예정"].map((text) => ruled(text).answers.offer), ["빙수 한 그릇", "베이글 한 개"]);
+  assert.doesNotMatch(ruled("무인 반려동물 간식 판매점").answers.offer, /매점/);
   assert.equal(ruled("학원 전용 출결 관리 앱").sector, "software");
   // 나이대 낱말 하나('유아용품'의 유아)는 종류의 고객(부모)을 덮지 않는다. 짚어 말한 고객('외국인 대상')은 그대로 둔다
   assert.doesNotMatch(ruled("유아용품 온라인몰").answers.customer, /^유아$/);

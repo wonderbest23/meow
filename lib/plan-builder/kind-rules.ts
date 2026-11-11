@@ -19,7 +19,7 @@ export const KIND_RULE_ROWS: readonly Row[] = table.rows;
 const JOSA = /(?:에서|으로|[을를이가은는의에로도과와만])$/;
 
 /** 문장에서 가장 긴 낱말이 가리키는 세부 업종. allow 가 거르는 줄은 건너뛰고 다음으로 긴 낱말을 본다. */
-export function ruleKind(text: string, allow: (sector: ProposalSector, ksic: string) => boolean = () => true): (BusinessKind & { ksic: string; word: string }) | null {
+export function ruleKind(text: string, allow: (sector: ProposalSector, ksic: string) => boolean = () => true): (BusinessKind & { ksic: string; word: string; named: boolean }) | null {
   const whole = text.normalize("NFKC").toLowerCase(), phrase = whole.match(CUSTOMER_PHRASE);
   // '직장인을 위한 도시락 배달'은 뒤쪽이 사업이다 — 뒤에서 못 찾을 때만 문장 전체를 본다
   for (const part of phrase ? [phrase[2], whole] : [whole]) {
@@ -47,11 +47,19 @@ export function ruleKind(text: string, allow: (sector: ProposalSector, ksic: str
     for (const [word, , spans] of hits) for (const row of rowsFor(word)!) { const set = covered.get(row) ?? covered.set(row, new Set()).get(row)!; for (const [from, to] of spans) for (let at = from; at < to; at++) set.add(at); }
     // 덮은 글자 수가 같으면 붙어 있던 낱말이 더 많이 맞은 줄이 먼저다
     for (const [word, , spans] of new Map(hits.map(hit => [hit[0], hit])).values()) if (spans.length === 1) for (const row of rowsFor(word)!) extra.set(row, (extra.get(row) ?? 0) + word.length);
-    const score = (row: number) => covered.get(row)!.size + (extra.get(row) ?? 0) / 1000, best = (word: string) => Math.max(...rowsFor(word)!.map(score));
+    // 맞은 낱말이 그 줄의 파는 것에 그대로 들어 있으면(빙수 → '빙수 한 그릇') 그 품목을 짚은 것이다 — 넓은 낱말(디저트가게 → '마카롱')보다 앞에 둔다
+    // 두 글자 낱말은 어절 전체일 때만 친다('판매점'의 매점, '펫시터'의 시터는 아니다). 다른 줄의 더 긴 낱말에 든 낱말도 뺀다('퀵배송대행'의 배송대행은 해외 배송 대행이 아니다)
+    const named = new Set<number>(), whole = new Set([...tokens, ...tokens.map(token => token.replace(JOSA, ""))]), all = [...new Set(hits.map(hit => hit[0]))];
+    const words = all.filter(word => word.length >= 3 || whole.has(word));
+    for (const row of covered.keys()) {
+      const offer = table.rows[row][1].replace(/[^가-힣a-z0-9]/gi, "").toLowerCase();
+      if (words.some(word => offer.includes(word) && !all.some(longer => longer.length > word.length && longer.includes(word) && !rowsFor(longer)!.includes(row)))) named.add(row);
+    }
+    const score = (row: number) => covered.get(row)!.size + (named.has(row) ? 2 : 0) + (extra.get(row) ?? 0) / 1000, best = (word: string) => Math.max(...rowsFor(word)!.map(score));
     hits.sort((a, b) => best(b[0]) - best(a[0]));
     for (const [word] of hits) for (const row of [...rowsFor(word)!].sort((a, b) => score(b) - score(a))) {
       const [ksic, offer, customer, problem, channel, price, unitCost, cost, capacity, staff] = table.rows[row], sector = sectorForKsic(ksic);
-      if (sector && allow(sector, ksic)) return { ksic, word, sector, offer, customer, problem, channel, price, unitCost, cost, capacity, people: staff && (staff === 3 ? "직원 3명 이상" : "직원·아르바이트 1~2명") };
+      if (sector && allow(sector, ksic)) return { ksic, word, named: named.has(row), sector, offer, customer, problem, channel, price, unitCost, cost, capacity, people: staff && (staff === 3 ? "직원 3명 이상" : "직원·아르바이트 1~2명") };
     }
   }
   return null;

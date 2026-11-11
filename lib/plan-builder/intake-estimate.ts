@@ -38,7 +38,7 @@ const CHANNEL_WORD = /^(?:스마트스토어|오픈마켓|온라인쇼핑몰|쇼
 const TOOL_TAIL = /(?:앱|어플|소프트웨어|솔루션|플랫폼|saas|관리\s*(?:프로그램|시스템))(?:\s*(?:개발|제작|서비스|창업|스타트업))?$/i;
 
 /** 낱말 규칙(kind-rules.ruleKind)의 모양. 표가 커서 서버 쪽 호출자가 넘겨준다 — 여기서 import 하면 화면 묶음에 딸려 들어간다 */
-export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: string) => boolean) => (BusinessKind & { ksic: string; word: string }) | null;
+export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: string) => boolean) => (BusinessKind & { ksic: string; word: string; named?: boolean }) | null;
 
 /**
  * 질문 id → 짐작한 답(문자열). 고를 문구가 없는 질문은 빠진다 — 그 질문은 평소처럼 묻는다.
@@ -56,7 +56,7 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   const found = rules?.(said, (sector, ksic) => chosenKsic ? ksic === chosenKsic : tool ? sector === "software" : !chosen || sector === chosen) ?? null;
   // 사전에도 있지만 낱말 규칙이 그보다 짧지 않은 낱말로 맞았으면(청소 → 입주청소, 식당 → 식자재납품) 더 구체적인 규칙 줄을 쓴다. 사업자용 앱·프로그램은 예외다(카페용 앱은 카페가 아니다)
   const handWord = hand?.word.toLowerCase().replace(/\s/g, "") ?? "";
-  const rule = !hand || (found && found.word.length >= handWord.length && !CHANNEL_WORD.test(found.word) && (hand.sector !== "software" || found.sector === "software")) ? found : null;
+  const rule = !hand || (found && (found.word.length >= handWord.length || found.named) && !CHANNEL_WORD.test(found.word) && (hand.sector !== "software" || found.sector === "software")) ? found : null;
   const kind = rule ?? hand, sector = rule?.sector ?? chosen ?? ranked[0];
   const base = kind ?? SECTOR_BASELINES[sector];
   const read = readSentence(text);
