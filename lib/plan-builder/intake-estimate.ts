@@ -52,7 +52,7 @@ const ONLINE = /스토어|오픈마켓|쿠팡|인스타|온라인|자사몰|커�
 const WALK_IN = /동네|퇴근길|근처|인근|산책|구경|들르/;
 /** 가게·병원·학원 운영자가 쓰는 프로그램의 출발값(한 곳당 월 이용료) — 개인용 앱 값(월 5,900원)을 그대로 두지 않는다 */
 const OPERATOR_TOOL: Baseline = { price: 33_000, unitCost: 5_000, cost: 1_500_000, capacity: "한 달 80곳" };
-const TOOL_TAIL = /(?:앱|어플|소프트웨어|솔루션|플랫폼|saas|관리\s*(?:프로그램|시스템)|예약\s*(?:관리\s*)?(?:프로그램|시스템|서비스))(?:\s*(?:개발|제작|서비스|창업|스타트업))?$/i;
+const TOOL_TAIL = /(?:앱|어플|소프트웨어|솔루션|플랫폼|saas|툴|ai\s*(?:튜터|비서)|(?:관리|계산|분석|예측)\s*(?:프로그램|시스템)|예약\s*(?:관리\s*)?(?:프로그램|시스템|서비스))(?:\s*(?:개발|제작|서비스|창업|스타트업))?$/i;
 
 /** 낱말 규칙(kind-rules.ruleKind)의 모양. 표가 커서 서버 쪽 호출자가 넘겨준다 — 여기서 import 하면 화면 묶음에 딸려 들어간다 */
 export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: string) => boolean) => (BusinessKind & { ksic: string; word: string; named?: boolean }) | null;
@@ -65,7 +65,8 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 흔한 표기 차이는 사전 표기로 맞춘 뒤 찾는다
   const spelled = text.replace(/까페/g, "카페").replace(/찌게/g, "찌개");
   // 문장이 앱·프로그램으로 끝나면 파는 것은 소프트웨어다 — 이때는 손님 업종 낱말('학원 전용')이 종류를 정하는 단서라 빼지 않는다
-  const tool = !chosen && TOOL_TAIL.test(spelled.trim());
+  // 뒤에 붙인 값('…프로그램, 월 1만원')은 떼고 본다
+  const tool = !chosen && TOOL_TAIL.test(spelled.trim().replace(/[,.]?\s*(?:월|한\s*달에?)?\s*[0-9.,]+\s*[천만]?\s*원.*$/, "").trim());
   const said = tool ? spelled : spelled.replace(KIND_NOISE, " ");
   const ranked = tool ? ["software" as const] : rankedSectors(said);
   // 세부 업종을 찾으면 그 줄의 답과 숫자를 쓴다: 손으로 쓴 사전(치킨집·꽃집) → 낱말 규칙(수만 개) → 못 찾으면 업종 한 줄 기준값과 칩에서 고른 답
@@ -80,7 +81,8 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   const kind = rule ?? hand, sector = rule?.sector ?? chosen ?? ranked[0];
   const read = readSentence(text);
   const picked = kind ?? SECTOR_BASELINES[sector];
-  const base = sector === "software" && picked.price < 30_000 && /운영자$/.test(read.customer ?? "") ? OPERATOR_TOOL : picked;
+  // 가게·병원 운영자나 공장·기업이 쓰는 프로그램이면 개인용 앱 값 대신 사업자용 출발값을 쓴다
+  const base = sector === "software" && picked.price < 30_000 && !read.price && (/운영자$/.test(read.customer ?? "") || /공장|기업|회사|업체|b2b/i.test(text)) ? OPERATOR_TOOL : picked;
   // 한 달 값으로 적은 가격('월 15만원')인데 건당으로 세는 업종이면 감당하는 양도 한 달 회원 수로 바꾼다 — 건당 자리에 그대로 두면 매출이 몇십 배로 부푼다
   const monthly = !!read.priceMonthly && !base.capacity.startsWith("한 달");
   const price = read.price ?? base.price;
@@ -110,13 +112,15 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 소프트웨어는 줄마다 값이 비슷해 문장이 가장 정확한 설명이다('공유 주차장 예약 플랫폼'이 '체험·모임 예약 중개'가 됐다) — 파는 것은 적은 말 그대로 두고,
   // 줄의 낱말이 파는 것에 그대로 들지 않았으면(넓은 낱말로 맞은 줄) 그 줄의 고객 대신 업종의 넓은 고객을 둔다
   if (sector === "software") {
-    const own = text.trim().replace(/[.!?~\s]*$/, "").replace(/\s*(?:[을를]\s*)?(?:(?:창업|개발|제작|출시|운영)\s*)?(?:(?:만들|하려|해보|준비|시작|생각)[가-힣\s]*)?$/, "").trim();
+    const own = text.trim().replace(/[,.]?\s*(?:월|한\s*달에?)?\s*[0-9.,]+\s*[천만]?\s*원.*$/, "").replace(/[.!?~\s]*$/, "").replace(/\s*(?:[을를]\s*)?(?:(?:창업|개발|제작|출시|운영)\s*)?(?:(?:만들|하려|해보|준비|시작|생각)[가-힣\s]*)?$/, "").trim();
     if (own.length >= 4 && own.length <= 30) {
       answers.offer = own;
       // 누가 쓰는지는 문장에 없으면 짐작하지 않는다 — 고객 질문을 그대로 묻는다
       if (rule && !rule.named) { if (hand?.customer) answers.customer = hand.customer; else delete answers.customer; }
     }
   }
+  // 사전의 넓은 고객('개인 사용자')은 짐작이 아니라 빈칸에 가깝다 — 고객 질문을 묻는다
+  if (sector === "software" && answers.customer === "개인 사용자" && !read.customer) delete answers.customer;
   // 소프트웨어는 동네 가게처럼 지도 검색으로 손님을 만나지 않는다. 가게·병원 운영자가 쓰는 프로그램은 찾아가서 판다
   if (sector === "software") {
     if (/운영자$/.test(read.customer ?? "") && /인스타|앱스토어|앱 마켓|플레이스/.test(answers.channel ?? "")) answers.channel = "직접 영업·업종 커뮤니티";
@@ -140,6 +144,8 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 시장 안에서 하는 장사는 배달앱이 아니라 지나는 손님이다. 기업 출강은 개인 수강생이 아니라 회사 교육 담당자다
   if (/시장\s*(?:안|내|에서)/.test(text) && answers.channel === "배달앱") answers.channel = "매장 방문";
   if (/출강/.test(text) && kind) { answers.channel = "직접 영업·기존 거래처"; if (!read.customer || /^(?:기업|회사)$/.test(read.customer)) answers.customer = "직원 교육을 맡은 기업 인사·교육 담당자"; }
+  // 수출이라고 적었으면 국내 손님이 아니라 해외 바이어다(수출 줄이 맞았으면 그 줄의 답을 둔다)
+  if (/수출|해외\s*(?:판매|바이어)/.test(text) && kind && !read.customer && !/수출|무역|해외/.test(answers.offer ?? "")) { answers.customer = "한국 제품을 들여가려는 해외 바이어·현지 유통상"; answers.channel = "수출 상담회·해외 바이어 직접 영업"; }
   // 납품·도매·OEM이라고 적었으면 손님을 모으는 채널(스마트스토어·인스타그램·매장)이 아니라 거래처를 직접 찾아간다
   // shortcut: 값은 그 종류의 소매가 그대로다, 납품가를 따로 적은 줄이 생기면 그 값을 쓴다
   if (SUPPLY.test(text) && !/영업|거래처|견적/.test(answers.channel ?? "")) answers.channel = "직접 영업·기존 거래처";

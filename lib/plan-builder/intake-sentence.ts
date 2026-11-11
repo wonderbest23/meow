@@ -44,7 +44,9 @@ function readCustomer(text: string): { customer: string; loose?: boolean } | und
   if (venue) return { customer: venue[2] === "창업" ? `${venue[1]} 창업을 준비하는 사람` : `${venue[1]} 운영자` };
   const supplied = text.match(SUPPLIED);
   if (supplied) return { customer: /시장$/.test(supplied[1] ?? "") ? `${supplied[1]} 상인` : `납품받는 ${supplied[1] ?? supplied[2]}` };
-  if (SUPPLY_WORK.test(text)) return { customer: /oem|odm|하청|임가공/i.test(text) ? "자기 상표로 팔 제품을 맡기는 판매 업체" : "납품받는 매장·식당·유통업체" };
+  // 하청·임가공은 맞은 줄의 고객(원단 컨버터, 부품 업체)이 더 정확하다 — 줄을 못 찾았을 때만 이 넓은 말을 쓴다(loose)
+  if (/하청|임가공/.test(text)) return { customer: "부품·가공을 맡기는 제조 업체", loose: true };
+  if (SUPPLY_WORK.test(text)) return { customer: /oem|odm/i.test(text) ? "자기 상표로 팔 제품을 맡기는 판매 업체" : "납품받는 업체" };
   for (const who of text.matchAll(WHO_RUN)) {
     if (!FOUNDER.test(text.slice(who.index + who[0].length)) && !/(?:저는|제가|나는|내가)\s?$/.test(text.slice(0, who.index))) return { customer: who[0].trim(), loose: /^(?:영?유아|아기|어린이|아동|키즈|노인|어르신|시니어|성인)$/.test(who[0].trim()) };
   }
