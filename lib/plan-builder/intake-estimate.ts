@@ -73,7 +73,7 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
     // 가격을 문장에서 읽었으면 건당 비용도 같은 비율로 맞춘다
     "structure.unitCost": `${price === base.price ? base.unitCost : Math.round(price * base.unitCost / base.price / 100) * 100}원`,
     "structure.cost": `${base.cost}원`,
-    capacity: `${read.people ?? "대표자 혼자"} / ${amount}`,
+    capacity: `${read.people ?? kind?.people ?? "대표자 혼자"} / ${amount}`,
     goal: read.goal ?? "6개월 안에 손익분기 도달",
   };
   if (read.budget) answers.budget = `${read.budget}원`;

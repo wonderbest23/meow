@@ -186,7 +186,7 @@ async function main() {
       assert.equal(channel.filter(option => option.group === options.CHIP_GROUPS.channelSector).length, 2);
       channel.forEach(option => { noSeparators(option.label); assert.ok(option.label.length <= 20, `channel "${option.label}" ≤ 20 chars`); });
       const capacity = options.sectorChipOptions(sector, "capacity");
-      assert.equal(capacity.filter(option => option.group === options.CHIP_GROUPS.people).length, 5);
+      assert.equal(capacity.filter(option => option.group === options.CHIP_GROUPS.people).length, 6);
       assert.ok(capacity.filter(option => option.group === options.CHIP_GROUPS.unit).length >= 5);
       assert.equal(capacity.filter(option => option.group === options.CHIP_GROUPS.period).length, 3);
       for (const mode of modes) {

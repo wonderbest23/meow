@@ -29,8 +29,9 @@ function read(path) {
     if (skip) skipped.add(skip[1]);
     if (!line.trim() || line.startsWith("#")) return;
     const cells = line.split("\t").map(cell => cell.trim());
-    if (cells.length !== 10) return bad(`칸이 ${cells.length}개 (10개여야 함)`);
-    const [code, offer, wordList, customer, problem, channel, p, u, c, capacity] = cells;
+    if (cells.length !== 10 && cells.length !== 11) return bad(`칸이 ${cells.length}개 (10개, 인원 칸까지 11개여야 함)`);
+    const [code, offer, wordList, customer, problem, channel, p, u, c, capacity, people] = cells;
+    if (people !== undefined && people !== "1" && people !== "3") bad(`인원 '${people}': 1(직원 1~2명) 또는 3(3명 이상), 혼자면 칸을 비움`);
     const target = todo.get(code);
     if (!target || target.batch !== batch) return bad(`${code}: 이 묶음 todo에 없는 코드`);
     for (const [label, text, min, max] of [["offer", offer, 2, 30], ["customer", customer, 4, 40], ["problem", problem, 4, 50], ["channel", channel, 2, 30]])
@@ -53,7 +54,7 @@ function read(path) {
     if (["subscription", "project", "commission"].includes(target.revenue) && amount[1] !== "한 달") bad(`${target.revenue} 분류는 capacity가 '한 달 N…'`);
     if (target.revenue === "subscription" && amount[3] !== "명") bad("subscription 분류는 capacity 단위가 '명'");
     if (target.revenue === "per_hour" && amount[3] !== "시간") bad("per_hour 분류는 capacity 단위가 '시간'");
-    rows.push({ code, offer, words, customer, problem, channel, price, unitCost, cost, capacity });
+    rows.push({ code, offer, words, customer, problem, channel, price, unitCost, cost, capacity, people });
   });
   const covered = new Set(rows.map(row => row.code));
   const missing = [...todo].filter(([code, target]) => target.batch === batch && !covered.has(code) && !skipped.has(code)).map(([code, target]) => `${code} ${target.name}`);
@@ -75,7 +76,7 @@ if (command === "check" && file) {
   const order = all.map((row, index) => index).sort((a, b) => (all[a].code < "45" ? 1 : 0) - (all[b].code < "45" ? 1 : 0) || a - b);
   const words = {};
   for (const index of order) for (const word of all[index].words) if ((words[word] ??= []).length < 3) words[word].push(index);
-  const json = JSON.stringify({ rows: all.map(row => [row.code, row.offer, row.customer, row.problem, row.channel, row.price, row.unitCost, row.cost, row.capacity]), words: Object.entries(words).map(([word, rows]) => [word, ...rows]) });
+  const json = JSON.stringify({ rows: all.map(row => [row.code, row.offer, row.customer, row.problem, row.channel, row.price, row.unitCost, row.cost, row.capacity, ...(row.people ? [Number(row.people)] : [])]), words: Object.entries(words).map(([word, rows]) => [word, ...rows]) });
   const gzip = gzipSync(json).length;
   console.log(`${all.length}줄 · 낱말 ${Object.keys(words).length}개 · ${(json.length / 1024).toFixed(0)}KB(글자 수) · gzip ${(gzip / 1024).toFixed(0)}KB`);
   if (gzip > MAX_GZIP) { console.log(`gzip ${gzip} > ${MAX_GZIP} — 묶음이 너무 큼`); process.exit(1); }

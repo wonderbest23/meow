@@ -52,6 +52,8 @@ const CAPACITY = /(하루|매일|일주일|한\s?주|매주|한\s?달|매달)(?:
 const PERIOD: Record<string, "하루" | "일주일" | "한 달"> = { 하루: "하루", 매일: "하루", 일주일: "일주일", 한주: "일주일", 매주: "일주일", 한달: "한 달", 매달: "한 달" };
 // 같이·함께 뒤 두 낱말 안에 시작하는 말이 있어야 동업이다('친구와 함께 놀러 갈 수 있는 카페'는 아니다)
 const TOGETHER = /둘이서?|셋이서?|동업|(?<!신혼)부부(?!\s*(?:대상|[를을]|에게|상담|클리닉|모임))|(?:친구|가족|남편|아내|언니|오빠|형|누나|동생|엄마|어머니|아버지|아빠|부모님)(?:와|과|랑|이랑|하고)\s?(?:같이|함께|둘이)\s?(?:[가-힣]+\s){0,2}?[가-힣]*(?:창업|운영|시작|열|차리|차려|하려|해\s?보|하고\s?싶|만들|준비|꾸리)/;
+/** 혼자 한다고 말한 문장 — '1인 가구'·'1인분'은 고객·양 이야기라 보지 않는다 */
+export const SOLO = /(?:^|[^\d])1인(?!\s*(?:가구|분|용|당|석|실|세대|기준))|(?:혼자|나\s*홀로|홀로)\s*(?:서\s*)?(?:운영|하|할|해|일|시작|창업|꾸려)/;
 const STAFF = /(?:직원|알바|아르바이트)(?:생)?\s?(?:\d명|한\s?명|두\s?명|[을를]\s?(?:두고|쓰고|고용|뽑))/;
 
 export function readSentence(text: string): SentenceFacts {
@@ -81,5 +83,6 @@ export function readSentence(text: string): SentenceFacts {
   if (hours && Number(hours[1]) > 0 && Number(hours[1]) <= 168) facts.hours = Number(hours[1]);
   if (TOGETHER.test(text)) facts.people = "동업자·가족과 함께";
   else if (STAFF.test(text)) facts.people = "직원·아르바이트 1~2명";
+  else if (SOLO.test(text)) facts.people = "대표자 혼자";
   return facts;
 }

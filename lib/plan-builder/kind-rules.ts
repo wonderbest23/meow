@@ -10,7 +10,7 @@ import type { ProposalSector } from "./proposal-blueprint";
  * 손으로 쓴 사전(business-kinds)에 없는 종류와, 사전 낱말보다 짧지 않은 낱말로 맞은 종류(청소 → 입주청소)가 여기 줄을 쓴다. 숫자는 통계가 아니라 출발용 짐작값이다.
  * shortcut: 이 낱말들은 초안 짐작에만 쓴다(업종 검색·칩에는 안 쓴다), 실제 문장에서 잘 맞는 것이 확인되면 searchKsic 동의어로도 넘긴다.
  */
-type Row = [ksic: string, offer: string, customer: string, problem: string, channel: string, price: number, unitCost: number, cost: number, capacity: string];
+type Row = [ksic: string, offer: string, customer: string, problem: string, channel: string, price: number, unitCost: number, cost: number, capacity: string, people?: 1 | 3];
 const table = data as unknown as { rows: Row[]; words: [string, ...number[]][] };
 let index: Map<string, number[]> | undefined;
 const rowsFor = (word: string) => (index ??= new Map(table.words.map(([key, ...rows]) => [key, rows]))).get(word);
@@ -42,8 +42,8 @@ export function ruleKind(text: string, allow: (sector: ProposalSector, ksic: str
     // 긴 낱말이 먼저, 길이가 같으면 뒤에 나온 낱말이 먼저(우리말은 중심 낱말이 뒤에 온다)
     hits.sort((a, b) => b[0].length - a[0].length || b[1] - a[1]);
     for (const [word] of hits) for (const row of rowsFor(word)!) {
-      const [ksic, offer, customer, problem, channel, price, unitCost, cost, capacity] = table.rows[row], sector = sectorForKsic(ksic);
-      if (sector && allow(sector, ksic)) return { ksic, word, sector, offer, customer, problem, channel, price, unitCost, cost, capacity };
+      const [ksic, offer, customer, problem, channel, price, unitCost, cost, capacity, staff] = table.rows[row], sector = sectorForKsic(ksic);
+      if (sector && allow(sector, ksic)) return { ksic, word, sector, offer, customer, problem, channel, price, unitCost, cost, capacity, people: staff && (staff === 3 ? "직원 3명 이상" : "직원·아르바이트 1~2명") };
     }
   }
   return null;

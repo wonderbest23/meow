@@ -1,3 +1,4 @@
+import { SOLO } from "../../../../lib/plan-builder/intake-sentence";
 import type { IntakeSnapshot } from "../../../../lib/plan-builder/intake-types";
 import type { IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { parseIntakeNote } from "../../../../lib/plan-builder/intake-note-parser";
@@ -68,7 +69,7 @@ export function mentionsSolo(snapshot: IntakeSnapshot): boolean {
     ...snapshot.coach.fields.filter(field => field.basis === "user" && field.key === "business").map(field => field.value),
     snapshot.coach.ideaOrigin?.text ?? "",
   ];
-  return texts.some(text => /(?:^|[^\d])1인(?!\s*(?:가구|분|용|당|석|실|세대|기준))|(?:혼자|나\s*홀로|홀로)\s*(?:서\s*)?(?:운영|하|할|해|일|시작|창업|꾸려)/.test(text) && !uncertainContext.test(text));
+  return texts.some(text => SOLO.test(text) && !uncertainContext.test(text));
 }
 
 const HELP: Record<string, string> = {
