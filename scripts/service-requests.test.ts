@@ -199,6 +199,6 @@ const RETIRED = ["business-registration", "mail-order-report", "industry-license
   assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }), newer.id, "60초 안의 같은 문의는 찾는다");
   assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "다른 질문" }), null, "내용이 다르면 새 문의");
   assert.equal(await findRecentDuplicateLead(otherSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }), null, "다른 홈페이지 문의와 섞이지 않는다");
-  assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }, 0), null, "시간이 지나면 새 문의");
+  assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }, -1000), null, "시간이 지나면 새 문의"); // 0이면 같은 1/1000초에 만든 문의가 걸려 가끔 실패한다
   console.log("service-requests: ok");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
