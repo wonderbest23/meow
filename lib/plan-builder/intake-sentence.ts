@@ -29,9 +29,11 @@ const PERSON = new RegExp(`${WHO}|님|고객|손님|사람|주민|가족|커플|
 const MARKED = /(?:^|[\s,])((?:[가-힣A-Za-z0-9~·]+\s?){1,3}?)\s?(대상|[을를]\s?위한|에게)/;
 
 // 사업체를 상대로 하는 일('병원 마케팅 대행', '미용실 전용 예약 앱', '카페 창업 컨설팅') — 앞의 업종이 고객이다
-const VENUE_WORK = /(?:^|\s)(카페|식당|음식점|미용실|네일샵|학원|병원|의원|치과|한의원|약국|헬스장|펜션|숙박업소|호텔|편의점|쇼핑몰|어린이집|유치원|부동산|프랜차이즈)\s*(전용|전문|창업)?\s*(?:[가-힣a-z]+\s){0,2}?[가-힣a-z]*(?:마케팅|광고|홍보|컨설팅|인테리어|간판|앱|어플|프로그램|솔루션|시스템|소프트웨어|대행|디자인|세무|기장|청소|방역|플랫폼)/i;
+const VENUE_WORK = /(?:^|\s)(카페|식당|음식점|미용실|네일샵|학원|병원|의원|치과|한의원|약국|헬스장|펜션|숙박업소|호텔|편의점|쇼핑몰|어린이집|유치원|부동산|프랜차이즈)\s*(전용|전문|창업)?\s*(?:[가-힣a-z]+\s){0,3}?[가-힣a-z]*(?:saas|erp|pos|키오스크|마케팅|광고|홍보|컨설팅|인테리어|간판|앱|어플|프로그램|솔루션|시스템|소프트웨어|대행|디자인|세무|기장|청소|방역|플랫폼)/i;
 // '마트에 납품', '식당에 납품' — 납품받는 곳이 고객이다
-const SUPPLIED = /([가-힣a-z]+)에\s?납품/i;
+const SUPPLIED = /([가-힣a-z]+)(?:에\s?납품|\s?납품용)/i;
+// 어디에 납품하는지는 안 적었어도 납품·주문자 상표·하청이면 고객은 소비자가 아니라 업체다
+const SUPPLY_WORK = /납품|oem|odm|하청|임가공/i;
 
 function readCustomer(text: string): { customer: string; loose?: boolean } | undefined {
   const marked = text.match(MARKED);
@@ -41,7 +43,8 @@ function readCustomer(text: string): { customer: string; loose?: boolean } | und
   const venue = text.match(VENUE_WORK);
   if (venue) return { customer: venue[2] === "창업" ? `${venue[1]} 창업을 준비하는 사람` : `${venue[1]} 운영자` };
   const supplied = text.match(SUPPLIED);
-  if (supplied) return { customer: supplied[1] };
+  if (supplied) return { customer: `납품받는 ${supplied[1]}` };
+  if (SUPPLY_WORK.test(text)) return { customer: "납품받는 업체" };
   for (const who of text.matchAll(WHO_RUN)) {
     if (!FOUNDER.test(text.slice(who.index + who[0].length)) && !/(?:저는|제가|나는|내가)\s?$/.test(text.slice(0, who.index))) return { customer: who[0].trim(), loose: /^(?:영?유아|아기|어린이|아동|키즈|노인|어르신|시니어|성인)$/.test(who[0].trim()) };
   }

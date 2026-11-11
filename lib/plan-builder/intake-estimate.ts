@@ -89,8 +89,18 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
     const guess = kind?.[field] || localFieldSuggestions(text, field, [sector], "startup")[0];
     if (guess) answers[field] = guess;
   }
+  // 소프트웨어는 줄마다 값이 비슷해 문장이 가장 정확한 설명이다('공유 주차장 예약 플랫폼'이 '체험·모임 예약 중개'가 됐다) — 파는 것은 적은 말 그대로 두고,
+  // 줄의 낱말이 파는 것에 그대로 들지 않았으면(넓은 낱말로 맞은 줄) 그 줄의 고객 대신 업종의 넓은 고객을 둔다
+  if (sector === "software") {
+    const own = text.trim().replace(/[.!?~\s]*$/, "").replace(/\s*(?:[을를]\s*)?(?:(?:창업|개발|제작|출시|운영)\s*)?(?:(?:만들|하려|해보|준비|시작|생각)[가-힣\s]*)?$/, "").trim();
+    if (own.length >= 4 && own.length <= 30) {
+      answers.offer = own;
+      // 관리·솔루션·외주 같은 말이 있으면 쓰는 쪽은 개인이 아니라 사업체다
+      if (rule && !rule.named) answers.customer = /솔루션|saas|관리|외주|유지\s?보수|자동|b2b|erp|pos|키오스크|기업|업체|매장/i.test(text) ? "자영업자·소규모 매장" : "개인 사용자";
+    }
+  }
   // 사용자가 적은 고객이 표의 고객 문구에 이미 들어 있으면 더 자세한 표 문구를 둔다. 종류를 찾았는데 문장 속 낱말 하나뿐이면('유아용품'의 유아) 그 종류의 고객(아이 키우는 부모)을 둔다
-  if (read.customer && !(read.customerLoose && kind) && !answers.customer?.includes(read.customer)) answers.customer = read.customer;
+  if (read.customer && !(read.customerLoose && kind) && !answers.customer?.includes(read.customer.replace(/^납품받는 /, ""))) answers.customer = read.customer;
   // 교육: 문장에 적은 나이대(초등·어린이·성인)가 종류의 고객 문구와 다르면 그 자리만 바꾼다('수학에서 자꾸 막히는 중·고등학생' → 초등학생)
   const learner = sector === "education" ? LEARNERS.find(([test]) => test.test(text))?.[1] : undefined;
   if (learner && answers.customer && !answers.customer.includes(learner) && LEARNER_IN_CUSTOMER.test(answers.customer)) answers.customer = answers.customer.replace(LEARNER_IN_CUSTOMER, learner);
