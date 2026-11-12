@@ -10,3 +10,8 @@ code	name	path	sector	revenue
 76110	자동차 임대업	임대업; 부동산 제외 > 운송장비 임대업 > 자동차 임대업	general	rental
 03211	해수면 양식 어업	어업 > 양식어업 및 어업관련 서비스업 > 양식 어업	general	per_unit
 03112	연근해 어업	어업 > 어로 어업 > 해수면 어업	general	per_unit
+03212	내수면 양식 어업	어업 > 양식어업 및 어업관련 서비스업 > 양식 어업	general	per_unit
+02012	육림업	임업 > 임업 > 영림업	general	per_unit
+02030	임산물 채취업	임업 > 임업 > 임산물 채취업	general	per_unit
+28303	절연 코드세트 및 기타 도체 제조업	전기장비 제조업 > 절연선 및 케이블 제조업 > 절연선 및 케이블 제조업	manufacturing	per_unit
+41111	단독 주택 건설업	종합 건설업 > 건물 건설업 > 주거용 건물 건설업	local_service	project
