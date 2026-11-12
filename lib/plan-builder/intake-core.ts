@@ -856,10 +856,12 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   if (intake.mode !== "startup" || !business) return;
   const messageId = `${requestId}${ESTIMATE_SUFFIX}`, drafted = Object.keys(plan.sections).length > 0;
   const open = (id: string) => { const answer = intake.answers[id]; return !answer || !drafted && answer.messageId.endsWith(ESTIMATE_SUFFIX); };
-  const { sector, ksic, matched, answers } = open("industry") ? estimateIntake(business, undefined, rules) : estimateIntake(business, intake.sector, rules, intake.ksic);
+  // 업종을 '잘 모르겠어요'로 넘겼으면 고른 것이 없다 — 문장에서 찾은 종류를 그대로 쓴다(넓은 업종으로 걸러 '승마 체험장'을 못 찾던 문제)
+  const free = open("industry") || intake.answers.industry?.status === "unknown";
+  const { sector, ksic, matched, answers } = free ? estimateIntake(business, undefined, rules) : estimateIntake(business, intake.sector, rules, intake.ksic);
   // 업종도 모르고 종류도 못 찾았으면 아무것도 채우지 않는다 — 업종 질문을 먼저 묻고, 고르면 그 업종으로 다시 채운다
   if (open("industry") && !matched) return;
-  if (open("industry")) {
+  if (open("industry") || free && matched) {
     // 낱말 규칙으로 찾은 분류도 짐작이다 — 값·수량 이름(월 회비·프로젝트 1건)이 그 분류를 따르게 넣어 두고, 사용자가 업종을 고르면 그것으로 바뀐다
     intake.sector = sector; intake.ksic = ksic;
     coach.business.industry = intakeSectorOptions.find(option => option.value === sector)?.label ?? sector;

@@ -96,6 +96,9 @@ async function main() {
   assert.match(ruled("피부관리실, 여드름 관리 전문").answers.offer, / · 여드름 전문$/);
   assert.match(ruled("강아지 유치원 겸 호텔").answers.offer, / · 호텔$/);
   assert.deepEqual([ruled("승마 체험장").answers.offer, ruled("승마 체험장").answers.price], ["승마 체험 1회", "75000원"]);
+  // 고른 업종 안에 그 종류가 없으면 전체 표에서 찾는다(업종은 고른 대로). 소프트웨어를 골랐으면 찾지 않는다
+  assert.deepEqual(["general", "local_service"].map(chip => estimateIntake("맞춤 정장 테일러숍", chip as never, ruleKind).answers.offer), ["맞춤 정장 한 벌", "맞춤 정장 한 벌"]);
+  assert.doesNotMatch(estimateIntake("동네 카페 예약 관리", "software", ruleKind).answers.offer ?? "", /아메리카노|라테/);
   // 'X 전용'의 X 가 종류 이름의 일부면 떼지 않는다(배드민턴 전용 체육관은 다목적 체육관이 아니다). 표에 없던 업종 줄: 내수면 양식·환자 유치·설치 대행
   assert.match(ruled("배드민턴 전용 체육관, 대관이랑 레슨").answers.offer, /배드민턴/);
   assert.deepEqual(["민물장어 양식장", "외국인 환자 유치업, 의료 관광", "TV 벽걸이 커튼 액자 설치 대행"].map(text => ruled(text).ksic), ["03212", "75290", "95399"]);
@@ -177,6 +180,15 @@ async function main() {
     const priced = await send({ action: "answer", questionId: "price", value: "9,900원" });
     const price = readCoach(priced.plan.answers)!.fields.find(field => field.key === "price")!;
     assert.deepEqual([price.basis, price.value], ["user", "9900원"]);
+  }
+  // 업종을 '잘 모르겠어요'로 넘긴 뒤 적은 문장도 표에서 종류를 찾는다(넓은 업종으로 거르지 않는다)
+  {
+    const ownerHash = `intake-estimate-${randomUUID()}`;
+    const { plan } = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: "무언가 새로 해 보려고 해요", revision: 0, requestId: randomUUID() }, off);
+    const send = async (command: Record<string, unknown>) => saveIntakeCommand(ownerHash, { ...command, planId: plan.id, revision: readCoach((await loadPlanState(ownerHash)).plans.find(item => item.id === plan.id)!.answers)!.revision, requestId: randomUUID() } as never, off);
+    await send({ action: "answer", questionId: "industry", value: null, unknown: true });
+    const riding = await send({ action: "answer", questionId: "business", value: "승마 체험장" });
+    assert.match(readCoach(riding.plan.answers)!.fields.find(field => field.key === "offer")?.value ?? "", /승마/);
   }
   // 문장에 적은 자금·시간은 초안에 들어간다(적지 않았으면 위처럼 비워 둔다)
   const stated = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "자본금 3천만원으로 주 20시간만 하는 네일샵을 열려고 해요", revision: 0, requestId: randomUUID() }, off);

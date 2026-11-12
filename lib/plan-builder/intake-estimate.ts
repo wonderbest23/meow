@@ -78,7 +78,10 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 공장·제조라고 적었으면 같은 낱말의 가게·도매 줄보다 만드는 줄을 먼저 본다('냉동 만두 만드는 식품 공장'이 냉동식품 할인점이 됐다)
   const makes = !tool && !chosen && !chosenKsic && /공장(?!\s*(?:청소|철거|자동화|설비|부지|임대|매매))|제조/.test(said);
   // 제조업은 분류 앞 두 자리가 10~34다(식품 제조는 업종 묶음이 음식이라 묶음 이름으로는 못 고른다)
-  const stripped = (makes ? rules?.(said, (_, ksic) => ksic >= "10" && ksic < "35") : null) ?? rules?.(said, (sector, ksic) => chosenKsic ? ksic === chosenKsic : tool ? sector === "software" : !chosen || sector === chosen) ?? null;
+  const stripped = (makes ? rules?.(said, (_, ksic) => ksic >= "10" && ksic < "35") : null) ?? rules?.(said, (sector, ksic) => chosenKsic ? ksic === chosenKsic : tool ? sector === "software" : !chosen || sector === chosen) 
+    // 고른 업종 안에 그 종류가 없으면 전체 표에서 찾는다 — 화면 업종 칸은 넓어서 사람마다 다르게 고른다(맞춤 정장을 '생활 서비스'로, 법무사를 '기타'로). 업종 자체는 고른 대로 둔다
+    // 소프트웨어를 골랐으면 찾지 않는다(카페 예약 앱은 카페가 아니다)
+    ?? (chosen && chosen !== "software" && !chosenKsic ? rules?.(said, sector => sector !== "software") : null) ?? null;
   // 'X 전용'은 보통 고객이라 떼고 찾지만, X 가 종류 이름의 일부면(배드민턴 전용 체육관 → 배드민턴체육관) 떼지 않은 문장에서 찾은 줄을 쓴다
   const own = !tool && !chosen && !chosenKsic && spelled.match(/([가-힣a-z]+)\s*전용\s/i)?.[1], whole = own ? rules?.(spelled, () => true) : null;
   const found = whole && whole.word.includes(own as string) && whole.word.length > (own as string).length ? whole : stripped;
