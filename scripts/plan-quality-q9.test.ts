@@ -143,7 +143,7 @@ async function main() {
     assert.match(nail.reference, /규모\(영업 시간·메뉴 수\)/);
     assert.match(nail.table, /\| 경우 \| 한 달 예약·시술 \|/);
     assert.match(nail.table, /받을 수 있는 예약 건수 최대치: 하루 6건 × 월 26일 영업 = 월 156건\. 어느 경우도 이보다 많이 받지 않는다고/);
-    assert.match(nail.summary, /조심스러운 경우 25건 예약·시술/);
+    assert.match(nail.summary, /조심스러운 경우\(본전의 절반만 팔릴 때\) 25건 예약·시술/);
     assert.match(tutor.reference, /본전 등록 학생 수\(한 달 1명\) 이상이면 계획대로/);
     assert.match(tutor.reference, /1명 더 등록받을 때마다/);
     assert.match(tutor.table, /\| 경우 \| 한 달 등록 \|/);

@@ -65,7 +65,7 @@ async function main() {
     const first = lines.find(line => line.label === "첫 달 가정");
     assert.ok(first, lines.map(line => `${line.label}: ${line.value}`).join("\n"));
     // 저장된 생활비(1,500,000원)는 계산하지 않고(계획서 품질 Q3), 한 개에 실제 남는 돈 = 25,000 − 부가세 2,273 − 8,000 = 14,727원
-    assert.match(first!.value, /^조심스러운 경우 11개 판매 \/ 매출 275,000원 \/ 한 달 -138,003원/, first!.value);
+    assert.match(first!.value, /^조심스러운 경우\(본전의 절반만 팔릴 때\) 11개 판매 \/ 매출 275,000원 \/ 한 달 -138,003원/, first!.value);
     assert.doesNotMatch(first!.value, /생활비/);
     assert.match(first!.value, /목표 경우 6개월차 120개/);
     assert.ok(!JSON.stringify(lines).includes("520"), "capacity never appears as first-month sales");
