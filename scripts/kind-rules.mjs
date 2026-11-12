@@ -48,8 +48,11 @@ function read(path) {
     const amount = capacity.match(/^(하루|일주일|한 달) ([\d,]+)([가-힣·]+)$/);
     if (![price, unitCost, cost].every(Number.isFinite) || !amount) return bad("숫자 칸은 정수, capacity는 '하루 40그릇' 꼴");
     const volume = Math.round(Number(amount[2].replace(/,/g, "")) * FACTOR[amount[1]]), profit = volume * (price - unitCost) - cost;
+    // 계획서 계산은 판매가에서 부가세(1/11)를 뺀 뒤 남는 돈으로 본전을 본다 — 그 기준으로도 다 팔면 본전을 넘어야 한다
+    const afterVat = volume * (price * 10 / 11 - unitCost) - cost;
     if (price < 100 || unitCost >= price || cost < 100_000) bad("price ≥ 100, unitCost < price, cost ≥ 10만원");
     else if (profit <= 0) bad(`적자: 한 달 ${volume} × (${price} − ${unitCost}) ≤ ${cost}`);
+    else if (afterVat <= 0) bad(`부가세를 빼면 적자: 한 달 ${volume} × (${price} × 10/11 − ${unitCost}) ≤ ${cost}`);
     else if (profit > 20_000_000 || volume * price > 100_000_000) bad(`과장: 한 달 남는 돈 ${profit.toLocaleString()}원 / 매출 ${(volume * price).toLocaleString()}원`);
     // 직원이 있어야 하는 종류는 고정비에 그 사람들 급여가 들어 있어야 한다(1명 월 220만원 어림)
     if (people && cost < Number(people) * 2_200_000) bad(`고정비 ${cost.toLocaleString()}원: 직원 ${people === "3" ? "3명 이상" : "1~2명"} 급여가 빠짐 (${(Number(people) * 2_200_000).toLocaleString()}원 이상)`);
