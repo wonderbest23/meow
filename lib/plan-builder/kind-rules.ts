@@ -64,3 +64,7 @@ export function ruleKind(text: string, allow: (sector: ProposalSector, ksic: str
   }
   return null;
 }
+
+/** 표가 아는 품목 낱말인가 — 낱말 그대로이거나, 두 글자면 그 품목을 다루는 종류가 있을 때('장판' → 장판시공, '수학' → 수학학원) */
+const KIND_TAIL = ["시공", "공사", "청소", "설치", "수리", "제작", "판매", "가게", "집", "전문점", "학원", "과외", "레슨", "샵", "점", "교실", "도매", "농장", "재배", "업체", "용역", "대행", "공방", "매장", "출원", "번역"];
+ruleKind.knows = (word: string) => !!rowsFor(word) || (word.length === 2 && KIND_TAIL.some(tail => rowsFor(word + tail)));

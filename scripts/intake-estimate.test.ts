@@ -89,6 +89,9 @@ async function main() {
   assert.equal(ruled("화물 배차 앱").answers.customer, undefined);
   assert.match(ruled("일본으로 김 수출").answers.customer, /해외 바이어/);
   assert.equal(ruled("수출 중소기업 대상 해외 마케팅 대행").answers.customer, "수출 중소기업");
+  // 짧은 명사구에서 파는 것에 안 담긴 품목 낱말은 뒤에 남긴다. 어디에나 붙는 말·가게 이름·조사가 붙은 문장은 그대로 둔다
+  assert.deepEqual(["특허 상표 출원 대행", "속눈썹 연장 왁싱", "치킨집 창업 준비", "대학가 앞에서 컵밥 장사"].map(text => ruled(text).answers.offer.split(" · ")[1]), ["특허", "왁싱", undefined, undefined]);
+  assert.match(ruled("도배 장판").answers.offer, /도배.*장판|장판.*도배/);
   // 'X 전용'의 X 가 종류 이름의 일부면 떼지 않는다(배드민턴 전용 체육관은 다목적 체육관이 아니다). 표에 없던 업종 줄: 내수면 양식·환자 유치·설치 대행
   assert.match(ruled("배드민턴 전용 체육관, 대관이랑 레슨").answers.offer, /배드민턴/);
   assert.deepEqual(["민물장어 양식장", "외국인 환자 유치업, 의료 관광", "TV 벽걸이 커튼 액자 설치 대행"].map(text => ruled(text).ksic), ["03212", "75290", "95399"]);
