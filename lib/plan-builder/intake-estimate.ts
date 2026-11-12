@@ -46,7 +46,7 @@ const SUPPLY = /납품|oem|odm|하청|임가공|도매(?!\s*(?:시장|상가|업
 const FOCUS = /((?:[가-힣a-z0-9]+\s)?[가-힣a-z0-9]+)\s?(전문|특화)(?![가-힣]*(?:가|의|직))/i;
 /** 전문 분야가 아니라 파는 방식·꾸밈말 */
 // 조사·어미가 붙은 어절(앞에서·만드는·하려고) — 이런 어절이 있으면 명사구가 아니다
-const NOT_NOUN = /(?:에서|으로|해서|하는|하고|이랑|려고|에게|한테|부터|까지|[을를은는에의]|[가-힣]{3,}로|[가-힣](?:는|던|할|한|된|될)|요|다|겸)$/;
+const NOT_NOUN = /(?:에서|으로|해서|하는|하고|이랑|려고|에게|한테|부터|까지|[을를은는에의]|[가-힣]{3,}로|[가-힣](?:는|던|할|한|된|될)|요|다)$/;
 // 어느 업종에나 붙는 말 — 남겨도 뜻이 없다
 const PLAIN_WORD = /^(?:가게|매장|전문점?|판매|쇼핑몰|스토어|창업|운영|제작|대행|업체|회사|공장|제조|도매|소매|시공|공사|설치|서비스|사업|장사|센터|스튜디오|공방|클래스|교실|학원|농장|용역|위주|작은|개인|매매|수리|관리|전문가|프리랜서|외주|업|및|면허|자격증|허가|등록|배송|설비|사진|채용|골목|상가|돌봄|노인|시험|건조|설계|실내|전용|차량|오픈|파견|영업|시설|기업|공간|임대|유통|납품|운반|교체|농사|재배|인수|준비|개업|설립|개설|기사|사육|채취|가공|조립|대여|렌탈|교육|강의|레슨|수업|과외|상담|컨설팅|촬영|디자인|개발|배달|수거|조사|구축|유료|주문|계약|운행|작가|활용|인테리어|스마트스토어|출강|수제|전통|임가공|oem|odm|프랜차이즈|가맹|무인|24시간|근처|소형|대형|고급|프리미엄|[가-힣a-z0-9]*(?:집|점|당|숍|샵|카페|가게|몰|관|소|상|마트|주점|술집|센터|센타|방|학원|법인|업체|펌|세차장))$/i;
 const MODE_WORD = /배달|포장|테이크아웃|온라인|출장|방문|예약|경력|분야|지역|동네|소규모|1인|여성|남성|유아|초등|중등|고등|성인/;
@@ -92,7 +92,10 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   const base = sector === "software" && picked.price < 30_000 && !read.price && (/운영자$/.test(read.customer ?? "") || /공장|기업|회사|업체|b2b/i.test(text)) ? OPERATOR_TOOL : picked;
   // 한 달 값으로 적은 가격('월 15만원')인데 건당으로 세는 업종이면 감당하는 양도 한 달 회원 수로 바꾼다 — 건당 자리에 그대로 두면 매출이 몇십 배로 부푼다
   const monthly = !!read.priceMonthly && !base.capacity.startsWith("한 달");
-  const price = read.price ?? base.price;
+  // 체험·원데이라고 적었는데 한 달 회비로 세는 줄이 맞았으면(승마 체험장 → 월 회원권) 1회 값으로 바꾼다 — 아래 each 가 한 달 횟수도 맞춘다
+  // shortcut: 1회 값은 월 회비의 4분의 1로 본다, 체험 줄이 따로 생기면 그 줄이 맞는다
+  const trial = !read.price && /체험|원데이/.test(text) && base.capacity.startsWith("한 달") && /월\s|\(월|회원권/.test(kind?.offer ?? "");
+  const price = read.price ?? (trial ? Math.max(1000, Math.round(base.price / 4000) * 1000) : base.price);
   // 거꾸로 한 달 회원으로 세는 업종에 회당 값('회당 4만원 과외')을 적었으면 한 달 횟수로 바꾼다 — 회원 자리에 그대로 두면 적자 초안이 된다
   const each = !read.priceMonthly && base.capacity.startsWith("한 달") && price * 3 < base.price;
   const unit = base.capacity.match(/[가-힣·]+$/)?.[0] ?? "건";
@@ -116,6 +119,8 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
     const guess = kind?.[field] || localFieldSuggestions(text, field, [sector], "startup")[0];
     if (guess) answers[field] = guess;
   }
+  const taster = trial ? answers.offer?.split(/\s*(?:월\s|\(|정규반|교실|수업|레슨|회원권)/)[0].trim() : "";
+  if (taster) answers.offer = `${taster}${taster.includes("체험") ? "" : " 체험"} 1회`;
   // 소프트웨어는 줄마다 값이 비슷해 문장이 가장 정확한 설명이다('공유 주차장 예약 플랫폼'이 '체험·모임 예약 중개'가 됐다) — 파는 것은 적은 말 그대로 두고,
   // 줄의 낱말이 파는 것에 그대로 들지 않았으면(넓은 낱말로 맞은 줄) 그 줄의 고객 대신 업종의 넓은 고객을 둔다
   if (sector === "software") {
@@ -161,17 +166,21 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   if (focus && !MODE_WORD.test(focus[1])) {
     // 이미 파는 것이나 맞은 낱말에 든 말이면(두 글자만 겹쳐도) 붙이지 않는다 — '전기자전거 전문'을 '전기 자전거'에 또 붙이지 않게
     const has = `${answers.offer}${kind!.word ?? ""}`.replace(/\s/g, "").toLowerCase(), words = focus[1].toLowerCase().split(" ").filter(word => word.length >= 2);
-    if (words.length && !words.some(word => [...word].some((_, at) => at + 2 <= word.length && has.includes(word.slice(at, at + 2))))) answers.offer = `${answers.offer} · ${focus[1]} ${focus[2]}`;
+    // 겹치는 낱말은 빼고 남는 낱말만 붙인다('여드름 관리 전문' + '얼굴 피부 관리' → 여드름 전문)
+    const apart = words.filter(word => ![...word].some((_, at) => at + 2 <= word.length && has.includes(word.slice(at, at + 2))));
+    const fresh = apart.length === words.length ? apart : apart.filter(word => !PLAIN_WORD.test(word) && !NOT_NOUN.test(word));
+    if (fresh.length) answers.offer = `${answers.offer} · ${fresh.length === words.length ? focus[1] : fresh.join(" ")} ${focus[2]}`;
   }
   // 짧은 명사구('도배 장판', '한우 오마카세', '초등 수학 공부방')에서 그 종류의 파는 것에 안 담긴 낱말은 뒤에 붙여 둔다 — 나란히 적은 품목·한정어가 초안에서 사라지지 않게
   // shortcut: 값·고객은 맞은 줄 그대로다(장판을 붙여도 값은 도배 값), 그 품목 줄이 따로 생기면 그 줄이 맞는다
   else if (kind && sector !== "software" && answers.offer) {
-    const head = text.split(/[,.(]/)[0].trim().split(/\s+/);
+    const head = text.split(/[,.(]/)[0].trim().split(/\s+/).filter(word => !/^(?:겸|및)$/.test(word));
     if (head.length >= 2 && head.length <= 4 && head.every(word => /^[가-힣a-z0-9]{1,8}$/i.test(word) && !NOT_NOUN.test(word))) {
       const has = `${answers.offer}${answers.customer ?? ""}${kind.word ?? ""}`.replace(/\s/g, "").toLowerCase();
       const left = head.filter(word => word.length >= 2 && !PLAIN_WORD.test(word) && !MODE_WORD.test(word) && ![...word.toLowerCase()].some((_, at) => at + 2 <= word.length && has.includes(word.toLowerCase().slice(at, at + 2)))
         // 표가 아는 다른 품목일 때만 붙인다('장판'·'청국장') — '재배'·'인수'·'준비' 같은 말은 붙이지 않는다
-        && rules?.knows?.(word.toLowerCase()));
+        // '겸'·'및'으로 이었으면 앞말을 같이 쓰는 품목도 친다('강아지 유치원 겸 호텔'의 호텔 → 강아지호텔)
+        && (rules?.knows?.(word.toLowerCase()) || /\s(?:겸|및)\s/.test(text) && head.some(other => other !== word && rules?.knows?.(`${other}${word}`.toLowerCase()))));
       if (left.length && left.length <= 2) answers.offer = `${answers.offer} · ${left.join(" ")}`;
     }
   }
