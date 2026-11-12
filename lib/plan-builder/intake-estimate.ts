@@ -45,6 +45,10 @@ const SUPPLY = /납품|oem|odm|하청|임가공|도매(?!\s*(?:시장|상가|업
 /** 문장에 적은 전문 분야('여드름 관리 전문', 'PT 전문') — 앞의 한두 어절 */
 const FOCUS = /((?:[가-힣a-z0-9]+\s)?[가-힣a-z0-9]+)\s?(전문|특화)(?![가-힣]*(?:가|의|직))/i;
 /** 전문 분야가 아니라 파는 방식·꾸밈말 */
+// 조사·어미가 붙은 어절(앞에서·만드는·하려고) — 이런 어절이 있으면 명사구가 아니다
+const NOT_NOUN = /(?:에서|으로|해서|하는|하고|이랑|려고|에게|한테|부터|까지|[을를은는에의]|[가-힣]{3,}로|[가-힣](?:는|던|할|한|된|될)|요|다|겸)$/;
+// 어느 업종에나 붙는 말 — 남겨도 뜻이 없다
+const PLAIN_WORD = /^(?:가게|매장|전문점?|판매|쇼핑몰|스토어|창업|운영|제작|대행|업체|회사|공장|제조|도매|소매|시공|공사|설치|서비스|사업|장사|센터|스튜디오|공방|클래스|교실|학원|농장|용역|위주|작은|개인|매매|수리|관리|전문가|프리랜서|외주|업|및|면허|자격증|허가|등록|배송|설비|사진|채용|골목|상가|돌봄|노인|시험|건조|설계|실내|전용|차량|오픈|파견|영업|시설|기업|공간|임대|유통|납품|운반|교체|농사|재배|인수|준비|개업|설립|개설|기사|사육|채취|가공|조립|대여|렌탈|교육|강의|레슨|수업|과외|상담|컨설팅|촬영|디자인|개발|배달|수거|조사|구축|유료|주문|계약|운행|작가|활용|인테리어|스마트스토어|출강|수제|전통|임가공|oem|odm|프랜차이즈|가맹|무인|24시간|근처|소형|대형|고급|프리미엄|[가-힣a-z0-9]*(?:집|점|당|숍|샵|카페|가게|몰|관|소|상|마트|주점|술집|센터|센타|방|학원|법인|업체|펌|세차장))$/i;
 const MODE_WORD = /배달|포장|테이크아웃|온라인|출장|방문|예약|경력|분야|지역|동네|소규모|1인|여성|남성|유아|초등|중등|고등|성인/;
 const SELLS_GOODS: ReadonlySet<ProposalSector> = new Set(["retail_commerce", "food_beverage", "manufacturing"]);
 const ONLINE = /스토어|오픈마켓|쿠팡|인스타|온라인|자사몰|커머스|앱/;
@@ -55,7 +59,7 @@ const OPERATOR_TOOL: Baseline = { price: 33_000, unitCost: 5_000, cost: 1_500_00
 const TOOL_TAIL = /(?:앱|어플|소프트웨어|솔루션|플랫폼|saas|툴|ai\s*(?:튜터|비서)|(?:관리|계산|분석|예측)\s*(?:프로그램|시스템)|예약\s*(?:관리\s*)?(?:프로그램|시스템|서비스))(?:\s*(?:개발|제작|서비스|창업|스타트업))?$/i;
 
 /** 낱말 규칙(kind-rules.ruleKind)의 모양. 표가 커서 서버 쪽 호출자가 넘겨준다 — 여기서 import 하면 화면 묶음에 딸려 들어간다 */
-export type KindRules = (text: string, allow: (sector: ProposalSector, ksic: string) => boolean) => (BusinessKind & { ksic: string; word: string; named?: boolean }) | null;
+export type KindRules = ((text: string, allow: (sector: ProposalSector, ksic: string) => boolean) => (BusinessKind & { ksic: string; word: string; named?: boolean }) | null) & { knows?: (word: string) => boolean };
 
 /**
  * 질문 id → 짐작한 답(문자열). 고를 문구가 없는 질문은 빠진다 — 그 질문은 평소처럼 묻는다.
@@ -158,6 +162,18 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
     // 이미 파는 것이나 맞은 낱말에 든 말이면(두 글자만 겹쳐도) 붙이지 않는다 — '전기자전거 전문'을 '전기 자전거'에 또 붙이지 않게
     const has = `${answers.offer}${kind!.word ?? ""}`.replace(/\s/g, "").toLowerCase(), words = focus[1].toLowerCase().split(" ").filter(word => word.length >= 2);
     if (words.length && !words.some(word => [...word].some((_, at) => at + 2 <= word.length && has.includes(word.slice(at, at + 2))))) answers.offer = `${answers.offer} · ${focus[1]} ${focus[2]}`;
+  }
+  // 짧은 명사구('도배 장판', '한우 오마카세', '초등 수학 공부방')에서 그 종류의 파는 것에 안 담긴 낱말은 뒤에 붙여 둔다 — 나란히 적은 품목·한정어가 초안에서 사라지지 않게
+  // shortcut: 값·고객은 맞은 줄 그대로다(장판을 붙여도 값은 도배 값), 그 품목 줄이 따로 생기면 그 줄이 맞는다
+  else if (kind && sector !== "software" && answers.offer) {
+    const head = text.split(/[,.(]/)[0].trim().split(/\s+/);
+    if (head.length >= 2 && head.length <= 4 && head.every(word => /^[가-힣a-z0-9]{1,8}$/i.test(word) && !NOT_NOUN.test(word))) {
+      const has = `${answers.offer}${answers.customer ?? ""}${kind.word ?? ""}`.replace(/\s/g, "").toLowerCase();
+      const left = head.filter(word => word.length >= 2 && !PLAIN_WORD.test(word) && !MODE_WORD.test(word) && ![...word.toLowerCase()].some((_, at) => at + 2 <= word.length && has.includes(word.toLowerCase().slice(at, at + 2)))
+        // 표가 아는 다른 품목일 때만 붙인다('장판'·'청국장') — '재배'·'인수'·'준비' 같은 말은 붙이지 않는다
+        && rules?.knows?.(word.toLowerCase()));
+      if (left.length && left.length <= 2) answers.offer = `${answers.offer} · ${left.join(" ")}`;
+    }
   }
   // 종류를 못 찾았으면 업종 표의 넓은 답(1회 서비스·개인 소비자)을 채우지 않는다 — 그 두 질문은 평소처럼 묻는다. 문장에 적은 고객은 둔다
   if (!kind) { if (sector !== "software") delete answers.offer; if (!read.customer) delete answers.customer; }
