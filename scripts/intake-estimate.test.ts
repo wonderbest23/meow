@@ -89,6 +89,9 @@ async function main() {
   assert.equal(ruled("화물 배차 앱").answers.customer, undefined);
   assert.match(ruled("일본으로 김 수출").answers.customer, /해외 바이어/);
   assert.equal(ruled("수출 중소기업 대상 해외 마케팅 대행").answers.customer, "수출 중소기업");
+  // 'X 전용'의 X 가 종류 이름의 일부면 떼지 않는다(배드민턴 전용 체육관은 다목적 체육관이 아니다). 표에 없던 업종 줄: 내수면 양식·환자 유치·설치 대행
+  assert.match(ruled("배드민턴 전용 체육관, 대관이랑 레슨").answers.offer, /배드민턴/);
+  assert.deepEqual(["민물장어 양식장", "외국인 환자 유치업, 의료 관광", "TV 벽걸이 커튼 액자 설치 대행"].map(text => ruled(text).ksic), ["03212", "75290", "95399"]);
   assert.doesNotMatch(ruled("CNC 금속 임가공").answers.customer, /자기 상표/);
   assert.equal(ruled("흰다리새우 양식장").ksic, "03211");
   // 가게·병원·학원 운영자가 쓰는 프로그램은 개인용 앱 값이 아니다. 개인용 앱은 그대로다

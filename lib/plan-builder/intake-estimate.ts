@@ -74,7 +74,10 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 공장·제조라고 적었으면 같은 낱말의 가게·도매 줄보다 만드는 줄을 먼저 본다('냉동 만두 만드는 식품 공장'이 냉동식품 할인점이 됐다)
   const makes = !tool && !chosen && !chosenKsic && /공장(?!\s*(?:청소|철거|자동화|설비|부지|임대|매매))|제조/.test(said);
   // 제조업은 분류 앞 두 자리가 10~34다(식품 제조는 업종 묶음이 음식이라 묶음 이름으로는 못 고른다)
-  const found = (makes ? rules?.(said, (_, ksic) => ksic >= "10" && ksic < "35") : null) ?? rules?.(said, (sector, ksic) => chosenKsic ? ksic === chosenKsic : tool ? sector === "software" : !chosen || sector === chosen) ?? null;
+  const stripped = (makes ? rules?.(said, (_, ksic) => ksic >= "10" && ksic < "35") : null) ?? rules?.(said, (sector, ksic) => chosenKsic ? ksic === chosenKsic : tool ? sector === "software" : !chosen || sector === chosen) ?? null;
+  // 'X 전용'은 보통 고객이라 떼고 찾지만, X 가 종류 이름의 일부면(배드민턴 전용 체육관 → 배드민턴체육관) 떼지 않은 문장에서 찾은 줄을 쓴다
+  const own = !tool && !chosen && !chosenKsic && spelled.match(/([가-힣a-z]+)\s*전용\s/i)?.[1], whole = own ? rules?.(spelled, () => true) : null;
+  const found = whole && whole.word.includes(own as string) && whole.word.length > (own as string).length ? whole : stripped;
   // 사전에도 있지만 낱말 규칙이 그보다 짧지 않은 낱말로 맞았으면(청소 → 입주청소, 식당 → 식자재납품) 더 구체적인 규칙 줄을 쓴다. 사업자용 앱·프로그램은 예외다(카페용 앱은 카페가 아니다)
   const handWord = hand?.word.toLowerCase().replace(/\s/g, "") ?? "";
   const rule = !hand || (found && (found.word.length >= handWord.length || found.named) && !CHANNEL_WORD.test(found.word) && (hand.sector !== "software" || found.sector === "software")) ? found : null;
