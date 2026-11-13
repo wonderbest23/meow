@@ -30,7 +30,7 @@ import { AppButton, type AppButtonSize } from "../../../components/app-button";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { restoreRangeTildes } from "../../../lib/plan-builder/range-tildes";
 import { withTableCellLabels } from "../../../lib/plan-builder/table-cells";
-import { useStudioCommand, useStudioHeaderActions, useStudioHeaderCenter, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import { publishPlanView, useStudioCommand, useStudioHeaderActions, useStudioHeaderCenter, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import paneHeader from "../workspace/PaneHeaderActions.module.css";
 import { paneLinkCapture } from "./pane-link";
 import { planChapterComposeRequest } from "../../../lib/plan-builder/studio-plan-edit";
@@ -466,6 +466,10 @@ export default function DocumentWorkspace(props: Props) {
     setSummaryMode(next); setEditing(false); setContinuous(false); setModal(null);
     scroller()?.scrollTo({ top: 0 });
   }, !!pane && ready);
+  /* 휴대폰 작업실 머리 오른쪽의 보기 전환(쉬운 보기 · 작업 모드)에 지금 보기를 알린다 — 이 줄(목차 · 보기 전환)은 휴대폰 작업실에서 숨긴다 */
+  const canSwitchView = !!pane && ready && !!props.summary && grouped.length > 0;
+  useEffect(() => { publishPlanView(canSwitchView ? summaryMode ? "easy" : "work" : null); }, [canSwitchView, summaryMode]);
+  useEffect(() => () => publishPlanView(null), []);
   /* 휴대폰 작업실은 위 줄을 숨겨(아래 data-bar-hidden) 목차를 머리의 페이지 이름 알약 메뉴에서 연다 */
   useStudioCommand("plan-toc", () => setModal("toc"), !!pane && ready && grouped.length > 0);
   /* 5단계 — 위 막대 ⋯ 메뉴의 '사업계획서 직접 고치기'(칸 위 얇은 줄의 단추와 같다) */
@@ -540,7 +544,7 @@ export default function DocumentWorkspace(props: Props) {
   /* 작업실 안이면 main 대신 칸 본문(div) — 작업실 루트가 페이지의 유일한 main 이다 */
   const Root = pane ? "div" : "main";
   const stripEdit = summaryMode ? null : <button type="button" className={styles.stripButton} disabled={!grouped.length || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { setSummaryMode(false); setFactMode(true); return; } setEditing(!editing); }}><PenLine size={14} aria-hidden="true" />{editing ? "수정 마치기" : "직접 고치기"}</button>;
-  return <Root ref={rootRef as never} className={`${frame.page} ${styles.page}`} data-embedded={pane ? "" : undefined} data-studio-pc={studioPc ? "" : undefined} data-bar-hidden={studioHeader && !wide && !factMode && !summaryMode ? "" : undefined} onClickCapture={paneLinkCapture(nav, planId)}>
+  return <Root ref={rootRef as never} className={`${frame.page} ${styles.page}`} data-embedded={pane ? "" : undefined} data-studio-pc={studioPc ? "" : undefined} data-bar-hidden={studioHeader && !wide && !factMode ? "" : undefined} onClickCapture={paneLinkCapture(nav, planId)}>
     <BusinessAppChrome title="사업계획서" backHref={back} showRail={!isSample} documentToc={documentToc} titleHeading={!bodyTitle}>
       {!ready ? <PlanLoading fill variant="compact" note="문서를 불러오고 있어요" /> : <div className={styles.layout}>
         {/* 예시 문서는 왼쪽 메뉴에 사업이 없으니 문서 옆에 목차를 그대로 둔다 — 작업실 안도 왼쪽 메뉴가 없어 같다 */}

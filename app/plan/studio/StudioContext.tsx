@@ -109,6 +109,18 @@ export function useStudioCommand(command: StudioCommand, handler: () => void, en
   }, [command, enabled]);
 }
 
+/*
+ * 계획서 칸이 지금 보기(쉬운 보기 · 작업 모드)를 알린다 — 휴대폰 머리 오른쪽의 보기 전환이 눌린 쪽을 표시한다(대표 결정 2026-11-13).
+ * null 이면 바꿀 보기가 없다(문서 준비 전 · 요약 없음).
+ */
+export type PlanView = "easy" | "work" | null;
+let planView: PlanView = null;
+const planViewListeners = new Set<() => void>();
+export function publishPlanView(view: PlanView) { if (planView === view) return; planView = view; planViewListeners.forEach(listener => listener()); }
+export function usePlanView(): PlanView {
+  return useSyncExternalStore(listener => { planViewListeners.add(listener); return () => { planViewListeners.delete(listener); }; }, () => planView, () => null);
+}
+
 /** 채팅 수정 제안(작업 id)이 계획서에서 닿는 장 이름 — 대화 칸은 지금 카드의 작업 id 와 같을 때만 쓴다(앞 제안의 장이 남아 보이지 않게) */
 export type StudioEditPreviewChapters = { jobId: string; chapters: string[] };
 
