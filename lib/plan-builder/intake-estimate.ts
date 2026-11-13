@@ -48,7 +48,7 @@ const FOCUS = /((?:[가-힣a-z0-9]+\s)?[가-힣a-z0-9]+)\s?(전문|특화)(?![�
 // 조사·어미가 붙은 어절(앞에서·만드는·하려고) — 이런 어절이 있으면 명사구가 아니다
 const NOT_NOUN = /(?:에서|으로|해서|하는|하고|이랑|려고|에게|한테|부터|까지|[을를은는에의]|[가-힣]{3,}로|[가-힣](?:는|던|할|한|된|될)|요|다)$/;
 // 어느 업종에나 붙는 말 — 남겨도 뜻이 없다
-const PLAIN_WORD = /^(?:가게|매장|전문점?|판매|쇼핑몰|스토어|창업|운영|제작|대행|업체|회사|공장|제조|도매|소매|시공|공사|설치|서비스|사업|장사|센터|스튜디오|공방|클래스|교실|학원|농장|용역|위주|작은|개인|매매|수리|관리|전문가|프리랜서|외주|업|및|면허|자격증|허가|등록|배송|설비|사진|채용|골목|상가|돌봄|노인|시험|건조|설계|실내|전용|차량|오픈|파견|영업|시설|기업|공간|임대|유통|납품|운반|교체|농사|재배|인수|준비|개업|설립|개설|기사|사육|채취|가공|조립|대여|렌탈|교육|강의|레슨|수업|과외|상담|컨설팅|촬영|디자인|개발|배달|수거|조사|구축|유료|주문|계약|운행|작가|활용|인테리어|스마트스토어|출강|수제|전통|임가공|oem|odm|프랜차이즈|가맹|무인|24시간|근처|소형|대형|고급|프리미엄|[가-힣a-z0-9]*(?:집|점|당|숍|샵|카페|가게|몰|관|소|상|마트|주점|술집|센터|센타|방|학원|법인|업체|펌|세차장))$/i;
+const PLAIN_WORD = /^(?:가게|매장|전문점?|판매|쇼핑몰|스토어|창업|운영|제작|대행|업체|회사|공장|제조|도매|소매|시공|공사|설치|서비스|사업|장사|센터|스튜디오|공방|클래스|교실|학원|농장|용역|위주|작은|개인|매매|수리|관리|전문가|프리랜서|외주|업|및|방앗간|면허|자격증|허가|등록|배송|설비|사진|채용|골목|상가|돌봄|노인|시험|건조|설계|실내|전용|차량|오픈|파견|영업|시설|기업|공간|임대|유통|납품|운반|교체|농사|재배|인수|준비|개업|설립|개설|기사|사육|채취|가공|조립|대여|렌탈|교육|강의|레슨|수업|과외|상담|컨설팅|촬영|디자인|개발|배달|수거|조사|구축|유료|주문|계약|운행|작가|활용|인테리어|스마트스토어|출강|수제|전통|임가공|oem|odm|프랜차이즈|가맹|무인|24시간|근처|소형|대형|고급|프리미엄|[가-힣a-z0-9]*(?:집|점|당|숍|샵|카페|가게|몰|관|소|상|마트|주점|술집|센터|센타|방|학원|법인|업체|펌|세차장))$/i;
 const MODE_WORD = /배달|포장|테이크아웃|온라인|출장|방문|예약|경력|분야|지역|동네|소규모|1인|여성|남성|유아|초등|중등|고등|성인/;
 const SELLS_GOODS: ReadonlySet<ProposalSector> = new Set(["retail_commerce", "food_beverage", "manufacturing"]);
 const ONLINE = /스토어|오픈마켓|쿠팡|인스타|온라인|자사몰|커머스|앱/;
@@ -186,10 +186,11 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
     const fresh = apart.length === words.length ? apart : apart.filter(word => !PLAIN_WORD.test(word) && !NOT_NOUN.test(word));
     if (fresh.length) answers.offer = `${answers.offer} · ${fresh.length === words.length ? focus[1] : fresh.join(" ")} ${focus[2]}`;
   }
+  // 가운뎃점·빗금으로 붙여 쓴 품목('도배·장판 시공')도 띄어 쓴 것처럼 나눠 본다
   // 짧은 명사구('도배 장판', '한우 오마카세', '초등 수학 공부방')에서 그 종류의 파는 것에 안 담긴 낱말은 뒤에 붙여 둔다 — 나란히 적은 품목·한정어가 초안에서 사라지지 않게
   // shortcut: 값·고객은 맞은 줄 그대로다(장판을 붙여도 값은 도배 값), 그 품목 줄이 따로 생기면 그 줄이 맞는다
   else if (kind && sector !== "software" && answers.offer) {
-    const head = text.split(/[,.(]/)[0].trim().split(/\s+/).filter(word => !/^(?:겸|및)$/.test(word));
+    const head = text.split(/[,.(]/)[0].trim().split(/[\s·ㆍ・/]+/).filter(word => word && !/^(?:겸|및)$/.test(word));
     if (head.length >= 2 && head.length <= 4 && head.every(word => /^[가-힣a-z0-9]{1,8}$/i.test(word) && !NOT_NOUN.test(word))) {
       const has = `${answers.offer}${answers.customer ?? ""}${kind.word ?? ""}`.replace(/\s/g, "").toLowerCase();
       const left = head.filter(word => word.length >= 2 && !PLAIN_WORD.test(word) && !MODE_WORD.test(word) && ![...word.toLowerCase()].some((_, at) => at + 2 <= word.length && has.includes(word.toLowerCase().slice(at, at + 2)))

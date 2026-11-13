@@ -92,6 +92,7 @@ async function main() {
   // 짧은 명사구에서 파는 것에 안 담긴 품목 낱말은 뒤에 남긴다. 어디에나 붙는 말·가게 이름·조사가 붙은 문장은 그대로 둔다
   assert.deepEqual(["특허 상표 출원 대행", "속눈썹 연장 왁싱", "치킨집 창업 준비", "대학가 앞에서 컵밥 장사"].map(text => ruled(text).answers.offer.split(" · ")[1]), ["특허", "왁싱", undefined, undefined]);
   assert.match(ruled("도배 장판").answers.offer, /도배.*장판|장판.*도배/);
+  assert.match(ruled("도배·장판 시공").answers.offer, /도배.*장판|장판.*도배/);
   // 전문 분야가 파는 것과 일부만 겹치면 남는 말만 붙인다. '겸'·'및'으로 이은 품목도 남긴다. 체험장은 월 회비가 아니라 1회 값이다
   assert.match(ruled("피부관리실, 여드름 관리 전문").answers.offer, / · 여드름 전문$/);
   assert.match(ruled("강아지 유치원 겸 호텔").answers.offer, / · 호텔$/);
