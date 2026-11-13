@@ -181,7 +181,6 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 수출이라고 적었으면 국내 손님이 아니라 해외 바이어다(수출 줄이 맞았으면 그 줄의 답을 둔다)
   if (/수출|해외\s*(?:판매|바이어)/.test(text) && kind && !read.customer && !/수출|무역|해외/.test(answers.offer ?? "")) { answers.customer = "한국 제품을 들여가려는 해외 바이어·현지 유통상"; answers.channel = "수출 상담회·해외 바이어 직접 영업"; }
   // 납품·도매·OEM이라고 적었으면 손님을 모으는 채널(스마트스토어·인스타그램·매장)이 아니라 거래처를 직접 찾아간다
-  // shortcut: 값은 그 종류의 소매가 그대로다, 납품가를 따로 적은 줄이 생기면 그 값을 쓴다
   if (SUPPLY.test(text) && !/영업|거래처|견적/.test(answers.channel ?? "")) answers.channel = "직접 영업·기존 거래처";
   // '그림책 전문', '고양이 진료 특화'처럼 문장에 적은 전문 분야가 그 종류의 파는 것에 없으면 뒤에 붙여 둔다 — 줄을 더 잘게 나누지 않아도 적은 말이 초안에 남는다
   const focus = kind && sector !== "software" && answers.offer ? text.match(FOCUS) : null;
