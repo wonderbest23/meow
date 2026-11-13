@@ -547,14 +547,15 @@ export function DocumentLockedTurn({ planId, chatEdit, onChatEdit, pro = false }
   /** 작업실 PC: 안내 아래 복사 줄만 두고 단추 줄은 뺀다 — 계획서 보기는 칸 탭, 대화로 고치기는 늘 열린 입력창, 직접 고치기는 계획서 칸에 있다 */
   pro?: boolean }) {
   const id = encodeURIComponent(planId);
-  /* 한 문장만 — 입력창 · 고치기 단추가 바로 아래에 있어 무엇을 할지 따로 말하지 않는다(r37 글 점검) */
-  const text = "사업계획서를 만들었어요.";
+  /* 여기가 마지막 단계다 — 끝났다는 느낌이 들게 축하 말을 앞에 두고 단추는 오른쪽 끝에(대표 요청 2026-11-13). 무엇을 할지는 따로 말하지 않는다(r37 글 점검) */
+  const text = "축하합니다! 사업계획서가 완성됐어요.";
+  const message = <p><strong>축하합니다!</strong> 사업계획서가 완성됐어요.</p>;
   if (pro) return <section className={styles.lockedTurn} aria-label="사업계획서 완성" data-document-locked>
-    <div className={styles.assistantMessage}><p>{text}</p></div>
+    <div className={styles.assistantMessage}>{message}</div>
     <MessageMeta text={text} />
   </section>;
   return <section className={styles.lockedTurn} aria-label="사업계획서 완성" data-document-locked>
-    <div className={styles.assistantMessage}><p>{text}</p></div>
+    <div className={styles.assistantMessage}>{message}</div>
     {/* 다른 화면으로 가는 칩은 끝에 ›(휴대폰 점검 2026-10-24) */}
     {/* 다 만든 뒤 할 일은 '계획서 보기'가 먼저다 — 예전엔 세 단추가 같은 무게라 무엇을 누를지 몰랐다(여정 점검 2026-10-22) */}
     <div className={styles.chipRow}>

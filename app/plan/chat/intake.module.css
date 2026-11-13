@@ -357,6 +357,8 @@
 .composerRow textarea::placeholder { color: var(--app-muted); }
 /* 좁은 화면·글자 확대에서 안내 글이 두 줄로 접혀 한 줄 높이 입력칸 밖으로 잘렸다 — 한 줄로 두고 넘치면 말줄임 */
 .composerRow textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* AI 추천 문구(회색 안내 글자) — 입력창을 누르면 사라지고, 빈 채로 빠져나오면 다시 보인다 */
+.composerRow.composerRow textarea[data-reply-hint]:focus::placeholder { color: transparent !important; } /* 아래 작업실 규칙들이 같은 무게로 뒤에 와서 !important */
 .sendButton { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--intake-blue); color: var(--app-on-primary); }
 .sendButton:disabled { opacity: 1 !important; background: var(--app-raised); color: var(--app-muted); }
 .newMessage { position: absolute; right: 24px; bottom: 150px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--intake-line); border-radius: 8px; color: var(--app-accent); background: var(--app-surface); box-shadow: 0 3px 16px color-mix(in srgb, var(--app-text) 6%, transparent); font-size: .75rem !important; }
@@ -727,7 +729,8 @@ div.nextStepHint { display: grid; justify-items: start; gap: 6px; padding-top: 1
 .page[data-coach] .chatQuestion .option:has(input:disabled), .page[data-coach] .chatQuestion .chip:disabled, .page[data-coach] .chatQuestion .ksicChip:disabled { opacity: 1; }
 /* Plan document exists: the chat ends with a coach note and links to edit from the document. */
 .lockedTurn { display: grid; gap: 10px; margin-top: 8px; }
-.lockedTurn .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.lockedTurn .chipRow { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.lockedTurn .assistantMessage strong { font-weight: 700; }
 .lockedTurn .chip { text-decoration: none; }
 /* The intake question reused inside the document's fact popover: same coach look, no full-page shell. */
 .page.factScope { display: block; height: auto; overflow: visible; background: transparent; font-size: .875rem; }
