@@ -1612,12 +1612,29 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const pickable = pro && !editTarget && !!plan?.hasDocuments && editChatReady && editChapterList.length > 0 && (studioRoute === "chat" || studioRoute === "section");
   /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로. 이미 보낸 예시는 다시 권하지 않는다(r42) */
   const priceAnswer = plan?.intake.answers.price;
+  /*
+   * 계획서를 만든 대화의 입력창 — 고정 예시 칩 대신, 위 대화를 읽고 AI가 만든 '다음에 보낼 만한 말'을 회색 안내 글자로만 보인다(대표 결정 2026-11-13).
+   * 입력값이 아니다: 입력창을 누르면 사라지고(intake.module.css [data-reply-hint]), 빈 채로 빠져나오면 다시 보인다. 못 받으면 기본 안내 글자.
+   * 대화가 한 번 오갈 때마다(메시지 수가 바뀔 때) 한 번만 부른다.
+   */
+  const replyHintKey = embedded && studioRoute === "chat" && planSide && plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy && !editWorking ? `${plan.planId}\n${plan.coach.messages.length}` : "";
+  const [replyHint, setReplyHint] = useState<{ key: string; text: string } | null>(null);
+  useEffect(() => {
+    if (!replyHintKey) return;
+    const abort = new AbortController();
+    fetch("/api/plan/chat/reply-suggestion", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ planId: replyHintKey.split("\n")[0] }), signal: abort.signal })
+      .then(response => response.status === 200 ? response.json() : null)
+      .then(data => { if (typeof data?.reply === "string") setReplyHint({ key: replyHintKey, text: data.reply }); })
+      .catch(() => { /* 추천은 없어도 된다 */ });
+    return () => abort.abort();
+  }, [replyHintKey]);
+  const replyHintText = replyHint?.key === replyHintKey ? replyHint.text : "";
   /* 휴대폰 작업실도 같은 추천을 입력 상자 위 한 줄(가로로 밀어 보기)로 — lovable 구조 2단계(시안 MChat) */
   const suggestionChips: SuggestionChip[] = !embedded || !studioComposer || editWorking ? []
     : homepageSuggest ? [{ label: "홈페이지를 대화로 고치기", pick: () => enterEditTarget({ target: "homepage", label: "홈페이지" }) }]
     : visibleComposerText(studioText) ? []
     : editTarget?.target === "homepage" ? HOMEPAGE_SUGGESTIONS
-    : (studioRoute === "chat" && planSide || studioRoute === "section") && !!plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy ? editExamples(priceAnswer?.status === "answered" ? priceAnswer.value : null).filter(text => !plan.coach.messages.some(message => message.role === "user" && message.text.endsWith(text))).map(text => ({ label: text, fill: text }))
+    : studioRoute === "section" && !!plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy ? editExamples(priceAnswer?.status === "answered" ? priceAnswer.value : null).filter(text => !plan.coach.messages.some(message => message.role === "user" && message.text.endsWith(text))).map(text => ({ label: text, fill: text }))
     : [];
   const pickSuggestion = (chip: SuggestionChip) => {
     if (chip.pick) { chip.pick(); return; }
@@ -1810,7 +1827,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
             {!studioRoute && askingAI && <div className={styles.composerContext}><MessageCircle size={14} aria-hidden="true" />AI에게 질문<AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => storeComposerNote("memo")}><Bookmark size={14} aria-hidden="true" />메모로 저장</AppButton></div>}
             {(studioRoute ? studioNote : composerNote) && <p className={styles.composerHint} role="status" aria-live="polite">{studioRoute ? studioNote : composerNote}</p>}
             <div className={styles.composerRow}>
-              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" placeholder={studioRoute ? studioPlaceholder : coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!studioRoute && !!replyTurn} disabled={!loaded || loadFailed || ownerChanged} rows={1} enterKeyHint="enter" maxLength={1200} value={studioRoute ? studioText : composerShown} onPaste={event => {
+              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" data-reply-hint={replyHintText ? "" : undefined} placeholder={replyHintText ? replyHintText : studioRoute ? studioPlaceholder : coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!studioRoute && !!replyTurn} disabled={!loaded || loadFailed || ownerChanged} rows={1} enterKeyHint="enter" maxLength={1200} value={studioRoute ? studioText : composerShown} onPaste={event => {
                 const input = event.currentTarget, pasted = event.clipboardData.getData("text");
                 setPasteCut(pasted.length > 1200 - (input.value.length - (input.selectionEnd - input.selectionStart)));
               }} onChange={event => {
