@@ -610,7 +610,7 @@ export default function DocumentWorkspace(props: Props) {
       </div>}
     </BusinessAppChrome>
     <dialog ref={dialog} className={styles.dialog} onCancel={() => setModal(null)} onClose={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setModal(null); } }} aria-labelledby="document-dialog-title">
-      <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : modal === "edit" ? "어떻게 고칠까요?" : summaryMode && props.summary ? "한 장 요약 내려받기" : "상세 계획서 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
+      <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : modal === "edit" ? "어떻게 고칠까요?" : summaryMode && props.summary && !isSample ? "한 장 요약 내려받기" : "상세 계획서 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
       {modal === "edit" ? <div className={styles.editChoices}>
         {EDIT_CHAT && coachHref && <Link href={`${coachHref}&edit=chat`} onClick={() => setModal(null)}><strong>대화로 고치기</strong><small>“가격을 올려줘”처럼 말하기</small></Link>}
         <button onClick={() => { setModal(null); setSummaryMode(false); setFactMode(true); }}><strong>직접 고치기</strong><small>숫자·사실을 눌러 바꾸기</small></button>

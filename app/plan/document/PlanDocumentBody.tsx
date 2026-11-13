@@ -12,7 +12,7 @@ import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import { coachDocumentSnapshot, completedDocumentKey } from "../../../lib/plan-builder/coach-document";
 import { documentContext, overviewFields } from "../../../lib/plan-builder/document-context";
-import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
+import { LISTED_SAMPLE_IDS, SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import { useDeckExport } from "./use-deck-export";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { useDocumentEdits } from "./use-document-edits";
@@ -124,7 +124,8 @@ export function PlanDocumentBody() {
   function updateSourceStatus(plan: Plan) {
     try {
       const nextSummary = buildExecutiveSummary(plan, documentContext(loadState(), plan.id)?.business);
-      setSummary(isSamplePlan(plan.id) || !hasExecutiveSummaryContent(nextSummary) ? null : nextSummary);
+      // 옛 예시(새벽커피·무인꽃집)는 답이 옛 형식이라 요약에 '미입력'이 섞인다 — 목록에 올린 예시(퇴근필라)만 보여 준다. 홈 화면이 이 요약을 소개한다
+      setSummary(isSamplePlan(plan.id) && !LISTED_SAMPLE_IDS.has(plan.id) || !hasExecutiveSummaryContent(nextSummary) ? null : nextSummary);
       setSummaryError("");
     } catch {
       setSummary(null); setSummaryError("저장된 실적 기록을 읽지 못해 한 장 요약은 보여 드리지 않았어요. 기존 문서는 그대로 있어요.");
