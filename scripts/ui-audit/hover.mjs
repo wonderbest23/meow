@@ -5,11 +5,19 @@
 import fs from "node:fs";
 import { S, args, browser, open, sleep } from "./lib.mjs";
 
-const [uid, planId] = args;
+const [uid, planId, askingId] = args; // askingId: 질문 단계에 멈춘 사업(seed.mjs partial:N) — 있으면 질문 화면도 본다
 if (!uid || !planId) { console.error("사용법: node scripts/ui-audit/hover.mjs <uid> <planId>"); process.exit(2); }
 const q = `planId=${planId}`;
 const PAGES = [
   ["chat", `/plan/studio?${q}`], ["plan", `/plan/studio?${q}&tab=plan`], ["plan-expert", `/plan/studio?${q}&tab=plan`, "^전문가 모드$"], ["plan-menu", `/plan/studio?${q}&tab=plan`, "페이지 바꾸기|더 보기"], ["homepage", `/plan/studio?${q}&tab=homepage`], ["operations", `/plan/studio?${q}&tab=operations`],
+  // 창 · 편집 화면 — 앞에서부터 차례로 누른 뒤 본다(이름이나 aria-label, 없는 단계는 건너뛴다)
+  ["plan-download", `/plan/studio?${q}&tab=plan`, ["페이지 바꾸기", "^내려받기$|사업계획서 내려받기"]],
+  ["plan-toc", `/plan/studio?${q}&tab=plan`, ["페이지 바꾸기", "^목차$|^일반 보기"]],
+  ["plan-edit", `/plan/studio?${q}&tab=plan`, ["페이지 바꾸기|더 보기", "^직접 고치기$"]],
+  ["plan-continuous", `/plan/studio?${q}&tab=plan`, ["^전문가 모드$", "페이지 바꾸기", "^목차$|장 고르기|^1장", "전체 이어 읽기"]],
+  ["homepage-made", `/plan/studio?${q}&tab=homepage`, ["^홈페이지 만들기|초안 만들기|^만들기"]],
+  ["chat-tools", `/plan/studio?${q}`, ["^\\+$|더하기|지금까지 답|첨부"]],
+  ...(askingId ? [["asking", `/plan/studio?planId=${askingId}`], ["asking-summary", `/plan/studio?planId=${askingId}`, ["지금까지 답|답 보기"]]] : []),
   ["list", "/plan"], ["settings", "/plan/settings"], ["me", "/plan/me"], ["home", "/"],
 ];
 
@@ -37,7 +45,7 @@ for (const width of [1440, 390]) for (const [name, pathname, press] of PAGES) {
   const page = await open(b, uid, pathname, { width, height: 2400, mobile: false });
   await sleep(6000);
   // 먼저 눌러 둘 것(보기 전환 · 메뉴 열기) — 이름이나 aria-label 로 찾는다
-  if (press) { await page.evaluate(`(() => { const re = new RegExp(${JSON.stringify(press)}); [...document.querySelectorAll("button")].find(el => re.test((el.innerText || "").trim()) || re.test(el.getAttribute("aria-label") || ""))?.click(); })()`); await sleep(1200); }
+  for (const step of [press ?? []].flat()) { await page.evaluate(`(() => { const re = new RegExp(${JSON.stringify(step)}); [...document.querySelectorAll("button, a")].filter(el => el.getBoundingClientRect().width > 0).find(el => re.test((el.innerText || "").trim()) || re.test(el.getAttribute("aria-label") || ""))?.click(); })()`); await sleep(name === "homepage-made" ? 12000 : 1200); }
   const targets = await page.evaluate(`[...document.querySelectorAll("button, a, [role=button], [role=tab], [role=menuitem], summary")].map((el, i) => { el.dataset.hv = i; const r = el.getBoundingClientRect(); return { i, x: r.x + r.width / 2, y: r.y + r.height / 2, ok: r.width > 4 && r.height > 4 && r.y >= 0 && r.bottom <= innerHeight && r.x >= 0 && r.right <= innerWidth && !el.disabled && document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest("[data-hv]") === el, label: (el.innerText || el.getAttribute("aria-label") || "").trim().replace(/\\s+/g, " ").slice(0, 30) }; }).filter(t => t.ok)`);
   let checked = 0;
   for (const t of targets.slice(0, 120)) {
@@ -49,7 +57,8 @@ for (const width of [1440, 390]) for (const [name, pathname, press] of PAGES) {
     checked++;
     for (const [state, m] of [["올림", hover], ["누름", press]]) if (m && m.ratio < 2.5 && (!rest || rest.ratio >= 2.5 || m.ratio < rest.ratio - .3)) found.push({ width, page: name, label: t.label, state, ...m, rest: rest?.ratio });
   }
-  console.log(`${width} ${name}: 단추 ${checked}개`);
+  const opened = await page.evaluate(`[document.querySelector("dialog[open] h2")?.innerText, document.querySelector("[role=menu]") && "메뉴", document.querySelector("[data-fact-mode]") && "직접 고치기"].filter(Boolean).join(" · ")`).catch(() => "");
+  console.log(`${width} ${name}: 단추 ${checked}개${opened ? ` (열림: ${opened})` : ""}`);
   await page.close();
 }
 await b.close();
