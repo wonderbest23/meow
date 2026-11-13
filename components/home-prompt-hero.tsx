@@ -45,7 +45,7 @@ const S = "/home-media/showcase";
  * 컴퓨터 화면: 1280×2000 화면을 찍어 1600×2500 으로. 틀 안에는 위 16:10(1280×800)만 보이고 아래로 내려 간다.
  * 휴대폰 화면: 390×(1720~2400) 화면을 찍어 너비 780 으로. 틀 안에는 상태 표시줄 아래 390×790 만 보인다. 컴퓨터 화면을 줄여 넣지 않는다.
  */
-const screen = (name: string, alt: string, focus: ShowcaseFocus): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 1600, height: 2500, focus });
+const screen = (name: string, alt: string, focus: ShowcaseFocus, height = 2500): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 1600, height, focus });
 const phone = (name: string, cssHeight: number, alt: string, focus: ShowcaseFocus): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 780, height: cssHeight * 2, focus });
 /** 보이는 칸의 높이 ÷ 너비 — 컴퓨터 화면 16:10, 휴대폰 화면 390×790 */
 const VIEW_RATIO: Record<ShowcaseSlot, number> = { screen: 10 / 16, phone: 790 / 390 };
@@ -54,6 +54,7 @@ const VIEW_RATIO: Record<ShowcaseSlot, number> = { screen: 10 / 16, phone: 790 /
  * 진열 띠 — 실제 AI로 만든 예시 사업('퇴근필라', 동네 직장인을 위한 4인 소그룹 기구 필라테스 · lib/plan-builder/samples/pilates.ts)의 실제 화면만 쓴다.
  * lovable 구조 7단계(2026-11-01)에 새 작업실 화면(라이트)으로 다시 찍음 — 합성 개발 서버(scripts/preview/dev.sh), AI 비용 0원.
  * 대화로 답한 주 2회 정기권 월 220,000원·회원 1명당 변동비 15,000원·월 고정비 450만 원·예산 4,000만 원으로 만든 계획서·한 장 요약·홈페이지·개업 준비 그대로다.
+ * 한 장 요약 두 장은 2026-11-13에 예시 화면(sample_pilates)에서 다시 찍었다 — 첫 달 가정 문구가 바뀌어서. 컴퓨터 화면은 1280×1248(왼쪽 '예시 사업이에요'가 첫 화면에 보이게).
  * 탭마다 컴퓨터 화면과 '같은 탭'의 휴대폰 화면(390 너비로 따로 찍은 것)을 함께 보여 준다.
  * focus 는 찍을 때 강조할 요소의 실제 위치를 재서 넣었다(그림 높이·너비에 대한 %).
  * note 는 강조할 곳에 띄우는 작은 이름표(14자 안) — 그림 대체 글에도 같은 내용이 들어 있어 낭독기에는 읽히지 않게 둔다.
@@ -71,8 +72,8 @@ const SHOWCASE: Array<{ label: string; note: string } & Record<ShowcaseSlot, Sho
   {
     label: "한 장 요약",
     note: "첫 달·본전 계산",
-    screen: screen("pilates-summary-tall", `${EXAMPLE}의 한 장 요약 — 사업과 고객, 제공안과 판매(4인 소그룹 주 2회 정기권 220,000원), 수익 구조와 계획 계산(첫 달 조심스러운 경우 11명 등록 / 한 달 -2,245,000원, 손익분기 월 22명 / 매출 4,840,000원), 다음 행동과 확인 기준`, { top: 18.6, bottom: 31, x: 67 }),
-    phone: phone("pilates-summary-tall-m", 1720, `${EXAMPLE}의 한 장 요약을 휴대폰으로 본 화면 — '퇴근 후, 붐비지 않는 4인 기구 필라테스', 첫 달 가정(조심스러운 경우 11명 등록 / 한 달 -2,245,000원), 손익분기 월 22명 / 매출 4,840,000원, 다음 행동과 확인 기준`, { top: 33.7, bottom: 55.3 }),
+    screen: screen("pilates-summary-tall", `${EXAMPLE}의 한 장 요약 — 사업과 고객, 제공안과 판매(4인 소그룹 주 2회 정기권 220,000원), 수익 구조와 계획 계산(첫 달 조심스러운 경우(본전의 절반만 팔릴 때) 11명 등록 / 한 달 -2,245,000원, 손익분기 월 22명 / 매출 4,840,000원), 다음 행동과 확인 기준`, { top: 35.9, bottom: 51.3, x: 67 }, 1560),
+    phone: phone("pilates-summary-tall-m", 1720, `${EXAMPLE}의 한 장 요약을 휴대폰으로 본 화면 — '퇴근 후, 붐비지 않는 4인 기구 필라테스', 첫 달 가정(조심스러운 경우(본전의 절반만 팔릴 때) 11명 등록 / 한 달 -2,245,000원), 손익분기 월 22명 / 매출 4,840,000원, 다음 행동과 확인 기준`, { top: 38.6, bottom: 59.3 }),
   },
   {
     label: "홈페이지",
