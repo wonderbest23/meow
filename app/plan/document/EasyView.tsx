@@ -10,7 +10,7 @@ import styles from "./EasyView.module.css";
 const man = (value: number) => Math.round(Math.abs(value) / 10000).toLocaleString("ko-KR");
 const num = (value: number) => value.toLocaleString("ko-KR");
 
-export default function EasyView({ easy, chapters }: { easy: EasySummary; chapters: string[] }) {
+export default function EasyView({ easy, chapters, onDownload }: { easy: EasySummary; chapters: string[]; onDownload?: () => void }) {
   // 하루 환산은 돈 장과 같은 가정(월 26일, 반올림)
   const days = easy.perDay ? 26 : 1, per = easy.perDay ? "하루" : "한 달", unit = easy.unit;
   const safe = Math.max(1, Math.round(easy.breakEven / days)), cap = easy.cap ? Math.floor(easy.cap / days) : null;
@@ -60,6 +60,8 @@ export default function EasyView({ easy, chapters }: { easy: EasySummary; chapte
       </div></section>}
     </div>
     {!!chapters.length && <p className={styles.ready}><strong>준비된 것</strong>{chapters.join(" · ")}</p>}
+    {/* 휴대폰은 머리의 내려받기를 메뉴로 옮겼다 — 돈 낸 사람이 바로 찾게 여기에도 둔다 */}
+    {onDownload && <button type="button" className={styles.download} onClick={onDownload}>계획서 내려받기</button>}
     <p className={styles.say}>세상의 어떤 큰일도 열정 없이 이루어진 적이 없습니다.<cite>헤겔</cite></p>
   </div>;
 }

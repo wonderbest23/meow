@@ -177,8 +177,10 @@ export default function DocumentWorkspace(props: Props) {
   /* 내려받은 뒤 잠깐 보이는 알림 */
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(null), 2600); return () => clearTimeout(timer); }, [toast]);
+  // 쉬운 보기에서 받는 파일은 계획서 전체다 — 처음 보는 화면이 쉬운 보기라 여기서 받은 파일이 한 장짜리면 돈 낸 사람이 놀란다. 쉬운 보기가 없는 계획은 예전처럼 한 장 요약
+  const summaryDownload = summaryMode && !!props.summary && !props.summary.easy;
   async function download(format: Format) {
-    const view = summaryMode && props.summary ? "summary" as const : "detailed" as const;
+    const view = summaryDownload ? "summary" as const : "detailed" as const;
     const done = await props.onDownload(format, view);
     if (done === true) { setModal(null); setToast("내려받았어요"); }
   }
@@ -596,7 +598,7 @@ export default function DocumentWorkspace(props: Props) {
                 ? <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" size="small" className={styles.noticeAction} onConfirm={() => void reflectFacts()} />
                 : factEditable ? <AppButton type="button" variant="primary" size="small" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>직접 고치기</AppButton> : coachHref && <AppButton variant="primary" size="small" className={styles.noticeAction} href={coachHref}>대화로 고치기</AppButton>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}{facts.error.retry && <AppButton type="button" variant="secondary" size="small" className={styles.factRetry} disabled={facts.busy} onClick={retryReflect}><RefreshCw size={15} aria-hidden="true" />다시 시도</AppButton>}</span>}</div>}
               {summaryMode && props.summary ? props.summary.easy
-                ? <><EasyView easy={props.summary.easy} chapters={grouped.map(([name]) => name)} /><details className={styles.summaryMore}><summary>자세한 요약</summary><ExecutiveSummaryView summary={props.summary} /></details></>
+                ? <><EasyView easy={props.summary.easy} chapters={grouped.map(([name]) => name)} onDownload={canDownloadDoc && !isSample ? () => setModal("download") : undefined} /><details className={styles.summaryMore}><summary>자세한 요약</summary><ExecutiveSummaryView summary={props.summary} /></details></>
                 : <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter} data-changing={(studioPc && list.some(section => previews.has(section.key))) || undefined}>
                 <DocumentChapterHeading number={index + 1} title={name} pc={studioPc} lead={studioPc && index === 0 ? props.identity : undefined}
                   actions={studioPc && list.some(section => previews.has(section.key)) ? <><StatusBadge tone="info">대화로 고치는 중</StatusBadge>{chapterActions(index, name)}</> : chapterActions(index, name)} />
@@ -631,7 +633,7 @@ export default function DocumentWorkspace(props: Props) {
       </div>}
     </BusinessAppChrome>
     <dialog ref={dialog} className={styles.dialog} onCancel={() => setModal(null)} onClose={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setModal(null); } }} aria-labelledby="document-dialog-title">
-      <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : modal === "edit" ? "어떻게 고칠까요?" : summaryMode && props.summary && !isSample ? "한 장 요약 내려받기" : "상세 계획서 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
+      <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : modal === "edit" ? "어떻게 고칠까요?" : summaryDownload && !isSample ? "한 장 요약 내려받기" : "계획서 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
       {modal === "edit" ? <div className={styles.editChoices}>
         {EDIT_CHAT && coachHref && <Link href={`${coachHref}&edit=chat`} onClick={() => setModal(null)}><strong>대화로 고치기</strong><small>“가격을 올려줘”처럼 말하기</small></Link>}
         <button onClick={() => { setModal(null); setSummaryMode(false); setFactMode(true); }}><strong>직접 고치기</strong><small>숫자·사실을 눌러 바꾸기</small></button>
@@ -640,7 +642,7 @@ export default function DocumentWorkspace(props: Props) {
         {props.accessError ? <div className={styles.notice} role="alert">이용 권한을 확인하지 못했어요. <button className={styles.help} onClick={props.onRetryAccess}>다시 확인</button></div> : props.accessPending && <p role="status">이용 권한을 확인하고 있어요.</p>}
         {([{ format: "pdf", name: "PDF", description: "인쇄하거나 공유할 때", Icon: FileDown }, { format: "docx", name: "Word", description: "문서를 직접 고쳐 쓸 때", Icon: FileText }, { format: "pptx", name: props.deckLabel || "발표자료 PPT", description: "계획서를 발표자료로 만들 때", Icon: Presentation }] as const)
           /* PPT 는 제공 준비 중이면 줄 자체를 두지 않는다 — 결제 전 사람에게 'PPT 상태 다시 확인'이 보였다 */
-          .filter(({ format }) => format !== "pptx" || (PPT_GENERATION_VERIFIED && !(summaryMode && props.summary))).map(({ format, name, description, Icon }) => <button key={format} disabled={props.exporting !== null || props.accessPending || !props.canDownload(format, summaryMode && props.summary ? "summary" : "detailed")} onClick={() => void download(format)}><Icon size={24} /><span><strong>{props.exporting === format ? "파일을 준비하고 있어요…" : name}</strong>{props.exporting === format ? <><small role="status">10~15초쯤 걸려요 · 이 화면에 그대로 계세요</small><progress aria-label="파일 준비 중" /></> : format === "pptx" && props.deckStatus ? <small role="status" aria-live="polite">{props.deckStatus}</small> : <small>{description}</small>}</span><ChevronRight size={20} /></button>)}
+          .filter(({ format }) => format !== "pptx" || (PPT_GENERATION_VERIFIED && !summaryDownload)).map(({ format, name, description, Icon }) => <button key={format} disabled={props.exporting !== null || props.accessPending || !props.canDownload(format, summaryDownload ? "summary" : "detailed")} onClick={() => void download(format)}><Icon size={24} /><span><strong>{props.exporting === format ? "파일을 준비하고 있어요…" : name}</strong>{props.exporting === format ? <><small role="status">10~15초쯤 걸려요 · 이 화면에 그대로 계세요</small><progress aria-label="파일 준비 중" /></> : format === "pptx" && props.deckStatus ? <small role="status" aria-live="polite">{props.deckStatus}</small> : <small>{description}</small>}</span><ChevronRight size={20} /></button>)}
         {Object.values(props.editStates).some(state => state.status !== "saved") && <p role="status">저장이 끝난 뒤 파일을 받을 수 있어요. 저장에 실패한 항목은 본문에서 확인해 주세요.</p>}
         {props.error && <p role="alert">{props.error}</p>}
       </div>}

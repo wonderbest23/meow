@@ -30,6 +30,8 @@
 .split i[data-kind=short] { background: repeating-linear-gradient(135deg, var(--app-danger) 0 3px, transparent 3px 6px); }
 .ready { margin: 22px 0 0; font-size: .875rem; line-height: 1.8; color: var(--app-body); word-break: keep-all; }
 .ready strong { display: inline-block; width: 88px; font-size: .8125rem; font-weight: 600; color: var(--app-muted); }
+.download { justify-self: start; min-height: 44px; margin-top: 24px; padding: 10px 20px; border: 0; border-radius: 999px; background: var(--app-primary); color: var(--app-surface); font: inherit; font-size: .9375rem; font-weight: 600; }
+.download:hover { background: var(--app-primary-hover); }
 .say { margin: 32px 0 0; font-size: .875rem; line-height: 1.8; color: var(--app-muted); word-break: keep-all; }
 .say cite { font-style: normal; font-size: .75rem; }
 .say::before { content: "\201C"; } .say cite::before { content: "\201D  "; }
