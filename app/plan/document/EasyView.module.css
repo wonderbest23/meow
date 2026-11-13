@@ -28,6 +28,22 @@
 .scale i, .split i { display: block; background: var(--app-text); transition: width .5s ease; }
 .split i[data-kind=keep] { background: color-mix(in srgb, var(--app-text) 26%, transparent); }
 .split i[data-kind=short] { background: repeating-linear-gradient(135deg, var(--app-danger) 0 3px, transparent 3px 6px); }
+.steps { padding: 22px 0; border-bottom: 1px solid var(--app-line); }
+.steps header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.steps header span { font-size: .8125rem; font-weight: 600; color: var(--app-text); }
+.steps ol { display: grid; gap: 18px; margin: 0; padding: 0; list-style: none; }
+.steps li { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; }
+.steps li > button { width: 32px; height: 32px; padding: 0; border: 1.5px solid var(--app-line-strong); border-radius: 50%; background: var(--app-surface); color: var(--app-text); font: inherit; font-size: .875rem; font-weight: 600; transition: background .2s, color .2s, border-color .2s; }
+.steps li[data-done] > button { border-color: var(--app-text); background: var(--app-text); color: var(--app-surface); }
+.steps li[data-done] .task { color: var(--app-muted); }
+.meta { margin: 0 0 2px; font-size: .75rem; font-weight: 600; line-height: 1.7; color: var(--app-muted); }
+.task { margin: 0; font-size: .9375rem; line-height: 1.7; color: var(--app-text); word-break: keep-all; }
+.steps .small { margin-top: 4px; }
+.good { max-width: 620px; margin: 0 0 24px; padding: 18px 20px; border-radius: 14px; background: var(--app-hover); }
+.good h3 { margin: 0 0 8px; font-size: .875rem; font-weight: 700; color: var(--app-text); }
+.good ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; font-size: .875rem; line-height: 1.7; color: var(--app-body); word-break: keep-all; }
+.good li::before { content: "✓  "; font-weight: 700; color: var(--app-text); }
+.good .say { margin-top: 12px; font-size: .8125rem; }
 .ready { margin: 22px 0 0; font-size: .875rem; line-height: 1.8; color: var(--app-body); word-break: keep-all; }
 .ready strong { display: inline-block; width: 88px; font-size: .8125rem; font-weight: 600; color: var(--app-muted); }
 .download { justify-self: start; min-height: 44px; margin-top: 24px; padding: 10px 20px; border: 0; border-radius: 999px; background: var(--app-primary); color: var(--app-surface); font: inherit; font-size: .9375rem; font-weight: 600; }

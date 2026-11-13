@@ -19,7 +19,8 @@ import DocumentSourceReview, { type DocumentReviewSource } from "./DocumentSourc
 import type { StoredSection } from "../../../lib/plan-builder/plan-store";
 import type { ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
 import ExecutiveSummaryView from "./ExecutiveSummaryView";
-import EasyView from "./EasyView";
+import EasyView, { GoodPoints } from "./EasyView";
+import { firstSteps } from "../../../lib/plan-builder/first-steps";
 import { useHomepageStatus } from "../use-homepage";
 import { journeyNext, type HomepageStatus } from "../../../lib/plan-builder/journey";
 import { loadState } from "../../../lib/plan-builder/plan-store";
@@ -329,6 +330,8 @@ export default function DocumentWorkspace(props: Props) {
    * 다 쓴 계획서를 처음 열 때 한 번만 쉬운 보기를 먼저 보인다(대표 결정 2026-11-13 — 표부터 나오면 어렵다).
    * 그 뒤로는 마지막에 보던 대로(작업 모드) — 예전에 요약이 매번 먼저 떠 불편하다는 피드백이 있었다. 주소가 특정 항목(#sec-)이면 건드리지 않는다.
    */
+  // 첫걸음 — 계획서 '12주 할 일' 표의 앞 세 줄(first-steps.ts)
+  const steps = useMemo(() => { for (const [, list] of grouped) for (const section of list) { const found = firstSteps(section.html); if (found.length) return found; } return []; }, [grouped]);
   const easyShown = useRef(false);
   useEffect(() => {
     if (easyShown.current || !ready || !grouped.length || props.writing || !props.summary?.easy || isSample || !planId) return;
@@ -598,10 +601,12 @@ export default function DocumentWorkspace(props: Props) {
                 ? <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" size="small" className={styles.noticeAction} onConfirm={() => void reflectFacts()} />
                 : factEditable ? <AppButton type="button" variant="primary" size="small" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>직접 고치기</AppButton> : coachHref && <AppButton variant="primary" size="small" className={styles.noticeAction} href={coachHref}>대화로 고치기</AppButton>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}{facts.error.retry && <AppButton type="button" variant="secondary" size="small" className={styles.factRetry} disabled={facts.busy} onClick={retryReflect}><RefreshCw size={15} aria-hidden="true" />다시 시도</AppButton>}</span>}</div>}
               {summaryMode && props.summary ? props.summary.easy
-                ? <><EasyView easy={props.summary.easy} chapters={grouped.map(([name]) => name)} onDownload={canDownloadDoc && !isSample ? () => setModal("download") : undefined} /><details className={styles.summaryMore}><summary>자세한 요약</summary><ExecutiveSummaryView summary={props.summary} /></details></>
+                ? <><EasyView easy={props.summary.easy} chapters={grouped.map(([name]) => name)} steps={steps} planId={planId} onDownload={canDownloadDoc && !isSample ? () => setModal("download") : undefined} /><details className={styles.summaryMore}><summary>자세한 요약</summary><ExecutiveSummaryView summary={props.summary} /></details></>
                 : <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter} data-changing={(studioPc && list.some(section => previews.has(section.key))) || undefined}>
                 <DocumentChapterHeading number={index + 1} title={name} pc={studioPc} lead={studioPc && index === 0 ? props.identity : undefined}
                   actions={studioPc && list.some(section => previews.has(section.key)) ? <><StatusBadge tone="info">대화로 고치는 중</StatusBadge>{chapterActions(index, name)}</> : chapterActions(index, name)} />
+                {/* 작업 모드 돈 장 머리 — 표를 읽기 전에 이 계획의 좋은 점을 계산 값으로 먼저 보인다(대표 결정 2026-11-13) */}
+                {props.summary?.easy && !isSample && !factMode && /재무|돈/.test(name) && <GoodPoints easy={props.summary.easy} />}
                 {index === 0 && !!props.overview?.length && <table className={styles.overview}><caption>일반 현황</caption><tbody>{props.overview.map(field => <tr key={field.label}><th scope="row">{field.label}</th><td>{field.value}</td></tr>)}</tbody></table>}
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
                   <DocumentSectionHeading number={props.numbering.get(section.key)?.num} title={section.sectionTitle} />
