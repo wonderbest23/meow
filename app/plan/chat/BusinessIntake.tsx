@@ -33,10 +33,9 @@ import { nativePlatform } from "../../../lib/native-app";
 import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 import { LANDING_IDEA_PARAM, clearLandingIdea, readLandingIdea, stashLandingIdea, withoutLandingIdea } from "../../../lib/plan-builder/landing-idea";
 import { ENTRY_PARAM, isEntryMode, STUDIO_PATH, studioHref, type StudioTab } from "../../../lib/plan-builder/studio";
-import { homepageHref, journeyNext } from "../../../lib/plan-builder/journey";
-import { useHomepageStatus } from "../use-homepage";
+import { homepageHref } from "../../../lib/plan-builder/journey";
 import { useChipFlight } from "./intake-ui/use-chip-flight";
-import { sendStudioCommand, useStudioCommand, useStudioEditChapterList, useStudioEditPreviewChapters, useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
+import { useStudioCommand, useStudioEditChapterList, useStudioEditPreviewChapters, useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
 import { PopMenu, type PopMenuItem } from "../studio/PopMenu";
 import { useDictation } from "../../../components/use-dictation";
 import { newChatHref } from "../../../lib/plan-builder/studio";
@@ -1613,22 +1612,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const pickable = pro && !editTarget && !!plan?.hasDocuments && editChatReady && editChapterList.length > 0 && (studioRoute === "chat" || studioRoute === "section");
   /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로. 이미 보낸 예시는 다시 권하지 않는다(r42) */
   const priceAnswer = plan?.intake.answers.price;
-  const homepageStatus = useHomepageStatus(plan?.hasDocuments ? plan.planId : null);
-  const storedPlan = plan?.hasDocuments ? loadState().plans.find(item => item.id === plan.planId) : undefined;
-  const journeyStep = storedPlan ? journeyNext(storedPlan, homepageStatus) : null;
-  const nextStepChips: SuggestionChip[] = journeyStep ? [
-    { label: journeyStep.title, pick: () => studioNav?.push(journeyStep.href) },
-    ...(journeyStep.secondary ? [{ label: journeyStep.secondary.title, pick: () => studioNav?.push(journeyStep.secondary!.href) }] : []),
-    { label: "계획서 내려받기", pick: () => { studioNav?.showTab?.("plan"); sendStudioCommand("plan-download"); } },
-  ] : [];
   /* 휴대폰 작업실도 같은 추천을 입력 상자 위 한 줄(가로로 밀어 보기)로 — lovable 구조 2단계(시안 MChat) */
   const suggestionChips: SuggestionChip[] = !embedded || !studioComposer || editWorking ? []
     : homepageSuggest ? [{ label: "홈페이지를 대화로 고치기", pick: () => enterEditTarget({ target: "homepage", label: "홈페이지" }) }]
     : visibleComposerText(studioText) ? []
     : editTarget?.target === "homepage" ? HOMEPAGE_SUGGESTIONS
-    /* 계획서를 다 만든 대화에서는 고치기 예시 대신 다음에 할 일을 권한다(대표 결정 2026-11-13 — '1인 가구로 바꿔줘' 같은 고정 예시는 사업과 안 맞고 고치기만 복잡해 보였다). 장을 골라 고치는 중일 때만 예시를 남긴다 */
-    : studioRoute === "chat" && planSide && !!plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy ? nextStepChips
-    : studioRoute === "section" && !!plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy ? editExamples(priceAnswer?.status === "answered" ? priceAnswer.value : null).filter(text => !plan.coach.messages.some(message => message.role === "user" && message.text.endsWith(text))).map(text => ({ label: text, fill: text }))
+    : (studioRoute === "chat" && planSide || studioRoute === "section") && !!plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy ? editExamples(priceAnswer?.status === "answered" ? priceAnswer.value : null).filter(text => !plan.coach.messages.some(message => message.role === "user" && message.text.endsWith(text))).map(text => ({ label: text, fill: text }))
     : [];
   const pickSuggestion = (chip: SuggestionChip) => {
     if (chip.pick) { chip.pick(); return; }
