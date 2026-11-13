@@ -1014,6 +1014,7 @@ button.workLogRow { min-height: 32px; }
 .depthCards small { align-self: end; font-size: .75rem; color: var(--app-muted); }
 /* 대화 방식(일반 · 전문가) — 입력 상자 바로 위 작은 전환 */
 .depthPick { display: flex; align-items: center; gap: 2px; min-width: 0; margin: 0 0 8px 2px; }
+.depthNote { margin: 0 0 8px 6px; color: var(--app-muted); font-size: .75rem; line-height: 1.6; }
 .depthPick button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--app-muted); font: inherit; font-size: .8125rem; font-weight: 500; }
 .depthPick button[aria-pressed=true] { background: var(--app-hover); color: var(--app-text); font-weight: 650; }
 .depthPick button:disabled { opacity: .5; }
