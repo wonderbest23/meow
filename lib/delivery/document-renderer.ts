@@ -533,7 +533,9 @@ export async function renderPdf(
   project: DocumentProjectMeta,
   fontData?: DeliveryFontData,
 ): Promise<Buffer> {
-  return renderLightweightPdf(documents, project, deliveryFontData(fontData));
+  // 수학 빼기 기호(−, U+2212)는 나눔고딕에 글자가 없어 PDF에서 빈 네모로 찍힌다 — 붙임표로 바꿔 그린다
+  // shortcut: 지금 본문에서 글꼴에 없는 글자는 이것 하나다(2026-11-13 실제 계획서 4건 대조), 다른 글자가 보이면 여기에 더한다
+  return renderLightweightPdf(documents.map(document => ({ ...document, markdown: document.markdown.replace(/\u2212/g, "-") })), project, deliveryFontData(fontData));
 }
 
 function safeFileName(value: string) {

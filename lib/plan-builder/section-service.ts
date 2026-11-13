@@ -61,7 +61,11 @@ export function intakeFinancialTable(plan: Pick<ServerPlan, "planType" | "answer
   // 돈 장 시험판(cashflow-scenarios.ts): 판매량 하나 대신 세 경우의 12개월 통장 흐름 — 신규 사업만
   const flow = cashflowScenariosEnabled() && intake?.mode !== "operating" ? cashflowFromFields(coach.fields, scenario) : null;
   // 한 건에 실제 남는 돈(부가세를 뺀 뒤)·본전 판매량은 세 경우 표 위에 있다(예전 손익표를 따로 두면 다른 본전이 두 번 나온다)
-  if (flow) return cashflowMarkdown(flow);
+  if (flow) {
+    // 표의 '대표님이 정한 값'은 직접 답한 값일 때만 맞다 — AI 초안으로 채운 값이면 그렇게 적는다
+    const drafted = (key: string) => coach.fields.find(field => field.key === key)?.basis === "proposal";
+    return cashflowMarkdown(flow).split("\n").map(row => /^\| 판매가 \|/.test(row) && drafted("price") || /^\| 한 [^|]+당 비용 \|/.test(row) && drafted("unitCost") ? row.replace("대표님이 정한 값", "AI 초안 값(확인 필요)") : row).join("\n");
+  }
   // 새로 시작하는 사업에서 처리량(최대치)만 있으면 판매량을 모르는 것과 같다 — 최대치를 매달 판다고 12개월 표를 만들지 않는다
   const capacityOnly = cashflowScenariosEnabled() && intake?.mode !== "operating" && scenario.volumeSource === "capacity";
   if (!scenario.volume || capacityOnly) {
@@ -186,7 +190,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
 
   const coach = readCoach(plan.answers);
   const config = coach ? resolvePlanningLLMConfig(job.ownerHash) : resolveLLMConfig(job.ownerHash, "anthropic");
-  const { markdown, source } = await generateSection(config, {
+  const { markdown: written, source } = await generateSection(config, {
     chapter,
     section,
     answers,
@@ -210,7 +214,10 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
    * 실패했으면 저장하지 않고 던진다 — 워크플로가 다시 시도하고,
    * 끝내 안 되면 그 섹션만 실패로 남는다. 표를 본문인 척 저장하지 않는다.
    */
-  if (source === "failed" || (coach && source !== "ai") || !markdown.trim()) throw new Error("SECTION_GENERATION_FAILED");
+  if (source === "failed" || (coach && source !== "ai") || !written.trim()) throw new Error("SECTION_GENERATION_FAILED");
+  // 지시문의 표시 낱말 '추가 정의 필요'가 본문에 그대로 나오면 읽는 사람은 뜻을 모른다 — 쉬운 말로 바꿔 저장한다
+  // shortcut: 저장할 때만 바꾼다(지시문의 낱말은 그대로), 대화로 고친 글에도 보이면 그 저장 길에도 넣는다
+  const markdown = written.replace(/추가 정의가 필요합니다/g, "확인이 필요합니다").replace(/추가 정의 필요/g, "확인 필요");
 
   let html = "";
   try {

@@ -173,7 +173,8 @@ async function main() {
   for (const text of ["동네 네일샵을 열려고 해요", "반찬가게를 열고 싶어요", "굿즈 스마트스토어를 운영하려고 해요", "소규모 팀용 예약 관리 SaaS를 만들고 있어요", "배달 전문 치킨집을 하려고 해요", "한복 대여점을 하고 싶어요", "요리 유튜브 채널을 키워서 수익을 내고 싶어요"]) {
     const ownerHash = `intake-estimate-${randomUUID()}`;
     const { plan, snapshot } = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: text, revision: 0, requestId: randomUUID() }, off);
-    assert.equal(snapshot.coreComplete, true, `${text}: 한 문장으로 핵심 질문이 모두 채워진다`);
+    // 한 문장으로 나머지는 채워지고, 준비 예산·일할 시간 두 가지만 남아 그대로 묻는다(짐작도 '모름'도 아니다)
+    assert.deepEqual([snapshot.coreComplete, snapshot.coreTotal - snapshot.coreAnswered, snapshot.nextQuestion?.id], [false, 2, "budget"], `${text}: 예산·시간만 남는다`);
     const coach = readCoach(plan.answers)!;
     assert.equal(coach.fields.find(field => field.key === "business")?.basis, "user");
     for (const key of ["customer", "problem", "offer", "channel", "price", "unitCost", "cost", "capacity", "goal"]) assert.equal(coach.fields.find(field => field.key === key)?.basis, "proposal", `${text}: ${key} 는 제안으로 표시된다`);

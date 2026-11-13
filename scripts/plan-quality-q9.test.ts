@@ -164,7 +164,7 @@ async function main() {
     // ── (3)·(4) 부가세 안내: 면세 문장은 면세일 수 있는 업종에만, 간이과세 매입 공제 0.5%, 제조업은 관할 세무서 확인 ──
     for (const { table } of [nail, candle, lunchbox]) {
       assert.doesNotMatch(table, /부가세가 면제되는 사업이면 빼지 않습니다|면제되는 상품·용역/, "taxable businesses get no exemption sentence");
-      assert.match(table, /간이과세자는 산 금액의 0\.5%만 공제되고 내야 할 세금보다 많아도 돌려받지 않습니다\(제63조제3항\)/);
+      assert.match(table, /간이과세자는 산 금액의 0\.5%만 공제되고 내야 할 세금보다 많아도 돌려받지 않습니다\(제63조제3항·제6항\)/);
       assert.match(table, /한 해 매출이 4,800만 원 미만이면 내지 않습니다\(부가가치세법 제63조·제69조\)/);
     }
     assert.match(candle.table, /직접 만들어 파는 사업은 제조업으로 보면 간이과세를 적용받지 못할 수 있으므로\(제61조, 대통령령으로 정한 업종\) 관할 세무서에서 확인합니다/);
