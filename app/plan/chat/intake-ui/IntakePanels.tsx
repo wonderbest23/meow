@@ -59,9 +59,10 @@ function CoachGreeting({ onReady }: { onReady: () => void }) {
 
 export function EntryChoices({ disabled, onStart, initialMessage, coach = false, depth, onDepth }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null; coach?: boolean;
   /** 대화 방식 카드(대표 결정 2026-11-13) — onDepth 가 있으면 인사 뒤 맨 먼저 '일반 · 전문가' 두 카드를 보이고, 고른 뒤에 단계를 묻는다 */
-  depth?: "easy" | "expert"; onDepth?: (depth: "easy" | "expert") => void }) {
+  /** depth 가 비어 있으면 아직 고르지 않은 것 — 대화 칸이 그동안 입력창을 잠근다. '바꾸기'는 null 로 되돌린다 */
+  depth?: "easy" | "expert" | null; onDepth?: (depth: "easy" | "expert" | null) => void }) {
   const [greeted, setGreeted] = useState(false);
-  const [depthPicked, setDepthPicked] = useState(false);
+  const depthPicked = !!depth;
   const choices = [
     { mode: "exploring" as const, label: "아이디어를 찾고 있어요", Icon: Lightbulb },
     { mode: "startup" as const, label: "생각한 사업이 있어요", Icon: FileText },
@@ -78,11 +79,11 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false,
     {(initialMessage || greeted) && onDepth && (depthPicked
       ? <><div className={`${styles.question} ${styles.chatQuestion}`}><h2>어떻게 만들까요?</h2></div>
         <article className={styles.userMessage} data-coach-message="user"><p>{depth === "expert" ? "전문가" : "일반"}</p></article>
-        <button type="button" className={styles.depthChange} disabled={disabled} onClick={() => setDepthPicked(false)}>바꾸기</button></>
+        <button type="button" className={styles.depthChange} disabled={disabled} onClick={() => onDepth(null)}>바꾸기</button></>
       : <div className={styles.depthCards} role="group" aria-label="대화 방식">
         <h2>어떻게 만들까요?</h2>
         {([["easy", "일반", "한 문장만 말하면 나머지는 채워서 바로 만들어요", "처음이라면 이쪽"], ["expert", "전문가", "가격·고객·비용을 하나씩 직접 정해요", "숫자를 이미 알고 있다면"]] as const).map(([value, name, text, who]) =>
-          <button type="button" key={value} disabled={disabled} onClick={() => { onDepth(value); setDepthPicked(true); }}><strong>{name}</strong><span>{text}</span><small>{who}</small></button>)}
+          <button type="button" key={value} disabled={disabled} onClick={() => onDepth(value)}><strong>{name}</strong><span>{text}</span><small>{who}</small></button>)}
       </div>)}
     {(initialMessage || greeted) && (!onDepth || depthPicked) && <div className={`${styles.question} ${styles.chatQuestion}`}>
       <h2 id="intake-entry-heading">{ENTRY_QUESTION}</h2>

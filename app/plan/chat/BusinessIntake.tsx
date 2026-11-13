@@ -283,9 +283,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
    * 대화 방식(대표 결정 2026-11-13) — 일반: 한 문장만 받고 나머지는 업종 기준값으로 채워 바로 초안, 전문가: 하나씩 자세히 묻는다.
    * 새 대화에서는 여기서 고른 값을 시작 명령에 싣고, 진행 중인 사업은 서버에 저장된 값(intake.depth)을 따른다.
    */
-  const [startDepth, setStartDepth] = useState<"easy" | "expert">("easy");
+  const [startDepth, setStartDepth] = useState<"easy" | "expert" | null>(null);
   const startDepthRef = useRef(startDepth);
   useEffect(() => { startDepthRef.current = startDepth; }, [startDepth]);
+  const depthGateRef = useRef(false);
   const [busy, setBusy] = useState(false);
   // '사업계획서 만들기' 대기 표시 — 결제 화면으로 넘어가는 동안(주소 이동은 몇 초 걸린다)에도 유지한다(대표 지적 2026-10-16: 눌러도 멈춘 것 같았다)
   const [preparing, setPreparing] = useState(false);
@@ -838,7 +839,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     void send({ action: "answer", questionId, value, ...(unknown ? { unknown: true } : {}), ...(extra?.ksic ? { ksic: extra.ksic } : {}) }, { answer: draftRef.current.answers[question.id] ?? emptyAnswer() });
   };
   const submitComposer = () => {
-    if (answerBlocked || !loaded || unfinishedText) return;
+    if (answerBlocked || !loaded || unfinishedText || depthGateRef.current) return;
     if (!plan) {
       const text = entryMessage(draftRef.current);
       if (text.length > 1200) { setError("처음 사업 설명은 1,200자 이내로 나눠 보내 주세요. 입력한 내용은 그대로 보관했어요."); return; }
@@ -1618,9 +1619,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const openSummary = () => { setView("summary"); setDeskSummary(true); };
   const pickable = pro && !editTarget && !!plan?.hasDocuments && editChatReady && editChapterList.length > 0 && (studioRoute === "chat" || studioRoute === "section");
   /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로. 이미 보낸 예시는 다시 권하지 않는다(r42) */
-  const depthNow: "easy" | "expert" = plan ? plan.intake.depth === "expert" ? "expert" : "easy" : startDepth;
+  const depthNow: "easy" | "expert" = plan ? plan.intake.depth === "expert" ? "expert" : "easy" : startDepth ?? "easy";
+  // 새 대화는 방식 카드를 고르기 전까지 입력창을 잠근다 — 먼저 글을 치면 고른 방식이 의미가 없어진다(대표 요청 2026-11-13). 주소로 시작 방식이 정해져 들어온 경우(?entry=)는 카드 없이 바로 시작하므로 plan 이 생겨 풀린다
+  const depthGate = coach && newEntry && !plan && !loginGate && !replyTurn && startDepth === null;
   // 새 대화는 첫 화면의 두 카드로 고른다 — 이 작은 전환은 시작한 뒤 바꿀 때만
   const depthPick = !studioRoute && !loginGate && !!plan && !plan.hasDocuments && plan.intake.mode !== "operating" && !aiBusy;
+  useEffect(() => { depthGateRef.current = depthGate; });
   const priceAnswer = plan?.intake.answers.price;
   /*
    * 계획서를 만든 대화의 입력창 — 고정 예시 칩 대신, 위 대화를 읽고 AI가 만든 '다음에 보낼 만한 말'을 회색 안내 글자로만 보인다(대표 결정 2026-11-13).
@@ -1825,7 +1829,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
           {/* 대화 방식 고르기 — 계획서를 만들기 전까지만. 진행 중에 바꾸면 서버가 채운 값을 걷거나(전문가) 다시 채운다(일반) */}
           {depthPick && <div className={styles.depthPick} role="group" aria-label="대화 방식">
             {(["easy", "expert"] as const).map(value => <button key={value} type="button" aria-pressed={depthNow === value} disabled={busy} title={value === "easy" ? "한 문장만 말하면 나머지는 채워서 바로 만들어요" : "하나씩 자세히 묻고 정해요"}
-              onClick={() => { if (depthNow === value) return; if (plan) void send({ action: "depth", depth: value }); else setStartDepth(value); }}>{value === "easy" ? "일반" : "전문가"}</button>)}
+              onClick={() => { if (depthNow === value) return; void send({ action: "depth", depth: value }); }}>{value === "easy" ? "일반" : "전문가"}</button>)}
             <span>{depthNow === "easy" ? "한 문장이면 바로 만들어요" : "하나씩 자세히 물어봐요"}</span>
           </div>}
           <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); setGuideShown(null); if (studioRoute) submitStudio(); else submitComposer(); }}>
@@ -1843,7 +1847,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
             {!studioRoute && askingAI && <div className={styles.composerContext}><MessageCircle size={14} aria-hidden="true" />AI에게 질문<AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => storeComposerNote("memo")}><Bookmark size={14} aria-hidden="true" />메모로 저장</AppButton></div>}
             {(studioRoute ? studioNote : composerNote) && <p className={styles.composerHint} role="status" aria-live="polite">{studioRoute ? studioNote : composerNote}</p>}
             <div className={styles.composerRow}>
-              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" data-reply-hint={replyHintText ? "" : undefined} placeholder={replyHintText ? replyHintText : studioRoute ? studioPlaceholder : coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!studioRoute && !!replyTurn} disabled={!loaded || loadFailed || ownerChanged} rows={1} enterKeyHint="enter" maxLength={1200} value={studioRoute ? studioText : composerShown} onPaste={event => {
+              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" data-reply-hint={replyHintText ? "" : undefined} placeholder={depthGate ? "위에서 방식을 먼저 골라 주세요" : replyHintText ? replyHintText : studioRoute ? studioPlaceholder : coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!studioRoute && !!replyTurn} disabled={!loaded || loadFailed || ownerChanged || depthGate} rows={1} enterKeyHint="enter" maxLength={1200} value={studioRoute ? studioText : composerShown} onPaste={event => {
                 const input = event.currentTarget, pasted = event.clipboardData.getData("text");
                 setPasteCut(pasted.length > 1200 - (input.value.length - (input.selectionEnd - input.selectionStart)));
               }} onChange={event => {
