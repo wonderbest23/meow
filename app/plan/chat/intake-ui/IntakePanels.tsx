@@ -74,11 +74,16 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false,
      * 한 박자 뒤 첫 질문과 선택지. 첫 화면에서 글을 적어 들어온 경우는 내 말풍선 뒤에 바로 질문(인사는 건너뜀). 고르는 것이 단계라 질문도 단계를 묻는다(대화 기록 첫 줄과 같은 말)
      */}
     {initialMessage ? <><article className={styles.userMessage} data-coach-message="user"><p>{initialMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p></> : <CoachGreeting onReady={() => setGreeted(true)} />}
-    {(initialMessage || greeted) && onDepth && <div className={styles.depthCards} role="group" aria-label="대화 방식">
-      <h2>어떻게 만들까요?</h2>
-      {([["easy", "일반", "한 문장만 말하면 나머지는 채워서 바로 만들어요", "처음이라면 이쪽"], ["expert", "전문가", "가격·고객·비용을 하나씩 직접 정해요", "숫자를 이미 알고 있다면"]] as const).map(([value, name, text, who]) =>
-        <button type="button" key={value} aria-pressed={depthPicked && depth === value} disabled={disabled} onClick={() => { onDepth(value); setDepthPicked(true); }}><strong>{name}</strong><span>{text}</span><small>{who}</small></button>)}
-    </div>}
+    {/* 한 번에 질문 하나 — 고르기 전에는 두 카드만, 고르면 카드는 내 답 말풍선으로 접히고 그다음에 단계를 묻는다(대표 요청 2026-11-13). 말풍선 아래 '바꾸기'로 다시 고른다 */}
+    {(initialMessage || greeted) && onDepth && (depthPicked
+      ? <><div className={`${styles.question} ${styles.chatQuestion}`}><h2>어떻게 만들까요?</h2></div>
+        <article className={styles.userMessage} data-coach-message="user"><p>{depth === "expert" ? "전문가" : "일반"}</p></article>
+        <button type="button" className={styles.depthChange} disabled={disabled} onClick={() => setDepthPicked(false)}>바꾸기</button></>
+      : <div className={styles.depthCards} role="group" aria-label="대화 방식">
+        <h2>어떻게 만들까요?</h2>
+        {([["easy", "일반", "한 문장만 말하면 나머지는 채워서 바로 만들어요", "처음이라면 이쪽"], ["expert", "전문가", "가격·고객·비용을 하나씩 직접 정해요", "숫자를 이미 알고 있다면"]] as const).map(([value, name, text, who]) =>
+          <button type="button" key={value} disabled={disabled} onClick={() => { onDepth(value); setDepthPicked(true); }}><strong>{name}</strong><span>{text}</span><small>{who}</small></button>)}
+      </div>)}
     {(initialMessage || greeted) && (!onDepth || depthPicked) && <div className={`${styles.question} ${styles.chatQuestion}`}>
       <h2 id="intake-entry-heading">{ENTRY_QUESTION}</h2>
       <div className={styles.chipRow} role="group" aria-label="대화 시작 선택지">{choices.map(({ mode, label }) => <button type="button" key={mode} className={styles.chip} disabled={disabled} onClick={() => onStart(mode)}>{label}</button>)}</div>

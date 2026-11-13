@@ -1008,6 +1008,7 @@ button.workLogRow { min-height: 32px; }
 @media (prefers-reduced-motion: reduce) { .depthCards button { animation: none; transition: none; } }
 .depthCards button:hover:not(:disabled) { border-color: var(--app-line-strong); transform: translateY(-1px); }
 .depthCards button[aria-pressed=true] { border-color: var(--app-text); box-shadow: 0 0 0 1px var(--app-text); }
+.depthChange { display: block; width: fit-content; margin: -4px 2px 12px auto; padding: 4px 6px; border: 0; background: transparent; color: var(--app-muted); font: inherit; font-size: .75rem; text-decoration: underline; text-underline-offset: 3px; }
 .depthCards strong { font-size: 1.0625rem; font-weight: 700; }
 .depthCards span { font-size: .8125rem; line-height: 1.6; color: var(--app-body); word-break: keep-all; }
 .depthCards small { align-self: end; font-size: .75rem; color: var(--app-muted); }
