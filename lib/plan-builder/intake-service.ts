@@ -134,7 +134,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       assertAmountConfirmed(intake, coach, command);
       const beforeAnswers = structuredClone(intake.answers);
       applyIntakeAnswer(plan, coach, intake, command, at);
-      if (process.env.INTAKE_ESTIMATE === "1" && intake.depth !== "expert" && (command.questionId === "business" || command.questionId === "industry") && !command.unknown) applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
+      if (process.env.INTAKE_ESTIMATE === "1" && intake.depth !== "expert" && (command.questionId === "business" || command.questionId === "industry" || command.questionId === "candidate") && !command.unknown) applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
       // 계획서가 있으면 고친 금액을 본문에 바로 바꿔 넣는다(AI 없음). 계산된 다른 값은 다시 작성하기로 맞춘다.
       patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);
     }

@@ -215,6 +215,13 @@ async function main() {
     const back = await next({ action: "depth", depth: "expert" });
     assert.ok(back.snapshot.coreAnswered < priced.snapshot.coreAnswered && back.snapshot.intake.depth === "expert", "전문가로 바꾸면 채운 답을 걷는다");
     assert.match(String(back.snapshot.intake.answers.price?.value), /^33000/, "직접 답한 가격은 남는다");
+    // 전문가 방식에서 한 개 비용이 가격보다 크면 한 번 되묻고, [맞아요](confirmed)면 받는다
+    const unitCostId = back.snapshot.questions.find(question => question.fieldKey === "unitCost")?.id;
+    if (unitCostId) {
+      await assert.rejects(() => next({ action: "answer", questionId: unitCostId, value: 50000 }), /팔수록 손해/);
+      const confirmed = await next({ action: "answer", questionId: unitCostId, value: 50000, confirmed: true });
+      assert.match(String(confirmed.snapshot.intake.answers[unitCostId]?.value), /^50000/);
+    } else assert.fail("전문가 방식 질문에 한 개 비용이 있어야 한다");
   }
   assert.deepEqual(network, [], "네트워크 호출 0");
   console.log("intake-estimate: 8 businesses drafted from one sentence (AI 0회)");

@@ -697,7 +697,7 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
       const time = Date.parse(`${date}T00:00:00Z`);
       return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === date;
     });
-    if (!valid || dates[0] > dates[1]) throw new IntakeError("invalid_period", "실적 기간의 시작일과 종료일을 YYYY-MM-DD / YYYY-MM-DD 형식으로 확인해 주세요");
+    if (!valid || dates[0] > dates[1]) throw new IntakeError("invalid_period", "기간은 위 단추(지난달 · 최근 3개월 등)에서 고르거나 2026-01-01 / 2026-03-31처럼 적어 주세요");
     return `${dates[0]} / ${dates[1]}`;
   }
   const allowed = (item: unknown) => question.options?.some(option => option.value === item)
@@ -773,8 +773,23 @@ function answerQuestionFor(intake: IntakeState, coach: CoachState, id: string | 
  */
 export function assertAmountConfirmed(intake: IntakeState, coach: CoachState, command: IntakeCommand) {
   if (command.unknown || command.confirmed) return;
-  const prompt = amountCheckPrompt(answerQuestionFor(intake, coach, command.questionId), command.value);
+  const question = answerQuestionFor(intake, coach, command.questionId);
+  const prompt = amountCheckPrompt(question, command.value) ?? marginCheckPrompt(question, command.value, coach);
   if (prompt) throw new IntakeError("amount_check", prompt, 422);
+}
+
+/**
+ * 한 개에 드는 비용이 가격과 같거나 크면 한 번 묻는다(2026-11-14 전문가 방식 점검: 가격 15,000원 · 비용 30,000원이 그대로 통과해 팔수록 손해인 계획서가 만들어졌다).
+ * 금액 확인과 같은 길([맞아요]로 확인하면 그대로 받는다)이라 막지는 않는다.
+ */
+function marginCheckPrompt(question: ReturnType<typeof answerQuestionFor>, value: IntakeCommand["value"], coach: CoachState): string | null {
+  if (!question || question.fieldKey !== "price" && question.fieldKey !== "unitCost" || value === null || value === undefined || Array.isArray(value)) return null;
+  const amount = typeof value === "number" ? value : coachAmount(value);
+  // 상대 값이 업종 기준값(제안)이면 묻지 않는다 — 사용자가 적지 않은 숫자를 근거로 되물으면 헷갈린다. 둘 다 직접 적었을 때만
+  const other = coachAmount(coach.fields.find(field => field.key === (question.fieldKey === "price" ? "unitCost" : "price") && field.basis === "user")?.value);
+  if (!amount || !other) return null;
+  const price = question.fieldKey === "price" ? amount : other, unitCost = question.fieldKey === "price" ? other : amount;
+  return unitCost >= price ? `한 개에 드는 비용(${unitCost.toLocaleString("ko-KR")}원)이 가격(${price.toLocaleString("ko-KR")}원)보다 ${unitCost === price ? "같아요" : "커요"}. 이대로면 팔수록 손해예요. 맞나요?`.replace("보다 같아요", "과 같아요") : null;
 }
 
 export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
@@ -853,15 +868,17 @@ const ESTIMATE_SUFFIX = ":estimate";
  */
 export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake: IntakeState, requestId: string, at: string, rules?: KindRules) {
   const business = coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim();
-  if (intake.mode !== "startup" || !business) return;
+  // '아이디어를 찾고 있어요'로 들어와 사업 후보를 고른 뒤도 같다(2026-11-14) — 고른 후보의 업종을 그대로 쓰고 문장에서 다시 짐작하지 않는다. 일반 방식이 이 경로에서도 전문가와 똑같이 13개를 묻던 문제
+  const picked = intake.mode === "exploring" && !!intake.selectedCandidate;
+  if (intake.mode !== "startup" && !picked || !business) return;
   const messageId = `${requestId}${ESTIMATE_SUFFIX}`, drafted = Object.keys(plan.sections).length > 0;
   const open = (id: string) => { const answer = intake.answers[id]; return !answer || !drafted && answer.messageId.endsWith(ESTIMATE_SUFFIX); };
   // 업종을 '잘 모르겠어요'로 넘겼으면 고른 것이 없다 — 문장에서 찾은 종류를 그대로 쓴다(넓은 업종으로 걸러 '승마 체험장'을 못 찾던 문제)
-  const free = open("industry") || intake.answers.industry?.status === "unknown";
+  const free = !picked && (open("industry") || intake.answers.industry?.status === "unknown");
   const { sector, ksic, matched, answers } = free ? estimateIntake(business, undefined, rules) : estimateIntake(business, intake.sector, rules, intake.ksic);
   // 업종도 모르고 종류도 못 찾았으면 아무것도 채우지 않는다 — 업종 질문을 먼저 묻고, 고르면 그 업종으로 다시 채운다
-  if (open("industry") && !matched) return;
-  if (open("industry") || free && matched) {
+  if (!picked && open("industry") && !matched) return;
+  if (!picked && (open("industry") || free && matched)) {
     // 낱말 규칙으로 찾은 분류도 짐작이다 — 값·수량 이름(월 회비·프로젝트 1건)이 그 분류를 따르게 넣어 두고, 사용자가 업종을 고르면 그것으로 바뀐다
     intake.sector = sector; intake.ksic = ksic;
     coach.business.industry = intakeSectorOptions.find(option => option.value === sector)?.label ?? sector;
