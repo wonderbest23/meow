@@ -1827,6 +1827,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
           {dockQueue && <QueuedStudioRequests dock items={queuedRequests} generating={generating} onCancel={cancelQueued} onEdit={editQueued} />}
           {suggestionChips.length > 0 && <SuggestRow chips={suggestionChips} onPick={pickSuggestion} />}
           {/* 대화 방식 고르기 — 계획서를 만들기 전까지만. 진행 중에 바꾸면 서버가 채운 값을 걷거나(전문가) 다시 채운다(일반) */}
+          {/* 운영 중인 사업은 실제 매출 · 비용을 받아야 해서 일반 방식도 채우지 못한다 — 첫 화면 카드의 '한 문장이면 바로'와 어긋나는 것을 이 자리에서 알린다(2026-11-14 실사용 점검 4번). 대화 기록에는 넣지 않는다(AI 없이 쌓이는 기록은 사용자 말뿐이어야 한다) */}
+          {!studioRoute && !loginGate && plan && !plan.hasDocuments && plan.intake.mode === "operating" && <p className={styles.depthNote}>운영 중인 사업은 실제 숫자가 필요해서, 하나씩 여쭤봐요</p>}
           {depthPick && <div className={styles.depthPick} role="group" aria-label="대화 방식">
             {(["easy", "expert"] as const).map(value => <button key={value} type="button" aria-pressed={depthNow === value} disabled={busy} title={value === "easy" ? "한 문장만 말하면 나머지는 채워서 바로 만들어요" : "하나씩 자세히 묻고 정해요"}
               onClick={() => { if (depthNow === value) return; void send({ action: "depth", depth: value }); }}>{value === "easy" ? "일반" : "전문가"}</button>)}
