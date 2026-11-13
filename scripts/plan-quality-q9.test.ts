@@ -70,7 +70,7 @@ async function main() {
       assert.ok(systems.every(system => system === systems[0]), `${item.name}: system prompt stays identical across chapters (cache)`);
       const built = buildExecutiveSummary(plan, coach.business);
       const summary = built.blocks.find(block => block.id === "finance")!.lines.map(line => line.value).join("\n");
-      // 일반 보기(2026-11-13)는 돈 장과 같은 값을 쓴다 — 본전·한 건에 남는 돈·한도가 따로 놀면 화면과 문서가 어긋난다
+      // 쉽게 보기(2026-11-13)는 돈 장과 같은 값을 쓴다 — 본전·한 건에 남는 돈·한도가 따로 놀면 화면과 문서가 어긋난다
       if (flow) assert.deepEqual([built.easy?.breakEven, built.easy?.contribution, built.easy?.limit, built.easy?.shortfall], [flow.breakEven, flow.contribution, flow.setupLimit, flow.reviewShortfall], `${item.name}: easy view uses the cashflow numbers`);
       return { flow, table, reference, intakeContext, roadmap: buildUserPrompt(input("summary/roadmap")), summary };
     };

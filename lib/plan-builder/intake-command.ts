@@ -6,6 +6,7 @@ import { resourceContextSchema, resourceLimitsSchema, resourceQuoteSchema } from
 export const intakeCommandSchema = z.object({
   action: z.enum(INTAKE_ACTIONS),
   planId: z.string().min(1).max(60).optional(), revision: z.number().int().nonnegative().default(0), requestId: z.string().uuid(),
+  depth: z.enum(["easy", "expert"]).optional(),
   mode: z.enum(["exploring", "startup", "operating"]).optional(), questionId: z.string().max(100).optional(),
   value: z.union([z.string().max(1200), z.number().finite(), z.array(z.string().max(200)).max(12), z.null()]).optional(),
   unknown: z.boolean().optional(), confirmed: z.boolean().optional(), ksic: z.string().regex(/^\d{5}$/).optional(), message: z.string().trim().max(8000).optional(),

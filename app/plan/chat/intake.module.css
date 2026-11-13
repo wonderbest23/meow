@@ -999,6 +999,12 @@ button.workLogRow { min-height: 32px; }
 .queueButton:hover { background: var(--app-raised); color: var(--app-body); }
 .queueNote { margin: -2px 0 0 4px !important; color: var(--app-muted); font-size: .71875rem; }
 /* 두 줄까지 감싼다 — 셋째 줄로 넘치는 칩은 SuggestRow 가 통째로 숨긴다(칩 중간에서 글자가 잘리지 않게) */
+/* 대화 방식(일반 · 전문가) — 입력 상자 바로 위 작은 전환 */
+.depthPick { display: flex; align-items: center; gap: 2px; min-width: 0; margin: 0 0 8px 2px; }
+.depthPick button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: var(--app-muted); font: inherit; font-size: .8125rem; font-weight: 500; }
+.depthPick button[aria-pressed=true] { background: var(--app-hover); color: var(--app-text); font-weight: 650; }
+.depthPick button:disabled { opacity: .5; }
+.depthPick span { margin-left: 8px; overflow: hidden; color: var(--app-muted); font-size: .75rem; white-space: nowrap; text-overflow: ellipsis; }
 .suggestRow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 .suggestLabel { display: inline-flex; flex: none; align-items: center; gap: 4px; margin-right: 2px; color: var(--app-muted); font-size: .75rem; white-space: nowrap; }
 /* 긴 추천도 끝까지 읽히게 두 줄까지(…20시간으로 바… 처럼 잘렸다 — PC 점검 2026-10-24). PC 누르는 자리 32px */

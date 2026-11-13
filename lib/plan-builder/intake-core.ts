@@ -884,6 +884,15 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   if (filled && !coach.messages.some(message => message.id === messageId)) coach.messages.push({ id: messageId, role: "assistant", text: "나머지는 같은 업종 기준값으로 먼저 채웠어요. 다르면 눌러서 고칠 수 있어요.", at });
 }
 
+/** 전문가 방식으로 바꿀 때 — 기준값으로 채운 답(제안)을 걷어 하나씩 다시 묻게 한다. 업종은 질문 묶음을 정하므로 그대로 두고, 사용자가 직접 답한 것은 건드리지 않는다 */
+export function clearIntakeEstimates(coach: CoachState, intake: IntakeState) {
+  for (const question of intakeQuestions(intake, coach)) {
+    if (question.id === "industry" || question.id === "business" || !intake.answers[question.id]?.messageId.endsWith(ESTIMATE_SUFFIX)) continue;
+    delete intake.answers[question.id];
+    if (question.fieldKey) coach.fields = coach.fields.filter(field => !(field.key === question.fieldKey && field.basis === "proposal"));
+  }
+}
+
 export function applyIntakeCandidates(coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
   const accept = new Set(command.candidateIds ?? []), reject = new Set(command.rejectIds ?? []), overwrite = new Set(command.overwriteIds ?? []);
   if ([...accept].some(id => reject.has(id))) throw new IntakeError("candidate_choice", "같은 내용은 반영과 제외 중 하나만 선택해 주세요");

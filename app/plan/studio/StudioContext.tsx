@@ -110,7 +110,7 @@ export function useStudioCommand(command: StudioCommand, handler: () => void, en
 }
 
 /*
- * 계획서 칸이 지금 보기(일반 보기 · 전문가 모드)를 알린다 — 휴대폰 머리 오른쪽의 보기 전환이 눌린 쪽을 표시한다(대표 결정 2026-11-13).
+ * 계획서 칸이 지금 보기(쉽게 보기 · 전체 문서)를 알린다 — 휴대폰 머리 오른쪽의 보기 전환이 눌린 쪽을 표시한다(대표 결정 2026-11-13).
  * null 이면 바꿀 보기가 없다(문서 준비 전 · 요약 없음).
  */
 export type PlanView = "easy" | "work" | null;

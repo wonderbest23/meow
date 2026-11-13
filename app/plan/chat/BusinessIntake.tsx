@@ -279,6 +279,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [newEntry, setNewEntry] = useState(false);
+  /*
+   * 대화 방식(대표 결정 2026-11-13) — 일반: 한 문장만 받고 나머지는 업종 기준값으로 채워 바로 초안, 전문가: 하나씩 자세히 묻는다.
+   * 새 대화에서는 여기서 고른 값을 시작 명령에 싣고, 진행 중인 사업은 서버에 저장된 값(intake.depth)을 따른다.
+   */
+  const [startDepth, setStartDepth] = useState<"easy" | "expert">("easy");
+  const startDepthRef = useRef(startDepth);
+  useEffect(() => { startDepthRef.current = startDepth; }, [startDepth]);
   const [busy, setBusy] = useState(false);
   // '사업계획서 만들기' 대기 표시 — 결제 화면으로 넘어가는 동안(주소 이동은 몇 초 걸린다)에도 유지한다(대표 지적 2026-10-16: 눌러도 멈춘 것 같았다)
   const [preparing, setPreparing] = useState(false);
@@ -563,7 +570,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     const existing = draftRef.current.pending;
     if (!input && !existing) return;
     if (input?.action !== "start" && !existing && !planRef.current) return;
-    const pending: PendingRequest = existing ?? { command: { ...input!, requestId: crypto.randomUUID(), revision: planRef.current?.coach.revision ?? 0, ...(planRef.current ? { planId: planRef.current.planId } : {}) }, ...captured };
+    const pending: PendingRequest = existing ?? { command: { ...input!, ...(input!.action === "start" && !planRef.current && startDepthRef.current === "expert" ? { depth: "expert" as const } : {}), requestId: crypto.randomUUID(), revision: planRef.current?.coach.revision ?? 0, ...(planRef.current ? { planId: planRef.current.planId } : {}) }, ...captured };
     let optimistic: IntakeSnapshot | null = null;
     try { if (planRef.current) optimistic = previewIntakeAnswer(planRef.current, pending.command); }
     catch (caught) {
@@ -1611,6 +1618,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const openSummary = () => { setView("summary"); setDeskSummary(true); };
   const pickable = pro && !editTarget && !!plan?.hasDocuments && editChatReady && editChapterList.length > 0 && (studioRoute === "chat" || studioRoute === "section");
   /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로. 이미 보낸 예시는 다시 권하지 않는다(r42) */
+  const depthNow: "easy" | "expert" = plan ? plan.intake.depth === "expert" ? "expert" : "easy" : startDepth;
+  const depthPick = !studioRoute && !loginGate && (plan ? !plan.hasDocuments && plan.intake.mode !== "operating" && !aiBusy : newEntry);
   const priceAnswer = plan?.intake.answers.price;
   /*
    * 계획서를 만든 대화의 입력창 — 고정 예시 칩 대신, 위 대화를 읽고 AI가 만든 '다음에 보낼 만한 말'을 회색 안내 글자로만 보인다(대표 결정 2026-11-13).
@@ -1812,6 +1821,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
           {/* 작업실 PC: 입력창 바로 위 — 기다리는 요청('다음 요청' 줄)과 '추천' 칩 줄(누르면 입력창에 글만 채운다) */}
           {dockQueue && <QueuedStudioRequests dock items={queuedRequests} generating={generating} onCancel={cancelQueued} onEdit={editQueued} />}
           {suggestionChips.length > 0 && <SuggestRow chips={suggestionChips} onPick={pickSuggestion} />}
+          {/* 대화 방식 고르기 — 계획서를 만들기 전까지만. 진행 중에 바꾸면 서버가 채운 값을 걷거나(전문가) 다시 채운다(일반) */}
+          {depthPick && <div className={styles.depthPick} role="group" aria-label="대화 방식">
+            {(["easy", "expert"] as const).map(value => <button key={value} type="button" aria-pressed={depthNow === value} disabled={busy} title={value === "easy" ? "한 문장만 말하면 나머지는 채워서 바로 만들어요" : "하나씩 자세히 묻고 정해요"}
+              onClick={() => { if (depthNow === value) return; if (plan) void send({ action: "depth", depth: value }); else setStartDepth(value); }}>{value === "easy" ? "일반" : "전문가"}</button>)}
+            <span>{depthNow === "easy" ? "한 문장이면 바로 만들어요" : "하나씩 자세히 물어봐요"}</span>
+          </div>}
           <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); setGuideShown(null); if (studioRoute) submitStudio(); else submitComposer(); }}>
             {/* 작업실: 무엇을 고치는지 칩으로 — ✕ 로 그만두면 예전 입력창으로 돌아간다. 쓰는 중이면 다 쓴 뒤 반영한다고 알린다 */}
             {studioRoute && studioRoute !== "chat" && <div className={styles.composerTarget} data-studio-target={editTarget?.target ?? "queue"}>

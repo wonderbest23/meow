@@ -12,7 +12,7 @@ import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, applyIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
+import { applyIntakeAnswer, applyIntakeEstimates, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { ruleKind } from "./kind-rules";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
@@ -119,8 +119,9 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         // Persist the first typed answer and new conversation in the same CAS write.
         applyIntakeAnswer(plan, coach, intake, { ...command, action: "answer" }, at);
         // 한 문장 → 바로 초안(시험 기능, INTAKE_ESTIMATE=1): 나머지 핵심 질문을 자체 기준표로 채운다
-        if (process.env.INTAKE_ESTIMATE === "1") applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
-      }
+        if (command.depth === "expert") intake.depth = "expert";
+        if (process.env.INTAKE_ESTIMATE === "1" && intake.depth !== "expert") applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
+      } else if (!savedIntake && command.depth === "expert") intake.depth = "expert";
       if (command.message) storeDeferredNote(coach, intake, command, at);
       coach.stage = intake.mode === "operating" ? "operating" : intake.mode === "exploring" && !coach.fields.some(field => field.key === "business") ? "exploring" : "startup";
       coach.business.stage = coach.stage === "operating" ? "운영 중" : "사업 기획";
@@ -133,7 +134,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       assertAmountConfirmed(intake, coach, command);
       const beforeAnswers = structuredClone(intake.answers);
       applyIntakeAnswer(plan, coach, intake, command, at);
-      if (process.env.INTAKE_ESTIMATE === "1" && (command.questionId === "business" || command.questionId === "industry") && !command.unknown) applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
+      if (process.env.INTAKE_ESTIMATE === "1" && intake.depth !== "expert" && (command.questionId === "business" || command.questionId === "industry") && !command.unknown) applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
       // 계획서가 있으면 고친 금액을 본문에 바로 바꿔 넣는다(AI 없음). 계산된 다른 값은 다시 작성하기로 맞춘다.
       patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);
     }
@@ -174,6 +175,18 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     }
     else if (command.action === "resources") applyIntakeResources(plan, coach, intake, command, at);
     else if (command.action === "details") intake.detailsRequested = true;
+    else if (command.action === "depth") {
+      // 대화 방식 바꾸기 — 계획서를 만든 뒤에는 질문이 아니라 계획서에서 고친다
+      if (Object.keys(plan.sections).length) throw new IntakeError("depth_locked", "계획서를 만든 뒤에는 계획서에서 고칠 수 있어요", 409);
+      if (command.depth === "expert") {
+        intake.depth = "expert"; clearIntakeEstimates(coach, intake);
+        coach.messages.push({ id: `${command.requestId}:depth`, role: "assistant", text: "전문가 방식으로 바꿨어요. 하나씩 자세히 물어볼게요.", at });
+      } else {
+        delete intake.depth;
+        if (process.env.INTAKE_ESTIMATE === "1") applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
+        coach.messages.push({ id: `${command.requestId}:depth`, role: "assistant", text: "일반 방식으로 바꿨어요. 꼭 필요한 것만 물어볼게요.", at });
+      }
+    }
     else if (command.action === "name") {
       // 사업 이름만 바꾼다. 내용이 바뀐 게 아니므로 정리한 사업 방향과 계획서를 '변경됨'으로 만들지 않는다.
       const name = typeof command.value === "string" ? command.value.replace(/\s+/g, " ").trim() : "";

@@ -203,6 +203,19 @@ async function main() {
   const stated = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "자본금 3천만원으로 주 20시간만 하는 네일샵을 열려고 해요", revision: 0, requestId: randomUUID() }, off);
   const statedFields = readCoach(stated.plan.answers)!.fields;
   assert.deepEqual(["budget", "hoursPerWeek"].map(key => statedFields.find(field => field.key === key)?.value), ["30000000원", "20시간"]);
+  // 대화 방식(2026-11-13): 전문가로 시작하면 채우지 않고 하나씩 묻는다. 중간에 일반으로 바꾸면 채우고, 다시 전문가로 바꾸면 채운 것만 걷는다(직접 답한 것은 남는다)
+  {
+    const owner = `intake-estimate-${randomUUID()}`;
+    const expert = await saveIntakeCommand(owner, { action: "start", mode: "startup", depth: "expert", questionId: "business", value: "동네 네일샵을 열려고 해요", revision: 0, requestId: randomUUID() }, off);
+    assert.equal(expert.snapshot.coreAnswered, 1, "전문가: 사업 문장만 답한 상태");
+    const next = async (command: Record<string, unknown>) => { const current = (await loadPlanState(owner)).plans.find(item => item.id === expert.plan.id)!; return saveIntakeCommand(owner, { ...command, planId: expert.plan.id, revision: readCoach(current.answers)!.revision, requestId: randomUUID() } as never, off); };
+    const easy = await next({ action: "depth", depth: "easy" });
+    assert.ok(easy.snapshot.coreAnswered > 5 && easy.snapshot.intake.depth === undefined, "일반으로 바꾸면 기준값으로 채운다");
+    const priced = await next({ action: "answer", questionId: "price", value: 33000 });
+    const back = await next({ action: "depth", depth: "expert" });
+    assert.ok(back.snapshot.coreAnswered < priced.snapshot.coreAnswered && back.snapshot.intake.depth === "expert", "전문가로 바꾸면 채운 답을 걷는다");
+    assert.match(String(back.snapshot.intake.answers.price?.value), /^33000/, "직접 답한 가격은 남는다");
+  }
   assert.deepEqual(network, [], "네트워크 호출 0");
   console.log("intake-estimate: 8 businesses drafted from one sentence (AI 0회)");
 }

@@ -51,11 +51,18 @@ export type IntakeState = {
    * 설명을 바꾸면 다시 한 번만 묻는다(2026-10-22 캔들 스마트스토어를 '기업 서비스'로 골라 '프로젝트 1건 가격'을 물었다).
    */
   sectorCheck?: { business: string; decision: "kept" | "changed" };
+  /**
+   * 대화 방식(대표 결정 2026-11-13) — 없으면 '일반'(한 문장만 받고 나머지는 업종 기준값으로 채워 바로 초안), "expert"면 '전문가'(채우지 않고 하나씩 묻는다).
+   * 계획서를 만들기 전까지만 바꿀 수 있다.
+   */
+  depth?: "expert";
 };
-export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss", "sector-keep"] as const;
+export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss", "sector-keep", "depth"] as const;
 export type IntakeCommand = {
   action: (typeof INTAKE_ACTIONS)[number];
   planId?: string; revision: number; requestId: string;
+  /** action "start"(새 대화) · "depth"(진행 중 바꾸기): 대화 방식 */
+  depth?: "easy" | "expert";
   mode?: IntakeMode; questionId?: string; value?: IntakeValue; unknown?: boolean;
   /** action "answer": 현실 범위 밖 금액(생활비 3,000원 등)을 사용자가 [맞아요]로 확인했다(amountCheckPrompt) */
   confirmed?: boolean;
