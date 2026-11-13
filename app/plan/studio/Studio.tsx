@@ -781,7 +781,7 @@ export default function Studio() {
     /* 휴대폰 미리보기는 계획서 칸의 위 줄이 없다 — 목차 · 한 장 요약은 여기서. 내려받기(위 막대 주 단추) · 실적 기록(위 '유지보수')은 겹쳐서 뺐다 */
     ...(rightTab === "plan" ? [
       { key: "toc", label: "목차", icon: <List />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-toc") },
-      { key: "summary", label: "한 장 요약", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") },
+      { key: "summary", label: "쉬운 보기", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") },
       /* 고치는 길은 대화 하나 — 손으로 고치기는 장마다 두지 않고 여기 한 곳(2026-11-10) */
       { key: "edit", label: "직접 고치기", icon: <PenLine />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => runPlan("plan-edit") },
     ] : []),
@@ -815,7 +815,7 @@ export default function Studio() {
       <div className={styles.viewGroup} role="group" aria-label="미리보기 도구">
         <span className={styles.previewPill}><Globe aria-hidden="true" />미리보기</span>
         <ToolButton className={styles.groupTool} label="사업계획서 내려받기" title={planTools ? "사업계획서 내려받기" : "계획서를 쓰면 내려받을 수 있어요"} icon={<Download aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-download")} />
-        <ToolButton className={styles.groupTool} label="한 장 요약 보기 · 상세 계획서로 돌아가기" title={planTools ? "한 장 요약 ↔ 상세 계획서" : "계획서를 쓰면 볼 수 있어요"} icon={<FileText aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-summary")} />
+        <ToolButton className={styles.groupTool} label="쉬운 보기 · 작업 모드로 돌아가기" title={planTools ? "쉬운 보기 ↔ 작업 모드" : "계획서를 쓰면 볼 수 있어요"} icon={<FileText aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-summary")} />
         <PopMenu buttonClassName={styles.groupTool} buttonLabel="더 보기 — 직접 고치기 · 실적 기록 · 저장" buttonTitle="더 보기" menuLabel="미리보기 더 보기" label={<Layers aria-hidden="true" />} groups={[{ key: "more", items: moreItems }]} />
       </div>
       <span className={styles.grow} />

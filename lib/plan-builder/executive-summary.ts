@@ -13,7 +13,11 @@ export type ExecutiveSummary = {
   version: 1; title: string; planType: string; sourceVersion: string; abbreviated: boolean;
   blocks: Array<{ id: string; title: string; lines: SummaryLine[] }>;
   note: string;
+  /** 쉬운 보기(2026-11-13) — 문서 돈 장과 같은 계산 값. 새로 시작하는 사업에서 계산이 될 때만 있다 */
+  easy?: EasySummary;
 };
+/** 판매량은 모두 월 기준. perDay면 화면에서 월 26일로 나눠 '하루'로 보인다(돈 장의 하루 환산과 같은 가정) */
+export type EasySummary = { unit: string; perDay: boolean; enroll: boolean; contribution: number; fixed: number; breakEven: number; cap: number | null; budget: number | null; limit: number | null; shortfall: number };
 type Business = { name?: string; description?: string; industry?: string; region?: string; stage?: string };
 const won = (value: number) => `${value.toLocaleString("ko-KR")}원`;
 
@@ -145,6 +149,10 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   return {
     version: 1, title: plan.title, planType: plan.planType, sourceVersion: `${plan.id}:${plan.updatedAt}:coach-${coach ? coachDocumentRevision(coach) : "legacy"}:operations-${operations.revision}`,
     abbreviated, note, blocks,
+    ...(flow && !implausible.length && flow.contribution > 0 && flow.breakEven > 0 ? { easy: {
+      unit: flow.unit, perDay: flow.daily && flow.breakEven / 26 >= 1, enroll: flow.shape.cycle === "enroll", contribution: flow.contribution, fixed: flow.monthlyFixedCost,
+      breakEven: flow.breakEven, cap: flow.capacity?.volume ?? null, budget: flow.budget, limit: flow.setupLimit, shortfall: flow.reviewShortfall,
+    } } : {}),
   };
 }
 
