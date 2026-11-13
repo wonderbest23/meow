@@ -729,7 +729,8 @@ div.nextStepHint { display: grid; justify-items: start; gap: 6px; padding-top: 1
 .page[data-coach] .chatQuestion .option:has(input:disabled), .page[data-coach] .chatQuestion .chip:disabled, .page[data-coach] .chatQuestion .ksicChip:disabled { opacity: 1; }
 /* Plan document exists: the chat ends with a coach note and links to edit from the document. */
 .lockedTurn { display: grid; gap: 10px; margin-top: 8px; }
-.lockedTurn .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.lockedTurn .chipRow { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.lockedTurn .assistantMessage strong { font-weight: 700; }
 .lockedTurn .chip { text-decoration: none; }
 /* The intake question reused inside the document's fact popover: same coach look, no full-page shell. */
 .page.factScope { display: block; height: auto; overflow: visible; background: transparent; font-size: .875rem; }
