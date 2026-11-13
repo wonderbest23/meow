@@ -5,7 +5,7 @@ import type { FirstStep } from "../../../lib/plan-builder/first-steps";
 import styles from "./EasyView.module.css";
 
 /*
- * 쉬운 보기(대표 결정 2026-11-13) — 계획서를 처음 연 사람이 표 대신 '얼마 남나 · 얼마면 여나 · 어디부터 안전한가'를 먼저 본다.
+ * 일반 보기(대표 결정 2026-11-13) — 계획서를 처음 연 사람이 표 대신 '얼마 남나 · 얼마면 여나 · 어디부터 안전한가'를 먼저 본다.
  * 숫자는 모두 문서 돈 장과 같은 계산 값이고(executive-summary.ts easy), 사실이 아닌 줄은 그리지 않는다. 보장하는 말은 쓰지 않는다.
  */
 const man = (value: number) => Math.round(Math.abs(value) / 10000).toLocaleString("ko-KR");
@@ -20,7 +20,7 @@ const SAY = [
 ];
 const HEGEL = ["세상의 어떤 큰일도 열정 없이 이루어진 적이 없습니다.", "헤겔"];
 
-/** 작업 모드 돈 장 머리 — 계산 값으로 말할 수 있는 좋은 점만. 사실이 아닌 줄은 빠지고, 하나도 없으면 그리지 않는다 */
+/** 전문가 모드 돈 장 머리 — 계산 값으로 말할 수 있는 좋은 점만. 사실이 아닌 줄은 빠지고, 하나도 없으면 그리지 않는다 */
 export function GoodPoints({ easy }: { easy: EasySummary }) {
   const top = easy.cap ? easy.cap * easy.contribution - easy.fixed : 0;
   const points = [
@@ -60,7 +60,7 @@ export default function EasyView({ easy, chapters, steps = [], planId, onDownloa
   // 모자라는 돈이 모은 돈의 절반을 넘으면 "조금만"이라고 하지 않는다
   const far = short && -easy.limit! > (easy.budget ?? 0) / 2;
   const less = easy.enroll ? "적게 와도" : "덜 팔려도";
-  return <div className={styles.easy} aria-label="쉬운 보기">
+  return <div className={styles.easy} aria-label="일반 보기">
     <div className={styles.hello}>
       <h2>{far ? "시작 전에 볼 숫자가 정리됐어요" : short ? "조금만 더 준비하면 시작할 수 있어요" : "시작할 수 있어요"}</h2>
       <p>계획서와 준비물이 다 만들어졌어요</p>
@@ -87,7 +87,7 @@ export default function EasyView({ easy, chapters, steps = [], planId, onDownloa
         <p className={styles.big}>{cap != null && !reachable ? "값을 조금 고치면 남기 시작해요" : `${per} ${easy.perDay ? "약 " : ""}${num(safe)}${unit}만 넘기면 손해가 없어요`}</p>
         {cap != null && <><div className={styles.scale} aria-hidden="true"><i style={{ width: `${Math.min(100, safe / cap * 100)}%` }} /></div>
           <div className={styles.ticks}><span>0</span><span>최대 {num(cap)}{unit}</span></div></>}
-        <p className={styles.small}>{cap == null ? "여기부터는 팔수록 남아요" : reachable ? `최대의 ${Math.round(safe / cap * 100)}%만 채우면 돼요` : `지금 값으로는 본전이 ${per} ${num(safe)}${unit}라 최대(${num(cap)}${unit})보다 많아요. 작업 모드에서 가격·고정비를 고쳐 보세요`}</p>
+        <p className={styles.small}>{cap == null ? "여기부터는 팔수록 남아요" : reachable ? `최대의 ${Math.round(safe / cap * 100)}%만 채우면 돼요` : `지금 값으로는 본전이 ${per} ${num(safe)}${unit}라 최대(${num(cap)}${unit})보다 많아요. 전문가 모드에서 가격·고정비를 고쳐 보세요`}</p>
       </div></section>
       {easy.shortfall > 0 && <section>
         <h3>여유</h3><div>

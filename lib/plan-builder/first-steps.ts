@@ -1,5 +1,5 @@
 /*
- * 쉬운 보기의 '첫걸음'(2026-11-13) — 계획서 '12주 할 일' 표(주차 | 할 일 | 걸리는 시간 | 끝났다고 볼 기준, section-generator.ts가 정한 열)의
+ * 일반 보기의 '첫걸음'(2026-11-13) — 계획서 '12주 할 일' 표(주차 | 할 일 | 걸리는 시간 | 끝났다고 볼 기준, section-generator.ts가 정한 열)의
  * 앞 줄을 그대로 가져온다. 새로 지어내지 않으므로 화면과 문서가 어긋나지 않는다. 표가 없으면 빈 배열(첫걸음 칸을 그리지 않는다).
  */
 export type FirstStep = { week: string; task: string; time: string; done: string };

@@ -80,7 +80,7 @@ await run("plan", async () => {
   await sleep(1200); console.log("toc", toc);
   if (toc) { const TR = await p.evaluate(() => { const d = [...document.querySelectorAll("[role=dialog], [aria-modal=true]")].find(e => e.getBoundingClientRect().width > 0); if (!d) return null; d.dataset.swRoot = "toc"; return '[data-sw-root="toc"]'; }); await sweep(p, { screen: "plan-toc", width: W, maxSteps: 3, bottom: false, root: TR }); await p.keyboard.press("Escape"); await sleep(600); await p.evaluate(() => [...document.querySelectorAll("button")].find(b => /닫기/.test(b.getAttribute("aria-label") || "") && b.getBoundingClientRect().width > 0)?.click()); await sleep(600); }
   // 한 장 요약
-  const s = await p.evaluate(() => { const b = [...document.querySelectorAll("button, [role=tab], [role=radio], a")].find(b => b.innerText.trim() === "쉬운 보기" && b.getBoundingClientRect().width > 0); b?.click(); return !!b; });
+  const s = await p.evaluate(() => { const b = [...document.querySelectorAll("button, [role=tab], [role=radio], a")].find(b => b.innerText.trim() === "일반 보기" && b.getBoundingClientRect().width > 0); b?.click(); return !!b; });
   await sleep(2500); console.log("summary", s);
   if (s) { await sweep(p, { screen: "plan-summary", width: W, maxSteps: 8 }); await p.evaluate(() => [...document.querySelectorAll("button, [role=tab], [role=radio], a")].find(b => /^(전체|계획서|본문)/.test(b.innerText.trim()) && b.getBoundingClientRect().width > 0)?.click()); await sleep(1500); }
   await p.close();

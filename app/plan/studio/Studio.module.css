@@ -177,7 +177,9 @@
 .viewSeg button { position:relative; min-height:38px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:var(--app-body); font:inherit; font-size:.875rem; font-weight:500; white-space:nowrap; }
 .viewSeg button::after { content:""; position:absolute; inset:-6px 0; }
 .viewSeg button[aria-pressed=true] { background:var(--app-surface); color:var(--app-text); font-weight:650; box-shadow:0 1px 2px rgba(16,24,40,.1); }
-@media (max-width:359px) { .viewSeg button { padding:0 8px; font-size:.8125rem; } }
+/* 이름이 길어져(일반 보기 · 전문가 모드) 좁은 화면에서는 글자와 여백을 줄인다 — 가운데 페이지 이름이 잘리지 않게 */
+@media (max-width:420px) { .viewSeg { padding:2px; } .viewSeg button { padding:0 9px; font-size:.8125rem; } }
+@media (max-width:359px) { .viewSeg button { padding:0 6px; font-size:.75rem; } }
 .primary44:hover:not(:disabled) { background:var(--app-primary-hover); }
 .primary44:disabled { background:var(--app-line-strong); cursor:default; }
 @media (max-width:359px) { .primary44 { padding:10px 12px; } }
