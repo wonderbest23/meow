@@ -872,7 +872,7 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   for (const question of intakeQuestions(intake, coach)) {
     if (question.id === "industry" || question.id === "business" || !open(question.id)) continue;
     const guess = answers[question.id];
-    if (!guess && (question.id === "budget" || question.id === "hoursPerWeek")) { intake.answers[question.id] = { status: "unknown", value: null, messageId, at }; continue; }
+    // 준비 예산·일할 시간은 짐작하지도, '모름'으로 넘기지도 않는다 — 그대로 묻는다(안 물으면 계획서가 '감당할 수 있는지 알 수 없다'로만 채워진다)
     if (!guess) continue;
     try {
       const value = validatedAnswer(question, guess);

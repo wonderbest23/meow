@@ -48,7 +48,11 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
 
   const offer = field("상품", "offer", context.solution.mainOffer);
   const customer = field("고객", "customer", context.customer.target);
-  const businessLine = field("사업", "business", context.identity.description, 145);
+  const businessRaw = field("사업", "business", context.identity.description, 145);
+  // 입력칸에 적은 말('…팔아보려고 해요')을 그대로 두지 않는다 — 사업 방향을 정리한 뒤에는 그때 만든 한 문장 설명을 쓰고(제안으로 표시), 아직이면 말끝만 뗀다
+  const pitch = coach?.design?.identity?.pitch;
+  const businessLine = pitch ? line("사업", pitch, "proposal", ["coach.design.identity"], 145)
+    : { ...businessRaw, value: businessRaw.value.replace(/[.!?~\s]*$/, "").replace(/\s*(?:[을를]\s*)?(?:도\s+같이\s*|같이\s*)?(?:하려고|하려|해\s?보려고|열려고|차리려고|만들려고|시작하려고|하고\s?싶|열고\s?싶|해\s?보고\s?싶|준비\s?중|생각\s?중|할\s?예정|할\s?계획)[가-힣\s]*$/, "").trim() || businessRaw.value };
   const price = field("가격", "price", context.revenue.unitPrice, 50);
   const channel = field("판매", "channel", context.marketing.channels, 70);
   const cost = field("월 고정비", "cost", undefined, 45);
@@ -109,7 +113,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
     for (const pair of [rows.slice(0, 2), rows.slice(2)]) evidenceLines.push(line("입력 실적", pair.map(row => `${row.label} ${metricValue(row.current, row.unit)}${row.delta === null ? "" : ` (이전 대비 ${row.delta > 0 ? "+" : ""}${metricValue(row.delta, row.unit)})`}`).join(" / "), "user", pair.map(row => `operations.${period.id}.${row.key}`), 150));
   } else {
     const sales = fields.get("sales");
-    evidenceLines.push(sales?.basis === "user" ? line("매출 진술", coachFieldDisplay(sales.value), "user", ["coach.sales"], 120) : line("실적", undefined, "missing", []));
+    evidenceLines.push(sales?.basis === "user" ? line("매출 진술", coachFieldDisplay(sales.value), "user", ["coach.sales"], 120) : line("실적", coach?.stage === "operating" ? undefined : "아직 시작 전이라 실적이 없어요", "missing", []));
     const experience = field("관련 경험", "experience", context.team.ownerExperience, 120);
     if (experience.basis === "user") evidenceLines.push(experience);
   }
@@ -119,7 +123,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const criterion = period?.successCriterion || (!actionNeedsReview ? next?.doneWhen : undefined);
   const actionLines = [
     line("다음 행동", action, period?.nextAction || coach?.directAction && next === coach.directAction ? "user" : "proposal", [period?.nextAction ? `operations.${period.id}.nextAction` : "coach.nextAction"], 150),
-    line("확인 기준", criterion, period?.successCriterion || coach?.directAction && next === coach.directAction ? "user" : "proposal", [period?.successCriterion ? `operations.${period.id}.successCriterion` : "coach.nextAction.doneWhen"], 100),
+    line("확인 기준", criterion, period?.successCriterion || coach?.directAction && next === coach.directAction ? "user" : "proposal", [period?.successCriterion ? `operations.${period.id}.successCriterion` : "coach.nextAction.doneWhen"], 200),
   ];
   const goal = field("목표", "goal", context.goals.main, 100);
   if (goal.basis !== "missing") actionLines.push(goal);
@@ -136,7 +140,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
       { id: "finance", title: "수익 구조와 계획 계산", lines: financialLines },
       { id: "evidence", title: period ? "기간별 실제 기록" : "현재 확인할 근거", lines: evidenceLines },
       { id: "action", title: "다음 행동과 확인 기준", lines: actionLines },
-      { id: "conditions", title: "결정할 조건", lines: [line("확인 사항", [...attention, ...(unresolved.length ? [`미입력: ${unresolved.join(", ")}`] : [])].join(" ") || "추가로 기록된 충돌 없음 / 사업성 검증을 뜻하지 않음", attention.length ? "calculation" : "missing", ["feasibility", "context.conflicts"], 150)] },
+      { id: "conditions", title: "결정할 조건", lines: [line("확인 사항", [...attention, ...(unresolved.length ? [`미입력: ${unresolved.join(", ")}`] : [])].join(" ") || "답한 내용끼리 어긋나는 곳은 없어요. 이 요약이 사업이 잘된다는 보증은 아니에요.", attention.length ? "calculation" : "missing", ["feasibility", "context.conflicts"], 150)] },
   ];
   return {
     version: 1, title: plan.title, planType: plan.planType, sourceVersion: `${plan.id}:${plan.updatedAt}:coach-${coach ? coachDocumentRevision(coach) : "legacy"}:operations-${operations.revision}`,

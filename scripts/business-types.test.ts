@@ -27,6 +27,9 @@ for (const item of EVAL_CASES) {
 // 플랫폼·앱 — 업종 말보다 사업의 모양(연결·앱)이 먼저
 assert.equal(businessTypeFor({ description: "반려동물 주인과 동네 펫시터를 연결해 주는 앱" })?.type.id, "platform");
 assert.equal(businessTypeFor({ description: "초등 학부모가 학원 후기를 나누는 앱" })?.type.id, "app");
+// 곁들인 것('…도 같이')은 사업 형태를 정하지 않는다 — 매장 사업이 '매장을 빌리지 않는 사업'으로 계산되던 문제
+assert.equal(businessTypeFor({ description: "퇴근길 직장인 대상 동네 반찬가게, 주 2회 정기배달도 같이 하려고요" })?.type.id, "store");
+assert.equal(businessTypeFor({ description: "동네 반찬 정기배달" })?.type.id, "visit");
 assert.equal(businessTypeFor({ description: "1인 가구 요리 유튜브 채널" })?.type.id, "app");
 // 사용자가 직접 고른 구조가 설명보다 먼저
 assert.equal(businessTypeFor({ chosen: { sides: "two" }, description: "동네 빵집" })?.type.id, "platform");
