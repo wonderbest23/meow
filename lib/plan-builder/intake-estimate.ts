@@ -71,7 +71,14 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 문장이 앱·프로그램으로 끝나면 파는 것은 소프트웨어다 — 이때는 손님 업종 낱말('학원 전용')이 종류를 정하는 단서라 빼지 않는다
   // 뒤에 붙인 값('…프로그램, 월 1만원')은 떼고 본다
   const tool = !chosen && TOOL_TAIL.test(spelled.trim().replace(/[,.]?\s*(?:월|한\s*달에?)?\s*[0-9.,]+\s*[천만]?\s*원.*$/, "").trim());
-  const said = tool ? spelled : spelled.replace(KIND_NOISE, " ");
+  const heard = tool ? spelled : spelled.replace(KIND_NOISE, " ");
+  // 'X도 (같이)'로 곁들인 것은 본업이 아니다('네일샵, 속눈썹도 같이'는 네일샵이다) — 그 앞쪽에서 종류를 찾을 수 있으면 앞쪽만 보고 찾는다
+  const side = !tool && !chosenKsic ? heard.match(/([가-힣a-z0-9]{2,})도(?=\s*(?:같이|함께|병행|하|할|해|열|만들|제작|판매|팔|취급|운영|제공|가능|포함|,|$))/i) : null;
+  // '도'로 끝나는 낱말(설계도·투시도·제주도)은 곁들임이 아니다
+  const sideOk = !!side && !/^(?:설계|투시|조감|배치|평면|단면|해부|구성|조직|안내|노선|태권|합기|제주|경기|강원|충청|전라|경상|울릉|강화|거제|청포|머루)$/.test(side[1]);
+  const before = sideOk ? heard.slice(0, side!.index) : "", main = (before.includes(",") ? before.slice(0, before.lastIndexOf(",")) : before).trim();
+  const sided = main.length >= 2 && !!(rules?.(main, sector => sector !== "software") ?? businessKind(main, chosen ?? rankedSectors(main)[0]));
+  const said = sided ? main : heard;
   const ranked = tool ? ["software" as const] : rankedSectors(said);
   // 세부 업종을 찾으면 그 줄의 답과 숫자를 쓴다: 손으로 쓴 사전(치킨집·꽃집) → 낱말 규칙(수만 개) → 못 찾으면 업종 한 줄 기준값과 칩에서 고른 답
   const hand = businessKind(said, chosen ?? ranked[0]);
@@ -200,6 +207,8 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
       if (left.length && left.length <= 2) answers.offer = `${answers.offer} · ${left.join(" ")}`;
     }
   }
+  // 곁들인 품목은 뒤에 남긴다(표가 아는 품목일 때만)
+  if (sided && kind && answers.offer && !PLAIN_WORD.test(side![1]) && rules?.knows?.(side![1].toLowerCase()) && !answers.offer.includes(side![1])) answers.offer = `${answers.offer} · ${side![1]}`;
   // 종류를 못 찾았으면 업종 표의 넓은 답(1회 서비스·개인 소비자)을 채우지 않는다 — 그 두 질문은 평소처럼 묻는다. 문장에 적은 고객은 둔다
   if (!kind) { if (sector !== "software") delete answers.offer; if (!read.customer) delete answers.customer; }
   return { sector, ksic: rule?.ksic ?? null, matched: !!kind, answers };
