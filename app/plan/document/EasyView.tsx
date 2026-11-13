@@ -29,7 +29,6 @@ export default function EasyView({ easy, chapters }: { easy: EasySummary; chapte
       <h2>{far ? "시작 전에 볼 숫자가 정리됐어요" : short ? "조금만 더 준비하면 시작할 수 있어요" : "시작할 수 있어요"}</h2>
       <p>계획서와 준비물이 다 만들어졌어요</p>
     </div>
-    <p className={styles.say}>세상의 어떤 큰일도 열정 없이 이루어진 적이 없습니다.<cite>헤겔</cite></p>
     {reachable && <section className={styles.goal}>
       <h3>목표</h3>
       <p className={styles.big}>{per} {num(sell)}{unit}{hasFinalConsonant(unit) ? "이면" : "면"} {easy.perDay ? "한 달에 " : ""}<b data-neg={gain < 0 || undefined}>{gain < 0 ? "−" : ""}{man(gain)}</b>만 원이 남아요</p>
@@ -39,27 +38,28 @@ export default function EasyView({ easy, chapters }: { easy: EasySummary; chapte
     </section>}
     <div className={styles.cards}>
       {startCard && <section>
-        <h3>시작</h3>
+        <h3>시작</h3><div>
         <p className={styles.big}>{far ? `${man(easy.limit!)}만 원이 더 있으면 든든해요` : short ? `${man(easy.limit!)}만 원만 더 모으면 돼요` : `${man(easy.limit!)}만 원이면 시작할 수 있어요`}</p>
         <div className={styles.split} aria-hidden="true">{short
           ? <><i style={{ width: `${easy.budget! / total * 100}%` }} /><i data-kind="short" style={{ width: `${-easy.limit! / total * 100}%` }} /></>
           : <><i style={{ width: `${easy.limit! / total * 100}%` }} /><i data-kind="keep" style={{ width: `${keep / total * 100}%` }} /></>}</div>
         <div className={styles.ticks}>{short ? <><span>모은 돈 {man(easy.budget!)}만</span><span>필요 {man(keep)}만</span></> : <><span>시작에 {man(easy.limit!)}만</span><span>남겨 둘 돈 {man(keep)}만</span></>}</div>
         <p className={styles.small}>준비금 {man(easy.budget!)}만 원 기준</p>
-      </section>}
+      </div></section>}
       <section>
-        <h3>안전선</h3>
+        <h3>안전선</h3><div>
         <p className={styles.big}>{cap != null && !reachable ? "값을 조금 고치면 남기 시작해요" : `${per} ${easy.perDay ? "약 " : ""}${num(safe)}${unit}만 넘기면 손해가 없어요`}</p>
         {cap != null && <><div className={styles.scale} aria-hidden="true"><i style={{ width: `${Math.min(100, safe / cap * 100)}%` }} /></div>
           <div className={styles.ticks}><span>0</span><span>최대 {num(cap)}{unit}</span></div></>}
         <p className={styles.small}>{cap == null ? "여기부터는 팔수록 남아요" : reachable ? `최대의 ${Math.round(safe / cap * 100)}%만 채우면 돼요` : `지금 값으로는 본전이 ${per} ${num(safe)}${unit}라 최대(${num(cap)}${unit})보다 많아요. 작업 모드에서 가격·고정비를 고쳐 보세요`}</p>
-      </section>
+      </div></section>
       {easy.shortfall > 0 && <section>
-        <h3>여유</h3>
+        <h3>여유</h3><div>
         <p className={styles.big}>{easy.limit != null && !short ? `처음 ${less} 여섯 달은 버텨요` : `${man(easy.shortfall)}만 원이 있으면 여섯 달을 버텨요`}</p>
         <p className={styles.small}>{easy.limit != null && !short ? `그만큼(${man(easy.shortfall)}만 원)은 미리 떼어 뒀어요` : `처음에 안전선의 절반만 ${easy.enroll ? "올" : "팔릴"} 때를 대비한 돈이에요`}</p>
-      </section>}
+      </div></section>}
     </div>
-    {!!chapters.length && <div className={styles.ready}><strong>준비된 것</strong>{chapters.map(name => <span key={name}>{name}</span>)}</div>}
+    {!!chapters.length && <p className={styles.ready}><strong>준비된 것</strong>{chapters.join(" · ")}</p>}
+    <p className={styles.say}>세상의 어떤 큰일도 열정 없이 이루어진 적이 없습니다.<cite>헤겔</cite></p>
   </div>;
 }
