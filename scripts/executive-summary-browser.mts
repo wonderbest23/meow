@@ -68,7 +68,7 @@ try {
     });
     const page = await context.newPage(); page.on("pageerror", (error: Error) => errors.push(error.message));
     await page.goto(`${origin}/plan/document?planId=${plan.id}`, { waitUntil: "networkidle", timeout: 120000 });
-    await page.getByRole("group", { name: "문서 보기 방식" }).getByRole("button", { name: "한 장 요약", exact: true }).click();
+    await page.getByRole("group", { name: "문서 보기 방식" }).getByRole("button", { name: "쉬운 보기", exact: true }).click();
     await page.getByLabel("한 장 사업 요약", { exact: true }).waitFor();
     assert(await page.getByLabel("한 장 사업 요약", { exact: true }).innerText().then((value: string) => value.includes("5,400,000원") && value.includes("지출 미입력")));
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -81,7 +81,7 @@ try {
     assert.equal(exports.at(-1).view, "detailed");
     assert.equal(exports.at(-1).sections.length, Object.keys(plan.sections).length);
     await page.keyboard.press("Escape"); await page.reload({ waitUntil: "networkidle" });
-    await page.getByRole("group", { name: "문서 보기 방식" }).getByRole("button", { name: "한 장 요약", exact: true }).click();
+    await page.getByRole("group", { name: "문서 보기 방식" }).getByRole("button", { name: "쉬운 보기", exact: true }).click();
     assert(await page.getByLabel("한 장 사업 요약", { exact: true }).innerText().then((value: string) => value.includes("5,400,000원")));
     emptySections = true;
     await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });

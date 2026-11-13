@@ -173,6 +173,11 @@
 
 /* 휴대폰 미리보기 머리의 주 단추 — 옆 44 원 · 알약과 같은 높이 */
 .primary44 { display:inline-flex; align-items:center; justify-content:center; flex:none; box-sizing:border-box; min-height:44px; padding:10px 16px; border:0; border-radius:999px; background:var(--app-primary); color:var(--app-surface); font:inherit; font-size:1rem; font-weight:600; white-space:nowrap; cursor:pointer; }
+.viewSeg { display:inline-flex; flex:none; gap:2px; padding:3px; border-radius:999px; background:var(--app-hover); }
+.viewSeg button { position:relative; min-height:38px; padding:0 12px; border:0; border-radius:999px; background:transparent; color:var(--app-body); font:inherit; font-size:.875rem; font-weight:500; white-space:nowrap; }
+.viewSeg button::after { content:""; position:absolute; inset:-6px 0; }
+.viewSeg button[aria-pressed=true] { background:var(--app-surface); color:var(--app-text); font-weight:650; box-shadow:0 1px 2px rgba(16,24,40,.1); }
+@media (max-width:359px) { .viewSeg button { padding:0 8px; font-size:.8125rem; } }
 .primary44:hover:not(:disabled) { background:var(--app-primary-hover); }
 .primary44:disabled { background:var(--app-line-strong); cursor:default; }
 @media (max-width:359px) { .primary44 { padding:10px 12px; } }

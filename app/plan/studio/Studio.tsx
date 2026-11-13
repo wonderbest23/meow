@@ -18,7 +18,7 @@ import { useGenerationProgress } from "../GenerationProgress";
 import frame from "../chat/page.module.css";
 import hub from "../BusinessHub.module.css";
 import styles from "./Studio.module.css";
-import { sendStudioCommand, StudioNavContext, StudioPaneContext, type StudioCommand, type StudioComposeRequest, type StudioEditHandler, type StudioEditPreviewChapters, type StudioEditTarget, type StudioNav, type StudioPane } from "./StudioContext";
+import { sendStudioCommand, usePlanView, StudioNavContext, StudioPaneContext, type StudioCommand, type StudioComposeRequest, type StudioEditHandler, type StudioEditPreviewChapters, type StudioEditTarget, type StudioNav, type StudioPane } from "./StudioContext";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan } from "../../../lib/plan-builder/plan-store";
 import { journeySteps, launchProgress, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type JourneyState, type JourneyStepId } from "../../../lib/plan-builder/journey";
 import { businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
@@ -781,7 +781,8 @@ export default function Studio() {
     /* 휴대폰 미리보기는 계획서 칸의 위 줄이 없다 — 목차 · 한 장 요약은 여기서. 내려받기(위 막대 주 단추) · 실적 기록(위 '유지보수')은 겹쳐서 뺐다 */
     ...(rightTab === "plan" ? [
       { key: "toc", label: "목차", icon: <List />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-toc") },
-      { key: "summary", label: "한 장 요약", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") },
+      ...(wide ? [{ key: "summary", label: "쉬운 보기", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") }]
+        : [{ key: "download", label: "내려받기", icon: <Download />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 내려받을 수 있어요", onSelect: () => runPlan("plan-download") }]),
       /* 고치는 길은 대화 하나 — 손으로 고치기는 장마다 두지 않고 여기 한 곳(2026-11-10) */
       { key: "edit", label: "직접 고치기", icon: <PenLine />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => runPlan("plan-edit") },
     ] : []),
@@ -815,7 +816,7 @@ export default function Studio() {
       <div className={styles.viewGroup} role="group" aria-label="미리보기 도구">
         <span className={styles.previewPill}><Globe aria-hidden="true" />미리보기</span>
         <ToolButton className={styles.groupTool} label="사업계획서 내려받기" title={planTools ? "사업계획서 내려받기" : "계획서를 쓰면 내려받을 수 있어요"} icon={<Download aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-download")} />
-        <ToolButton className={styles.groupTool} label="한 장 요약 보기 · 상세 계획서로 돌아가기" title={planTools ? "한 장 요약 ↔ 상세 계획서" : "계획서를 쓰면 볼 수 있어요"} icon={<FileText aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-summary")} />
+        <ToolButton className={styles.groupTool} label="쉬운 보기 · 작업 모드로 돌아가기" title={planTools ? "쉬운 보기 ↔ 작업 모드" : "계획서를 쓰면 볼 수 있어요"} icon={<FileText aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-summary")} />
         <PopMenu buttonClassName={styles.groupTool} buttonLabel="더 보기 — 직접 고치기 · 실적 기록 · 저장" buttonTitle="더 보기" menuLabel="미리보기 더 보기" label={<Layers aria-hidden="true" />} groups={[{ key: "more", items: moreItems }]} />
       </div>
       <span className={styles.grow} />
@@ -843,6 +844,7 @@ export default function Studio() {
    */
   /* 유지보수 칸 앞쪽이 개업 준비인 동안(공개 전 · 준비가 남음)은 주 단추도 개업 준비 다음 단계 — BusinessWorkspace 의 careOpen · launchFront 와 같은 조건 */
   const launchFront = !isSamplePlan(planId) && (homepage !== "published" || (!!plan && launchProgress(plan) !== "done"));
+  const planView = usePlanView();
   const primary = rightTab === "operations" && launchFront ? LAUNCH_PRIMARY : PRIMARY[rightTab];
   const mobileHead = chatVisible ? <header className={styles.mHead}>
     <Link className={styles.round44} href="/plan" aria-label="첫 화면으로" title="첫 화면으로"><X aria-hidden="true" /></Link>
@@ -861,7 +863,11 @@ export default function Studio() {
         { key: "pages", heading: "페이지", items: pageOptions.map(item => ({ key: item.id, label: item.label, current: item.id === rightTab, title: item.locked ?? undefined, ariaLabel: `${item.label}${item.done ? " (완료)" : ""}${item.locked ? ` (${item.locked})` : ""}${item.unread ? " (새 소식)" : ""}`, onSelect: () => pickPage(item.id) })) },
         { key: "tools", heading: "도구", items: toolItems },
       ]} />
-    <button type="button" className={styles.primary44} disabled={!!locks[rightTab]} title={locks[rightTab]?.message} onClick={() => sendStudioCommand(primary.command)}>{primary.label}</button>
+    {/* 계획서는 오른쪽에 보기 전환(대표 결정 2026-11-13 — 내려받기는 가운데 알약 메뉴로). 바꿀 보기가 없을 때만 예전 주 단추 */}
+    {rightTab === "plan" && planView && !locks.plan ? <div className={styles.viewSeg} role="group" aria-label="문서 보기 방식">
+      <button type="button" aria-pressed={planView === "easy"} onClick={() => { if (planView !== "easy") sendStudioCommand("plan-summary"); }}>쉬운 보기</button>
+      <button type="button" aria-pressed={planView === "work"} onClick={() => { if (planView !== "work") sendStudioCommand("plan-summary"); }}>작업 모드</button>
+    </div> : <button type="button" className={styles.primary44} disabled={!!locks[rightTab]} title={locks[rightTab]?.message} onClick={() => sendStudioCommand(primary.command)}>{primary.label}</button>}
   </header>;
 
   /* 예시 사업 · 대화 없는 사업의 대화 칸 안내 아래 — 대화 칸(BusinessIntake)이 없어 여기서 같은 말풍선을 그린다 */

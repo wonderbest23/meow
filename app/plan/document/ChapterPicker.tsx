@@ -58,7 +58,7 @@ export default function ChapterPicker({ chapters, current, onSelect }: { chapter
     else if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setOpen(false); button.current?.focus(); }
     else if (event.key === "Tab") { event.preventDefault(); setOpen(false); button.current?.focus(); }
   };
-  const label = current === "summary" ? "한 장 요약" : current === "all" ? "전체 이어 읽기" : `${current + 1}장 ${chapters[current] ?? ""}`;
+  const label = current === "summary" ? "쉬운 보기" : current === "all" ? "전체 이어 읽기" : `${current + 1}장 ${chapters[current] ?? ""}`;
   const count = current === "summary" ? "" : current === "all" ? `${total}장` : `${current + 1} / ${total}`;
   return <div ref={wrap} className={styles.picker}>
     <button ref={button} type="button" className={styles.pickerButton} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? menuId : undefined}
