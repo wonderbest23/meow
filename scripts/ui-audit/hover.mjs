@@ -9,7 +9,7 @@ const [uid, planId] = args;
 if (!uid || !planId) { console.error("사용법: node scripts/ui-audit/hover.mjs <uid> <planId>"); process.exit(2); }
 const q = `planId=${planId}`;
 const PAGES = [
-  ["chat", `/plan/studio?${q}`], ["plan", `/plan/studio?${q}&tab=plan`], ["plan-expert", `/plan/studio?${q}&tab=plan`, "^전문가 모드$"], ["plan-menu", `/plan/studio?${q}&tab=plan`, "페이지 바꾸기|더 보기"], ["homepage", `/plan/studio?${q}&tab=homepage`], ["operations", `/plan/studio?${q}&tab=operations`],
+  ["chat", `/plan/studio?${q}`], ["plan", `/plan/studio?${q}&tab=plan`], ["plan-expert", `/plan/studio?${q}&tab=plan`, "^전체 문서$"], ["plan-menu", `/plan/studio?${q}&tab=plan`, "페이지 바꾸기|더 보기"], ["homepage", `/plan/studio?${q}&tab=homepage`], ["operations", `/plan/studio?${q}&tab=operations`],
   ["list", "/plan"], ["settings", "/plan/settings"], ["me", "/plan/me"], ["home", "/"],
 ];
 

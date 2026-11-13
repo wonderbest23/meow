@@ -219,7 +219,7 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
     event.preventDefault(); event.stopPropagation();
     const href = anchor.href;
     if (operatingDirty) { void confirmLeave(OPERATING_LEAVE).then(ok => { if (ok) { setOperatingDirty(false); router.push(href); } }); return; }
-    /* 전문가 모드 수정안 — 탭 이동·'기본'에서는 물었지만 '대화 이어가기'·메뉴·뒤로 링크로는 그냥 사라졌다 */
+    /* 전체 문서 수정안 — 탭 이동·'기본'에서는 물었지만 '대화 이어가기'·메뉴·뒤로 링크로는 그냥 사라졌다 */
     void confirmLeave(EXPERT_LEAVE).then(ok => { if (ok) { leavingExpert.current = true; anchor.click(); } });
   }}><BusinessAppChrome title="내 사업" titleHeading={false}>
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : embedded && resumeChat ? <div className={styles.scroll}><div className={styles.content}>

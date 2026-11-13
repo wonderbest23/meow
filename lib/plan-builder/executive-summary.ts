@@ -13,7 +13,7 @@ export type ExecutiveSummary = {
   version: 1; title: string; planType: string; sourceVersion: string; abbreviated: boolean;
   blocks: Array<{ id: string; title: string; lines: SummaryLine[] }>;
   note: string;
-  /** 일반 보기(2026-11-13) — 문서 돈 장과 같은 계산 값. 새로 시작하는 사업에서 계산이 될 때만 있다 */
+  /** 쉽게 보기(2026-11-13) — 문서 돈 장과 같은 계산 값. 새로 시작하는 사업에서 계산이 될 때만 있다 */
   easy?: EasySummary;
 };
 /** 판매량은 모두 월 기준. perDay면 화면에서 월 26일로 나눠 '하루'로 보인다(돈 장의 하루 환산과 같은 가정) */

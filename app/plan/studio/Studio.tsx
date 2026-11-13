@@ -781,7 +781,7 @@ export default function Studio() {
     /* 휴대폰 미리보기는 계획서 칸의 위 줄이 없다 — 목차 · 한 장 요약은 여기서. 내려받기(위 막대 주 단추) · 실적 기록(위 '유지보수')은 겹쳐서 뺐다 */
     ...(rightTab === "plan" ? [
       { key: "toc", label: "목차", icon: <List />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-toc") },
-      ...(wide ? [{ key: "summary", label: "일반 보기", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") }]
+      ...(wide ? [{ key: "summary", label: "쉽게 보기", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") }]
         : [{ key: "download", label: "내려받기", icon: <Download />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 내려받을 수 있어요", onSelect: () => runPlan("plan-download") }]),
       /* 고치는 길은 대화 하나 — 손으로 고치기는 장마다 두지 않고 여기 한 곳(2026-11-10) */
       { key: "edit", label: "직접 고치기", icon: <PenLine />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => runPlan("plan-edit") },
@@ -816,7 +816,7 @@ export default function Studio() {
       <div className={styles.viewGroup} role="group" aria-label="미리보기 도구">
         <span className={styles.previewPill}><Globe aria-hidden="true" />미리보기</span>
         <ToolButton className={styles.groupTool} label="사업계획서 내려받기" title={planTools ? "사업계획서 내려받기" : "계획서를 쓰면 내려받을 수 있어요"} icon={<Download aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-download")} />
-        <ToolButton className={styles.groupTool} label="일반 보기 · 전문가 모드로 돌아가기" title={planTools ? "일반 보기 ↔ 전문가 모드" : "계획서를 쓰면 볼 수 있어요"} icon={<FileText aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-summary")} />
+        <ToolButton className={styles.groupTool} label="쉽게 보기 · 전체 문서로 돌아가기" title={planTools ? "쉽게 보기 ↔ 전체 문서" : "계획서를 쓰면 볼 수 있어요"} icon={<FileText aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-summary")} />
         <PopMenu buttonClassName={styles.groupTool} buttonLabel="더 보기 — 직접 고치기 · 실적 기록 · 저장" buttonTitle="더 보기" menuLabel="미리보기 더 보기" label={<Layers aria-hidden="true" />} groups={[{ key: "more", items: moreItems }]} />
       </div>
       <span className={styles.grow} />
@@ -865,8 +865,8 @@ export default function Studio() {
       ]} />
     {/* 계획서는 오른쪽에 보기 전환(대표 결정 2026-11-13 — 내려받기는 가운데 알약 메뉴로). 바꿀 보기가 없을 때만 예전 주 단추 */}
     {rightTab === "plan" && planView && !locks.plan ? <div className={styles.viewSeg} role="group" aria-label="문서 보기 방식">
-      <button type="button" aria-pressed={planView === "easy"} onClick={() => { if (planView !== "easy") sendStudioCommand("plan-summary"); }}>일반 보기</button>
-      <button type="button" aria-pressed={planView === "work"} onClick={() => { if (planView !== "work") sendStudioCommand("plan-summary"); }}>전문가 모드</button>
+      <button type="button" aria-pressed={planView === "easy"} onClick={() => { if (planView !== "easy") sendStudioCommand("plan-summary"); }}>쉽게 보기</button>
+      <button type="button" aria-pressed={planView === "work"} onClick={() => { if (planView !== "work") sendStudioCommand("plan-summary"); }}>전체 문서</button>
     </div> : <button type="button" className={styles.primary44} disabled={!!locks[rightTab]} title={locks[rightTab]?.message} onClick={() => sendStudioCommand(primary.command)}>{primary.label}</button>}
   </header>;
 
