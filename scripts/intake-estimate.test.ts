@@ -99,6 +99,10 @@ async function main() {
   // 고른 업종 안에 그 종류가 없으면 전체 표에서 찾는다(업종은 고른 대로). 소프트웨어를 골랐으면 찾지 않는다
   assert.deepEqual(["general", "local_service"].map(chip => estimateIntake("맞춤 정장 테일러숍", chip as never, ruleKind).answers.offer), ["맞춤 정장 한 벌", "맞춤 정장 한 벌"]);
   assert.doesNotMatch(estimateIntake("동네 카페 예약 관리", "software", ruleKind).answers.offer ?? "", /아메리카노|라테/);
+  // 공장이라고 적었는데 작은 규모 줄이 맞았으면 처리량 5배·직원 3명 이상으로 본다(이미 공장 규모인 줄은 그대로). 납품이면 값을 납품가(70%)로 낮춘다
+  assert.equal(ruled("어묵 공장").answers.capacity, "직원 3명 이상 / 하루 200팩");
+  assert.equal(ruled("양말 공장").answers.capacity, ruled("양말 편직").answers.capacity.replace(/^[^/]+/, "직원·아르바이트 1~2명 "));
+  assert.equal(ruled("수제 쿠키 만들어 카페에 납품").answers.price, "15000원");
   // 'X 전용'의 X 가 종류 이름의 일부면 떼지 않는다(배드민턴 전용 체육관은 다목적 체육관이 아니다). 표에 없던 업종 줄: 내수면 양식·환자 유치·설치 대행
   assert.match(ruled("배드민턴 전용 체육관, 대관이랑 레슨").answers.offer, /배드민턴/);
   assert.deepEqual(["민물장어 양식장", "외국인 환자 유치업, 의료 관광", "TV 벽걸이 커튼 액자 설치 대행"].map(text => ruled(text).ksic), ["03212", "75290", "95399"]);
@@ -125,7 +129,7 @@ async function main() {
   // 교육: 문장에 적은 나이대가 종류의 고객 문구 속 나이대를 바꾼다
   assert.match(ruled("초등 수학 학원 차리려고요").answers.customer, /초등학생/);
   // 혼자서는 못 하는 종류는 인원을 그 종류 값으로 잡는다 — 문장에 혼자 한다고 적었으면 그 말이 먼저다
-  assert.deepEqual(["요양원 창업", "돼지국밥집", "동네 꽃집", "혼자 하는 1인 국밥집", "김치 제조 공장", "김치 담가서 온라인 판매"].map((text) => ruled(text).answers.capacity.split(" / ")[0]), ["직원 3명 이상", "직원·아르바이트 1~2명", "대표자 혼자", "대표자 혼자", "직원·아르바이트 1~2명", "대표자 혼자"]);
+  assert.deepEqual(["요양원 창업", "돼지국밥집", "동네 꽃집", "혼자 하는 1인 국밥집", "김치 제조 공장", "김치 담가서 온라인 판매"].map((text) => ruled(text).answers.capacity.split(" / ")[0]), ["직원 3명 이상", "직원·아르바이트 1~2명", "대표자 혼자", "대표자 혼자", "직원 3명 이상", "대표자 혼자"]);
 
   // 문장 읽기: 사용자가 이미 적은 고객·가격·자금·시간·목표·양·인원은 짐작하지 않고 그대로 읽는다
   const { readSentence } = await import("../lib/plan-builder/intake-sentence");

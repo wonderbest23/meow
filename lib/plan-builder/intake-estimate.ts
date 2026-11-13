@@ -98,21 +98,33 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 체험·원데이라고 적었는데 한 달 회비로 세는 줄이 맞았으면(승마 체험장 → 월 회원권) 1회 값으로 바꾼다 — 아래 each 가 한 달 횟수도 맞춘다
   // shortcut: 1회 값은 월 회비의 4분의 1로 본다, 체험 줄이 따로 생기면 그 줄이 맞는다
   const trial = !read.price && /체험|원데이/.test(text) && base.capacity.startsWith("한 달") && /월\s|\(월|회원권/.test(kind?.offer ?? "");
-  const price = read.price ?? (trial ? Math.max(1000, Math.round(base.price / 4000) * 1000) : base.price);
+  // 납품·도매·OEM이라고 적었는데 소비자에게 파는 줄이 맞았으면 값을 납품가로 낮춘다(건당 비용도 아래에서 같은 비율로 따라간다)
+  // shortcut: 납품가는 소매가의 70%로 본다, 납품가를 따로 적은 줄이 생기면 그 값을 쓴다
+  const wholesale = !!kind && sector !== "software" && !read.price && SUPPLY.test(text) && !/납품(?:도|\s*겸)|겸\s*납품|병행/.test(text) && !/영업|거래처|견적|납품|위판|도매|입찰/.test(`${kind.channel}${kind.offer}`);
+  const round = (value: number) => { const step = value >= 10_000 ? 1000 : value >= 1000 ? 100 : 10; return Math.round(value / step) * step; };
+  const price = read.price ?? (trial ? Math.max(1000, Math.round(base.price / 4000) * 1000) : wholesale ? round(base.price * 0.7) : base.price);
   // 거꾸로 한 달 회원으로 세는 업종에 회당 값('회당 4만원 과외')을 적었으면 한 달 횟수로 바꾼다 — 회원 자리에 그대로 두면 적자 초안이 된다
   const each = !read.priceMonthly && base.capacity.startsWith("한 달") && price * 3 < base.price;
   const unit = base.capacity.match(/[가-힣·]+$/)?.[0] ?? "건";
   const stated = read.capacity && (!monthly || read.capacity.period === "한 달") ? `${read.capacity.period} ${read.capacity.count}${unit}` : undefined;
   const amount = stated ?? (monthly || each ? `한 달 ${Math.max(1, Math.round((monthlyVolumeFromCapacity(base.capacity)?.volume ?? 1) * base.price / price))}${monthly ? "명" : "회"}` : base.capacity);
   // '공장'이라고 적었는데 혼자 하는 규모의 줄이 맞았으면 직원을 둔 것으로 본다. 그 줄의 남는 돈이 급여 한 명분(220만원)을 감당할 때만 고정비에도 더한다(적자 초안을 만들지 않게)
-  const factory = !read.people && !kind?.people && /공장(?!\s*(?:청소|철거|자동화|설비|부지|임대|매매))/.test(said);
+  // 공장·OEM이라고 적었는데 혼자·두세 명 규모의 줄이 맞았으면 공장 규모로 본다: 처리량 5배, 직원 3명 이상, 고정비 3배 + 급여 3명분
+  // 그렇게 키워도 부가세를 뺀 뒤 남을 때만 쓴다(적자 초안을 만들지 않게). shortcut: 5배·3배는 어림값이다, 공장 규모 줄이 따로 생기면 그 줄이 맞는다
+  const PLANT_COST = (cost: number) => cost * 3 + 6_600_000 - (kind?.people ? 2_200_000 : 0);
+  // 이미 공장 규모인 줄(한 달 매출 2천만원 이상)과 공장을 상대하는 서비스(스마트공장 컨설팅)는 키우지 않는다
+  const baseVolume = monthlyVolumeFromCapacity(base.capacity)?.volume ?? 0;
+  const plantFits = !!kind && !["software", "b2b_service", "education"].includes(sector) && baseVolume * base.price < 20_000_000 && !read.people && !read.capacity && !monthly && !each && kind.people !== "직원 3명 이상" && /공장(?!\s*(?:청소|철거|자동화|설비|부지|임대|매매))|oem|odm/i.test(said)
+    && baseVolume * 5 * (price * 10 / 11 - price * base.unitCost / base.price) - PLANT_COST(base.cost) > 0;
+  const plantAmount = plantFits ? amount.replace(/\d[\d,]*/, count => String(Number(count.replace(/,/g, "")) * 5)) : amount;
+  const factory = !plantFits && !read.people && !kind?.people && /공장(?!\s*(?:청소|철거|자동화|설비|부지|임대|매매))/.test(said);
   const wage = factory && (monthlyVolumeFromCapacity(base.capacity)?.volume ?? 0) * (base.price - base.unitCost) - base.cost > 2_200_000 ? 2_200_000 : 0;
   const answers: Record<string, string> = {
     price: `${price}원`,
     // 가격을 문장에서 읽었으면 건당 비용도 같은 비율로 맞춘다
     "structure.unitCost": `${price === base.price ? base.unitCost : Math.round(price * base.unitCost / base.price / 100) * 100}원`,
-    "structure.cost": `${base.cost + wage}원`,
-    capacity: `${read.people ?? kind?.people ?? (factory ? "직원·아르바이트 1~2명" : "대표자 혼자")} / ${amount}`,
+    "structure.cost": `${plantFits ? PLANT_COST(base.cost) : base.cost + wage}원`,
+    capacity: `${plantFits ? "직원 3명 이상" : read.people ?? kind?.people ?? (factory ? "직원·아르바이트 1~2명" : "대표자 혼자")} / ${plantAmount}`,
     goal: read.goal ?? "6개월 안에 손익분기 도달",
   };
   if (read.budget) answers.budget = `${read.budget}원`;
