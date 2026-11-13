@@ -747,6 +747,8 @@ div.nextStepHint { display: grid; justify-items: start; gap: 6px; padding-top: 1
 .changeCard p strong { color: var(--app-text); }
 .changeCard small { color: var(--app-muted); font-size: .75rem; line-height: 1.6; }
 .page[data-coach] .chip.chipStrong { background: var(--app-text); border-color: var(--app-line-strong); color: var(--app-surface); }
+/* 올렸을 때도 검은 바탕 흰 글자 — 위 일반 칩의 올림 규칙(밝은 바탕)이 더 무거워 흰 글자가 밝은 바탕에 묻혀 사라졌다(2026-11-13 사용자 발견) */
+.page[data-coach] .chip.chipStrong:hover:not(:disabled) { background: color-mix(in srgb, var(--app-text) 84%, var(--app-surface)); border-color: var(--app-line-strong); color: var(--app-surface); }
 
 /* 계획서가 있을 때 다시 쓰기는 버튼 하나, 안내는 확인창에서 */
 .rewriteAction { display: grid; margin-top: 12px; }
