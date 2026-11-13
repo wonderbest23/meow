@@ -104,6 +104,9 @@ async function main() {
   assert.equal(ruled("어묵 공장").answers.capacity, "직원 3명 이상 / 하루 200팩");
   assert.equal(ruled("양말 공장").answers.capacity, ruled("양말 편직").answers.capacity.replace(/^[^/]+/, "직원·아르바이트 1~2명 "));
   assert.equal(ruled("수제 쿠키 만들어 카페에 납품").answers.price, "15000원");
+  // 'X도 같이'로 곁들인 것은 본업이 아니다 — 앞쪽 본업의 줄을 쓰고 곁들인 품목은 뒤에 남긴다. 지명의 '도'(제주도)는 건드리지 않는다
+  assert.match(ruled("네일샵, 속눈썹도 같이").answers.offer, /네일.* · 속눈썹$/);
+  assert.equal(ruled("제주도 감귤 농장").answers.offer, ruled("제주 감귤 농장").answers.offer);
   // 'X 전용'의 X 가 종류 이름의 일부면 떼지 않는다(배드민턴 전용 체육관은 다목적 체육관이 아니다). 표에 없던 업종 줄: 내수면 양식·환자 유치·설치 대행
   assert.match(ruled("배드민턴 전용 체육관, 대관이랑 레슨").answers.offer, /배드민턴/);
   assert.deepEqual(["민물장어 양식장", "외국인 환자 유치업, 의료 관광", "TV 벽걸이 커튼 액자 설치 대행"].map(text => ruled(text).ksic), ["03212", "75290", "95399"]);
