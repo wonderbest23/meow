@@ -26,6 +26,13 @@ assert.deepEqual(understoodAnswers({ offer: "작은 카페" }, [...questions, q(
 assert.deepEqual(understoodAnswers({ offer: "국 하나를 포함한 반찬 4가지 한 묶음", problem: "반찬을 만들 시간이 없다" }, [...questions, q("offer", "offer"), q("problem", "problem", "multi")]),
   [{ questionId: "offer", value: "국 하나를 포함한 반찬 4가지 한 묶음" }, { questionId: "problem", value: ["반찬을 만들 시간이 없다"] }]);
 assert.equal(cleanUnderstood({ problem: "원문에 없는 문제" }, "반찬을 만들 시간이 없다").problem, undefined);
+// 값이 둘 이상이면 그 구절을 파는 것에 덧붙인다(2026-11-14). 값이 하나뿐인 구절 · 원문에 없는 구절은 붙이지 않는다
+const offerQ = [...questions, q("offer", "offer")], twoPrices = "쿠키는 한 봉지 6천원, 구움과자 세트는 2만원";
+assert.deepEqual(understoodAnswers({ offer: "수제 쿠키와 구움과자 세트", prices: twoPrices }, offerQ), [{ questionId: "offer", value: `수제 쿠키와 구움과자 세트 (${twoPrices})` }]);
+assert.deepEqual(understoodAnswers({ offer: "네일샵", prices: twoPrices }, offerQ), [{ questionId: "offer", value: twoPrices }], "파는 것이 없으면 값 구절이 파는 것이 된다");
+assert.deepEqual(understoodAnswers({ offer: "쿠키", prices: twoPrices }, offerQ), [{ questionId: "offer", value: twoPrices }], "겹치면 한 번만");
+assert.deepEqual(understoodAnswers({ offer: "수제 쿠키", prices: "한 봉지 6천원" }, offerQ), [{ questionId: "offer", value: "수제 쿠키" }]);
+assert.equal(cleanUnderstood({ prices: "쿠키 6천원, 케이크 3만원" }, "쿠키는 6천원에 팔아요").prices, undefined);
 assert.deepEqual(understoodAnswers({}, questions, "대표자 혼자 / 하루 50건"), []);
 // 보일 때는 사용자가 적은 말에 가깝게 — 저장값(일주일 N)은 계산용
 assert.equal(capacityDaysDisplay("대표자 혼자 · 평일만 / 일주일 400건"), "대표자 혼자 / 하루 80건 · 평일만");
