@@ -208,6 +208,12 @@ async function main() {
     assert.equal(readCoach(named.plan.answers)!.business.description, long, "적은 문장은 그대로 남는다");
     const vague = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "뭔가 사람들한테 도움되는 걸 하고 싶어요. 아직 잘 모르겠지만 천천히 정해 보려고 합니다", revision: 0, requestId: randomUUID() }, off);
     assert.equal(vague.plan.title, "뭔가 사람들한테 도움되는 걸 하고 싶어요");
+    // 'X에서 팔아요'의 X(플리마켓)는 파는 곳이라 제목이 되지 않는다
+    const place = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "손뜨개 인형을 인스타, 플리마켓, 아이디어스에서 팔 거예요. 하나에 2만원", revision: 0, requestId: randomUUID() }, off);
+    assert.equal(place.plan.title, "손뜨개 인형을 인스타, 플리마켓…");
+    // 전문가 모드도 제목은 찾은 이름으로
+    const pro = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", depth: "expert", questionId: "business", value: "퇴근길 직장인을 상대로 동네에서 반찬가게를 열고 싶어요. 혼자서 하루 30묶음 정도 만들어 팔 생각입니다", revision: 0, requestId: randomUUID() }, off);
+    assert.equal(pro.plan.title, "반찬가게");
   }
   const stated = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "자본금 3천만원으로 주 20시간만 하는 네일샵을 열려고 해요", revision: 0, requestId: randomUUID() }, off);
   const statedFields = readCoach(stated.plan.answers)!.fields;

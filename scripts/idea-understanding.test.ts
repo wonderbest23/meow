@@ -33,3 +33,4 @@ console.log("idea understanding: passed");
 assert.deepEqual(understoodAnswers({ channel: "스마트스토어", channel2: "인스타" }, questions), [{ questionId: "channel", value: ["스마트스토어", "인스타"] }]);
 assert.deepEqual(understoodAnswers({ channel: "인스타", channel2: "인스타" }, questions), [{ questionId: "channel", value: ["인스타"] }]);
 assert.equal(cleanUnderstood({ channel: "스마트스토어", channel2: "당근" }, "스마트스토어랑 인스타에서 팔아요").channel2, undefined, "원문에 없는 두 번째 경로는 버린다");
+assert.deepEqual(understoodAnswers({ channel: "인스타", channel2: "플리마켓", channel3: "아이디어스" }, questions), [{ questionId: "channel", value: ["인스타", "플리마켓", "아이디어스"] }]);

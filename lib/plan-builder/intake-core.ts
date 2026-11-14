@@ -727,11 +727,11 @@ export function autoBusinessName(value: string, limit = 60): string {
   if (chars.length <= limit) return chars.join("");
   const head = chars.slice(0, limit - 1).join("");
   const space = head.search(/\s\S*$/);
-  return `${(space > limit / 2 ? head.slice(0, space) : head).trimEnd()}…`;
+  return `${(space > limit / 2 ? head.slice(0, space) : head).replace(/[\s,·]+$/, "")}…`;
 }
 
 /** 길게 적은 사업 문장으로 붙이는 임시 제목 — 첫 구절만, 24자까지(문장 전체가 제목 칸을 덮던 문제 2026-11-14). 적은 문장 자체는 대화와 사업 설명에 그대로 남는다 */
-export const draftNameFromIdea = (value: string) => autoBusinessName(value.trim().split(/[.,!?\n]/)[0] || value, 24);
+export const draftNameFromIdea = (value: string) => autoBusinessName(value.trim().split(/[.!?\n]/)[0] || value, 24);
 
 function setField(coach: CoachState, key: CoachField["key"], value: string | null, messageId: string, quote: string, basis: CoachField["basis"] = "user") {
   const fields = coach.fields.filter(field => field.key !== key);
@@ -865,6 +865,18 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
 const ESTIMATE_SUFFIX = ":estimate";
 
 /**
+ * 제목이 아직 문장 앞부분(임시 제목)이면 기준표가 찾은 이름으로 바꾼다 — 사용자가 적은 띄어쓰기대로('강아지 수제 간식').
+ * 두 글자 이름('과외' · '캔들')은 제목으로 너무 짧고, 'X에서 팔아요'의 X(플리마켓 · 인스타)는 파는 곳이지 사업 이름이 아니다 — 그때는 문장 앞부분을 둔다.
+ */
+export function nameFromKind(coach: CoachState, business: string, word: string | null) {
+  if (!word || coach.business.nameConfirmed || coach.business.name !== draftNameFromIdea(business)) return;
+  const pattern = Array.from(word.replace(/\s/g, "")).map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s*");
+  const spaced = business.match(new RegExp(pattern, "i"))?.[0] ?? word;
+  const place = new RegExp(`${pattern}(?:(?:\\s*[,·/]\\s*|(?:와|과|랑|이랑)\\s*)[가-힣a-z0-9]+?)*에서(?:\\s|$)`, "i").test(business);
+  if (!place && Array.from(spaced.replace(/\s/g, "")).length >= 3) coach.business.name = spaced;
+}
+
+/**
  * 한 문장만 받은 새 사업의 나머지 핵심 질문을 자체 기준표(intake-estimate)로 채운다 — 묻지 않고 바로 초안으로 간다.
  * 채운 값은 '제안'이라 사용자가 답하면 그 답이 이긴다. 예산·주당 시간은 개인 사정이라 짐작하지 않는다 — 문장에 적혀 있을 때만 쓰고 아니면 '미정'으로 둔다.
  * 문서를 쓰기 전에는 사업 문장이 바뀌면 지난 짐작도 새 문장을 따라 바뀐다. 쓴 뒤에는 건드리지 않는다.
@@ -881,12 +893,7 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   const { sector, ksic, matched, word, answers } = free ? estimateIntake(business, undefined, rules) : estimateIntake(business, intake.sector, rules, intake.ksic);
   // 업종도 모르고 종류도 못 찾았으면 아무것도 채우지 않는다 — 업종 질문을 먼저 묻고, 고르면 그 업종으로 다시 채운다
   if (!picked && open("industry") && !matched) return;
-  // 제목이 아직 문장 앞부분(임시 제목)이면 기준표가 찾은 이름으로 바꾼다 — 사용자가 적은 띄어쓰기대로('강아지 수제 간식')
-  if (!picked && word && !coach.business.nameConfirmed && coach.business.name === draftNameFromIdea(business)) {
-    const spaced = business.match(new RegExp(Array.from(word.replace(/\s/g, "")).map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s*"), "i"))?.[0] ?? word;
-    // 두 글자 이름('과외' · '캔들')은 제목으로 너무 짧다 — 문장 앞부분을 그대로 둔다
-    if (Array.from(spaced.replace(/\s/g, "")).length >= 3) coach.business.name = spaced;
-  }
+  if (!picked) nameFromKind(coach, business, word);
   if (!picked && (open("industry") || free && matched)) {
     // 낱말 규칙으로 찾은 분류도 짐작이다 — 값·수량 이름(월 회비·프로젝트 1건)이 그 분류를 따르게 넣어 두고, 사용자가 업종을 고르면 그것으로 바뀐다
     intake.sector = sector; intake.ksic = ksic;
