@@ -142,7 +142,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
       {/* 서랍에서 장을 고르면 서랍을 닫고 그 장을 보여 준다 */}
       <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
     </aside>}
-    <div className={`${styles.appSurface} ${chrome.surface} ${home || hero ? chrome.hero : ""}`} data-app-surface="" data-solo={showRail || rail ? undefined : ""} data-bare={bare || undefined} data-hero={hero || undefined} data-tabbar={tabBar ? "" : undefined} data-settings={settings ? "" : undefined} inert={open || profile}>
+    <div className={`${styles.appSurface} ${chrome.surface} ${home || hero ? chrome.hero : ""}`} data-app-surface="" data-solo={showRail || rail ? undefined : ""} data-bare={bare || undefined} data-tabbar={tabBar ? "" : undefined} data-settings={settings ? "" : undefined} inert={open || profile}>
       {/* 휴대폰 첫 화면 머리 56px — 계정 알약(누르면 내 사업 메뉴 서랍) · 아바타(프로필 시트) */}
       {home && <header className={chrome.homeBar}>
         <button type="button" className={chrome.pill} aria-haspopup="dialog" aria-expanded={open} aria-label="내 사업 메뉴 열기" onClick={() => setOpen(true)}>

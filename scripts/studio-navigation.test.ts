@@ -388,6 +388,13 @@ console.log("studio navigation ok");
   /* PC 는 한 칸 대화(계획서를 쓰기 전)가 아닐 때만 오른쪽 칸이 보인다(대표 승인 2026-11-14) */
   assert.match(studio, /const rightVisible = wide \? !focus : tab !== "chat" && !chatOnly;/);
   /* 한 칸 대화는 장이 없고 작성도 시작하지 않았을 때만 — 작성이 시작되면(작업 번호 · 알림 · 진행 중) 바로 끝난다. 예시 · 못 찾은 사업 · 대화 없는 사업은 아니다 */
+  /* 첫 화면 입력창에서 고른 전문가 모드는 주소 인자(depth=expert)로 넘어가 대화가 그 방식으로 시작한다. 말로 입력하기(마이크)는 뺐다(대표 결정 2026-11-14) */
+  {
+    const home = readFileSync(new URL("../app/plan/PlanList.tsx", import.meta.url), "utf8"), chat = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
+    assert.match(home, /depth === "expert" \? `&\$\{DEPTH_PARAM\}=expert` : ""/);
+    assert.match(chat, /searchParams\.get\(DEPTH_PARAM\) === "expert" \? "expert" : "easy"/);
+    for (const source of [home, chat]) assert.doesNotMatch(source, /SpeechRecognition|useDictation|말로 적기"|말로 입력하기"/);
+  }
   assert.match(studio, /const writingStarted = generationWanted \|\| !!generationKey \|\| !!generation\?\.active;/);
   assert.match(studio, /const focus = !isSamplePlan\(planId\) && !missing && !noChat && \(tab === "chat" \|\| !!locks\[tab\]\)\s+&& \(plan \? !hubState\?\.documents\.length && !writingStarted : pending \|\| !ready && focusHint\);/);
   assert.match(studio, /disabled=\{chatOnly \|\| missing\}/);

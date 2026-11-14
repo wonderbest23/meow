@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer,
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
-import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, Mic, Paperclip, Plus, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, Paperclip, Plus, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
@@ -33,13 +33,12 @@ import { composerEnterSends, composerLimitNote, resultUpdateNotice, resumeSummar
 import { nativePlatform } from "../../../lib/native-app";
 import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 import { LANDING_IDEA_PARAM, clearLandingIdea, readLandingIdea, stashLandingIdea, withoutLandingIdea } from "../../../lib/plan-builder/landing-idea";
-import { ENTRY_PARAM, isEntryMode, STUDIO_PATH, studioHref, type StudioTab } from "../../../lib/plan-builder/studio";
+import { DEPTH_PARAM, ENTRY_PARAM, isEntryMode, STUDIO_PATH, studioHref, type StudioTab } from "../../../lib/plan-builder/studio";
 import { homepageHref } from "../../../lib/plan-builder/journey";
 import { useChipFlight } from "./intake-ui/use-chip-flight";
 import StudioIntakeSummary, { intakeSummaryRows } from "../studio/StudioIntakeSummary";
 import { GUEST_NEXT_KEY, useStudioCommand, useStudioEditChapterList, useStudioEditPreviewChapters, useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
 import { PopMenu, type PopMenuItem } from "../studio/PopMenu";
-import { useDictation } from "../../../components/use-dictation";
 import { newChatHref } from "../../../lib/plan-builder/studio";
 import { QueuedStudioRequests, StudioEditTurns } from "./intake-ui/StudioEditTurns";
 import { JourneyGuideTurn } from "./intake-ui/JourneyGuideTurn";
@@ -191,6 +190,8 @@ export type BusinessIntakeProps = {
   focus?: boolean;
 };
 const HEADERS = { "x-business-intake": "2" };
+/* '정한 내용' 서랍이 미끄러져 나가는 시간 — intake.module.css 의 focusDrawerOut 과 같은 값 */
+const DRAWER_OUT_MS = 280;
 /** Browser network failures ("Failed to fetch", "Load failed") become plain Korean; our own messages pass through. */
 function friendlyError(caught: unknown): string | null {
   if (!(caught instanceof Error)) return null;
@@ -248,7 +249,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const [drawerWanted, setDrawerWanted] = useState(false);
   const drawerPill = useRef<HTMLButtonElement>(null);
   const drawerOpen = drawerWanted && focusMode;
-  const closeDrawer = () => { setDrawerWanted(false); drawerPill.current?.focus({ preventScroll: true }); };
+  /* 닫힐 때도 미끄러져 나간다 — 나가는 동안은 inert 로 초점 · 낭독기에서 빼고, 끝나면 지운다(시간으로 지운다 — 애니메이션이 돌지 않아도 남지 않게). 움직임 줄이기면 바로 지운다 */
+  const [drawerLeaving, setDrawerLeaving] = useState(false);
+  const closeDrawer = () => {
+    setDrawerWanted(false); drawerPill.current?.focus({ preventScroll: true });
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    setDrawerLeaving(true); window.setTimeout(() => setDrawerLeaving(false), DRAWER_OUT_MS);
+  };
   useEffect(() => {
     if (!drawerOpen) return;
     document.querySelector<HTMLElement>("#intake-decided-drawer [data-summary-close]")?.focus({ preventScroll: true });
@@ -318,8 +325,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    * 대화 방식(대표 결정 2026-11-13) — 일반: 한 문장만 받고 나머지는 업종 기준값으로 채워 바로 초안, 전문가: 하나씩 자세히 묻는다.
    * 새 대화에서는 여기서 고른 값을 시작 명령에 싣고, 진행 중인 사업은 서버에 저장된 값(intake.depth)을 따른다.
    * 처음부터 일반 모드다 — 큰 카드 두 장으로 먼저 고르게 하던 것을 입력창 안 작은 전환으로 바꿨다(대표 승인 2026-11-14). 바로 적을 수 있다.
+   * 첫 화면 입력창에서 전문가를 고르고 보냈으면 주소 인자(depth=expert)로 넘어온다.
    */
-  const [startDepth, setStartDepth] = useState<"easy" | "expert">("easy");
+  const [startDepth, setStartDepth] = useState<"easy" | "expert">(() => (searchParams.get(DEPTH_PARAM) === "expert" ? "expert" : "easy"));
   const startDepthRef = useRef(startDepth);
   useEffect(() => { startDepthRef.current = startDepth; }, [startDepth]);
   const [busy, setBusy] = useState(false);
@@ -1739,21 +1747,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   };
   const dockQueue = pro && showComposer && (plan || newEntry);
   /*
-   * ── lovable 구조 2단계: 작업실 입력 상자 아래 줄 — ＋(28/40 원) · 모드 알약('사업계획서 ▾') · 마이크 · 보내기(검정 원) ──
+   * ── lovable 구조 2단계: 작업실 입력 상자 아래 줄 — ＋(28/40 원) · 모드 알약('사업계획서 ▾') · 보내기(검정 원) ──
    * ＋ 는 지금까지 답 보기 · 새 대화, 모드 알약은 말을 보낼 곳(대화 · 사업계획서 장 · 홈페이지) — 예전 '고칠 곳 고르기'·'지금까지 답 보기'와 같다.
-   * 마이크는 브라우저 음성 인식으로 들은 말을 입력칸에 잇는다(지원하지 않는 브라우저는 단추가 없다).
+   * 말로 적기(마이크)는 뺐다(대표 결정 2026-11-14).
    */
-  const appendToComposer = (text: string) => {
-    const input = composerInput.current;
-    if (!input || input.disabled || input.readOnly) return;
-    const next = `${input.value.trimEnd() ? `${input.value.trimEnd()} ` : ""}${text}`.slice(0, 1200);
-    /* 입력칸의 onChange 를 그대로 거치게(질문 답 · 고치기 글이 저마다 저장된다) */
-    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set?.call(input, next);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.focus();
-  };
-  const dictation = useDictation(appendToComposer);
-  useStudioCommand("chat-dictate", () => { if (dictation.supported && !dictation.listening) dictation.start(); else focusComposer(); }, embedded && !!(plan || newEntry) && showComposer);
   useStudioCommand("chat-summary", () => { if (!plan) return; setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }, embedded && !!plan);
   /* 고른 선택지 알약이 내 말풍선으로 옮겨 가는 짧은 전환(6단계) — 대화 칸이 그려진 뒤에 붙인다 */
   useChipFlight(conversation, loaded && !!(plan || newEntry));
@@ -1796,7 +1793,6 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const questionPill = questionTarget && !modePill
     ? <PopMenu placement="above" align="end" buttonClassName={styles.modePill} buttonLabel={`답하는 중: ${questionTarget} — 더 보기`} menuLabel="지금 답하는 질문" groups={[{ key: "question", items: [{ key: "current", label: questionTarget, icon: <Target />, current: true, onSelect: () => focusComposer() }, ...plusItems.filter(item => item.key === "answers")] }]} label={<><span className={styles.modePillLabel} data-question-target title={questionTarget}><span className={styles.modePillHint}>답하는 중:</span> {questionTarget}</span><ChevronDown aria-hidden="true" /></>} />
     : null;
-  const micButton = dictation.supported ? <button type="button" className={styles.composerRound} aria-label={dictation.listening ? "말로 적기 멈추기" : "말로 적기"} aria-pressed={dictation.listening} title={dictation.listening ? "듣고 있어요 · 누르면 멈춰요" : "말로 적기"} disabled={!loaded || loadFailed || ownerChanged || (!studioRoute && !!replyTurn)} onClick={dictation.toggle}><Mic aria-hidden="true" /></button> : null;
   const plusMenu = <>{attachField}<PopMenu placement="above" align="start" buttonClassName={styles.composerRound} buttonLabel="더 보기 — 문서 첨부 · 지금까지 답 보기 · 새 대화" buttonTitle="더 보기" menuLabel="대화 더 보기" groups={[{ key: "more", items: plusItems }]} label={<Plus aria-hidden="true" />} /></>;
   /* 대화 방식 전환 — 작업실은 입력 상자 아래 줄 안 작은 [일반 | 전문가], 예전 화면은 입력창 위 */
   const depthControl = depthPick ? <div className={styles.depthPick} role="group" aria-label="대화 모드">
@@ -1935,7 +1931,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
           {/* 한 칸 대화: 진행은 가는 선 하나, 지금까지 정한 내용은 알약 하나 — 누르면 오른쪽에서 밀려 나온다 */}
           {focusMode && plan && (!plan.coreComplete || decidedCount > 0) && <div className={styles.focusStatus}>
             {!plan.coreComplete ? <div className={styles.paneProgress} role="progressbar" aria-label="사업 방향 정하기" aria-valuemin={0} aria-valuemax={plan.coreTotal} aria-valuenow={plan.coreAnswered} aria-valuetext={`${questionNumber} / ${plan.coreTotal}`}><span style={{ width: `${plan.coreTotal ? Math.round(plan.coreAnswered / plan.coreTotal * 100) : 0}%` }} /></div> : <span className={styles.composerGrow} />}
-            {decidedCount > 0 && <button ref={drawerPill} type="button" className={styles.focusPill} aria-expanded={drawerOpen} aria-controls="intake-decided-drawer" onClick={() => setDrawerWanted(open => !open)}>정한 내용 {decidedCount}개</button>}
+            {decidedCount > 0 && <button ref={drawerPill} type="button" className={styles.focusPill} aria-expanded={drawerOpen} aria-controls="intake-decided-drawer" onClick={() => { if (drawerOpen) closeDrawer(); else setDrawerWanted(true); }}>정한 내용 {decidedCount}개</button>}
           </div>}
           <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); setGuideShown(null); if (studioRoute) submitStudio(); else submitComposer(); }}>
             {/* 작업실: 무엇을 고치는지 칩으로 — ✕ 로 그만두면 예전 입력창으로 돌아간다. 쓰는 중이면 다 쓴 뒤 반영한다고 알린다 */}
@@ -1976,12 +1972,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
                 if (composerEnterSends({ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode }, window.matchMedia("(pointer: coarse)").matches)) { event.preventDefault(); if (studioRoute) submitStudio(); else submitComposer(); } }} />
               {!embedded && sendButton}
             </div>
-            {embedded && <div className={styles.composerBar} data-studio-bar>{plusMenu}{depthControl}<span className={styles.composerGrow} />{modePill ?? questionPill}{micButton}{sendButton}</div>}
+            {embedded && <div className={styles.composerBar} data-studio-bar>{plusMenu}{depthControl}<span className={styles.composerGrow} />{modePill ?? questionPill}{sendButton}</div>}
           </form>
         </footer>}
       </InputPane>
       {/* 한 칸 대화의 '정한 내용' 서랍 — 예전 오른쪽 칸(지금까지 정한 내용)을 그대로 얹는다. Esc · 닫기로 닫는다 */}
-      {drawerOpen && plan && <div id="intake-decided-drawer" className={styles.focusDrawer}><StudioIntakeSummary snapshot={plan} onClose={closeDrawer} /></div>}
+      {(drawerOpen || drawerLeaving && focusMode) && plan && <div id="intake-decided-drawer" className={styles.focusDrawer} data-leaving={!drawerOpen || undefined} inert={!drawerOpen}><StudioIntakeSummary snapshot={plan} onClose={closeDrawer} /></div>}
       {plan && !embedded && <div {...split.separator} aria-controls="intake-input-panel" className={styles.splitHandle} title="드래그해서 너비 조절 · 두 번 누르면 기본 너비"><span /></div>}
       {plan && <aside id="intake-summary-panel" aria-labelledby="intake-summary-heading" className={`${styles.summaryPane} ${view !== "summary" ? styles.mobileHidden : ""}`}><div className={styles.summarySheetHeader}><button type="button" onClick={() => setView("input")}><ChevronLeft size={18} aria-hidden="true" />대화로 돌아가기</button></div><BusinessSummary snapshot={plan} showActions={false} readOnly={documentFixed} disabled={blocked} onStructure={patch => void send({ action: "structure", structure: patch })} aiBusy={aiBusy} prepared={started} onEdit={editQuestion} onDetails={() => void send({ action: "details" })} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} /><ResourcePanel snapshot={plan} draft={draft.resourceEditor} disabled={blocked} onDraft={resourceEditor => editDraft({ ...draftRef.current, resourceEditor })} onCommand={command => void send(command)} /><AnswerHistory snapshot={plan} readOnly={documentFixed} drafts={draft.answers} onEdit={editQuestion} onKeepAsMemo={keepDraftAsMemo} /></aside>}
     </div>

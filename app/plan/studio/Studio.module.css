@@ -308,11 +308,16 @@
   .studio[data-focus] .rightCol { grid-column:1; margin:0; }
   .topBar[data-focus] { grid-template-columns:minmax(0,1fr); }
   /* 작성이 시작돼 작업실이 열리는 순간 — 오른쪽 칸 · 위 막대 도구가 밀려 들어온다. 자리만 옮긴다(투명하게 두고 기다리지 않는다) */
+  /* 대화 칸은 화면 폭에서 작업실 폭으로 줄어들고, 오른쪽 칸은 그 가장자리를 따라 들어온다(오른쪽 칸은 처음부터 제 크기 — 문서를 다시 배치하지 않는다) */
   .studio[data-opened] .rightCol { animation:studioPaneIn .36s cubic-bezier(.2,.8,.2,1); }
-  .studio[data-opened] .chatCol { animation:studioPaneIn .36s cubic-bezier(.2,.8,.2,1); }
+  .studio[data-opened] .chatCol { animation:studioChatIn .36s cubic-bezier(.2,.8,.2,1); }
+  /* 줄어드는 동안 대화는 한 칸 대화 때의 가운데 줄 폭을 지킨다(작업실 폭보다 좁아지면 아무 영향이 없다) */
+  .studio[data-opened] .chatCol > .paneBody { width:100%; max-width:704px; margin-inline:auto; }
   .topBar[data-opened] .toolbar { animation:studioBarIn .36s cubic-bezier(.2,.8,.2,1); }
 }
-@keyframes studioPaneIn { from { transform:translateX(56px); } }
+@keyframes studioPaneIn { from { transform:translateX(100%); } }
+/* 끝 값도 길이로 적는다 — 적지 않으면(auto) 사이 값을 만들지 못해 절반에서 한 번에 바뀐다 */
+@keyframes studioChatIn { from { width:100vw; } to { width:var(--studio-chat-w, 430px); } }
 @keyframes studioBarIn { from { transform:translateY(-12px); } }
 @media (prefers-reduced-motion:reduce) { .studio[data-opened] :is(.rightCol, .chatCol), .topBar[data-opened] .toolbar { animation:none; } }
 /* '정한 내용' 서랍 머리의 닫기 */

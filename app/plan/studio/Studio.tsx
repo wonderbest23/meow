@@ -722,8 +722,6 @@ export default function Studio() {
     if (name) document.title = `${name} | 오늘창업`;
   }, [intakeV2, missing, signedOut, pageName, pageTab, fresh, newIntent]);
 
-  /* 휴대폰 아래 막대의 마이크 — 대화 화면으로 돌아가 말로 적기를 켠다(브라우저가 지원할 때만 단추가 있다) */
-
   if (!intakeV2) return <StudioLoading />;
 
   /* PC 는 대화 열과 미리보기 판이 늘 함께(대화 열을 접으면 판만), 휴대폰은 대화 화면 ↔ 미리보기 화면 */
@@ -839,6 +837,8 @@ export default function Studio() {
       <BizMenu planId={planId} title={businessTitle} canRename={!!plan && !isSamplePlan(planId) && !missing} onRenamed={setTitle} className={styles.bizName}
         label={<><h1 className={styles.bizTitle}>{businessTitle}</h1><ChevronDown aria-hidden="true" /></>} />
       <span className={styles.grow} />
+      {/* 한 칸 대화: 사업 방향을 정리한 뒤 계획서를 쓰기 전에도 개업 준비로 가는 길 하나 — 그 칸이 열려 있을 때만(잠금 규칙 그대로). 누르면 작업실이 열린다 */}
+      {focus && !!hubState?.coach?.design && !locks.operations && <button type="button" className={styles.sharePill} onClick={() => pickPage("operations")}>{operating ? STUDIO_TAB_LABELS.operations : "개업 준비"}</button>}
       {headerSlot("chat")}
       {(focus || !chatCollapsed) && <ToolButton label="지금까지 답한 기록 보기" icon={<History aria-hidden="true" />} disabled={!plan || missing || isSamplePlan(planId) || noChat} onClick={() => sendStudioCommand("chat-summary")} />}
       {focus ? relogin : <ToolButton label={chatCollapsed ? "대화 열 펴기" : "대화 열 접기"} pressed={chatCollapsed} icon={chatCollapsed ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />} onClick={() => setChatCollapsed(value => !value)} />}

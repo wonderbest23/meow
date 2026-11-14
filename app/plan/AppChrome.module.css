@@ -56,8 +56,8 @@
   /* 아래 3탭 막대(57 + 아래 24) 자리 — 막대가 마지막 내용·단추를 가리지 않게 판 아래를 비운다 */
   .surface[data-tabbar] { padding-bottom:calc(57px + 24px + 12px + env(safe-area-inset-bottom)); }
   /* 휴대폰 바탕 — lovable 캡처 body(bg-base #f5f5f5 / #1d1d1c) */
-  /* 작업실 한 칸 대화(data-hero)는 바탕색만 바꾼다 — background 로 한꺼번에 덮으면 그라데이션 그림까지 지워진다(2026-11-14) */
-  .surface:not([data-settings]):not([data-hero]) { background:var(--app-base); }
+  /* 바탕색만 바꾼다 — background 로 한꺼번에 덮으면 첫 화면 · 한 칸 대화의 그라데이션 그림(.hero)까지 지워졌다(2026-11-14) */
+  .surface:not([data-settings]) { background-color:var(--app-base); }
   .hero.hero { background-color:var(--app-base); }
 }
 
