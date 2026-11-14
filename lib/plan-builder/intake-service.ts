@@ -12,7 +12,7 @@ import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, applyIntakeEstimates, applyUnderstood, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
+import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { ruleKind } from "./kind-rules";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
@@ -121,6 +121,8 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         // 한 문장 → 바로 초안(시험 기능, INTAKE_ESTIMATE=1): 나머지 핵심 질문을 자체 기준표로 채운다
         if (command.depth === "expert") intake.depth = "expert";
         if (process.env.INTAKE_ESTIMATE === "1" && intake.depth !== "expert") applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
+        // 전문가 모드는 기준값을 채우지 않지만 제목만은 찾은 이름으로(긴 문장이 중간에서 잘린 제목이 되던 문제)
+        else if (intake.mode === "startup" && typeof command.value === "string") nameFromKind(coach, command.value.trim(), ruleKind(command.value, () => true)?.word ?? null);
       } else if (!savedIntake && command.depth === "expert") intake.depth = "expert";
       if (command.message) storeDeferredNote(coach, intake, command, at);
       coach.stage = intake.mode === "operating" ? "operating" : intake.mode === "exploring" && !coach.fields.some(field => field.key === "business") ? "exploring" : "startup";

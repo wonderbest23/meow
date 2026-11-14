@@ -701,7 +701,7 @@ export default function Studio() {
   const pageTab = STUDIO_TAB_LABELS[wide ? rightTab : tab];
   useEffect(() => {
     if (!intakeV2) return;
-    const name = missing ? (signedOut ? "로그인이 풀렸어요" : "사업을 찾지 못했어요") : pageName ? `${pageName} · ${pageTab}` : fresh && newIntent ? "새 대화" : "";
+    const name = missing ? (signedOut ? "로그인이 필요해요" : "사업을 찾지 못했어요") : pageName ? `${pageName} · ${pageTab}` : fresh && newIntent ? "새 대화" : "";
     if (name) document.title = `${name} | 오늘창업`;
   }, [intakeV2, missing, signedOut, pageName, pageTab, fresh, newIntent]);
 
@@ -892,9 +892,9 @@ export default function Studio() {
         {/* 로그인이 풀렸을 때(휴대폰) — 머리 아래 한 줄에 다시 로그인하기 */}
         {!wide && relogin && <div className={styles.reloginRow}>{relogin}</div>}
         {/* 주소의 사업을 찾지 못했으면 칸마다 따로 알리지 않고(왼쪽·오른쪽 두 번 보였다) 작업실에서 한 번만 */}
-        {/* 로그인이 풀려 못 찾았으면 '다시 로그인하기'(팝업, 끝나면 이 주소로 돌아온다) — 사업이 사라진 게 아니다 */}
+        {/* 로그인이 안 돼 못 찾았으면 '로그인하기'(팝업, 끝나면 이 주소로 돌아온다) — 처음 온 사람도 이 화면을 보므로 '풀렸어요'라고 하지 않는다(2026-11-14) */}
         {missing ? <div className={styles.missingNote}><div className={hub.content}>{signedOut
-          ? <MissingBusinessBody title="로그인이 풀렸어요" detail="다시 로그인하면 이 사업을 이어서 볼 수 있어요." action={<AppButton type="button" variant="primary" className={hub.primary} onClick={() => openLogin()}>다시 로그인하기</AppButton>} />
+          ? <MissingBusinessBody title="로그인이 필요해요" detail="로그인하면 이 사업을 볼 수 있어요." action={<AppButton type="button" variant="primary" className={hub.primary} onClick={() => openLogin()}>로그인하기</AppButton>} />
           : <MissingBusinessBody />}</div></div> : <div className={styles.studio} data-wide={wide || undefined} data-collapsed={wide && chatCollapsed || undefined}>
           <Pane id="chat" planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} refresh={refreshSeq.chat ?? 0} className={styles.chatCol} headingRef={headingRef("chat")}>
             {/* PC 에서 오른쪽에 보이는 열린 칸 — 대화 칸이 '홈페이지를 대화로 고치기' 같은 제안을 고른다(막힌 칸이면 null) */}
