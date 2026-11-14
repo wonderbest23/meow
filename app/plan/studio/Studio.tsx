@@ -18,7 +18,7 @@ import { useGenerationProgress } from "../GenerationProgress";
 import frame from "../chat/page.module.css";
 import hub from "../BusinessHub.module.css";
 import styles from "./Studio.module.css";
-import { sendStudioCommand, usePlanView, StudioNavContext, StudioPaneContext, type StudioCommand, type StudioComposeRequest, type StudioEditHandler, type StudioEditPreviewChapters, type StudioEditTarget, type StudioNav, type StudioPane } from "./StudioContext";
+import { GUEST_NEXT_KEY, sendStudioCommand, usePlanView, StudioNavContext, StudioPaneContext, type StudioCommand, type StudioComposeRequest, type StudioEditHandler, type StudioEditPreviewChapters, type StudioEditTarget, type StudioNav, type StudioPane } from "./StudioContext";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan } from "../../../lib/plan-builder/plan-store";
 import { journeySteps, launchProgress, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type JourneyState, type JourneyStepId } from "../../../lib/plan-builder/journey";
 import { businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
@@ -30,6 +30,7 @@ import type { IntakeSnapshot } from "../../../lib/plan-builder/intake-types";
 import { trackFunnel } from "../../../lib/funnel/client";
 import { askConfirm, showCopyText, showNotice } from "../../../components/confirm-dialog";
 import { openLogin } from "../../../components/login-dialog";
+import { useAccount } from "../use-account";
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import StudioLoading, { useCachedPlanTitle } from "./loading";
 import StudioIntakeSummary from "./StudioIntakeSummary";
@@ -73,6 +74,12 @@ const PRIMARY: Record<RightTab, { label: string; command: StudioCommand }> = {
   operations: { label: "기록 추가", command: "operations-add" },
 };
 const LAUNCH_PRIMARY: { label: string; command: StudioCommand } = { label: "다음 단계", command: "launch-next" };
+/* 로그인 전에도 볼 수 있는 완성 예시 두 개(lib/plan-builder/samples) — 같은 반찬가게를 두 대화 방식으로 만든 실제 완성본 */
+const GUEST_SAMPLES = [
+  { id: "sample_banchan_easy", how: "일반으로 만든 계획서", note: "질문 4개에 답하고 나머지는 AI가 채움" },
+  { id: "sample_banchan_expert", how: "전문가로 만든 계획서", note: "질문 13개에 직접 답함" },
+] as const;
+function guestNext() { try { return sessionStorage.getItem(GUEST_NEXT_KEY) || "/plan/studio?new=1"; } catch { return "/plan/studio?new=1"; } }
 const LEAVE_MESSAGE = "저장하지 않은 수정이 있어요. 이 화면을 나가면 고친 내용이 사라져요. 나갈까요?";
 /* 작성이 멈춘 상태(아직 안 쓴 장이 남았는데 작업이 끝남) — GenerationProgress 와 같은 기준 */
 const GENERATION_FAILED = ["errored", "terminated", "complete"];
@@ -215,6 +222,7 @@ export default function Studio() {
    * '사업을 찾지 못했어요'와 '내 사업으로'만 보였다(점검 2026-10-23). 그때는 '로그인이 풀렸어요'와 다시 로그인하는 길을 연다.
    */
   const [signedOut, setSignedOut] = useState(false);
+  const account = useAccount();
   const [title, setTitle] = useState("");
   useEffect(() => {
     if (!planId || !intakeV2) return;
@@ -888,10 +896,23 @@ export default function Studio() {
             {/* 예시 사업은 서버에 대화가 없어 대화 칸이 '사업을 찾지 못했어요 · 내 사업으로'를 보였다(감사 2026-10-23) — 읽기 전용 안내와 새 대화 길로 */}
             {/* 대화 없이 만든 사업(예전 편집 화면 등)도 서버에 대화가 없어 '사업을 찾지 못했어요'가 보였다 — 오른쪽 칸은 그대로 쓰니 읽기 전용 안내만 */}
             {isSamplePlan(planId)
-              ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
-                <h2>예시 사업이에요</h2>
-                <AppButton variant="primary" className={hub.primary} href={newChatHref()}><span className={styles.nowrap}>대화로 내 사업 시작하기</span><ChevronRight size={18} aria-hidden="true" /></AppButton>
-              </section>{noteGuideTurn}</div></div>
+              ? <div className={styles.sampleCol}>
+                {/*
+                  * 예시 사업의 왼쪽 칸 — 결제한 사람의 작업실처럼 '만들어진 사업 두 개'가 보이고 눌러서 오른쪽에 연다(대표 요청 2026-11-14).
+                  * 로그인 전이면 맨 아래에 로그인 · 회원가입만, 로그인했으면 내 사업을 시작하는 단추.
+                  */}
+                <div className={styles.sampleList}>
+                  <h2>완성 예시</h2>
+                  <p>실제 AI가 만든 계획서예요. 고칠 수는 없고 구경만 할 수 있어요.</p>
+                  {GUEST_SAMPLES.map(sample => <Link key={sample.id} href={`/plan/studio?planId=${sample.id}&tab=plan`} aria-current={planId === sample.id ? "page" : undefined} className={styles.sampleItem}>
+                    <strong>퇴근길 반찬가게</strong><span>{sample.how}</span><small>{sample.note}</small>
+                  </Link>)}
+                  {noteGuideTurn}
+                </div>
+                <div className={styles.sampleFoot}>{account?.authenticated === false
+                  ? <><p>로그인하면 내 사업을 바로 시작할 수 있어요</p><div><AppButton type="button" variant="primary" onClick={() => openLogin(guestNext())}>로그인</AppButton><AppButton type="button" variant="secondary" onClick={() => openLogin(guestNext(), "register")}>회원가입</AppButton></div></>
+                  : <AppButton variant="primary" href={newChatHref()}><span className={styles.nowrap}>대화로 내 사업 시작하기</span><ChevronRight size={18} aria-hidden="true" /></AppButton>}</div>
+              </div>
               : noChat
                 ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
                   <h2>대화 기록이 없는 사업이에요</h2>
