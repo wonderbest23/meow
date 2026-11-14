@@ -1377,3 +1377,10 @@ button.workLogRow { min-height: 32px; }
 .understood h3 > button > small { margin: 0; }
 .understood h3 > button > span { flex: 1; min-width: 0; overflow: hidden; color: var(--app-muted); font-size: .8125rem; font-weight: 400; white-space: nowrap; text-overflow: ellipsis; }
 .understood h3 > button > em { flex: none; margin-left: auto; color: var(--app-muted); font-size: .75rem; font-style: normal; font-weight: 400; }
+/*
+ * 휴대폰 한 칸 대화 — 더 단순하게(대표 요청 2026-11-14): '정한 내용 N개' 알약 없이 게이지만 보이고(정한 내용은 '지금까지 답한 기록'에서 본다),
+ * 입력창에 초점 테두리를 두르지 않고, 대화 위쪽은 머리줄 아래로 서서히 흐려진다.
+ */
+.page[data-embedded][data-focus]:not([data-studio-pro]) .focusPill { display: none; }
+.page[data-embedded][data-focus]:not([data-studio-pro]) .composerShell:focus-within { border-color: transparent; box-shadow: var(--app-ring-shadow); outline: 0; }
+.page[data-embedded][data-focus]:not([data-studio-pro]) .conversation { -webkit-mask-image: linear-gradient(to bottom, transparent 0, var(--app-text) 44px); mask-image: linear-gradient(to bottom, transparent 0, var(--app-text) 44px); }
