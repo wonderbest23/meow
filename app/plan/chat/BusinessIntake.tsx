@@ -68,8 +68,13 @@ function rememberLastIntake(planId: string, signedIn: boolean) {
 function LoginGate({ popup = false }: { popup?: boolean }) {
   const next = typeof window === "undefined" ? "/plan/chat?new=1" : `${window.location.pathname}${window.location.search}`;
   useEffect(() => { if (popup) openLogin(next); }, [popup, next]);
-  if (popup) return <div className={styles.loginPrompt}><p>로그인하면 바로 시작할 수 있어요</p><LoginLink next={next} className={`${styles.chip} ${styles.chipStrong}`}>로그인</LoginLink></div>;
-  return <InlineLogin next={next} />;
+  // 로그인 전에도 구경할 수 있는 읽기 전용 예시 — 같은 반찬가게를 두 대화 방식으로 만든 실제 완성본(lib/plan-builder/samples)
+  const samples = <div className={styles.loginSamples}><p>로그인 전에 완성 예시부터 볼 수 있어요</p>
+    <a href="/plan/document?planId=sample_banchan_easy">일반으로 만든 예시<ChevronRight size={15} aria-hidden="true" /></a>
+    <a href="/plan/document?planId=sample_banchan_expert">전문가로 만든 예시<ChevronRight size={15} aria-hidden="true" /></a></div>;
+  if (popup) return <div className={styles.loginPrompt}><p>로그인하면 바로 시작할 수 있어요</p><LoginLink next={next} className={`${styles.chip} ${styles.chipStrong}`}>로그인</LoginLink>{samples}</div>;
+  // 휴대폰은 로그인 폼이 한 화면을 다 차지해 아래에 두면 안 보인다 — 예시를 위에 둔다
+  return <>{samples}<InlineLogin next={next} /></>;
 }
 
 /** sessionStorage — 막힌 브라우저(사생활 보호 등)에서는 꺼내기만 해도 오류가 나므로 null로 둔다 */

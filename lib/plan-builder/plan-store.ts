@@ -184,7 +184,7 @@ function samplePlans(): Plan[] {
     createdAt: "2026-01-15T09:00:00.000Z",
     updatedAt: "2026-01-15T09:00:00.000Z",
     sections: Object.fromEntries(
-      Object.entries(d.sections).map(([k, v]) => [k, { markdown: v.markdown, html: v.html, generatedAt: "2026-01-15T09:00:00.000Z", locked: true }]),
+      Object.entries(d.sections).map(([k, v]) => [k, { markdown: v.markdown, html: v.html, generatedAt: "2026-01-15T09:00:00.000Z", locked: true, ...(v.coachRevision != null ? { coachRevision: v.coachRevision } : {}) }]),
     ),
     answers: d.answers,
   }));

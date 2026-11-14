@@ -1002,6 +1002,10 @@ button.workLogRow { min-height: 32px; }
 .loginPrompt { display: grid; justify-items: center; align-content: center; gap: 14px; min-height: 60%; padding: 40px 16px; color: var(--app-body); font-size: .9375rem; text-align: center; }
 .loginPrompt p { margin: 0; }
 .loginPrompt .chip { text-decoration: none; }
+.loginSamples { display: grid; justify-items: center; gap: 8px; margin-top: 20px; padding: 0 16px 20px; color: var(--app-muted); font-size: .8125rem; text-align: center; }
+.loginSamples p { margin: 0 0 2px; }
+.loginSamples a { display: inline-flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 999px; background: var(--app-surface); color: var(--app-text); font-size: .875rem; font-weight: 500; text-decoration: none; }
+.loginSamples a:hover { border-color: var(--app-line-strong); }
 /* 새 대화 맨 처음 — 대화 방식 두 카드. 고르면 테두리가 진해지고 아래에 단계 질문이 이어진다 */
 .depthCards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 20px; }
 .depthCards h2 { grid-column: 1 / -1; margin: 0 0 2px; font-size: .9375rem; font-weight: 500; line-height: 1.6; color: var(--app-text); }

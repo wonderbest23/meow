@@ -188,7 +188,8 @@ export function businessTypeFor(input: {
   if (chosen.offering === "space" || chosen.revenue === "rental") return pick("space", "structure");
   if (chosen.payer === "b2b") return pick("b2b", "structure");
   // 'X도 같이'로 곁들인 것은 사업 형태를 정하지 않는다('반찬가게, 주 2회 정기배달도 같이'는 매장 사업이지 배달 사업이 아니다)
-  const whole = input.description?.trim() ?? "", main = whole.replace(/[,\s]+[^,]*?[가-힣a-z0-9]{2,}도\s*(?:같이|함께|병행|하|할|해|판매|제공|가능)[^,]*$/i, "").trim();
+  // 곁들인 말 앞 꾸밈말은 세 낱말까지만 지운다 — 쉼표 없는 문장('…매장에서 팔고 주 2회 정기배달도 같이')은 앞 구절까지 통째로 지워져 방문형으로 판정됐다(2026-11-14 실제 AI 점검: '매장을 빌리지 않으므로' 문장이 매장 계획서에 나옴)
+  const whole = input.description?.trim() ?? "", main = whole.replace(/[,\s]+(?:[^\s,]+\s+){0,3}[가-힣a-z0-9]{2,}도\s*(?:같이|함께|병행|하|할|해|판매|제공|가능)[^,]*$/i, "").trim();
   const text = main.length >= 4 ? main : whole;
   if (text) {
     const shaped = DESCRIPTION_WORDS.slice(0, 4).find(([, words]) => words.test(text));
