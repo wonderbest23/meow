@@ -106,7 +106,8 @@ export function summaryStats(snapshot: IntakeSnapshot, rows: SummaryRow[]): Stat
   return stats;
 }
 
-export default function StudioIntakeSummary({ snapshot }: { snapshot: IntakeSnapshot | null }) {
+/** onClose — 대화 칸의 서랍으로 열렸을 때(한 칸 대화) 머리줄에 닫기 단추를 둔다 */
+export default function StudioIntakeSummary({ snapshot, onClose }: { snapshot: IntakeSnapshot | null; onClose?: () => void }) {
   const rows = snapshot ? intakeSummaryRows(snapshot) : [];
   /*
    * 왼쪽 대화에서 답하면 오른쪽에 새 줄이 생기는데, 아래쪽에 붙으면 보이지 않아 반영된 줄 몰랐다(대표 요청 2026-10-24).
@@ -146,6 +147,7 @@ export default function StudioIntakeSummary({ snapshot }: { snapshot: IntakeSnap
     <header className={styles.sumStrip}>
       <ListChecks size={15} aria-hidden="true" />
       <h3 id="studio-live-summary-heading">지금까지 정한 내용</h3>
+      {onClose && <button type="button" className={styles.sumClose} data-summary-close onClick={onClose}>닫기</button>}
     </header>
     <div className={styles.sumBody} ref={list} data-empty={!rows.length || undefined}>
       {rows.length ? <>

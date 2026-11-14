@@ -1026,18 +1026,7 @@ button.workLogRow { min-height: 32px; }
 .understood > div[data-said] button { border-style: solid; border-color: var(--app-text); font-weight: 600; }
 .understood button:hover:not(:disabled) { border-style: solid; border-color: var(--app-text); }
 /* 새 대화 맨 처음 — 대화 방식 두 카드. 고르면 테두리가 진해지고 아래에 단계 질문이 이어진다 */
-.depthCards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 20px; }
-.depthCards h2 { grid-column: 1 / -1; margin: 0 0 2px; font-size: .9375rem; font-weight: 500; line-height: 1.6; color: var(--app-text); }
-.depthCards button { display: grid; align-content: start; gap: 6px; min-width: 0; min-height: 132px; padding: 16px; border: 1.5px solid var(--app-line); border-radius: 16px; background: var(--app-surface); color: var(--app-text); font: inherit; text-align: left; transition: border-color .15s, box-shadow .15s, transform .15s; animation: depthCardIn .35s both; }
-.depthCards button + button { animation-delay: .07s; }
 @keyframes depthCardIn { from { transform: translateY(8px); } }
-@media (prefers-reduced-motion: reduce) { .depthCards button { animation: none; transition: none; } }
-.depthCards button:hover:not(:disabled) { border-color: var(--app-line-strong); transform: translateY(-1px); }
-.depthCards button[aria-pressed=true] { border-color: var(--app-text); box-shadow: 0 0 0 1px var(--app-text); }
-.depthChange { display: block; width: fit-content; margin: -4px 2px 12px auto; padding: 4px 6px; border: 0; background: transparent; color: var(--app-muted); font: inherit; font-size: .75rem; text-decoration: underline; text-underline-offset: 3px; }
-.depthCards strong { font-size: 1.0625rem; font-weight: 700; }
-.depthCards span { font-size: .8125rem; line-height: 1.6; color: var(--app-body); word-break: keep-all; }
-.depthCards small { align-self: end; font-size: .75rem; color: var(--app-muted); }
 /* 대화 방식(일반 · 전문가) — 입력 상자 바로 위 작은 전환 */
 .depthPick { display: flex; align-items: center; gap: 2px; min-width: 0; margin: 0 0 8px 2px; }
 .depthNote { margin: 0 0 8px 6px; color: var(--app-muted); font-size: .75rem; line-height: 1.6; }
@@ -1340,3 +1329,47 @@ button.workLogRow { min-height: 32px; }
 /* 휴대폰 작업실 진행선 — 머리 바로 아래 2px, 선택지와 같은 파랑 */
 .page[data-embedded] .progressLine { height: 2px; background: var(--app-fill); }
 .page[data-embedded] .progressLine > span { background: var(--app-choice-accent); }
+
+/*
+ * 한 칸 대화(대표 승인 2026-11-14) — 작업실에서 계획서를 쓰기 전: 첫 화면과 같은 그라데이션 판 위에 대화 한 줄(672px — 첫 화면 입력 상자 폭).
+ * 바탕은 판이 맡으니 비우고, 입력 상자는 첫 화면과 같은 모양(r28 · 큰 그림자)으로 줄 아래에 붙는다. 색은 --app-* 토큰만.
+ */
+.page[data-embedded][data-focus] { position: relative; background: transparent; }
+.page[data-embedded][data-studio-pro][data-focus] .inputContent { width: 100%; max-width: 704px; padding: 20px 16px 16px; }
+.page[data-embedded][data-studio-pro][data-focus] .composer { width: 100%; max-width: 704px; margin-inline: auto; padding: 0 16px 20px; }
+.page[data-embedded][data-studio-pro][data-focus] .composerShell, .page[data-embedded][data-studio-pro][data-focus] .composerShell:focus-within { border-radius: 28px; box-shadow: var(--app-pop-shadow); }
+.page[data-embedded][data-studio-pro][data-focus] .composerShell:focus-within { box-shadow: 0 0 0 2px var(--app-focus-ring), var(--app-pop-shadow); }
+/* 입력창이 없을 때(사업 방향 정리 중)만 남는 요약 단추 줄도 대화 줄 폭 안에 */
+.page[data-embedded][data-studio-pro][data-focus] :is(.paneBar, .statusLine) { width: 100%; max-width: 704px; margin-inline: auto; padding-inline: 16px; border-bottom: 0; background: transparent; }
+/* 답한 기록(요약) 화면도 넓은 판에 퍼지지 않게 대화 줄 폭 안에 */
+.page[data-embedded][data-studio-pro][data-focus] .summaryPane { padding-inline: max(16px, calc((100% - 672px) / 2)); background: transparent; }
+/* 진행 선 + '정한 내용 N개' 알약 — 입력 상자 바로 위 한 줄 */
+.focusStatus { display: flex; align-items: center; gap: 10px; min-height: 28px; padding: 0 8px; }
+.page[data-embedded] .focusStatus .paneProgress { height: 2px; border-radius: 2px; background: var(--app-fill); }
+.page[data-embedded] .focusStatus .paneProgress > span { border-radius: 2px; background: var(--app-text); }
+.page .focusPill { position: relative; flex: none; min-height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line); color: var(--app-text); font-size: .75rem; font-weight: 500; white-space: nowrap; }
+.focusPill[aria-expanded=true] { background: var(--app-inverse); box-shadow: none; color: var(--app-on-inverse); }
+@media (pointer: coarse) { .focusPill::before { content: ""; position: absolute; inset: -8px 0; } }
+/* 서랍 — 오른쪽에서 밀려 나온다. 자리만 옮긴다(투명하게 두고 기다리지 않는다) */
+.focusDrawer { position: absolute; top: 0; right: 0; bottom: 0; z-index: 30; width: min(380px, 100%); display: flex; flex-direction: column; overflow-y: auto; overscroll-behavior: contain; background: var(--app-panel); box-shadow: var(--app-pop-shadow); animation: focusDrawerIn .28s cubic-bezier(.2,.8,.2,1); }
+.focusDrawer > section { flex: 1 0 auto; }
+@keyframes focusDrawerIn { from { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .focusDrawer { animation: none; } }
+/* 넓은 화면은 서랍이 대화를 덮지 않게 대화 줄을 서랍 폭만큼 비킨다 */
+.page[data-embedded][data-studio-pro][data-drawer] .inputPane { margin-right: 380px; }
+/* 대화 방식 전환 — 입력 상자 아래 줄 안의 작은 [일반 | 전문가] */
+.page[data-embedded] .composerBar .depthPick { flex: none; gap: 0; margin: 0; padding: 2px; border-radius: 999px; background: var(--app-fill); }
+.page[data-embedded] .composerBar .depthPick button { position: relative; min-height: 24px; padding: 0 10px; font-size: .75rem; }
+.page[data-embedded] .composerBar .depthPick button[aria-pressed=true] { background: var(--app-surface); box-shadow: 0 0 0 1px var(--app-line); }
+.page[data-embedded]:not([data-studio-pro]) .composerBar .depthPick button { min-height: 32px; padding: 0 12px; font-size: .8125rem; }
+@media (pointer: coarse) { .page[data-embedded] .composerBar .depthPick button::before { content: ""; position: absolute; inset: -6px 0; } }
+/* 접히는 상자의 제목 줄 — 제목 · (접혔을 때) 한 줄 요약 · 펼치기/접기. 아래 알약 단추 규칙(.understood button)을 걷어 낸다 */
+.understood h3 { display: flex; }
+.understood h3:last-child { margin-bottom: 0; }
+.understood h3 + h3 { margin-top: 10px; }
+.understood h3 > button { flex: 1; display: flex; align-items: baseline; gap: 8px; min-width: 0; min-height: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: inherit; font-size: inherit; font-weight: inherit; }
+.understood h3 > button:hover:not(:disabled) { border: 0; }
+.understood h3 > button > b { flex: none; font-weight: 700; }
+.understood h3 > button > small { margin: 0; }
+.understood h3 > button > span { flex: 1; min-width: 0; overflow: hidden; color: var(--app-muted); font-size: .8125rem; font-weight: 400; white-space: nowrap; text-overflow: ellipsis; }
+.understood h3 > button > em { flex: none; margin-left: auto; color: var(--app-muted); font-size: .75rem; font-style: normal; font-weight: 400; }

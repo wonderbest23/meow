@@ -1,6 +1,7 @@
 // 대화 방식(일반 · 전문가)을 실제 사용자처럼 화면에서 끝까지 눌러 보기 — 2026-11-13.
 //   BASE_URL=http://localhost:8098 node scripts/ui-audit/walk-modes.mjs <uid> <easy|expert> <exploring|startup|operating> [너비=390] [변형: unknown|switch|type-first]
 // 질문마다 보이는 것을 읽고(제목 · 고를 것 · 입력창) 사람처럼 고르거나 적는다. 걸음마다 한 줄 기록(<OUT>/walk-<이름>.jsonl)과 화면(<OUT>/walk-<이름>-NN.png)을 남긴다.
+// 2026-11-14: 큰 방식 카드 두 장이 없어지고 입력창 안 작은 [일반 | 전문가] 전환이 됐다 — 일반은 바로 적고(또는 '다른 시작' 단추), 전문가는 전환을 누른 뒤 단계를 고른다.
 // 계획서 쓰기는 로컬에서 작업 흐름(Workflow)이 없어 /api/dev/synthetic-generate 로 대신한다(seed.mjs 와 같다).
 import fs from "node:fs";
 import { S, args, browser, open, sleep, shot } from "./lib.mjs";
@@ -17,20 +18,20 @@ const log = [], write = entry => { log.push(entry); fs.writeFileSync(`${S}/walk-
 const READ = `(() => {
   const vis = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const txt = el => (el?.innerText || "").trim().replace(/\\s+/g, " ");
-  const cards = document.querySelector('[aria-label="대화 모드"] strong') ? [...document.querySelectorAll('[aria-label="대화 모드"] button')].map(txt) : null;
+  const other = [...document.querySelectorAll('[aria-label="다른 시작"] button')].filter(vis).map(txt);
   const entry = [...document.querySelectorAll('[aria-label="대화 시작 선택지"] button')].map(txt);
   const q = document.querySelector("[data-chat-question]");
   const input = q?.querySelector("input[type=radio], input[type=checkbox]");
   const area = document.querySelector('footer[aria-label="대화 입력창"] textarea');
   const turn = document.querySelector('[class*="currentTurn"]');
   return {
-    url: location.pathname + location.search, cards, entry,
+    url: location.pathname + location.search, other, entry,
     question: txt(q?.querySelector("h2")), qid: (input?.name || area?.id || "").replace(/^intake-(answer-)?/, ""),
     options: q ? [...q.querySelectorAll("label")].filter(vis).map(txt).filter(Boolean).slice(0, 14) : [],
     qButtons: q ? [...q.querySelectorAll("button")].filter(vis).filter(b => !b.disabled).map(txt).filter(Boolean).slice(0, 12) : [],
     turnButtons: turn ? [...turn.querySelectorAll("button, a")].filter(vis).filter(b => !b.disabled && !b.closest("[data-chat-question]")).map(txt).filter(Boolean).slice(0, 12) : [],
     area: area ? { disabled: area.disabled, placeholder: area.placeholder, value: area.value } : null,
-    depthToggle: [...document.querySelectorAll('footer [aria-label="대화 모드"] button')].map(b => txt(b) + (b.getAttribute("aria-pressed") === "true" ? "*" : "")),
+    depthToggle: [...document.querySelectorAll('footer [aria-label="대화 모드"] button')].filter(vis).map(b => (b.getAttribute("aria-label") || txt(b)) + (b.getAttribute("aria-pressed") === "true" ? "*" : "")),
     alerts: [...document.querySelectorAll('[role=alert]')].filter(vis).map(txt).filter(Boolean),
     busy: turn?.getAttribute("aria-busy") === "true" || !!document.querySelector('[class*="typing"]'),
     lastAssistant: txt([...document.querySelectorAll('[class*="assistantMessage"]')].at(-1)).slice(0, 140),
@@ -39,6 +40,8 @@ const READ = `(() => {
 })()`;
 const clickText = (page, text, scope = "body") => page.evaluate(`(() => { const el = [...document.querySelectorAll(${JSON.stringify(scope)} + " button, " + ${JSON.stringify(scope)} + " a, " + ${JSON.stringify(scope)} + " label")].filter(e => e.getBoundingClientRect().width > 0 && !e.disabled).find(e => (e.innerText || "").trim().replace(/\\s+/g, " ") === ${JSON.stringify(text)} || (e.innerText || "").trim().replace(/\\s+/g, " ").startsWith(${JSON.stringify(text)})); el?.click(); return !!el; })()`);
 
+const clickDepth = (page, label) => page.evaluate(`(() => { const el = [...document.querySelectorAll('footer [aria-label="대화 모드"] button')].find(e => e.getAttribute("aria-label") === ${JSON.stringify(label)} && !e.disabled); el?.click(); return !!el; })()`);
+const WANT = depth === "expert" ? "전문가 모드" : "일반 모드";
 const b = await browser();
 const page = await open(b, uid, "/plan/studio?new=1", { width, mobile: false });
 let n = 0, actions = 0, same = 0, lastKey = "", switched = false, planId = null, generated = false;
@@ -49,7 +52,7 @@ for (let step = 0; step < 60; step++) {
   let s = await page.evaluate(READ);
   for (let wait = 0; wait < 20 && s.busy; wait++) { await sleep(1000); s = await page.evaluate(READ); }
   planId = new URLSearchParams(s.url.split("?")[1] ?? "").get("planId") ?? planId;
-  const key = [s.question, s.qid, s.cards?.length, s.entry.length, s.turnButtons.join("|")].join("#");
+  const key = [s.question, s.qid, s.other.length, s.entry.length, s.depthToggle.join(","), s.turnButtons.join("|")].join("#");
   same = key === lastKey ? same + 1 : 0; lastKey = key;
   let did = "";
   if (s.done) { write({ step, state: "완성 화면", lastAssistant: s.lastAssistant, turnButtons: s.turnButtons, area: s.area, depthToggle: s.depthToggle }); await snap(); break; }
@@ -60,10 +63,13 @@ for (let step = 0; step < 60; step++) {
     write({ step, did: `계획서 쓰기(시험용 경로) → ${made}`, question: "", qButtons: [], turnButtons: [], alerts: [] });
     await page.goto(page.url(), { waitUntil: "load" }); await sleep(6000); continue;
   }
-  if (variant === "type-first" && step === 0) { write({ step, check: "카드 전에 입력창", area: s.area, cards: s.cards }); }
-  if (s.cards) { did = `방식 카드 → ${depth === "expert" ? "전문가 모드" : "일반 모드"}`; await clickText(page, depth === "expert" ? "전문가 모드" : "일반 모드", '[aria-label="대화 모드"]'); }
+  if (step === 0) write({ step, check: "첫 화면 입력창 · 방식 전환", area: s.area, depthToggle: s.depthToggle });
+  const starting = !planId && (s.other.length || s.entry.length);
+  if (starting && s.depthToggle.length && !s.depthToggle.includes(WANT + "*")) { did = `방식 전환 → ${WANT}`; await clickDepth(page, WANT); }
   else if (s.entry.length) { did = `단계 → ${STAGE}`; await clickText(page, STAGE, '[aria-label="대화 시작 선택지"]'); }
-  else if (variant === "switch" && !switched && s.depthToggle.length && step > 3) { switched = true; const to = depth === "expert" ? "일반 모드" : "전문가 모드"; did = `중간에 방식 바꾸기 → ${to}`; await clickText(page, to, 'footer [aria-label="대화 모드"]'); }
+  else if (s.other.length && stage !== "startup") { const pick = stage === "operating" ? "이미 운영 중이에요" : "아직 정한 사업이 없어요"; did = `다른 시작 → ${pick}`; await clickText(page, pick, '[aria-label="다른 시작"]'); }
+  else if (s.other.length && s.area && !s.area.disabled) { did = `바로 적기 → ${TEXT.business}`; await page.click('footer[aria-label="대화 입력창"] textarea'); await page.keyboard.type(TEXT.business + ". 혼자 하고 한 묶음에 15000원 받으려고요"); await sleep(200); await page.keyboard.press("Enter"); }
+  else if (variant === "switch" && !switched && s.depthToggle.length && step > 3) { switched = true; const to = depth === "expert" ? "일반 모드" : "전문가 모드"; did = `중간에 방식 바꾸기 → ${to}`; await clickDepth(page, to); }
   else if (same >= 2 && s.qButtons.some(t => /잘 모르겠어요|모르겠/.test(t))) { did = "같은 질문 반복 → 잘 모르겠어요"; await clickText(page, s.qButtons.find(t => /모르겠/.test(t)), "[data-chat-question]"); }
   else if (variant === "unknown" && s.question && s.qid !== "business" && s.qButtons.some(t => /모르겠/.test(t))) { did = "잘 모르겠어요"; await clickText(page, s.qButtons.find(t => /모르겠/.test(t)), "[data-chat-question]"); }
   else if (s.options.length && !(s.qid in NUMBER) && !(s.qid in TEXT)) { const pick = s.options.find(o => /카페 · 음식점|매장|직접|개|묶음/.test(o)) ?? s.options[0]; did = `고르기 → ${pick.slice(0, 30)}`; await clickText(page, pick.slice(0, 12), "[data-chat-question]"); await sleep(500); const next = (await page.evaluate(READ)).qButtons.find(t => /^(다음|확인|저장|이걸로|선택)/.test(t)); if (next) { await clickText(page, next, "[data-chat-question]"); did += ` → [${next}]`; } else if (same >= 1) { const sent = await page.evaluate(`(() => { const b = document.querySelector('footer[aria-label="대화 입력창"] button[type=submit]'); if (b && !b.disabled) { b.click(); return true; } return false; })()`); if (sent) did += " → [보내기]"; } }

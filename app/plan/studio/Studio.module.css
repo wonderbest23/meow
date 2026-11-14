@@ -296,3 +296,25 @@
 
 /* 예시 사업 · 대화 없는 사업의 안내 아래 단계별 대화 세트(JourneyGuideTurn) — 위 단추와 떨어뜨리고 말풍선은 왼쪽부터 */
 .noteGuide { margin-top: 32px; text-align: left; }
+
+/*
+ * 한 칸 대화(대표 승인 2026-11-14) — 계획서를 쓰기 전: 첫 화면과 같은 그라데이션 판(AppChrome .hero) 위에 대화 한 줄만.
+ * 바탕색은 판이 맡으니 작업실 칸들은 비운다. 오른쪽 칸은 같은 자리에 숨겨 둔다(크기를 지킨다 — display:none 은 쓰지 않는다).
+ */
+.studio[data-focus], .studio[data-focus] .chatCol, .mHead[data-focus] { background:transparent; }
+@media (min-width:1024px) {
+  main.page.page[data-focus] { background:var(--app-bg); }
+  .studio[data-focus] { grid-template-columns:minmax(0,1fr); }
+  .studio[data-focus] .rightCol { grid-column:1; margin:0; }
+  .topBar[data-focus] { grid-template-columns:minmax(0,1fr); }
+  /* 작성이 시작돼 작업실이 열리는 순간 — 오른쪽 칸 · 위 막대 도구가 밀려 들어온다. 자리만 옮긴다(투명하게 두고 기다리지 않는다) */
+  .studio[data-opened] .rightCol { animation:studioPaneIn .36s cubic-bezier(.2,.8,.2,1); }
+  .studio[data-opened] .chatCol { animation:studioPaneIn .36s cubic-bezier(.2,.8,.2,1); }
+  .topBar[data-opened] .toolbar { animation:studioBarIn .36s cubic-bezier(.2,.8,.2,1); }
+}
+@keyframes studioPaneIn { from { transform:translateX(56px); } }
+@keyframes studioBarIn { from { transform:translateY(-12px); } }
+@media (prefers-reduced-motion:reduce) { .studio[data-opened] :is(.rightCol, .chatCol), .topBar[data-opened] .toolbar { animation:none; } }
+/* '정한 내용' 서랍 머리의 닫기 */
+.sumStrip .sumClose { margin-left:auto; min-height:28px; padding:0 10px; border:0; border-radius:999px; background:transparent; color:var(--app-body); font:inherit; font-size:.8125rem; cursor:pointer; }
+.sumClose:hover { background:var(--app-hover); color:var(--app-text); }

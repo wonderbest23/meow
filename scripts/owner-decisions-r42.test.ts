@@ -24,7 +24,7 @@ assert.match(intake, /const reflectStyle = chatReflectStyle\(pro, studioSide\);/
 assert.equal(intake.match(/<NextStepAction reflect=\{reflectStyle\}/g)?.length, 3, "대화 칸의 반영 단추 세 자리가 같은 규칙을 쓴다");
 assert.doesNotMatch(intake, /reflect=\{pro \?/, "자리마다 따로 정하지 않는다");
 // 계획서 칸이 보이는지는 작업실이 넘겨 준다 — 넓은 화면에서 잠기지 않은 오른쪽 탭
-assert.match(read("app/plan/studio/Studio.tsx"), /<BusinessIntake [^>]*studioSide=\{wide && !locks\[rightTab\] \? rightTab : null\} \/>/);
+assert.match(read("app/plan/studio/Studio.tsx"), /<BusinessIntake [^>]*studioSide=\{wide && !focus && !locks\[rightTab\] \? rightTab : null\} focus=\{focus\} \/>/);
 
 // 숨겨도 작성 중이면 진행 게이지는 남고, 숨기는 것은 단추뿐이다
 const panels = read("app/plan/chat/intake-ui/IntakePanels.tsx");

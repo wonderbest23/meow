@@ -52,7 +52,7 @@ function StudioEntryLink({ withActions }: { withActions: boolean }) {
  */
 export type ChromeMenu = { button: (className: string, size?: number) => ReactNode; open: () => void; isOpen: boolean };
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true, topBar, home = false, bare = false, settings }: {
+export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true, topBar, home = false, bare = false, hero = false, rail, settings }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new" | "inquiries"; backHref?: string; showRail?: boolean;
   /** 화면 안에서 한 단계 되돌리기(예: 내 문의 상세 → 목록) — 있으면 머리말 뒤로 단추가 주소 이동 대신 이것을 부른다 */
   onBack?: () => void;
@@ -66,6 +66,10 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
   home?: boolean;
   /** 작업 화면(PC) — 본문 판을 그리지 않고 페이지색 위에 바로 놓는다. 둥근 판(r16)은 화면 안 미리보기 판이 맡는다(시안 PcStudio) */
   bare?: boolean;
+  /** 판에 첫 화면과 같은 그라데이션을 깐다 — 작업실의 한 칸 대화(계획서를 쓰기 전)가 첫 화면에서 그대로 이어지게(2026-11-14) */
+  hero?: boolean;
+  /** 왼쪽 메뉴를 아이콘만 남긴 좁은 줄로 — 안의 메뉴 단추가 전체 메뉴(서랍)를 편다. 넓은 화면에서만 보인다 */
+  rail?: (menu: ChromeMenu) => ReactNode;
   /**
    * 설정 화면(lovable 구조 3단계 — 내 계정 · 고객센터 · 이용 안내 · 환경설정 …). PC 는 왼쪽 메뉴가 설정 메뉴(SettingsMenu)로 바뀌고
    * 머리줄 없이 판 안쪽 48px 에 화면 제목이 놓인다. 휴대폰은 위 56px(왼쪽 44 원 단추 · 가운데 제목 18/600) — "close" 는 ✕(계정 설정 목록), "back" 은 ‹
@@ -123,6 +127,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     {showRail && <aside className={`${chrome.side} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open || profile} data-app-side="">
       {settings ? <SettingsMenu /> : <RailMenu active={active} documentToc={documentToc} />}
     </aside>}
+    {!showRail && rail && <aside className={`${chrome.side} ${chrome.railSide} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open || profile}>{rail({ button: menuButton, open: () => setOpen(true), isOpen: open })}</aside>}
     {/*
       폰·좁은 화면 메뉴 — PC 왼쪽 메뉴와 똑같은 것(내 사업 → 사업 → 목차)을 서랍으로 연다.
       예전엔 여기만 따로 만든 링크 목록이어서 PC와 폰의 메뉴가 달랐다.
@@ -137,7 +142,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
       {/* 서랍에서 장을 고르면 서랍을 닫고 그 장을 보여 준다 */}
       <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
     </aside>}
-    <div className={`${styles.appSurface} ${chrome.surface} ${home ? chrome.hero : ""}`} data-app-surface="" data-solo={showRail ? undefined : ""} data-bare={bare || undefined} data-tabbar={tabBar ? "" : undefined} data-settings={settings ? "" : undefined} inert={open || profile}>
+    <div className={`${styles.appSurface} ${chrome.surface} ${home || hero ? chrome.hero : ""}`} data-app-surface="" data-solo={showRail || rail ? undefined : ""} data-bare={bare || undefined} data-hero={hero || undefined} data-tabbar={tabBar ? "" : undefined} data-settings={settings ? "" : undefined} inert={open || profile}>
       {/* 휴대폰 첫 화면 머리 56px — 계정 알약(누르면 내 사업 메뉴 서랍) · 아바타(프로필 시트) */}
       {home && <header className={chrome.homeBar}>
         <button type="button" className={chrome.pill} aria-haspopup="dialog" aria-expanded={open} aria-label="내 사업 메뉴 열기" onClick={() => setOpen(true)}>

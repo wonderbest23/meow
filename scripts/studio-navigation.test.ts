@@ -342,7 +342,8 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.match(planBody, /if \(arrived\.length \|\| finished\) \{/, "작성이 끝나면 새 장이 없어도 한 번 맞춘다");
   assert.match(read("../app/plan/document/DocumentWorkspace.tsx"), /else if \(\(grouped\.length \|\| props\.writing\) && autoSummary\.current\)/, "저절로 띄운 요약은 작성이 시작되면 '쓰는 중'으로 돌아온다");
   // 사업을 못 찾았으면 위 막대의 미리보기 도구(페이지 선택 · 진행 점)를 그리지 않는다
-  assert.match(studio, /\{!missing && <div className=\{styles\.toolbar\}>/);
+  /* 한 칸 대화(계획서를 쓰기 전, 대표 승인 2026-11-14)에서는 계획서가 있어야 쓰는 위 막대 도구를 그리지 않는다 */
+  assert.match(studio, /\{!missing && !focus && <div className=\{styles\.toolbar\}>/);
   assert.match(studio, /const chips = useMemo\(\(\) => \(steps \|\| pending \? studioChips\(steps, operating\) : \[\]\)/);
   // 작업실에서는 상담 버튼을 띄우지 않는다(대화 입력칸 · 마무리 단추와 겹쳤다)
   assert.match(read("../components/support-chat-visibility.ts"), /pathname === "\/plan\/studio"/);
@@ -365,7 +366,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   for (const name of ["registerEditHandler", "editHandler", "composeInChat", "onComposeRequest"]) assert.match(studio, new RegExp(`\\n\\s*${name},\\n`), `nav 에 ${name}`);
   assert.match(context, /onComposeRequest\?: \(listener: \(request: StudioComposeRequest\) => void\) => \(\) => void;/);
   // PC 에서 오른쪽에 보이는 열린 칸을 대화 칸에 알린다(막힌 칸이면 null) — '홈페이지를 대화로 고치기' 제안
-  assert.match(studio, /studioSide=\{wide && !locks\[rightTab\] \? rightTab : null\}/);
+  assert.match(studio, /studioSide=\{wide && !focus && !locks\[rightTab\] \? rightTab : null\}/);
 }
 
 console.log("studio navigation ok");
@@ -384,7 +385,11 @@ console.log("studio navigation ok");
   const studio = readFileSync(new URL("../app/plan/studio/Studio.tsx", import.meta.url), "utf8");
   assert.match(studio, /const chatOnly = !isSamplePlan\(planId\) && !chatComplete && RIGHT_TABS\.every\(id => !!locks\[id\]\)/);
   // 대화만 할 때 휴대폰은 대화 화면만(미리보기로 가는 › 는 꺼 둔다) — lovable 구조 2단계
-  assert.match(studio, /const rightVisible = wide \|\| \(tab !== "chat" && !chatOnly\);/);
+  /* PC 는 한 칸 대화(계획서를 쓰기 전)가 아닐 때만 오른쪽 칸이 보인다(대표 승인 2026-11-14) */
+  assert.match(studio, /const rightVisible = wide \? !focus : tab !== "chat" && !chatOnly;/);
+  /* 한 칸 대화는 장이 없고 작성도 시작하지 않았을 때만 — 작성이 시작되면(작업 번호 · 알림 · 진행 중) 바로 끝난다. 예시 · 못 찾은 사업 · 대화 없는 사업은 아니다 */
+  assert.match(studio, /const writingStarted = generationWanted \|\| !!generationKey \|\| !!generation\?\.active;/);
+  assert.match(studio, /const focus = !isSamplePlan\(planId\) && !missing && !noChat && \(tab === "chat" \|\| !!locks\[tab\]\)\s+&& \(plan \? !hubState\?\.documents\.length && !writingStarted : pending \|\| !ready && focusHint\);/);
   assert.match(studio, /disabled=\{chatOnly \|\| missing\}/);
   // PC 는 대화만 할 때 칸 단추 · 가운데 알약을 위 막대에 올리지 않는다(지금까지 정한 내용만)
   assert.match(studio, /\{!chatOnly && centerSlot\(rightTab\)\}/);
@@ -400,7 +405,7 @@ console.log("studio navigation ok");
   // lovable 구조 2단계 — 위 막대는 작업실이 그린다: PC 48px(사업명 ▾ · 기록 · 패널 접기 | 미리보기 막대), 휴대폰 대화 화면 56px(✕ · 사업명 · ›)
   assert.match(studio, /topBar=\{menu => \(wide \? pcBar\(menu\) : mobileHead\)\}/);
   // lovable 구조 5단계(캡처 project-pc) — 작업 화면 PC 는 왼쪽 메뉴를 늘 접고 대화 열 머리 ☰ 로 같은 메뉴(서랍)를 연다
-  assert.match(studio, /showRail=\{false\} bare=\{wide\}/, "PC 작업 화면은 왼쪽 메뉴 없이 판 없는 본문(둥근 판은 미리보기 판)");
+  assert.match(studio, /showRail=\{false\} bare=\{wide && !focus\} hero=\{focus\} rail=\{wide && focus \? focusRail : undefined\}/, "PC 작업 화면은 왼쪽 메뉴 없이 판 없는 본문(둥근 판은 미리보기 판) — 한 칸 대화만 그라데이션 판 + 좁은 메뉴 줄");
   assert.match(studio, /\{menu\.button\(styles\.tool, 16\)\}/, "대화 열 머리 ☰ 로 같은 메뉴를 연다");
   assert.match(chrome, /\{topBar \? topBar\(\{ button: menuButton, open: \(\) => setOpen\(true\), isOpen: open \}\) : <>/);
   // 휴대폰 — 단추 줄·부제가 없는 화면은 설정 화면과 같은 머리(44 원 ‹ · 가운데 제목 · 아바타), PC 는 예전 머리줄

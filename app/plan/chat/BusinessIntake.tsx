@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
@@ -36,6 +36,7 @@ import { LANDING_IDEA_PARAM, clearLandingIdea, readLandingIdea, stashLandingIdea
 import { ENTRY_PARAM, isEntryMode, STUDIO_PATH, studioHref, type StudioTab } from "../../../lib/plan-builder/studio";
 import { homepageHref } from "../../../lib/plan-builder/journey";
 import { useChipFlight } from "./intake-ui/use-chip-flight";
+import StudioIntakeSummary, { intakeSummaryRows } from "../studio/StudioIntakeSummary";
 import { GUEST_NEXT_KEY, useStudioCommand, useStudioEditChapterList, useStudioEditPreviewChapters, useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
 import { PopMenu, type PopMenuItem } from "../studio/PopMenu";
 import { useDictation } from "../../../components/use-dictation";
@@ -186,6 +187,8 @@ export type BusinessIntakeProps = {
   onDesignComplete?: (snapshot: IntakeSnapshot) => void;
   /** 작업실 PC 에서 오른쪽에 보이는 열린 칸 — '홈페이지를 대화로 고치기' 제안에 쓴다. 작업실 밖·휴대폰은 없음 */
   studioSide?: StudioTab | null;
+  /** 작업실의 한 칸 대화(계획서를 쓰기 전, 대표 승인 2026-11-14) — 진행은 입력창 위 가는 선, 정한 내용은 알약 → 서랍 */
+  focus?: boolean;
 };
 const HEADERS = { "x-business-intake": "2" };
 /** Browser network failures ("Failed to fetch", "Load failed") become plain Korean; our own messages pass through. */
@@ -217,7 +220,7 @@ export default function BusinessIntake(props: BusinessIntakeProps) {
   return <Suspense fallback={<ChatLoading />}><IntakeWorkspace {...props} /></Suspense>;
 }
 
-function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: BusinessIntakeProps) {
+function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focus = false }: BusinessIntakeProps) {
   const searchParams = useSearchParams();
   // 랜딩 아이디어(idea)는 주소에서 지워도 대화를 다시 불러오지 않게 뺀 값으로 본다 — 지우는 순간 보내던 첫 메시지가 끊기지 않게
   const queryString = withoutLandingIdea(searchParams);
@@ -240,6 +243,19 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     return () => query.removeEventListener("change", sync);
   }, [embedded]);
   const pro = embedded && wide;
+  const focusMode = focus && embedded;
+  /* '정한 내용' 서랍 — 알약으로 열고 Esc · 닫기로 닫는다. 닫으면 초점을 알약으로 돌려준다. 한 칸 대화가 끝나면 함께 닫힌다 */
+  const [drawerWanted, setDrawerWanted] = useState(false);
+  const drawerPill = useRef<HTMLButtonElement>(null);
+  const drawerOpen = drawerWanted && focusMode;
+  const closeDrawer = () => { setDrawerWanted(false); drawerPill.current?.focus({ preventScroll: true }); };
+  useEffect(() => {
+    if (!drawerOpen) return;
+    document.querySelector<HTMLElement>("#intake-decided-drawer [data-summary-close]")?.focus({ preventScroll: true });
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") closeDrawer(); };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
+  }, [drawerOpen]);
   /* 대화 칸이 지금 보이는지 — 작업실 휴대폰 탭에서 다른 탭을 보는 중이면 false. 효과 안에서 최신 값을 읽으려고 ref 로 둔다 */
   const paneVisible = useRef(true);
   paneVisible.current = studioPane ? studioPane.active : true;
@@ -256,6 +272,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const plan = preview ?? savedPlan;
   /* 작업실 PC: '이렇게 바꿀게요' 카드의 장 칩 — 계획서 칸이 이 제안(작업 id)에서 찾은 장 이름 */
   const editChapterList = useStudioEditChapterList();
+  /* 알약의 개수 — 서랍(지금까지 정한 내용)이 보이는 줄 수와 같은 자료 */
+  const decidedCount = useMemo(() => (focusMode && plan ? intakeSummaryRows(plan).length : 0), [focusMode, plan]);
   /*
    * 휴대폰: 자판이 열리면(보이는 높이가 150px 넘게 줄면) 진행 줄을 접는다 — 자판 위에 대화가 거의 안 보였다(r37 휴대폰 점검)
    */
@@ -299,11 +317,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   /*
    * 대화 방식(대표 결정 2026-11-13) — 일반: 한 문장만 받고 나머지는 업종 기준값으로 채워 바로 초안, 전문가: 하나씩 자세히 묻는다.
    * 새 대화에서는 여기서 고른 값을 시작 명령에 싣고, 진행 중인 사업은 서버에 저장된 값(intake.depth)을 따른다.
+   * 처음부터 일반 모드다 — 큰 카드 두 장으로 먼저 고르게 하던 것을 입력창 안 작은 전환으로 바꿨다(대표 승인 2026-11-14). 바로 적을 수 있다.
    */
-  const [startDepth, setStartDepth] = useState<"easy" | "expert" | null>(null);
+  const [startDepth, setStartDepth] = useState<"easy" | "expert">("easy");
   const startDepthRef = useRef(startDepth);
   useEffect(() => { startDepthRef.current = startDepth; }, [startDepth]);
-  const depthGateRef = useRef(false);
   const [busy, setBusy] = useState(false);
   // '사업계획서 만들기' 대기 표시 — 결제 화면으로 넘어가는 동안(주소 이동은 몇 초 걸린다)에도 유지한다(대표 지적 2026-10-16: 눌러도 멈춘 것 같았다)
   const [preparing, setPreparing] = useState(false);
@@ -856,7 +874,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     void send({ action: "answer", questionId, value, ...(unknown ? { unknown: true } : {}), ...(extra?.ksic ? { ksic: extra.ksic } : {}) }, { answer: draftRef.current.answers[question.id] ?? emptyAnswer() });
   };
   const submitComposer = () => {
-    if (answerBlocked || !loaded || unfinishedText || depthGateRef.current || understandingRef.current) return;
+    if (answerBlocked || !loaded || unfinishedText || understandingRef.current) return;
     if (!plan) {
       const text = entryMessage(draftRef.current);
       if (text.length > 1200) { setError("처음 사업 설명은 1,200자 이내로 나눠 보내 주세요. 입력한 내용은 그대로 보관했어요."); return; }
@@ -1637,12 +1655,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const openSummary = () => { setView("summary"); setDeskSummary(true); };
   const pickable = pro && !editTarget && !!plan?.hasDocuments && editChatReady && editChapterList.length > 0 && (studioRoute === "chat" || studioRoute === "section");
   /* 입력창 위 '추천' 칩 — 누르면 입력창에 글만 채운다(보내지 않는다). 홈페이지를 보고 있으면 먼저 홈페이지 고치기로. 이미 보낸 예시는 다시 권하지 않는다(r42) */
-  const depthNow: "easy" | "expert" = plan ? plan.intake.depth === "expert" ? "expert" : "easy" : startDepth ?? "easy";
-  // 새 대화는 방식 카드를 고르기 전까지 입력창을 잠근다 — 먼저 글을 치면 고른 방식이 의미가 없어진다(대표 요청 2026-11-13). 주소로 시작 방식이 정해져 들어온 경우(?entry=)는 카드 없이 바로 시작하므로 plan 이 생겨 풀린다
-  const depthGate = coach && newEntry && !plan && !loginGate && !replyTurn && startDepth === null;
-  // 새 대화는 첫 화면의 두 카드로 고른다 — 이 작은 전환은 시작한 뒤 바꿀 때만
-  const depthPick = !studioRoute && !loginGate && !!plan && !plan.hasDocuments && plan.intake.mode !== "operating" && !aiBusy;
-  useEffect(() => { depthGateRef.current = depthGate; });
+  const depthNow: "easy" | "expert" = plan ? plan.intake.depth === "expert" ? "expert" : "easy" : startDepth;
+  // 작은 전환 하나로 고른다 — 첫 글을 보내기 전에는 시작 방식만 정하고(서버를 부르지 않는다), 시작한 뒤에는 서버가 채운 값을 걷거나 다시 채운다
+  const depthPick = !studioRoute && !loginGate && !aiBusy && (plan ? !plan.hasDocuments && plan.intake.mode !== "operating" : coach && newEntry && !replyTurn);
   // 업종 기준값으로 채운 답(메시지 번호가 :estimate 로 끝난다)과 문장에서 읽은 답(:said) — 계획서를 만들기 전, 일반 모드에서만 보인다
   const answerChips = (suffix: string) => plan && !plan.hasDocuments && plan.intake.depth !== "expert" ? plan.questions.flatMap(item => {
     const answer = plan.intake.answers[item.id];
@@ -1674,6 +1689,14 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
       .catch(() => { /* 못 읽어도 기준값으로 진행된다 */ })
       .finally(() => { window.clearTimeout(timer); setUnderstandDone(understandId); });
   }, [understandId]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* 상자가 처음 보인 질문 — 빈 상태를 본 뒤 생겼으면 그 질문 동안 펼쳐 둔다. 글을 읽는 중에는 질문이 바뀔 수 있어 읽기가 끝난 뒤에 적는다(그리는 중에 맞춘다) */
+  const chipCount = saidAnswers.length + filledAnswers.length;
+  const turnKey = question?.id ?? "";
+  const [chipsSeen, setChipsSeen] = useState<{ empty: boolean; at: string | null }>({ empty: false, at: null });
+  if (loaded && !chipCount && !(chipsSeen.empty && chipsSeen.at === null)) setChipsSeen({ empty: true, at: null });
+  else if (loaded && chipCount && chipsSeen.at === null && !understanding) setChipsSeen({ empty: chipsSeen.empty, at: chipsSeen.empty ? turnKey : "\u0000" });
+  const chipsFresh = chipsSeen.at === null || chipsSeen.at === turnKey;
+  const [chipsOpen, setChipsOpen] = useState<{ said?: boolean; filled?: boolean }>({});
   const understandingRef = useRef(false);
   useEffect(() => { understandingRef.current = understanding; });
   // 읽기 시작하면 '적은 글을 읽고 있어요' 줄까지, 끝나면 다음 질문까지 내린다
@@ -1775,16 +1798,36 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     : null;
   const micButton = dictation.supported ? <button type="button" className={styles.composerRound} aria-label={dictation.listening ? "말로 적기 멈추기" : "말로 적기"} aria-pressed={dictation.listening} title={dictation.listening ? "듣고 있어요 · 누르면 멈춰요" : "말로 적기"} disabled={!loaded || loadFailed || ownerChanged || (!studioRoute && !!replyTurn)} onClick={dictation.toggle}><Mic aria-hidden="true" /></button> : null;
   const plusMenu = <>{attachField}<PopMenu placement="above" align="start" buttonClassName={styles.composerRound} buttonLabel="더 보기 — 문서 첨부 · 지금까지 답 보기 · 새 대화" buttonTitle="더 보기" menuLabel="대화 더 보기" groups={[{ key: "more", items: plusItems }]} label={<Plus aria-hidden="true" />} /></>;
+  /* 대화 방식 전환 — 작업실은 입력 상자 아래 줄 안 작은 [일반 | 전문가], 예전 화면은 입력창 위 */
+  const depthControl = depthPick ? <div className={styles.depthPick} role="group" aria-label="대화 모드">
+    {(["easy", "expert"] as const).map(value => <button key={value} type="button" aria-pressed={depthNow === value} aria-label={value === "easy" ? "일반 모드" : "전문가 모드"} disabled={busy} title={value === "easy" ? "한 문장만 말하면 나머지는 채워서 바로 만들어요" : "하나씩 자세히 묻고 정해요"}
+      onClick={() => { if (depthNow === value) return; if (plan) void send({ action: "depth", depth: value }); else setStartDepth(value); }}>{value === "easy" ? "일반" : "전문가"}{!embedded && " 모드"}</button>)}
+    {!embedded && <span>{depthNow === "easy" ? "한 문장이면 바로 만들어요" : "하나씩 자세히 물어봐요"}</span>}
+  </div> : null;
+  /*
+   * '이렇게 알아들었어요' · '말하지 않은 것은 이렇게 채웠어요' — 처음 보일 때는 펼쳐 두고, 대화가 다음 질문으로 넘어가면 한 줄로 접는다(대표 결정 2026-11-14).
+   * 접힌 줄을 누르면 다시 펼친다(손으로 고른 것은 그대로 둔다). 다시 불러온 대화처럼 처음부터 있던 상자는 접힌 채로 시작한다.
+   */
+  const understoodBox = (key: "said" | "filled", title: string, items: typeof saidAnswers, summary: string) => {
+    if (!items.length) return null;
+    const open = chipsOpen[key] ?? chipsFresh;
+    return <>
+      <h3><button type="button" aria-expanded={open} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><b>{title}</b>{open ? <small>다르면 눌러서 바꾸세요</small> : <span>{summary}</span>}<em>{open ? "접기" : "펼치기"}</em></button></h3>
+      {open && <div data-said={key === "said" ? "" : undefined}>{items.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div>}
+    </>;
+  };
   /* 보내기 단추 — 예전 모양은 입력칸 오른쪽, PC 는 입력 카드 아래 줄 오른쪽 */
-  const sendButton = <button type="submit" className={styles.sendButton} aria-label={studioRoute ? studioRoute === "queue" ? "기다리는 요청으로 보내기" : "보내기" : sendLabel} title={studioRoute ? "보내기" : sendLabel} disabled={studioRoute ? studioSendDisabled || !visibleComposerText(studioText) : !loaded || depthGate || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{!studioRoute && (busy && !answerQueueOpen || replyTurn) ? <LoaderCircle size={20} className={styles.spinner} /> : !studioRoute && askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>;
-  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined} data-studio-pro={pro || undefined} data-keyboard={keyboardOpen || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={embedded ? undefined : summaryToggle}>
+  const sendButton = <button type="submit" className={styles.sendButton} aria-label={studioRoute ? studioRoute === "queue" ? "기다리는 요청으로 보내기" : "보내기" : sendLabel} title={studioRoute ? "보내기" : sendLabel} disabled={studioRoute ? studioSendDisabled || !visibleComposerText(studioText) : !loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{!studioRoute && (busy && !answerQueueOpen || replyTurn) ? <LoaderCircle size={20} className={styles.spinner} /> : !studioRoute && askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>;
+  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined} data-studio-pro={pro || undefined} data-focus={focus && embedded || undefined} data-drawer={drawerOpen || undefined} data-keyboard={keyboardOpen || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={embedded ? undefined : summaryToggle}>
     {plan && <>
       {/*
         작업실 칸 안: 칸 단추 줄(요약)과 진행 막대를 한 줄로 합친다 — 예전엔 요약 단추만 있는 넓은 줄 아래 막대가 또 있어 대화 위가 무거웠다.
         대화만 스크롤되고 이 줄은 칸 맨 위에 붙어 있다.
       */}
       {/* 작업실 PC: 질문 중에만 '사업 방향 정하기 ▬▬ 10 / 14' 한 줄 — 요약은 입력창 왼쪽 아래 단추가 연다. 입력창이 없을 때만 요약 단추를 이 줄에 남긴다 */}
-      {pro ? !plan.coreComplete ? <div className={styles.paneBar} data-pro-head><b>사업 방향 정하기</b><div className={styles.paneProgress} aria-hidden="true"><span style={{ width: `${plan.coreTotal ? Math.round(plan.coreAnswered / plan.coreTotal * 100) : 0}%` }} /></div><span className={styles.paneCount}>{questionNumber} / {plan.coreTotal}</span>{!showComposer && summaryToggle}</div>
+      {/* 한 칸 대화(계획서를 쓰기 전): 진행은 입력창 위 가는 선 하나로 내려간다 — 이 줄은 그리지 않는다 */}
+      {focusMode ? !showComposer && summaryToggle ? <div className={styles.paneBar} data-pro-head>{summaryToggle}</div> : null
+        : pro ? !plan.coreComplete ? <div className={styles.paneBar} data-pro-head><b>사업 방향 정하기</b><div className={styles.paneProgress} aria-hidden="true"><span style={{ width: `${plan.coreTotal ? Math.round(plan.coreAnswered / plan.coreTotal * 100) : 0}%` }} /></div><span className={styles.paneCount}>{questionNumber} / {plan.coreTotal}</span>{!showComposer && summaryToggle}</div>
         : !showComposer && summaryToggle ? <div className={styles.paneBar} data-pro-head>{summaryToggle}</div> : null
         /* 휴대폰 작업실: 44px 줄(진행 막대 + 요약 단추)이 자리만 차지했다(소유자 2026-11-09) — 머리 바로 아래 얇은 진행선만. 요약은 입력창 + 메뉴 '지금까지 답 보기' */
         : embedded ? !plan.coreComplete ? <div className={styles.progressLine} aria-hidden="true"><span style={{ width: `${plan.coreTotal ? Math.round(plan.coreAnswered / plan.coreTotal * 100) : 0}%` }} /></div> : null
@@ -1805,7 +1848,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
           {/* '사업계획서 만들기'를 누른 뒤 — 단추가 화면 밖으로 밀려도 알 수 있게 화면 전체에 같은 로딩(얇은 원)을 덮는다 */}
           {preparing && <div className={styles.prepareCover}><PlanLoading fill={!embedded} note="사업계획서를 준비하고 있어요" /></div>}
-          {!loaded ? <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate guestStudio={embedded} wide={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} onDepth={coach ? setStartDepth : undefined} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><p>{MISSING_BUSINESS_DETAIL}</p><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan/chat?new=1" className={styles.textLink}>새 대화 시작하기</Link></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan" className={styles.textLink}>내 사업으로</Link></>}</section>
+          {!loaded ? <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate guestStudio={embedded} wide={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><p>{MISSING_BUSINESS_DETAIL}</p><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan/chat?new=1" className={styles.textLink}>새 대화 시작하기</Link></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan" className={styles.textLink}>내 사업으로</Link></>}</section>
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.
@@ -1828,11 +1871,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
               </section>) : <>
             <ConversationHistory snapshot={plan} onEdit={editQuestion} receipt={receipt} readOnly={documentFixed} pro={pro} log={historyLog} />
 {/* 일반 모드: 문장에서 읽은 것(실선)과 말하지 않아 채운 것(점선)을 한눈에 — 누르면 그 답을 고친다 */}
-            {(saidAnswers.length > 0 || filledAnswers.length > 0) && <section className={styles.understood} aria-label="알아들은 내용">
-              {saidAnswers.length > 0 && <><h3>이렇게 알아들었어요 <small>다르면 눌러서 바꾸세요</small></h3>
-                <div data-said="">{saidAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div></>}
-              {filledAnswers.length > 0 && <><h3>말하지 않은 것은 이렇게 채웠어요 <small>다르면 눌러서 바꾸세요</small></h3>
-                <div>{filledAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div></>}
+            {chipCount > 0 && <section className={styles.understood} aria-label="알아들은 내용">
+              {understoodBox("said", "이렇게 알아들었어요", saidAnswers, saidAnswers.map(item => item.value).join(" · "))}
+              {understoodBox("filled", "말하지 않은 것은 이렇게 채웠어요", filledAnswers, `${filledAnswers.length}개 · ${filledAnswers.map(item => item.label).join(" · ")}`)}
             </section>}
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}
@@ -1890,10 +1931,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
           {/* 대화 방식 고르기 — 계획서를 만들기 전까지만. 진행 중에 바꾸면 서버가 채운 값을 걷거나(전문가) 다시 채운다(일반) */}
           {/* 운영 중인 사업은 실제 매출 · 비용을 받아야 해서 일반 방식도 채우지 못한다 — 첫 화면 카드의 '한 문장이면 바로'와 어긋나는 것을 이 자리에서 알린다(2026-11-14 실사용 점검 4번). 대화 기록에는 넣지 않는다(AI 없이 쌓이는 기록은 사용자 말뿐이어야 한다) */}
           {!studioRoute && !loginGate && plan && !plan.hasDocuments && plan.intake.mode === "operating" && <p className={styles.depthNote}>운영 중인 사업은 실제 숫자가 필요해서, 하나씩 여쭤봐요</p>}
-          {depthPick && <div className={styles.depthPick} role="group" aria-label="대화 모드">
-            {(["easy", "expert"] as const).map(value => <button key={value} type="button" aria-pressed={depthNow === value} disabled={busy} title={value === "easy" ? "한 문장만 말하면 나머지는 채워서 바로 만들어요" : "하나씩 자세히 묻고 정해요"}
-              onClick={() => { if (depthNow === value) return; void send({ action: "depth", depth: value }); }}>{value === "easy" ? "일반 모드" : "전문가 모드"}</button>)}
-            <span>{depthNow === "easy" ? "한 문장이면 바로 만들어요" : "하나씩 자세히 물어봐요"}</span>
+          {!embedded && depthControl}
+          {/* 한 칸 대화: 진행은 가는 선 하나, 지금까지 정한 내용은 알약 하나 — 누르면 오른쪽에서 밀려 나온다 */}
+          {focusMode && plan && (!plan.coreComplete || decidedCount > 0) && <div className={styles.focusStatus}>
+            {!plan.coreComplete ? <div className={styles.paneProgress} role="progressbar" aria-label="사업 방향 정하기" aria-valuemin={0} aria-valuemax={plan.coreTotal} aria-valuenow={plan.coreAnswered} aria-valuetext={`${questionNumber} / ${plan.coreTotal}`}><span style={{ width: `${plan.coreTotal ? Math.round(plan.coreAnswered / plan.coreTotal * 100) : 0}%` }} /></div> : <span className={styles.composerGrow} />}
+            {decidedCount > 0 && <button ref={drawerPill} type="button" className={styles.focusPill} aria-expanded={drawerOpen} aria-controls="intake-decided-drawer" onClick={() => setDrawerWanted(open => !open)}>정한 내용 {decidedCount}개</button>}
           </div>}
           <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); setGuideShown(null); if (studioRoute) submitStudio(); else submitComposer(); }}>
             {/* 작업실: 무엇을 고치는지 칩으로 — ✕ 로 그만두면 예전 입력창으로 돌아간다. 쓰는 중이면 다 쓴 뒤 반영한다고 알린다 */}
@@ -1910,7 +1952,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
             {!studioRoute && askingAI && <div className={styles.composerContext}><MessageCircle size={14} aria-hidden="true" />AI에게 질문<AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => storeComposerNote("memo")}><Bookmark size={14} aria-hidden="true" />메모로 저장</AppButton></div>}
             {(studioRoute ? studioNote : composerNote) && <p className={styles.composerHint} role="status" aria-live="polite">{studioRoute ? studioNote : composerNote}</p>}
             <div className={styles.composerRow}>
-              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" data-reply-hint={replyHintText ? "" : undefined} placeholder={depthGate ? "위에서 방식을 먼저 골라 주세요" : understanding ? "적은 글을 읽고 있어요…" : replyHintText ? replyHintText : studioRoute ? studioPlaceholder : coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!studioRoute && !!replyTurn} disabled={!loaded || loadFailed || ownerChanged || depthGate || understanding} rows={1} enterKeyHint="enter" maxLength={1200} value={studioRoute ? studioText : composerShown} onPaste={event => {
+              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" data-reply-hint={replyHintText ? "" : undefined} placeholder={understanding ? "적은 글을 읽고 있어요…" : replyHintText ? replyHintText : studioRoute ? studioPlaceholder : coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!studioRoute && !!replyTurn} disabled={!loaded || loadFailed || ownerChanged || understanding} rows={1} enterKeyHint="enter" maxLength={1200} value={studioRoute ? studioText : composerShown} onPaste={event => {
                 const input = event.currentTarget, pasted = event.clipboardData.getData("text");
                 setPasteCut(pasted.length > 1200 - (input.value.length - (input.selectionEnd - input.selectionStart)));
               }} onChange={event => {
@@ -1934,10 +1976,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
                 if (composerEnterSends({ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode }, window.matchMedia("(pointer: coarse)").matches)) { event.preventDefault(); if (studioRoute) submitStudio(); else submitComposer(); } }} />
               {!embedded && sendButton}
             </div>
-            {embedded && <div className={styles.composerBar} data-studio-bar>{plusMenu}<span className={styles.composerGrow} />{modePill ?? questionPill}{micButton}{sendButton}</div>}
+            {embedded && <div className={styles.composerBar} data-studio-bar>{plusMenu}{depthControl}<span className={styles.composerGrow} />{modePill ?? questionPill}{micButton}{sendButton}</div>}
           </form>
         </footer>}
       </InputPane>
+      {/* 한 칸 대화의 '정한 내용' 서랍 — 예전 오른쪽 칸(지금까지 정한 내용)을 그대로 얹는다. Esc · 닫기로 닫는다 */}
+      {drawerOpen && plan && <div id="intake-decided-drawer" className={styles.focusDrawer}><StudioIntakeSummary snapshot={plan} onClose={closeDrawer} /></div>}
       {plan && !embedded && <div {...split.separator} aria-controls="intake-input-panel" className={styles.splitHandle} title="드래그해서 너비 조절 · 두 번 누르면 기본 너비"><span /></div>}
       {plan && <aside id="intake-summary-panel" aria-labelledby="intake-summary-heading" className={`${styles.summaryPane} ${view !== "summary" ? styles.mobileHidden : ""}`}><div className={styles.summarySheetHeader}><button type="button" onClick={() => setView("input")}><ChevronLeft size={18} aria-hidden="true" />대화로 돌아가기</button></div><BusinessSummary snapshot={plan} showActions={false} readOnly={documentFixed} disabled={blocked} onStructure={patch => void send({ action: "structure", structure: patch })} aiBusy={aiBusy} prepared={started} onEdit={editQuestion} onDetails={() => void send({ action: "details" })} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} /><ResourcePanel snapshot={plan} draft={draft.resourceEditor} disabled={blocked} onDraft={resourceEditor => editDraft({ ...draftRef.current, resourceEditor })} onCommand={command => void send(command)} /><AnswerHistory snapshot={plan} readOnly={documentFixed} drafts={draft.answers} onEdit={editQuestion} onKeepAsMemo={keepDraftAsMemo} /></aside>}
     </div>

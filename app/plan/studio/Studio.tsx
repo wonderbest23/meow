@@ -4,11 +4,12 @@ import { settleTransition } from "../../../lib/client/view-transition";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, List, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, List, LayoutGrid, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, SquarePen, X } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
 import { lockedGuide } from "../BusinessRailTree";
+import { PLAN_VIEW_ALL } from "../MobileTabBar";
 import BusinessIntake from "../chat/BusinessIntake";
 import { PlanDocumentBody } from "../document/PlanDocumentBody";
 import { HomepageScreen } from "../homepage/HomepageScreen";
@@ -229,9 +230,13 @@ export default function Studio() {
   const [pickedSample, setPickedSample] = useState<string | null>(null);
   useEffect(() => { setPickedSample(current => current === planId ? null : current); }, [planId]);
   const [title, setTitle] = useState("");
+  const [focusHint, setFocusHint] = useState(false);
   useEffect(() => {
     if (!planId || !intakeV2) return;
     let alive = true;
+    /* 이 기기 저장본으로 한 칸 대화인지 먼저 본다 — 서버를 기다리는 동안 두 칸 작업실이 잠깐 보였다가 한 칸으로 바뀌지 않게(2026-11-14) */
+    const local = loadState().plans.find(item => item.id === planId);
+    setFocusHint(!!local && !!readCoach(local.answers) && !businessHubState(local).documents.length && !local.answers.__coach_generation);
     hydrateFromServer().catch(() => loadState()).then(async state => {
       if (!alive) return;
       const found = state.plans.find(item => item.id === planId) ?? null;
@@ -390,8 +395,20 @@ export default function Studio() {
   const chatOnly = !isSamplePlan(planId) && !chatComplete && RIGHT_TABS.every(id => !!locks[id]);
   /* 대화 없이 만든 사업 — 서버에 대화 기록(coach)이 없다. 대화 칸은 '찾지 못했어요' 대신 읽기 전용 안내(오른쪽 칸은 그대로 열린다) */
   const noChat = !!plan && !isSamplePlan(planId) && !pending && !readCoach(plan.answers);
+  /*
+   * 한 칸 대화(대표 승인 2026-11-14) — 계획서를 쓰기 전에는 첫 화면과 같은 그라데이션 위에 대화 한 줄만 보인다(위 막대 도구 · 오른쪽 칸 없음).
+   * 작성이 시작되거나(작업 번호 · 대화 칸의 작성 알림 · 진행 중) 장이 하나라도 있으면 끝나고 지금의 작업실이 열린다 — 장이 채워지는 걸 보게.
+   * 이미 열린 오른쪽 칸을 주소로 직접 연 경우(개업 준비 링크 등)는 그 칸을 보여 준다. 휴대폰은 원래 한 칸이라 바탕 · 진행 선 · 알약만 맞춘다.
+   */
+  const writingStarted = generationWanted || !!generationKey || !!generation?.active;
+  const focus = !isSamplePlan(planId) && !missing && !noChat && (tab === "chat" || !!locks[tab])
+    && (plan ? !hubState?.documents.length && !writingStarted : pending || !ready && focusHint);
+  /* 한 칸 대화가 끝나는 순간에만 오른쪽 칸 · 위 막대가 밀려 들어온다(처음부터 작업실이면 움직이지 않는다) — 그리는 중에 맞춘다 */
+  const [focusSeen, setFocusSeen] = useState(focus);
+  const [slidIn, setSlidIn] = useState(false);
+  if (focusSeen !== focus) { setFocusSeen(focus); setSlidIn(focusSeen && !focus); }
   /* 막힌 탭을 보고 있으면 서버 것을 다시 확인한다(대화로 방향을 정한 직후 등) */
-  const visibleRight: RightTab | null = wide || tab !== "chat" ? rightTab : null;
+  const visibleRight: RightTab | null = (wide ? !focus : tab !== "chat") ? rightTab : null;
   const visibleLocked = !!(visibleRight && locks[visibleRight]);
   useEffect(() => { if (ready && visibleLocked) refreshPlan(); }, [ready, visibleLocked, visibleRight, refreshPlan]);
 
@@ -710,8 +727,8 @@ export default function Studio() {
   if (!intakeV2) return <StudioLoading />;
 
   /* PC 는 대화 열과 미리보기 판이 늘 함께(대화 열을 접으면 판만), 휴대폰은 대화 화면 ↔ 미리보기 화면 */
-  const chatVisible = (wide && !chatCollapsed) || (!wide && (tab === "chat" || chatOnly));
-  const rightVisible = wide || (tab !== "chat" && !chatOnly);
+  const chatVisible = (wide && (!chatCollapsed || focus)) || (!wide && (tab === "chat" || chatOnly));
+  const rightVisible = wide ? !focus : tab !== "chat" && !chatOnly;
   /* 예시 사업 이름은 목록용 꼬리표 '샘플 · '로 저장돼 있다 — 화면에서는 다른 곳과 같게 '예시 · '로 부른다 */
   const businessTitle = sampleTitle(planId, shownTitle || (fresh && newIntent ? "새 대화" : "사업 작업실"));
   const headingRef = (id: StudioTab) => (node: HTMLHeadingElement | null) => { headings.current[id] = node; };
@@ -815,17 +832,18 @@ export default function Studio() {
     ...(rightTab === "homepage" && !locks.homepage ? [{ key: "save", label: "홈페이지 저장", icon: <Save />, onSelect: () => sendStudioCommand("homepage-save") }] : []),
     { key: "chat", label: "지금까지 답한 기록", icon: <History />, disabled: !plan || missing || isSamplePlan(planId) || noChat, onSelect: () => { if (chatCollapsed) setChatCollapsed(false); sendStudioCommand("chat-summary"); } },
   ];
-  const pcBar = (menu: ChromeMenu) => <header className={styles.topBar} data-collapsed={chatCollapsed || undefined} data-missing={missing || undefined}>
+  /* 한 칸 대화 — 계획서가 있어야 쓰는 도구(미리보기 · 내려받기 · 페이지 선택 · 공유)는 그리지 않고 사업명 메뉴와 답한 기록만 남긴다. ☰ 는 왼쪽 좁은 줄로 */
+  const pcBar = (menu: ChromeMenu) => <header className={styles.topBar} data-collapsed={!focus && chatCollapsed || undefined} data-missing={missing || undefined} data-focus={focus || undefined} data-opened={slidIn || undefined}>
     <div className={styles.chatHead}>
-      {menu.button(styles.tool, 16)}
+      {!focus && menu.button(styles.tool, 16)}
       <BizMenu planId={planId} title={businessTitle} canRename={!!plan && !isSamplePlan(planId) && !missing} onRenamed={setTitle} className={styles.bizName}
         label={<><h1 className={styles.bizTitle}>{businessTitle}</h1><ChevronDown aria-hidden="true" /></>} />
       <span className={styles.grow} />
       {headerSlot("chat")}
-      {!chatCollapsed && <ToolButton label="지금까지 답한 기록 보기" icon={<History aria-hidden="true" />} disabled={!plan || missing || isSamplePlan(planId) || noChat} onClick={() => sendStudioCommand("chat-summary")} />}
-      <ToolButton label={chatCollapsed ? "대화 열 펴기" : "대화 열 접기"} pressed={chatCollapsed} icon={chatCollapsed ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />} onClick={() => setChatCollapsed(value => !value)} />
+      {(focus || !chatCollapsed) && <ToolButton label="지금까지 답한 기록 보기" icon={<History aria-hidden="true" />} disabled={!plan || missing || isSamplePlan(planId) || noChat} onClick={() => sendStudioCommand("chat-summary")} />}
+      {focus ? relogin : <ToolButton label={chatCollapsed ? "대화 열 펴기" : "대화 열 접기"} pressed={chatCollapsed} icon={chatCollapsed ? <PanelLeftOpen aria-hidden="true" /> : <PanelLeftClose aria-hidden="true" />} onClick={() => setChatCollapsed(value => !value)} />}
     </div>
-    {!missing && <div className={styles.toolbar}>
+    {!missing && !focus && <div className={styles.toolbar}>
       <div className={styles.viewGroup} role="group" aria-label="미리보기 도구">
         <span className={styles.previewPill}><Globe aria-hidden="true" />미리보기</span>
         <ToolButton className={styles.groupTool} label="사업계획서 내려받기" title={planTools ? "사업계획서 내려받기" : "계획서를 쓰면 내려받을 수 있어요"} icon={<Download aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-download")} />
@@ -859,7 +877,13 @@ export default function Studio() {
   const launchFront = !isSamplePlan(planId) && (homepage !== "published" || (!!plan && launchProgress(plan) !== "done"));
   const planView = usePlanView();
   const primary = rightTab === "operations" && launchFront ? LAUNCH_PRIMARY : PRIMARY[rightTab];
-  const mobileHead = chatVisible ? <header className={styles.mHead}>
+  /* 한 칸 대화의 왼쪽 좁은 줄(PC) — 메뉴 펴기(전체 메뉴 서랍) · 새 대화 · 내 사업 */
+  const focusRail = (menu: ChromeMenu) => <>
+    {menu.button(styles.tool, 16)}
+    <Link className={styles.tool} href={newChatHref()} aria-label="새 대화" title="새 대화"><SquarePen aria-hidden="true" /></Link>
+    <Link className={styles.tool} href={`/plan?view=${PLAN_VIEW_ALL}`} aria-label="내 사업" title="내 사업"><LayoutGrid aria-hidden="true" /></Link>
+  </>;
+  const mobileHead = chatVisible ? <header className={styles.mHead} data-focus={focus || undefined}>
     <Link className={styles.round44} href="/plan" aria-label="첫 화면으로" title="첫 화면으로"><X aria-hidden="true" /></Link>
     <BizMenu planId={planId} title={businessTitle} canRename={!!plan && !isSamplePlan(planId) && !missing} onRenamed={setTitle} className={styles.namePill} align="center"
       label={<><h1 className={styles.bizTitle}>{businessTitle}</h1><ChevronDown aria-hidden="true" /></>} />
@@ -887,15 +911,15 @@ export default function Studio() {
   const noteGuideTurn = noteGuide && plan && plan.id === planId ? <div className={styles.noteGuide}><JourneyGuideTurn guide={journeyGuide(noteGuide, planId, journeyGuideContext(plan))} /></div> : null;
 
   return <StudioNavContext.Provider value={nav}>
-    <main className={`${frame.page} ${styles.page}`} data-wide={wide || undefined} onClickCapture={onClickCapture}>
-      <BusinessAppChrome title={businessTitle} subtitle={missing ? undefined : statusText} showRail={false} bare={wide} backHref="/plan" active={fresh ? "new" : "plans"} topBar={menu => (wide ? pcBar(menu) : mobileHead)}>
+    <main className={`${frame.page} ${styles.page}`} data-wide={wide || undefined} data-focus={focus || undefined} onClickCapture={onClickCapture}>
+      <BusinessAppChrome title={businessTitle} subtitle={missing ? undefined : statusText} showRail={false} bare={wide && !focus} hero={focus} rail={wide && focus ? focusRail : undefined} backHref="/plan" active={fresh ? "new" : "plans"} topBar={menu => (wide ? pcBar(menu) : mobileHead)}>
         {/* 로그인이 풀렸을 때(휴대폰) — 머리 아래 한 줄에 다시 로그인하기 */}
         {!wide && relogin && <div className={styles.reloginRow}>{relogin}</div>}
         {/* 주소의 사업을 찾지 못했으면 칸마다 따로 알리지 않고(왼쪽·오른쪽 두 번 보였다) 작업실에서 한 번만 */}
         {/* 로그인이 안 돼 못 찾았으면 '로그인하기'(팝업, 끝나면 이 주소로 돌아온다) — 처음 온 사람도 이 화면을 보므로 '풀렸어요'라고 하지 않는다(2026-11-14) */}
         {missing ? <div className={styles.missingNote}><div className={hub.content}>{signedOut
           ? <MissingBusinessBody title="로그인이 필요해요" detail="로그인하면 이 사업을 볼 수 있어요." action={<AppButton type="button" variant="primary" className={hub.primary} onClick={() => openLogin()}>로그인하기</AppButton>} />
-          : <MissingBusinessBody />}</div></div> : <div className={styles.studio} data-wide={wide || undefined} data-collapsed={wide && chatCollapsed || undefined}>
+          : <MissingBusinessBody />}</div></div> : <div className={styles.studio} data-wide={wide || undefined} data-collapsed={wide && chatCollapsed && !focus || undefined} data-focus={focus || undefined} data-opened={slidIn || undefined}>
           <Pane id="chat" planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} refresh={refreshSeq.chat ?? 0} className={styles.chatCol} headingRef={headingRef("chat")}>
             {/* PC 에서 오른쪽에 보이는 열린 칸 — 대화 칸이 '홈페이지를 대화로 고치기' 같은 제안을 고른다(막힌 칸이면 null) */}
             {/* 예시 사업은 서버에 대화가 없어 대화 칸이 '사업을 찾지 못했어요 · 내 사업으로'를 보였다(감사 2026-10-23) — 읽기 전용 안내와 새 대화 길로 */}
@@ -930,7 +954,7 @@ export default function Studio() {
                 ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
                   <h2>대화 기록이 없는 사업이에요</h2>
                 </section>{noteGuideTurn}</div></div>
-                : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !locks[rightTab] ? rightTab : null} />}
+                : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !focus && !locks[rightTab] ? rightTab : null} focus={focus} />}
           </Pane>
 
           {/* 미리보기 판 — PC 는 r16 흰 판(대화 열 오른쪽), 휴대폰은 머리 아래 전체 화면 */}
