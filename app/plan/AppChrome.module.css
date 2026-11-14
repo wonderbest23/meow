@@ -25,13 +25,28 @@
  * 그림은 우리 것 — 파랑·하늘·남색 radial-gradient 만(lovable 그림·분홍/주황 표식은 쓰지 않는다). 라이트/다크 따로.
  */
 .hero.hero { background-color:var(--app-panel); background-image:
+  /* 전문가 모드에서 한 겹 더 — --hero-deep 이 0이면 보이지 않는다 */
+  linear-gradient(rgb(31 85 241 / calc(.07 * var(--hero-deep))), rgb(31 85 241 / calc(.07 * var(--hero-deep)))),
+  radial-gradient(120% 62% at 50% 100%, rgb(31 85 241 / calc(.34 * var(--hero-deep))) 0%, transparent 76%),
   radial-gradient(60% 34% at 50% 96%, rgb(76 140 255 / .55) 0%, transparent 72%),
   radial-gradient(42% 30% at 18% 80%, rgb(56 189 248 / .42) 0%, transparent 70%),
   radial-gradient(42% 30% at 82% 80%, rgb(99 102 241 / .40) 0%, transparent 70%),
   radial-gradient(70% 36% at 50% 58%, rgb(31 85 241 / .30) 0%, transparent 70%),
   radial-gradient(90% 30% at 50% 30%, rgb(147 197 253 / .22) 0%, transparent 70%);
   background-repeat:no-repeat; background-size:100% max(100%, 900px); }
+/*
+ * 전문가 모드를 고르면 배경이 조금 더 진해진다(대표 요청 2026-11-14) — 같은 파랑을 한 겹 더 겹칠 뿐 새 색은 없다.
+ * 모드 단추(첫 화면 · 대화 입력창)의 눌림 상태를 그대로 읽어 값을 따로 넘기지 않는다. 숫자 속성으로 등록해 부드럽게 바뀌고,
+ * 등록을 모르는 브라우저와 움직임 줄이기에서는 바로 바뀐다.
+ */
+@property --hero-deep { syntax:"<number>"; inherits:false; initial-value:0; }
+.hero.hero { transition:--hero-deep .45s ease; }
+.hero.hero:has([aria-label="대화 모드"] [aria-label="전문가 모드"][aria-pressed="true"]) { --hero-deep:1; }
+@media (prefers-reduced-motion: reduce) { .hero.hero { transition:none; } }
 :global(html[data-app-theme="dark"]) .hero.hero { background-image:
+  /* 전문가 모드에서 한 겹 더 — --hero-deep 이 0이면 보이지 않는다 */
+  linear-gradient(rgb(31 85 241 / calc(.07 * var(--hero-deep))), rgb(31 85 241 / calc(.07 * var(--hero-deep)))),
+  radial-gradient(120% 62% at 50% 100%, rgb(31 85 241 / calc(.34 * var(--hero-deep))) 0%, transparent 76%),
   radial-gradient(60% 34% at 50% 96%, rgb(56 120 255 / .55) 0%, transparent 72%),
   radial-gradient(42% 30% at 18% 80%, rgb(14 165 233 / .38) 0%, transparent 70%),
   radial-gradient(42% 30% at 82% 80%, rgb(79 70 229 / .45) 0%, transparent 70%),
