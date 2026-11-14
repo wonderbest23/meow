@@ -237,6 +237,8 @@ export type CashflowScenarios = {
    * goal(대표가 답한 개업 목표 기간이 순서보다 이를 때), assumed(유형을 모를 때 PREP_MONTHS)
    */
   prep: { months: number; openWeek: number | null; startWeek: number; source: "roadmap" | "goal" | "assumed" };
+  /** 목표에 적힌 기간('6개월 안에 …') — 개업 시점 목표가 아닐 때만. 장마다 '오늘부터'와 '개업 뒤'로 다르게 세지 않게 세는 법을 한 줄로 넘긴다(2026-11-14 과외 매칭 계획서: 한 장은 개업 뒤 5개월째, 다른 장은 개업 뒤 6개월) */
+  goalPeriodMonths: number | null;
   /** 매장을 빌리는 사업의 한도 나누기 예(제안) — 보증금 상한 + 써서 없어지는 돈 상한 = 초기 지출 한도 */
   depositSplit: Array<{ deposit: number; spend: number }>;
   terms: Terms;
@@ -410,7 +412,8 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const unitNote = /세트/.test(input.offer ?? "") && capacityParsed && !/세트/.test(capacityParsed.unit)
     ? `처리량(${capacityParsed.note.replace(/월 26일 영업/g, `월 26일 ${words.day}`)})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
     : null;
-  return { unit, daily: /하루/.test(input.capacity ?? "") && shape.cycle !== "enroll", unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || store, breakEven, capacity, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, reviewShortfall, stopMonth, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: store, shape, prepCost, prep, depositSplit, terms, taxableBreakEven };
+  const goalPeriod = /개업|오픈|문\s*열|출시|영업\s*시작/.test(input.goal ?? "") ? null : Number(input.goal?.match(/(\d+)\s*개월\s*(?:안|내|이내|뒤|후)/)?.[1]) || null;
+  return { goalPeriodMonths: goalPeriod, unit, daily: /하루/.test(input.capacity ?? "") && shape.cycle !== "enroll", unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || store, breakEven, capacity, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, reviewShortfall, stopMonth, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: store, shape, prepCost, prep, depositSplit, terms, taxableBreakEven };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < result.breakEven;
@@ -772,6 +775,7 @@ export function cashflowReference(result: CashflowScenarios, options: { basis?: 
     // 참고 문장은 중단선까지만 달수를 쓰고 잔액 0원까지는 한 마디로(중단선이 월 고정비 3개월분이라 최대 3개월 더) — intake-context 8,000자 상한
     result.survival.length ? `- 매출이 없어도 중단선까지 버티는 기간((준비 예산 − 초기 지출${result.prepCost > 0 ? ` − ${prepLabel(result)}` : ""} − 중단선) ÷ 월 고정비, 잔액 0원까지는 최대 3개월 더): ${result.survival.map(row => `초기 지출 ${won(row.spend)}이면 ${monthsText(row.toStop)}`).join(", ")}` : "",
     goalLine(result),
+    result.goalPeriodMonths ? `- 목표 기간 세는 법(모든 장에서 같게 씁니다): '${result.goalPeriodMonths}개월 안에'는 ${result.words.at}${result.prep.openWeek ? `(${result.prep.openWeek}주차)` : ""}부터 ${result.goalPeriodMonths}개월로 셉니다(가정). 오늘부터 세지 않습니다.` : undefined,
     result.priceAlternatives.length ? `- 가격을 바꾸면(${won(Math.abs(result.priceAlternatives[0].price - result.unitPrice))}씩, 한 건당 비용은 같다고 가정, ${result.shape.vat === "exempt" ? "부가세는 면세로 봄" : "부가세는 가격마다 다시 뺌"}, ${chapterRef("strategy/price")}에서 씀): ${result.priceAlternatives.map(alt => `${won(alt.price)} → 본전 ${result.daily && alt.breakEven / 26 >= 1 ? `하루 약 ${count(alt.breakEven / 26, result.unit)} / 한 달 ${count(alt.breakEven, result.unit)}` : surveyPeriodFor(result, alt.breakEven)}`).join(" / ")}` : "",
     "- 초기 지출(입력이 없으면), 대표님 개인 생활비, 소득세는 이 계산에 빠져 있습니다.",
   ].filter(Boolean).join("\n");
