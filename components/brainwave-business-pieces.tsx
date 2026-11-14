@@ -131,7 +131,7 @@ export function kitPieces({ overrides, hidden, onPick }: BusinessDesignProps, cl
     const value = text(id);
     const hint = !value && onPick && placeholder && !hidden.has(id);
     if (!value && !hint) return null;
-    return <Element className={className} style={hint ? { opacity: .45, fontStyle: "italic" } : undefined} {...revealProps(reveal)} data-bw-text={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("text", id, event.currentTarget as HTMLElement); } : undefined}>{scaled(id, value || placeholder)}</Element>;
+    return <Element className={className} style={hint ? { opacity: .45, fontStyle: "italic" } : undefined} {...revealProps(reveal)} data-bw-hint={hint ? "" : undefined} data-bw-text={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("text", id, event.currentTarget as HTMLElement); } : undefined}>{scaled(id, value || placeholder)}</Element>;
   };
   const Button = ({ buttonId, textId, className, reveal }: { buttonId: string; textId: string; className?: string; reveal?: Reveal }) => {
     const label = text(textId);

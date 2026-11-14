@@ -425,6 +425,11 @@ async function main() {
   assert.ok(entry.includes("data-coach-welcome"), "The original chat welcome is reused");
   const firstMessage = renderToStaticMarkup(<EntryChoices initialMessage="먼저 적은 사업 이야기" disabled={false} onStart={noop} />);
   assert.ok(firstMessage.indexOf("먼저 적은 사업 이야기") < firstMessage.indexOf("대화 시작 선택지"), "Typed introduction precedes the stage choices inside the conversation");
+  // 한 칸 대화(대표 승인 2026-11-14): 큰 방식 카드 두 장 없이 처음부터 일반 모드(바로 적기) — 전문가는 입력창 안 작은 전환으로 고르고 단계를 묻는다
+  const easyEntry = renderToStaticMarkup(<EntryChoices coach initialMessage="쿠키 공방" disabled={false} onStart={noop} />);
+  assert.ok(easyEntry.includes("편하게 적어 주세요") && easyEntry.includes("이미 운영 중이에요") && !easyEntry.includes("어떻게 만들까요?") && !easyEntry.includes("대화 시작 선택지"));
+  const expertEntry = renderToStaticMarkup(<EntryChoices coach depth="expert" initialMessage="쿠키 공방" disabled={false} onStart={noop} />);
+  assert.ok(expertEntry.includes("대화 시작 선택지") && !expertEntry.includes("편하게 적어 주세요"));
   const form = (snapshot: IntakeSnapshot, question = snapshot.nextQuestion!, value = emptyAnswer(), disabled = false) => renderToStaticMarkup(<QuestionForm question={question} snapshot={snapshot} draft={value} editing={false} disabled={disabled} onChange={noop} onAnswer={noop} onCancel={noop} />);
   const sectorMarkup = form(original);
   for (const sector of intakeSectorOptions) assert.ok(sectorMarkup.includes(sector.label), sector.label);

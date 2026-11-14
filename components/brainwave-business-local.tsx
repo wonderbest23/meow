@@ -28,7 +28,7 @@ const ITEMS = [["0:2324", "0:2325", "0:2329/0/0"], ["0:2331", "0:2332", "0:2336/
 const POINTS = [["0:2285", "0:2286"], ["0:2294", "0:2295"], ["0:2301", "0:2302"]] as const;
 
 /** 지도 링크를 걸 만한 주소인지 — '문의 주시면…' 같은 안내 글에는 걸지 않는다 */
-function mapUrl(address: string): string | null {
+export function mapUrl(address: string): string | null {
   const value = address.trim();
   if (!value || value === LOCAL_ADDRESS_PENDING || /문의|안내/.test(value)) return null;
   return `https://map.naver.com/p/search/${encodeURIComponent(value.split("\n")[0])}`;
