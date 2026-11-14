@@ -12,16 +12,20 @@ import DeletedBusinessGuard from "./DeletedBusinessGuard";
  *
  * 지운 사업이면 DeletedBusinessGuard 가 안내하고 내 사업으로 보낸다.
  *
+ * keepSamples(작업실): 완성 예시에서 다른 완성 예시로 옮길 때는 다시 그리지 않는다 — 화면 전체가 새로 그려져 왼쪽 예시 목록이 깜빡이고
+ * 펼침 움직임이 끊겼다(2026-11-14). 작업실은 주소의 사업을 계속 따라가고(Studio 의 planId 효과), 오른쪽 칸만 사업마다 새로 그린다.
+ *
  * adoptFirst: 주소에 사업이 없던 화면이 스스로 고른 사업을 주소에 적은 것(빈 값 → 사업)은 다시 그리지 않는다.
  */
-function Keyed({ children, adoptFirst }: { children: ReactNode; adoptFirst: boolean }) {
+const isSample = (id: string) => id.startsWith("sample_");
+function Keyed({ children, adoptFirst, keepSamples }: { children: ReactNode; adoptFirst: boolean; keepSamples: boolean }) {
   const planId = useSearchParams().get("planId") ?? "";
   const seen = useRef({ id: planId, key: planId });
-  if (seen.current.id !== planId) seen.current = { id: planId, key: adoptFirst && seen.current.id === "" ? seen.current.key : planId };
+  if (seen.current.id !== planId) seen.current = { id: planId, key: adoptFirst && seen.current.id === "" || keepSamples && isSample(seen.current.id) && isSample(planId) ? seen.current.key : planId };
   return <Fragment key={seen.current.key}>{children}</Fragment>;
 }
 
 /* useSearchParams 는 정적 빌드에서 Suspense 경계가 있어야 한다 — 그동안은 fallback(불러오는 중)을 보인다 */
-export default function BusinessKeyed({ children, fallback, adoptFirst = false }: { children: ReactNode; fallback: ReactNode; adoptFirst?: boolean }) {
-  return <Suspense fallback={fallback}><Keyed adoptFirst={adoptFirst}>{children}</Keyed><DeletedBusinessGuard /></Suspense>;
+export default function BusinessKeyed({ children, fallback, adoptFirst = false, keepSamples = false }: { children: ReactNode; fallback: ReactNode; adoptFirst?: boolean; keepSamples?: boolean }) {
+  return <Suspense fallback={fallback}><Keyed adoptFirst={adoptFirst} keepSamples={keepSamples}>{children}</Keyed><DeletedBusinessGuard /></Suspense>;
 }
