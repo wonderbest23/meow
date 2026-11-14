@@ -25,6 +25,7 @@ import chatUi from "../../../components/coach-chat-ui.module.css";
 import ChatLoading from "./loading";
 import { GenerationCard, GenerationDialog, generationFinished, generationStalled, useGenerationProgress } from "../GenerationProgress";
 import { InlineLogin } from "../../../components/login-dialog";
+import { coachFieldDisplay } from "../../../lib/plan-builder/coach-presentation";
 import { ResourcePanel } from "./intake-ui/ResourcePanel";
 import { IdeaExploration } from "./intake-ui/IdeaExploration";
 import { attachmentMessage, businessDescriptionText, incompleteChoiceText, nextRefinementQuestion, questionPromptText } from "./intake-ui/model";
@@ -1648,7 +1649,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     const option = item.options?.find(choice => choice.value === answer.value)?.label;
     const shown = option ?? (typeof answer.quote === "string" && answer.quote ? answer.quote : Array.isArray(answer.value) ? answer.value.join(", ") : `${answer.value ?? ""}`);
     // 숫자만 남은 값에는 질문의 단위를 붙인다('9000' → '9000원')
-    return [{ id: item.id, label: item.label, value: /^\d[\d,]*$/.test(shown) ? `${shown}${item.unit ?? ""}` : shown }];
+    return [{ id: item.id, label: item.label, value: coachFieldDisplay(/^\d[\d,]*$/.test(shown) ? `${shown}${item.unit ?? ""}` : shown) }];
   }) : [];
   const filledAnswers = answerChips(":estimate"), saidAnswers = answerChips(":said");
   /*
@@ -1826,9 +1827,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
 {/* 일반 모드: 문장에서 읽은 것(실선)과 말하지 않아 채운 것(점선)을 한눈에 — 누르면 그 답을 고친다 */}
             {(saidAnswers.length > 0 || filledAnswers.length > 0) && <section className={styles.understood} aria-label="알아들은 내용">
               {saidAnswers.length > 0 && <><h3>이렇게 알아들었어요 <small>다르면 눌러서 바꾸세요</small></h3>
-                <div data-said="">{saidAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value.replace(/\d{4,}/g, digits => Number(digits).toLocaleString("ko-KR"))}</button>)}</div></>}
+                <div data-said="">{saidAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div></>}
               {filledAnswers.length > 0 && <><h3>말하지 않은 것은 이렇게 채웠어요 <small>다르면 눌러서 바꾸세요</small></h3>
-                <div>{filledAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value.replace(/\d{4,}/g, digits => Number(digits).toLocaleString("ko-KR"))}</button>)}</div></>}
+                <div>{filledAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div></>}
             </section>}
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}

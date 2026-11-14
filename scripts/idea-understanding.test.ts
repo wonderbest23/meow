@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { cleanUnderstood, understoodAnswers } from "../lib/plan-builder/idea-understanding";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
+import { capacityDaysDisplay, coachFieldDisplay } from "../lib/plan-builder/coach-presentation";
 
 const text = "출장 세차 해보려고요. 혼자 하고 차 한 대에 4만원, 하루에 다섯 대, 평일만 할 거예요. 모아둔 돈은 3천만원";
 // 원문에 없는 값 · 근거 없는 사람 수는 버린다
@@ -21,4 +22,10 @@ assert.deepEqual(understoodAnswers({ days: "weekends" }, questions, "대표자 �
 assert.deepEqual(understoodAnswers({ channel: "스마트스토어", monthlyCost: "150만원" }, questions), [{ questionId: "structure.cost", value: 1_500_000 }, { questionId: "channel", value: ["스마트스토어"] }]);
 assert.deepEqual(understoodAnswers({ offer: "네일샵" }, [...questions, q("offer", "offer")]), [], "상품은 옮기지 않는다(가게 이름이 들어온다)");
 assert.deepEqual(understoodAnswers({}, questions, "대표자 혼자 / 하루 50건"), []);
+// 보일 때는 사용자가 적은 말에 가깝게 — 저장값(일주일 N)은 계산용
+assert.equal(capacityDaysDisplay("대표자 혼자 · 평일만 / 일주일 400건"), "대표자 혼자 / 하루 80건 · 평일만");
+assert.equal(capacityDaysDisplay("대표자 혼자 · 주말만 / 일주일 160건"), "대표자 혼자 / 하루 80건 · 주말만");
+assert.equal(capacityDaysDisplay("대표자 혼자 · 평일만 / 일주일 7건"), "대표자 혼자 · 평일만 / 일주일 7건", "나누어떨어지지 않으면 그대로");
+assert.equal(capacityDaysDisplay("대표자 혼자 / 하루 50건"), "대표자 혼자 / 하루 50건");
+assert.equal(coachFieldDisplay("2800000원"), "2,800,000원");
 console.log("idea understanding: passed");

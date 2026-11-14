@@ -44,5 +44,16 @@ export function coachTurnSummary(previous: CoachState | null, next: CoachState):
 
 /** 화면에 보일 답 — 저장값('20000000원')은 그대로 두고 금액만 천 단위 쉼표로('20,000,000원'). 연도·전화번호는 건드리지 않는다 */
 export function coachFieldDisplay(value: string): string {
-  return value.replace(/(?<![\d.,])\d{4,}(?=\s*원)/g, digits => Number(digits).toLocaleString("ko-KR"));
+  return capacityDaysDisplay(value).replace(/(?<![\d.,])\d{4,}(?=\s*원)/g, digits => Number(digits).toLocaleString("ko-KR"));
+}
+
+/*
+ * 평일만 · 주말만 하는 사업의 운영 범위는 계산용으로 '일주일 N'(하루 양 × 5일 · 2일)으로 저장한다(idea-understanding.ts).
+ * 보일 때는 사용자가 적은 말에 가깝게 '하루 N · 평일만'으로 되돌린다 — 저장값과 월 처리량 계산은 그대로다. 나누어떨어지지 않으면 저장값 그대로.
+ */
+export function capacityDaysDisplay(value: string): string {
+  const match = value.match(/^(.+?) · (평일만|주말만) \/ 일주일 ([\d,]+)([가-힣·]*)$/);
+  if (!match) return value;
+  const perDay = Number(match[3].replace(/,/g, "")) / (match[2] === "평일만" ? 5 : 2);
+  return Number.isInteger(perDay) ? `${match[1]} / 하루 ${perDay.toLocaleString("ko-KR")}${match[4]} · ${match[2]}` : value;
 }

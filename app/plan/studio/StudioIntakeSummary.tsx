@@ -1,5 +1,6 @@
 "use client";
 
+import { capacityDaysDisplay } from "../../../lib/plan-builder/coach-presentation";
 import { useEffect, useRef, useState } from "react";
 import { ListChecks } from "lucide-react";
 import type { IntakeSnapshot } from "../../../lib/plan-builder/intake-types";
@@ -49,7 +50,8 @@ export function intakeSummaryRows(snapshot: IntakeSnapshot): SummaryRow[] {
   const items = [...snapshot.summary].sort((a, b) => rank(a.id) - rank(b.id));
   for (const item of items) {
     if (item.basis === "unknown") continue;
-    const shown = plainText(item.value);
+    // 평일만 · 주말만의 운영 범위는 저장값(일주일 N)이 아니라 사용자가 적은 말에 가깝게(하루 N · 평일만)
+    const shown = capacityDaysDisplay(plainText(item.value));
     if (!shown) continue;
     const question = questionFor(snapshot, item.id);
     const display = item.id === "industry" && snapshot.ksic ? snapshot.ksic.name : koreanAmount(question, shown) ?? ((question ? summaryAnswerText(question, shown, snapshot.candidateIdeas) : "") || shown);
