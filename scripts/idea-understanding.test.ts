@@ -29,3 +29,7 @@ assert.equal(capacityDaysDisplay("대표자 혼자 · 평일만 / 일주일 7건
 assert.equal(capacityDaysDisplay("대표자 혼자 / 하루 50건"), "대표자 혼자 / 하루 50건");
 assert.equal(coachFieldDisplay("2800000원"), "2,800,000원");
 console.log("idea understanding: passed");
+// 판매 경로를 두 개 말하면 둘 다 담는다(같은 것을 두 번 읽으면 한 번만)
+assert.deepEqual(understoodAnswers({ channel: "스마트스토어", channel2: "인스타" }, questions), [{ questionId: "channel", value: ["스마트스토어", "인스타"] }]);
+assert.deepEqual(understoodAnswers({ channel: "인스타", channel2: "인스타" }, questions), [{ questionId: "channel", value: ["인스타"] }]);
+assert.equal(cleanUnderstood({ channel: "스마트스토어", channel2: "당근" }, "스마트스토어랑 인스타에서 팔아요").channel2, undefined, "원문에 없는 두 번째 경로는 버린다");

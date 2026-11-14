@@ -58,7 +58,7 @@ globalThis.fetch = async (input, init) => {
   if (said) {
     const source = (() => { try { return JSON.parse(userText(body.messages?.[0]?.content)).text ?? ""; } catch { return ""; } })();
     const pick = re => source.match(re)?.[0] ?? "";
-    const fake = { price: pick(/\d+[만천]\s?원/), unitCost: "", monthlyCost: "", budget: "", hoursPerWeek: "", channel: pick(/스마트스토어|인스타|플리마켓/), customer: "", offer: "", goal: "",
+    const fake = { price: pick(/\d+[만천]\s?원/), unitCost: "", monthlyCost: "", budget: "", hoursPerWeek: "", channel: pick(/스마트스토어|인스타|플리마켓/), channel2: source.match(/스마트스토어|인스타|플리마켓/g)?.[1] ?? "", customer: "", offer: "", goal: "",
       staff: /혼자/.test(source) ? "solo" : "none", staffQuote: pick(/혼자[^.,]*/), days: /평일만/.test(source) ? "weekdays" : "none", daysQuote: pick(/평일만/), countPeriod: "none", countNumber: 0, countUnit: "", countQuote: "" };
     return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(fake) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
   }
