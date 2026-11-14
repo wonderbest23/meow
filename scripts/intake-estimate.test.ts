@@ -210,7 +210,16 @@ async function main() {
     assert.equal(vague.plan.title, "뭔가 사람들한테 도움되는 걸 하고 싶어요");
     // 'X에서 팔아요'의 X(플리마켓)는 파는 곳이라 제목이 되지 않는다
     const place = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "손뜨개 인형을 인스타, 플리마켓, 아이디어스에서 팔 거예요. 하나에 2만원", revision: 0, requestId: randomUUID() }, off);
-    assert.equal(place.plan.title, "손뜨개 인형을 인스타, 플리마켓…");
+    // 파는 곳 구절을 빼고 찾은 종류(손뜨개 인형)가 제목과 기준값이 된다 — 플리마켓 판매가 아니다
+    assert.equal(place.plan.title, "손뜨개 인형");
+    const { estimateIntake } = await import("../lib/plan-builder/intake-estimate");
+    const { ruleKind } = await import("../lib/plan-builder/kind-rules");
+    assert.equal(estimateIntake("직접 만든 비누를 플리마켓이랑 스마트스토어에서 팔아 보려고요", undefined, ruleKind).word, "비누");
+    assert.equal(estimateIntake("수제청을 담가 인스타그램과 플리마켓에서 팔 계획이에요", undefined, ruleKind).word, "수제청");
+    // 남는 종류가 없으면 파는 곳이 곧 사업이다 — 다만 제목은 문장 앞부분
+    assert.equal(estimateIntake("플리마켓에서 이것저것 팔아 보려고요", undefined, ruleKind).word, "플리마켓");
+    const venue = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "플리마켓에서 이것저것 팔아 보려고요", revision: 0, requestId: randomUUID() }, off);
+    assert.equal(venue.plan.title, "플리마켓에서 이것저것 팔아 보려고요");
     // 전문가 모드도 제목은 찾은 이름으로
     const pro = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", depth: "expert", questionId: "business", value: "퇴근길 직장인을 상대로 동네에서 반찬가게를 열고 싶어요. 혼자서 하루 30묶음 정도 만들어 팔 생각입니다", revision: 0, requestId: randomUUID() }, off);
     assert.equal(pro.plan.title, "반찬가게");
