@@ -258,13 +258,16 @@
 .sampleCol { min-height:0; display:flex; flex-direction:column; }
 .sampleList { flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:20px 16px; }
 .sampleList h2 { margin:0; font-size:1.0625rem; font-weight:700; color:var(--app-text); }
-.sampleList > p { margin:-4px 0 6px; font-size:.8125rem; line-height:1.6; color:var(--app-muted); word-break:keep-all; }
-.sampleItem { display:grid; gap:2px; padding:14px 16px; border:1.5px solid var(--app-line); border-radius:14px; background:var(--app-surface); color:var(--app-text); text-decoration:none; transition:border-color .15s; }
-.sampleItem:hover { border-color:var(--app-line-strong); }
-.sampleItem[aria-current=page] { border-color:var(--app-text); box-shadow:0 0 0 1px var(--app-text); }
-.sampleItem strong { font-size:.9375rem; font-weight:700; }
-.sampleItem span { font-size:.875rem; color:var(--app-body); }
-.sampleItem small { font-size:.75rem; color:var(--app-muted); }
+.sampleList > p { margin:-4px 0 6px; font-size:.875rem; line-height:1.6; color:var(--app-body); word-break:keep-all; }
+.sampleItem { display:grid; justify-items:start; gap:4px; padding:16px; border:1.5px solid var(--app-line-strong); border-radius:14px; background:var(--app-surface); color:var(--app-text); text-decoration:none; transition:border-color .15s; }
+.sampleItem:hover { border-color:var(--app-text); }
+.sampleItem[aria-current=page] { border-color:var(--app-text); box-shadow:0 0 0 1.5px var(--app-text); }
+.sampleItem em { margin-bottom:4px; padding:4px 12px; border-radius:999px; font-style:normal; font-size:.9375rem; font-weight:700; line-height:1.4; }
+.sampleItem em[data-kind="일반"] { background:var(--app-hover); color:var(--app-text); }
+.sampleItem em[data-kind="전문가"] { background:var(--app-text); color:var(--app-surface); }
+.sampleItem strong { font-size:1.0625rem; font-weight:700; line-height:1.5; }
+.sampleItem span { font-size:.9375rem; font-weight:500; line-height:1.5; color:var(--app-text); }
+.sampleItem small { font-size:.8125rem; line-height:1.5; color:var(--app-body); }
 .sampleFoot { flex:none; display:grid; gap:10px; padding:14px 16px calc(16px + env(safe-area-inset-bottom)); border-top:1px solid var(--app-line); background:var(--app-surface); }
 .sampleFoot p { margin:0; font-size:.8125rem; color:var(--app-muted); text-align:center; }
 .sampleFoot > div { display:grid; grid-template-columns:1fr 1fr; gap:8px; }

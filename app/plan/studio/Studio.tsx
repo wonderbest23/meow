@@ -76,8 +76,8 @@ const PRIMARY: Record<RightTab, { label: string; command: StudioCommand }> = {
 const LAUNCH_PRIMARY: { label: string; command: StudioCommand } = { label: "다음 단계", command: "launch-next" };
 /* 로그인 전에도 볼 수 있는 완성 예시 두 개(lib/plan-builder/samples) — 같은 반찬가게를 두 대화 방식으로 만든 실제 완성본 */
 const GUEST_SAMPLES = [
-  { id: "sample_banchan_easy", how: "일반으로 만든 계획서", note: "질문 4개에 답하고 나머지는 AI가 채움" },
-  { id: "sample_banchan_expert", how: "전문가로 만든 계획서", note: "질문 13개에 직접 답함" },
+  { id: "sample_banchan_easy", kind: "일반", how: "질문 4개만 답했어요", note: "나머지는 AI가 업종 기준값으로 채움" },
+  { id: "sample_banchan_expert", kind: "전문가", how: "질문 13개에 직접 답했어요", note: "가격 · 손님 · 비용을 모두 직접 정함" },
 ] as const;
 function guestNext() { try { return sessionStorage.getItem(GUEST_NEXT_KEY) || "/plan/studio?new=1"; } catch { return "/plan/studio?new=1"; } }
 const LEAVE_MESSAGE = "저장하지 않은 수정이 있어요. 이 화면을 나가면 고친 내용이 사라져요. 나갈까요?";
@@ -905,7 +905,8 @@ export default function Studio() {
                   <h2>완성 예시</h2>
                   <p>실제 AI가 만든 계획서예요. 고칠 수는 없고 구경만 할 수 있어요.</p>
                   {GUEST_SAMPLES.map(sample => <Link key={sample.id} href={`/plan/studio?planId=${sample.id}&tab=plan`} aria-current={planId === sample.id ? "page" : undefined} className={styles.sampleItem}>
-                    <strong>퇴근길 반찬가게</strong><span>{sample.how}</span><small>{sample.note}</small>
+                    {/* 어느 방식으로 만든 것인지가 먼저 보여야 차이를 안다 — 방식 이름표를 가장 크게(대표 요청 2026-11-14) */}
+                    <em data-kind={sample.kind}>{sample.kind}</em><strong>퇴근길 반찬가게</strong><span>{sample.how}</span><small>{sample.note}</small>
                   </Link>)}
                   {noteGuideTurn}
                 </div>
