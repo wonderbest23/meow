@@ -1,6 +1,7 @@
 // 플랜 빌더 클라이언트 스토어 — 사업 1개 + 플랜 여러 개 구조.
 // 로컬(localStorage) 캐시 + 서버(plan_states) 동기화.
 
+import { sampleLaunchAnswers } from "./sample-launch";
 import { chaptersForType, sectionKey, type PlanSectionStatus } from "./blueprint";
 import { SAMPLE_DOCS, isSampleId } from "./samples";
 import { filterQuarantinedCache, parseQuarantineNotice, quarantineChangesCache, readQuarantineNotice } from "./quarantine-cache";
@@ -186,7 +187,7 @@ function samplePlans(): Plan[] {
     sections: Object.fromEntries(
       Object.entries(d.sections).map(([k, v]) => [k, { markdown: v.markdown, html: v.html, generatedAt: "2026-01-15T09:00:00.000Z", locked: true, ...(v.coachRevision != null ? { coachRevision: v.coachRevision } : {}) }]),
     ),
-    answers: d.answers,
+    answers: sampleLaunchAnswers(d.id, d.answers),
   }));
 }
 
