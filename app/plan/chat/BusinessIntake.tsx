@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer,
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
-import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, Plus, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
@@ -1777,7 +1777,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const questionPill = questionTarget && !modePill
     ? <PopMenu placement="above" align="end" buttonClassName={styles.modePill} buttonLabel={`답하는 중: ${questionTarget} — 더 보기`} menuLabel="지금 답하는 질문" groups={[{ key: "question", items: [{ key: "current", label: questionTarget, icon: <Target />, current: true, onSelect: () => focusComposer() }, ...plusItems.filter(item => item.key === "answers")] }]} label={<><span className={styles.modePillLabel} data-question-target title={questionTarget}><span className={styles.modePillHint}>답하는 중:</span> {questionTarget}</span><ChevronDown aria-hidden="true" /></>} />
     : null;
-  const plusMenu = <><PopMenu placement="above" align="start" buttonClassName={styles.composerRound} buttonLabel="더 보기 — 지금까지 답 보기 · 새 대화" buttonTitle="더 보기" menuLabel="대화 더 보기" groups={[{ key: "more", items: plusItems }]} label={<Plus aria-hidden="true" />} /></>;
+  /* 입력창의 ＋ 메뉴는 뺐다(대표 결정 2026-11-14) — '지금까지 답 보기'는 질문 알약 · 정한 내용 알약에, '새 대화'는 왼쪽 메뉴에 있다 */
   /* 대화 방식 전환 — 작업실은 입력 상자 아래 줄 안 작은 [일반 | 전문가], 예전 화면은 입력창 위 */
   const depthControl = depthPick ? <div className={styles.depthPick} role="group" aria-label="대화 모드">
     {(["easy", "expert"] as const).map(value => <button key={value} type="button" aria-pressed={depthNow === value} aria-label={value === "easy" ? "일반 모드" : "전문가 모드"} disabled={busy} title={value === "easy" ? "한 문장만 말하면 나머지는 채워서 바로 만들어요" : "하나씩 자세히 묻고 정해요"}
@@ -1792,7 +1792,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     if (!items.length) return null;
     const open = chipsOpen[key] ?? chipsFresh;
     return <>
-      <h3><button type="button" aria-expanded={open} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><b>{title}</b>{open ? <small>다르면 눌러서 바꾸세요</small> : <span>{summary}</span>}<em>{open ? "접기" : "펼치기"}</em></button></h3>
+      <h3><button type="button" aria-expanded={open} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><b>{title}</b>{open ? <small>다르면 눌러서 바꾸세요</small> : <span>{summary}</span>}<em data-open={open || undefined} aria-hidden="true"><ChevronDown size={16} /></em></button></h3>
       {open && <div data-said={key === "said" ? "" : undefined}>{items.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div>}
     </>;
   };
@@ -1956,7 +1956,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
                 if (composerEnterSends({ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode }, window.matchMedia("(pointer: coarse)").matches)) { event.preventDefault(); if (studioRoute) submitStudio(); else submitComposer(); } }} />
               {!embedded && sendButton}
             </div>
-            {embedded && <div className={styles.composerBar} data-studio-bar>{plusMenu}{depthControl}<span className={styles.composerGrow} />{modePill ?? questionPill}{sendButton}</div>}
+            {embedded && <div className={styles.composerBar} data-studio-bar>{depthControl}<span className={styles.composerGrow} />{modePill}{sendButton}</div>}
           </form>
         </footer>}
       </InputPane>

@@ -399,7 +399,7 @@ console.log("studio navigation ok");
   assert.match(studio, /const focus = !isSamplePlan\(planId\) && !missing && !noChat && \(tab === "chat" \|\| !!locks\[tab\]\)\s+&& \(plan \? !hubState\?\.documents\.length && !writingStarted : pending \|\| !ready && focusHint\);/);
   assert.match(studio, /disabled=\{chatOnly \|\| missing\}/);
   // PC 는 대화만 할 때 칸 단추 · 가운데 알약을 위 막대에 올리지 않는다(지금까지 정한 내용만)
-  assert.match(studio, /\{!chatOnly && centerSlot\(rightTab\)\}/);
+  assert.match(studio, /\{!chatOnly && rightTab !== "plan" && centerSlot\(rightTab\)\}/);
   assert.doesNotMatch(studio, /질문을 마치면 사업계획서부터 차례로 열려요|답할 때마다 저장돼요/, "질문 중 머리줄에 군더더기 안내를 두지 않는다");
 }
 
@@ -412,7 +412,7 @@ console.log("studio navigation ok");
   // lovable 구조 2단계 — 위 막대는 작업실이 그린다: PC 48px(사업명 ▾ · 기록 · 패널 접기 | 미리보기 막대), 휴대폰 대화 화면 56px(✕ · 사업명 · ›)
   assert.match(studio, /topBar=\{menu => \(wide \? pcBar\(menu\) : mobileHead\)\}/);
   // lovable 구조 5단계(캡처 project-pc) — 작업 화면 PC 는 왼쪽 메뉴를 늘 접고 대화 열 머리 ☰ 로 같은 메뉴(서랍)를 연다
-  assert.match(studio, /showRail=\{false\} bare=\{wide && !focus\} hero=\{focus\} rail=\{wide && focus \? focusRail : undefined\}/, "PC 작업 화면은 왼쪽 메뉴 없이 판 없는 본문(둥근 판은 미리보기 판) — 한 칸 대화만 그라데이션 판 + 좁은 메뉴 줄");
+  assert.match(studio, /showRail=\{false\} bare=\{wide && !focus\} hero rail=\{wide && focus \? focusRail : undefined\}/, "PC 작업 화면은 왼쪽 메뉴 없이 판 없는 본문(둥근 판은 미리보기 판) — 배경 그라데이션은 한 칸 대화 · 두 칸 작업실 모두(2026-11-14 사장님), 좁은 메뉴 줄은 한 칸 대화만");
   assert.match(studio, /\{menu\.button\(styles\.tool, 16\)\}/, "대화 열 머리 ☰ 로 같은 메뉴를 연다");
   assert.match(chrome, /\{topBar \? topBar\(\{ button: menuButton, open: \(\) => setOpen\(true\), isOpen: open \}\) : <>/);
   // 휴대폰 — 단추 줄·부제가 없는 화면은 설정 화면과 같은 머리(44 원 ‹ · 가운데 제목 · 아바타), PC 는 예전 머리줄
