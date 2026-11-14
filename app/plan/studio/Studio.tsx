@@ -78,7 +78,7 @@ const LAUNCH_PRIMARY: { label: string; command: StudioCommand } = { label: "다�
 /* 로그인 전에도 볼 수 있는 완성 예시 두 개(lib/plan-builder/samples) — 같은 반찬가게를 두 대화 방식으로 만든 실제 완성본 */
 const GUEST_SAMPLES = [
   { id: "sample_banchan_easy", kind: "일반 모드", how: "질문 4개만 답했어요", note: "나머지는 AI가 업종 기준값으로 채움" },
-  { id: "sample_banchan_expert", kind: "전문가 모드", how: "질문 13개에 직접 답했어요", note: "가격 · 손님 · 비용을 모두 직접 정함" },
+  { id: "sample_banchan_expert", kind: "전문가 모드", how: "질문 13개에 직접 답했어요", note: "가격 17,000원 · 손님 · 비용을 모두 직접 정함" },
 ] as const;
 function guestNext() { try { return sessionStorage.getItem(GUEST_NEXT_KEY) || "/plan/studio?new=1"; } catch { return "/plan/studio?new=1"; } }
 const LEAVE_MESSAGE = "저장하지 않은 수정이 있어요. 이 화면을 나가면 고친 내용이 사라져요. 나갈까요?";
