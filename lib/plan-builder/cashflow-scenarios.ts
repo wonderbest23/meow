@@ -113,6 +113,8 @@ export type CashflowShape = {
   makesGoods?: boolean;
   /** 12주 순서에서 고정비가 나가기 시작하는 주(매장은 계약 주, 아니면 1주)와 개업(첫 판매) 주 — 사업 유형 roadmap에서 센다(Q9) */
   open?: { week: number; startWeek: number };
+  /** 물건을 파는 스토어가 아닌 온라인 사업 — 두 쪽을 잇는 연결(connect) · 앱(app). '스토어 공개' · '포장·택배' · '판매량' 대신 그 사업의 말을 쓴다(2026-11-14 과외 매칭 계획서 검토) */
+  service?: "connect" | "app";
 };
 const DEFAULT_SHAPE: CashflowShape = { premises: true, cycle: "weekly", vat: "general" };
 const FOOD_TEXT = /도시락|반찬|음식|식당|카페|커피|빵|베이커리|디저트|케이크|쿠키|김밥|분식|떡|밀키트|샐러드|주점|베이글|샌드위치/;
@@ -150,7 +152,7 @@ export function cashflowShapeFor(input: { typeId?: BusinessTypeId | null; struct
   const vat: CashflowShape["vat"] = typeId === "lesson" || structure?.sector === "education" ? "exempt" : "general";
   const trade: CashflowShape["trade"] = typeId === "lesson" || structure?.sector === "education" ? "lesson" : BEAUTY_TEXT.test(text) ? "beauty" : FOOD_TEXT.test(text) ? "food" : "other";
   const makesGoods = structure?.offering !== "service" && trade !== "food" && MAKES_TEXT.test(text);
-  return { premises, cycle, vat, trade, exemptPossible: vat === "general" && EXEMPT_GOODS_TEXT.test(text), makesGoods, open: roadmapOpening(typeId, premises) };
+  return { premises, cycle, vat, trade, exemptPossible: vat === "general" && EXEMPT_GOODS_TEXT.test(text), makesGoods, open: roadmapOpening(typeId, premises), ...(typeId === "platform" ? { service: "connect" as const } : typeId === "app" ? { service: "app" as const } : {}) };
 }
 /** 포장·용기와 팔지 못해 버리는 몫(폐기)이 생기는 판매 단위 */
 const GOODS_UNIT = /^(?:개|잔|세트|병|봉|봉지|판|상자|박스|인분|컵|통|팩|송이|다발|조각|권|켤레|마리)$/;
@@ -169,6 +171,7 @@ export type CashflowInputs = {
 type Words = { before: string; at: string; after: string; afterOpen: string; day: string };
 const STORE_WORDS: Words = { before: "문 열기 전", at: "문 열 때", after: "문 연 뒤", afterOpen: "문을 연 뒤", day: "영업" };
 const ONLINE_WORDS: Words = { before: "스토어 공개 전", at: "스토어 공개 때", after: "스토어 공개 뒤", afterOpen: "스토어를 공개한 뒤", day: "작업" };
+const OPEN_SERVICE_WORDS: Words = { before: "서비스 열기 전", at: "서비스를 열 때", after: "서비스를 연 뒤", afterOpen: "서비스를 연 뒤", day: "작업" };
 const SERVICE_WORDS: Words = { before: "영업 시작 전", at: "영업 시작 때", after: "영업 시작 뒤", afterOpen: "영업을 시작한 뒤", day: "영업" };
 /*
  * 세는 말(Q9) — 네일·과외 계산 자료에 '처리량·판매량·수량·팔 때마다' 같은 물건 판매 말이 그대로 나왔다.
@@ -176,7 +179,9 @@ const SERVICE_WORDS: Words = { before: "영업 시작 전", at: "영업 시작 �
  * counted: 관심 조사에서 응답마다 적는 것, expect: 할인 원칙으로 셈한 값, actual: 문을 연 뒤 셀 실제 숫자, intent: 아직 돈을 받지 않은 의사
  */
 type Terms = { volume: string; sold: string; verb: string; capacity: string; counted: string; expect: string; actual: string; intent: string };
-export function cashflowTerms(shape: Pick<CashflowShape, "cycle" | "trade">): Terms {
+export function cashflowTerms(shape: Pick<CashflowShape, "cycle" | "trade" | "service">): Terms {
+  // 두 쪽을 잇는 사업은 파는 것이 아니라 성사시키는 것이다
+  if (shape.service === "connect" && shape.cycle !== "enroll") return { volume: "성사 건수", sold: "성사", verb: "성사시킬", capacity: "한 달에 이을 수 있는 건수", counted: "적은 신청 횟수", expect: "예상 성사", actual: "실제 성사 건수", intent: "신청 의사" };
   if (shape.cycle === "visits") {
     const what = shape.trade === "beauty" ? "예약·시술 건수" : "예약 건수";
     return { volume: what, sold: shape.trade === "beauty" ? "예약·시술" : "예약", verb: "받을", capacity: "받을 수 있는 예약 건수", counted: "적은 예약 횟수", expect: "예상 예약", actual: `실제 ${what}`, intent: "예약 의사" };
@@ -304,6 +309,8 @@ export function parseVolumeGoal(goal: string | undefined): { volume: number; mon
 
 export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios | null {
   const shape = input.shape ?? { ...DEFAULT_SHAPE, premises: !input.online };
+  // 스토어(물건을 온라인으로 파는 사업)만 스토어 말을 쓴다 — 연결 · 앱은 온라인이어도 스토어가 아니다
+  const store = !!input.online && !shape.service;
   const vat = shape.vat === "exempt" ? 0 : vatInPrice(input.unitPrice);
   const contribution = realUnitMargin(input.unitPrice, input.unitVariableCost, shape.vat);
   if (!(input.unitPrice > 0) || contribution <= 0 || input.monthlyFixedCost < 0) return null;
@@ -389,7 +396,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
    * 판단이 늘 '계약하지 않음'이었다. 보증금 상한과 써서 없어지는 돈 상한의 나누는 예를 30·50·70%(제안)로 보이고 대안 자리를 나란히 둔다.
    * 실제 보증금 시세는 숫자로 만들지 않는다(주변 매물 확인).
    */
-  const depositSplit = shape.premises && !input.online && setupLimit != null && setupLimit > 0
+  const depositSplit = shape.premises && !store && setupLimit != null && setupLimit > 0
     ? [...new Map([0.3, 0.5, 0.7].map(share => { const deposit = Math.floor(setupLimit * share / 100_000) * 100_000; return [deposit, { deposit, spend: setupLimit - deposit }] as const; })).values()].filter(row => row.deposit > 0)
     : [];
   // 대안 가격: 가격 크기에 맞는 단위(500원·1,000원·1만 원)로 한 칸 낮게, 한두 칸 높게
@@ -399,11 +406,11 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
     .map(price => ({ price, breakEven: Math.ceil(input.monthlyFixedCost / realUnitMargin(price, input.unitVariableCost, shape.vat)) }));
   const taxableMargin = realUnitMargin(input.unitPrice, input.unitVariableCost);
   const taxableBreakEven = shape.vat === "exempt" && taxableMargin > 0 ? Math.ceil(input.monthlyFixedCost / taxableMargin) : null;
-  const words = input.online ? ONLINE_WORDS : shape.premises ? STORE_WORDS : SERVICE_WORDS;
+  const words = shape.service ? OPEN_SERVICE_WORDS : store ? ONLINE_WORDS : shape.premises ? STORE_WORDS : SERVICE_WORDS;
   const unitNote = /세트/.test(input.offer ?? "") && capacityParsed && !/세트/.test(capacityParsed.unit)
     ? `처리량(${capacityParsed.note.replace(/월 26일 영업/g, `월 26일 ${words.day}`)})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
     : null;
-  return { unit, daily: /하루/.test(input.capacity ?? "") && shape.cycle !== "enroll", unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || !!input.online, breakEven, capacity, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, reviewShortfall, stopMonth, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: !!input.online, shape, prepCost, prep, depositSplit, terms, taxableBreakEven };
+  return { unit, daily: /하루/.test(input.capacity ?? "") && shape.cycle !== "enroll", unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || store, breakEven, capacity, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, reviewShortfall, stopMonth, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: store, shape, prepCost, prep, depositSplit, terms, taxableBreakEven };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < result.breakEven;
@@ -425,7 +432,7 @@ function unknownCostRows(result: CashflowScenarios): Array<{ item: string; note:
     ? [{ item: "포장·택배", note: notIncluded }]
     : result.goods
       ? [{ item: "포장·용기", note: notIncluded }, { item: "팔지 못해 버리는 몫(폐기)", note: "만든 양 가운데 버리는 비율을 재서 반영" }]
-      : [{ item: `그 밖에 한 ${result.unit}마다 드는 돈(${result.shape.premises ? "소모품 등" : result.shape.cycle === "enroll" ? "교재·이동비 등" : "이동비·소모품 등"})`, note: notIncluded }];
+      : [{ item: `그 밖에 한 ${result.unit}마다 드는 돈(${result.shape.service ? "문자·알림 발송비, 서버 사용료 등" : result.shape.premises ? "소모품 등" : result.shape.cycle === "enroll" ? "교재·이동비 등" : "이동비·소모품 등"})`, note: notIncluded }];
   // 결제 방법(Q7): 매장은 카드 단말기, 온라인은 스토어 수수료, 매장 없는 서비스는 계좌이체면 수수료가 없다
   const payment = result.online ? { item: "스토어 판매·결제 수수료", note: "입점한 스토어의 수수료율 확인" }
     : result.shape.premises ? { item: "카드·결제 수수료", note: "가맹한 카드사·결제 서비스의 수수료율 확인" }
@@ -635,7 +642,9 @@ function decisionLines(result: CashflowScenarios): string[] {
     return result.daily ? `하루 약 ${Math.ceil(monthly / 26).toLocaleString("ko-KR")}명` : monthly / 4.3 >= 1 && result.shape.cycle === "weekly" ? `일주일 약 ${Math.ceil(monthly / 4.3).toLocaleString("ko-KR")}명` : `한 달 ${monthly.toLocaleString("ko-KR")}명`;
   };
   const { ask, kept } = SURVEY_ASK[result.shape.cycle](unit);
-  const discount = surveyDiscount(result.shape.cycle, result.shape.trade);
+  const discount = result.shape.service === "connect" && result.shape.cycle !== "enroll"
+    ? SURVEY_DISCOUNT.replace("예상 구매 = 응답마다 적은 수량", "예상 성사 = 응답마다 적은 신청 횟수").replace("날짜·수량을", "날짜를").replace("날짜·수량 없는", "날짜 없는").replace("실제 구매로", "실제 성사로")
+    : surveyDiscount(result.shape.cycle, result.shape.trade);
   const people = result.shape.cycle === "once" ? "새 구매자 수" : result.shape.cycle === "enroll" ? (result.shape.trade === "lesson" ? "학생 수" : "등록 인원") : "단골 수";
   const before = result.shape.premises ? "계약·개업 전 판단" : "시작 전 판단";
   // 규모를 줄이는 방법도 업종 말로(Q9: 네일에 '공간·장비·상품 수')
@@ -652,10 +661,10 @@ function decisionLines(result: CashflowScenarios): string[] {
   const pass = twoWay
     ? `${iga(expect)} 본전(${surveyPeriodFor(result, decision.go)}) 이상이고 ${kept} 수가 위 ${people} 이상이면 진행을 검토하고, 그보다 적으면 시작안을 바꿉니다.`
     : `${iga(expect)} 본전(${surveyPeriodFor(result, decision.go)}) 이상이고 ${kept} 수가 위 ${people}${result.shape.cycle === "enroll" ? "" : `(쓴 ${result.shape.cycle === "once" ? "개수" : "횟수"} 가정을 함께 밝힘)`} 이상이면 ${result.shape.premises ? "계약을 검토하고" : "진행을 검토하고"}, ${iga(expect)} 본전의 절반(${surveyPeriodFor(result, decision.floor)}) 이하이면 ${result.shape.premises ? "계약하지 않고 " : ""}시작안을 바꾸며, 그 사이면 규모를 줄여 다시 조사합니다.`;
-  const trial = result.shape.cycle === "visits" ? "첫 유료 예약" : result.shape.cycle === "enroll" ? "체험 수업 뒤 첫 등록" : "시범 판매";
+  const trial = result.shape.service === "connect" ? "첫 유료 연결" : result.shape.service === "app" ? "첫 유료 이용" : result.shape.cycle === "visits" ? "첫 유료 예약" : result.shape.cycle === "enroll" ? "체험 수업 뒤 첫 등록" : "시범 판매";
   return [
     `판단 기준(${chapterRef("summary/roadmap")}에서 씀): ${rule} 판단은 ${result.shape.premises ? "계약처럼 " : ""}큰돈을 쓰기 전(출시 전)에 한 번, ${result.words.afterOpen}에 다시 합니다.`,
-    `${before}(관심 조사 결과를 볼 때): ${terms.counted}에 할인 원칙을 곱한 '${expect}'${final(expect) ? "을" : "를"} ${terms.capacity}${result.shape.cycle === "enroll" ? "" : result.shape.cycle === "visits" ? "(하루 기준)" : "(하루에 만들 수 있는 양)"}${final(terms.capacity) ? "이" : "가"} 아니라 ${gwa(decision.goLabel)} 같은 기간끼리 비교합니다. ${discount} ${kept} 수는 본전에 필요한 ${gwa(people)} 비교합니다: ${regularsLine(decision.go, unit, result.shape.cycle)}. 조사 글(질문 문구)에는 ${ask} 꼭 묻고, ${kept}만 셉니다(지인·가족인지도 물음). 통과 기준(제안): ${pass} 목표 응답 수는 ${people} 이상으로 잡습니다(적으면 다 받아도 못 닿음). 이 기준을 넘어도 ${result.words.afterOpen} ${ro(terms.actual)} 다시 판단합니다.`,
+    `${before}(관심 조사 결과를 볼 때): ${terms.counted}에 할인 원칙을 곱한 '${expect}'${final(expect) ? "을" : "를"} ${terms.capacity}${result.shape.cycle === "enroll" ? "" : result.shape.service ? "" : result.shape.cycle === "visits" ? "(하루 기준)" : "(하루에 만들 수 있는 양)"}${final(terms.capacity) ? "이" : "가"} 아니라 ${gwa(decision.goLabel)} 같은 기간끼리 비교합니다. ${discount} ${kept} 수는 본전에 필요한 ${gwa(people)} 비교합니다: ${regularsLine(decision.go, unit, result.shape.cycle)}. 조사 글(질문 문구)에는 ${ask} 꼭 묻고, ${kept}만 셉니다(지인·가족인지도 물음). 통과 기준(제안): ${pass} 목표 응답 수는 ${people} 이상으로 잡습니다(적으면 다 받아도 못 닿음). 이 기준을 넘어도 ${result.words.afterOpen} ${ro(terms.actual)} 다시 판단합니다.`,
     `출시 전 판단: 돈을 받고 해 볼 수 있으면(${result.shape.premises ? "이미 신고된 공간·" : ""}${trial}) ${eul(terms.actual)} 위 기준과 같은 기간끼리 비교합니다. 아직 돈을 받을 수 없으면 ${terms.intent}만으로 기준을 채웠다고 보지 않고, 작은 표본에서 잰 실제 비율(${result.shape.cycle === "weekly" && result.goods ? GOODS_RATIO_EXAMPLES : RATIO_EXAMPLES[result.shape.cycle]})과 경쟁 자료를 함께 봅니다.`,
     `${eul(decision.goLabel)} 채우려면 닿아야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 그만큼의 사람에게 닿을 길(${result.online ? "스토어 방문자, 팔로워, 커뮤니티 회원 등" : result.shape.premises ? "지나가는 사람, 단지 세대, 커뮤니티 회원 등" : "지역 커뮤니티 회원, 소개 등"})이 있어야 진행합니다.`,
     `${result.words.afterOpen}: ${eul(terms.actual)} 위 기준과 매달 비교하고, 중단선에 닿으면 계속할지 다시 정합니다. 관심 글의 댓글·공감 수는 ${iga(terms.actual)} 아니므로 이 기준과 바로 비교하지 않습니다.`,
@@ -673,8 +682,8 @@ function unitMarginMarkdown(result: CashflowScenarios): string[] {
     "",
     `| 항목 | 한 ${unit}당 | 근거 |`,
     "| --- | ---: | --- |",
-    `| 판매가 | ${won(result.unitPrice)} | 대표님이 정한 값 |`,
-    result.shape.vat === "exempt" ? "| 부가세 | 0원 | 면세일 수 있음(교육용역). 면세 여부는 관할 세무서 확인 |" : `| 부가세 | -${won(result.vat)} | ${VAT_BASIS}. 과세 유형 확인 필요 |`,
+    `| ${result.shape.service === "connect" ? "한 건 수수료" : "판매가"} | ${won(result.unitPrice)} | 대표님이 정한 값 |`,
+    result.shape.vat === "exempt" ? "| 부가세 | 0원 | 면세일 수 있음(교육용역). 면세 여부는 관할 세무서 확인 |" : `| 부가세 | -${won(result.vat)} | ${result.shape.service === "connect" ? VAT_BASIS.replace(/판매가/g, "수수료") : VAT_BASIS}. 과세 유형 확인 필요 |`,
     `| 한 ${unit}당 비용 | -${won(unitCostOf(result))} | 대표님이 정한 값 |`,
     ...unknownCostRows(result).map(row => `| ${row.item} | 확인 필요 | ${row.note} |`),
     `| **한 ${unit}에 실제 남는 돈** | **${won(result.contribution)}** | 확인 필요 칸을 빼기 전 값 |`,
@@ -718,7 +727,7 @@ export function cashflowMarkdown(result: CashflowScenarios): string {
     ...rows,
     "",
     ...cashflowFindings(result).map(line => `- ${line}`),
-    result.budget != null ? `- ${result.shape.premises && !result.online ? DEPOSIT_SPLIT : NO_PREMISES_SETUP}` : undefined,
+    result.budget != null ? `- ${result.shape.premises && !result.online ? DEPOSIT_SPLIT : result.shape.service ? NO_PREMISES_SETUP.replace("장비·재료처럼", "홈페이지·도구 이용료·첫 홍보비처럼") : NO_PREMISES_SETUP}` : undefined,
     ...siteLines(result).map(line => `- ${line}`),
     `- ${opening != null ? `통장 잔고는 준비 예산 ${won(result.budget!)}에서 초기 지출 ${won(result.setupCost!)}${result.prepCost > 0 ? `과 ${prepLabel(result)} ${won(result.prepCost)}` : ""}을 뺀 ${won(opening)}에서 시작합니다.` : `통장 누적은 사업에서 들어오고 나간 돈만 더한 값입니다. ${result.prepCost > 0 ? `초기 지출과 ${eun(prepLabel(result))}` : "초기 지출은"} 빠져 있습니다.`} 대표님 개인 생활비와 소득세는 이 계산에 넣지 않았습니다.`,
     result.capacity ? `- ${result.terms.capacity} 최대치: ${dayWord(result, result.capacity.note)}. 어느 경우도 이보다 많이 ${result.terms.verb === "팔" ? "팔지" : "받지"} 않는다고 계산했습니다.` : undefined,
