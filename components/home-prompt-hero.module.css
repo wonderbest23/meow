@@ -117,23 +117,6 @@
 
 .actions { display: flex; align-items: center; gap: 6px; min-height: 48px; }
 .spacer { flex: 1 1 auto; }
-.micNote { margin: 0; color: #4e5968; font-size: .8125rem; line-height: 1.4; }
-
-.iconButton {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  color: #191f28;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-.iconButton:hover { background: #f2f4f6; }
-.iconButton[data-listening] { background: #e8f3ff; color: var(--brand-primary-hover, #1957c2); }
 
 .send {
   width: 48px;
@@ -152,9 +135,8 @@
 .send:hover { background: var(--brand-primary-hover, #1957c2); }
 
 /* 전역 'button svg 숨김'(globals.css) 때문에 아이콘 단추가 빈칸이 됐다 — 이 화면의 아이콘은 되살린다 */
-.hero .iconButton svg, .hero .send svg { display: block !important; flex: 0 0 auto; }
+.hero .send svg { display: block !important; flex: 0 0 auto; }
 
-.iconButton:focus-visible,
 .send:focus-visible,
 .tab:focus-visible,
 
