@@ -238,6 +238,10 @@ async function main() {
       const chosen = estimateIntake(text, "education", ruleKind);
       assert.equal(chosen.sector, "education"); assert.match(chosen.answers.offer, /연결 수수료/);
     }
+    // 수수료 비율을 적으면 거래 한 건 값의 그 비율로 계산하고 근거를 남긴다(거래 값도 적었으면 그 값으로)
+    const rated = estimateIntake("학부모와 대학생 과외 선생님을 매칭해 주는 서비스. 과외비는 월 50만원이고 수수료 15% 받을 거예요", undefined, ruleKind);
+    assert.equal(rated.answers.price, "75000원"); assert.equal(rated.answers.offer, "과외 선생님 연결 수수료(거래 한 건 500,000원의 15%)");
+    assert.equal(estimateIntake("학부모와 대학생 과외 선생님을 매칭해 주는 서비스를 하고 싶어요. 성사되면 수수료 10%", undefined, ruleKind).answers.offer, "과외 선생님 연결 수수료(거래 한 건 400,000원의 10%)");
     // 남는 종류가 없으면 파는 곳이 곧 사업이다 — 다만 제목은 문장 앞부분
     assert.equal(estimateIntake("플리마켓에서 이것저것 팔아 보려고요", undefined, ruleKind).word, "플리마켓");
     const venue = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "플리마켓에서 이것저것 팔아 보려고요", revision: 0, requestId: randomUUID() }, off);

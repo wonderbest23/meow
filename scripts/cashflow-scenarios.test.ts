@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildCashflowScenarios, cashflowFromFields, cashflowMarkdown, cashflowReference, fixedCostAssumptionMarkdown, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, parseRevenueGoal, parseVolumeGoal, realUnitMargin, vatInPrice } from "../lib/plan-builder/cashflow-scenarios";
+import { buildCashflowScenarios, cashflowShapeFor, cashflowFromFields, cashflowMarkdown, cashflowReference, fixedCostAssumptionMarkdown, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, parseRevenueGoal, parseVolumeGoal, realUnitMargin, vatInPrice } from "../lib/plan-builder/cashflow-scenarios";
 
 // 돈 장(품질기준 6·7번) — 숫자는 코드가 계산하고 AI는 해석만 한다. 빵집 시험(2026-10-10) 숫자로 고정한다.
 const bakery = { unitPrice: 4500, unitVariableCost: 1600, monthlyFixedCost: 3_800_000, capacity: "대표자 혼자 / 하루 120개", goal: "6개월 안에 월 매출 1,200만원", budget: "60000000원" };
@@ -124,5 +124,18 @@ assert.equal(buildCashflowScenarios({ ...bakery, unitVariableCost: 5000 }), null
 assert.equal(buildCashflowScenarios({ ...bakery, unitVariableCost: 4200 }), null, "4,500 − 409 − 4,200 < 0");
 // 처리량을 다 팔아도 본전이 안 되면 그렇게 말한다(세탁 픽업 극단값)
 assert.match(cashflowReference(buildCashflowScenarios({ unitPrice: 3000, unitVariableCost: 1500, monthlyFixedCost: 8_000_000, capacity: "대표자와 기사 2명 / 하루 100벌" })!), /처리량 최대치.*다 팔아도 본전에 못 미칩니다/);
+
+// 두 쪽을 잇는 사업 · 앱은 온라인이어도 스토어가 아니다(2026-11-14 과외 매칭 계획서 검토) — 스토어 · 포장 · 택배 · 판매량 대신 그 사업의 말
+{
+  const money = { unitPrice: 40_000, unitVariableCost: 7_500, monthlyFixedCost: 1_000_000, capacity: "대표자 혼자 / 한 달 60건", goal: "6개월 안에 손익분기 도달", budget: "5000000원", online: true };
+  const connect = buildCashflowScenarios({ ...money, shape: cashflowShapeFor({ typeId: "platform", online: true, description: "과외 선생님 연결" }) })!;
+  const text = cashflowMarkdown(connect) + cashflowReference(connect);
+  assert.doesNotMatch(text, /스토어|포장|택배|본전 판매량|더 팔 때/);
+  assert.match(text, /서비스를 연 뒤/); assert.match(text, /본전 성사 건수/); assert.match(text, /한 건 수수료/);
+  assert.equal(connect.breakEven, 35);
+  // 물건을 파는 온라인 가게는 그대로 스토어 말을 쓴다
+  const shop = buildCashflowScenarios({ ...money, shape: cashflowShapeFor({ typeId: "ship", online: true, description: "수제 캔들 스마트스토어" }) })!;
+  assert.match(cashflowMarkdown(shop), /스토어를 공개한 뒤/); assert.match(cashflowMarkdown(shop), /포장·택배/);
+}
 
 console.log("cashflow-scenarios: real unit margin (VAT), single break-even without living cost, owner share line, survival = budget ÷ fixed cost, contract criteria, fixed-cost assumptions passed");

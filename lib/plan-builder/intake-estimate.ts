@@ -131,18 +131,21 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
    * 연결 앱 줄을 바탕으로 하고, 공급자 쪽 종류를 찾았으면 그 손님 · 문제를 쓰고 한 건 수수료를 그 값의 10%로 둔다.
    * shortcut: 수수료는 1천~10만원으로 자르고 한 달 건수는 바탕 줄의 한 달 매출이 유지되게 맞춘다, 업종별 수수료 줄이 생기면 그 값을 쓴다
    */
-  let platform: typeof found = null, platformNamed = false;
+  let platform: typeof found = null, platformNamed = false, platformFee: number | null = null;
   if (!chosenKsic && rules && PLATFORM.test(spelled) && !PLATFORM_OFFER.test((rule ?? hand)?.offer ?? "")) {
     const base = rules("중개 앱", sector => sector === "software");
     const supplier = rules(spelled.replace(/예약\s*서비스|중개|매칭|연결|플랫폼|사이트|서비스|앱|어플/g, " "), sector => sector !== "software");
     if (base && supplier) {
       const name = spelled.match(new RegExp(Array.from(supplier.word).map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s*"), "i"))?.[0] ?? supplier.word;
-      const fee = Math.min(100_000, Math.max(1_000, Math.round(supplier.price * 0.1 / 500) * 500)), baseCount = Number(base.capacity.match(/\d+/)?.[0]) || 900;
-      platform = { ...base, customer: supplier.customer, problem: supplier.problem, offer: `${name} 연결 수수료(1건)`, price: fee, unitCost: Math.round(fee * base.unitCost / base.price / 100) * 100,
+      // 수수료 비율을 적었으면('성사되면 수수료 10%') 정액으로 굳히지 않고 거래 한 건 값의 그 비율로 계산하고 근거를 파는 것에 남긴다. 거래 값도 적었으면 그 값을 쓴다
+      const rate = Number(spelled.match(/수수료(?:는|를|로)?\s*(\d{1,2}(?:\.\d)?)\s*(?:%|퍼센트|프로)/)?.[1] ?? spelled.match(/(\d{1,2}(?:\.\d)?)\s*(?:%|퍼센트|프로)\s*(?:의\s*)?수수료/)?.[1]) || 0;
+      const deal = rate ? readSentence(text).price ?? supplier.price : supplier.price;
+      const fee = rate ? Math.max(100, Math.round(deal * rate / 100 / 100) * 100) : Math.min(100_000, Math.max(1_000, Math.round(supplier.price * 0.1 / 500) * 500)), baseCount = Number(base.capacity.match(/\d+/)?.[0]) || 900;
+      platform = { ...base, customer: supplier.customer, problem: supplier.problem, offer: rate ? `${name} 연결 수수료(거래 한 건 ${deal.toLocaleString("ko-KR")}원의 ${rate}%)` : `${name} 연결 수수료(1건)`, price: fee, unitCost: Math.round(fee * base.unitCost / base.price / 100) * 100,
         // 혼자 손으로 잇는 시작 단계 기준 — 하루 두 건(한 달 60건)까지, 고정비는 앱 운영비가 아니라 소프트웨어 업종의 기본값(실측 2026-11-14: 검토에서 건수 근거가 없고 본전이 처리 한도를 넘었다)
         // shortcut: 60건 · 기본 고정비는 어림값, 연결 사업 실제 사례가 쌓이면 업종별로 나눈다
         cost: Math.min(base.cost, SECTOR_BASELINES.software.cost), capacity: `한 달 ${Math.max(10, Math.min(60, Math.round(base.price * baseCount / fee / 10) * 10))}건`, word: `${name} 연결`, named: true };
-      platformNamed = true;
+      platformNamed = true; if (rate) platformFee = fee;
     } else platform = base;
   }
   const kind = platform ?? rule ?? hand, sector = (platform ? chosen ?? platform.sector : null) ?? rule?.sector ?? chosen ?? ranked[0];
@@ -159,7 +162,7 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // shortcut: 납품가는 소매가의 70%로 본다, 납품가를 따로 적은 줄이 생기면 그 값을 쓴다
   const wholesale = !!kind && sector !== "software" && !read.price && SUPPLY.test(text) && !/납품(?:도|\s*겸)|겸\s*납품|병행/.test(text) && !/영업|거래처|견적|납품|위판|도매|입찰/.test(`${kind.channel}${kind.offer}`);
   const round = (value: number) => { const step = value >= 10_000 ? 1000 : value >= 1000 ? 100 : 10; return Math.round(value / step) * step; };
-  const price = read.price ?? (trial ? Math.max(1000, Math.round(base.price / 4000) * 1000) : wholesale ? round(base.price * 0.7) : base.price);
+  const price = platformFee ?? read.price ?? (trial ? Math.max(1000, Math.round(base.price / 4000) * 1000) : wholesale ? round(base.price * 0.7) : base.price);
   // 거꾸로 한 달 회원으로 세는 업종에 회당 값('회당 4만원 과외')을 적었으면 한 달 횟수로 바꾼다 — 회원 자리에 그대로 두면 적자 초안이 된다
   const each = !read.priceMonthly && base.capacity.startsWith("한 달") && price * 3 < base.price;
   const unit = base.capacity.match(/[가-힣·]+$/)?.[0] ?? "건";
