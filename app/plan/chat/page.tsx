@@ -4,7 +4,7 @@ import PlanLoading from "../PlanLoading";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowUp, ChevronRight, Paperclip, FileCheck2, Check, Lightbulb, FileText, Store } from "lucide-react";
+import { ArrowUp, ChevronRight, FileCheck2, Check, Lightbulb, FileText, Store } from "lucide-react";
 import { useChatSplit } from "./useChatSplit";
 import { readCoach, type CoachField, type CoachState } from "../../../lib/plan-builder/coach";
 import type { BriefPatch } from "./BriefEditor";
@@ -52,7 +52,6 @@ function BusinessCoach() {
   const [plan, setPlan] = useState<Snapshot | null>(null);
   const planRef = useRef<Snapshot | null>(null);
   const [text, setText] = useState("");
-  const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [editDirty, setEditDirty] = useState(false);
   const [optimistic, setOptimistic] = useState<string | null>(null);
@@ -71,7 +70,6 @@ function BusinessCoach() {
   const conversationRef = useRef<HTMLDivElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const follow = useRef(true);
-  const file = useRef<HTMLInputElement>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const pendingId = useRef<string | null>(null);
   const pendingAction = useRef<"message" | "prepare">("message");
@@ -128,7 +126,7 @@ function BusinessCoach() {
     submitting.current = false;
     pendingId.current = null;
     setLoaded(false); setLoadFailed(false); setError(""); setLogin(false);
-    setBusy(false); setOptimistic(null); setAttachment(null); setView("chat");
+    setBusy(false); setOptimistic(null); setView("chat");
     setChanged([]); setUnseen(false); setEditDirty(false); follow.current = true;
     accept({ plan: null, paid: false, runStatus: null });
     storageKey.current = `coach-input:${query.get("planId") ?? "new"}`;
@@ -199,7 +197,7 @@ function BusinessCoach() {
   async function submit(message = text, action: "message" | "prepare" = "message", retry = false) {
     if (!loaded || (!plan && entryMode !== "new") || submitting.current || blocked) return;
     const epoch = routeEpoch.current;
-    const content = action === "message" ? [message.trim(), attachment ? `[첨부 자료: ${attachment.name}]\n${attachment.text}` : ""].filter(Boolean).join("\n\n") : "";
+    const content = action === "message" ? message.trim() : "";
     if (action === "message" && !content && !retry) return;
     submitting.current = true; setBusy(true); setError(""); setLogin(false); follow.current = true;
     if (action === "message") setOptimistic(retry ? plan?.job?.message.text ?? null : content);
@@ -220,7 +218,7 @@ function BusinessCoach() {
         try { sessionStorage.removeItem(storageKey.current); } catch { /* Optional local draft storage. */ }
         storageKey.current = `coach-input:${data.plan.planId}`;
       }
-      if (action === "prepare") setRunStatus("queued"); else { setText(""); setAttachment(null); }
+      if (action === "prepare") setRunStatus("queued"); else setText("");
       pendingId.current = null;
     } catch (e) { if (epoch === routeEpoch.current) setError(e instanceof Error ? e.message : "연결을 확인해 주세요. 입력은 그대로 남아 있어요."); }
     finally { if (epoch === routeEpoch.current) { setBusy(false); setOptimistic(null); submitting.current = false; } }
@@ -231,19 +229,6 @@ function BusinessCoach() {
     if (!plan || opening) return; setError(""); setOpening(true);
     try { await hydrateFromServer(); setActivePlan(plan.planId); router.push(pay ? `/plan/pay?planId=${encodeURIComponent(plan.planId)}&planType=${encodeURIComponent(plan.planType)}` : `/plan/document?planId=${encodeURIComponent(plan.planId)}`); }
     catch { setError("계획서를 열지 못했어요. 잠시 후 다시 시도해 주세요."); setOpening(false); }
-  }
-  async function attach(selected: File) {
-    setError("");
-    if (selected.size > 1024 * 1024) { setError("1MB 이하의 워드 또는 텍스트 문서를 첨부해 주세요."); return; }
-    try {
-      let contents: string;
-      if (/\.docx$/i.test(selected.name)) {
-        const res = await fetch("/api/plan/chat/attachment", { method: "POST", body: selected }); const data = await readChatResponse<{ text: string; message?: string }>(res); if (!res.ok) throw new Error(data.message); contents = data.text;
-      } else if (/\.(txt|md)$/i.test(selected.name)) contents = await selected.text();
-      else throw new Error("워드(.docx) 또는 텍스트(.txt, .md) 문서를 첨부해 주세요.");
-      if (contents.length > 18000) throw new Error("문서가 길어요. 필요한 부분만 18,000자 이내로 나누어 주세요.");
-      setAttachment({ name: selected.name, text: contents }); pendingId.current = null;
-    } catch (e) { setError(e instanceof Error ? e.message : "파일을 읽지 못했어요."); }
   }
   function edit(value: string) { setView("chat"); setText(value); pendingId.current = null; window.setTimeout(() => input.current?.focus(), 0); }
   async function saveBrief(patch: BriefPatch) {
@@ -294,12 +279,9 @@ function BusinessCoach() {
           {connectionError && <p role="status" className={styles.note}>연결이 잠시 끊겼어요. 저장된 작업 상태를 다시 확인하고 있어요.</p>}
           {error && <p className={styles.error} role="alert">{error} {login && <Link href={loginHref}>로그인하기</Link>}</p>}
           {loadFailed && <AppButton variant="secondary" className={styles.secondary} onClick={() => void refresh(new URLSearchParams(window.location.search).get("planId") ?? undefined).then(() => setError("")).catch(e => setError(e.message))}>대화 다시 불러오기</AppButton>}
-          {attachment && <div className={styles.attachment}><span>{attachment.name}</span><button onClick={() => setAttachment(null)}>첨부 취소</button></div>}
           <form className={chatUi.composerShell} aria-busy={busy || working} onClick={e => { if (e.target === e.currentTarget) input.current?.focus(); }} onSubmit={e => { e.preventDefault(); void submit(); }}>
-            <input hidden ref={file} type="file" accept=".txt,.md,.docx" onChange={e => { const selected = e.target.files?.[0]; if (selected) void attach(selected); e.target.value = ""; }} />
-            <button type="button" className={styles.tool} aria-label="기존 문서 첨부" title="기존 문서 첨부" disabled={!loaded || blocked} onClick={() => file.current?.click()}><Paperclip size={20} /></button>
             <textarea ref={input} aria-label="사업에 대해 말씀해 주세요" placeholder={started ? "메시지를 입력하세요" : "생각을 들려주세요"} value={text} maxLength={2500} rows={1} disabled={blocked} onChange={e => { setText(e.target.value); pendingId.current = null; }} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia("(max-width: 900px)").matches) { e.preventDefault(); void submit(); } }} />
-            <button type="submit" className={`${styles.send} ${chatUi.sendButton} ${text.trim() || attachment ? styles.sendReady : ""}`} aria-label="보내기" title="보내기" disabled={!loaded || blocked || (!text.trim() && !attachment)}><ArrowUp size={22} /></button>
+            <button type="submit" className={`${styles.send} ${chatUi.sendButton} ${text.trim() ? styles.sendReady : ""}`} aria-label="보내기" title="보내기" disabled={!loaded || blocked || !text.trim()}><ArrowUp size={22} /></button>
           </form>
         </footer>
       </section>

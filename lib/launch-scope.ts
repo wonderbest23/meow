@@ -21,7 +21,6 @@ export const CLOSED_API_PREFIXES: readonly string[] = [
   "/api/plan/suggest",
   "/api/plan/render",
   "/api/plan/market-research",
-  "/api/plan/chat/attachment", // 옛 대화 화면(파일 첨부) 전용 — 지금 대화 화면은 쓰지 않는다
   "/api/delivery",      // 옛 '프로젝트' 화면의 문서·PPT·재무표 만들기 — 로그인 없이 AI·PPT 를 공짜로 받을 수 있었다
   "/api/presentations", // 옛 '프로젝트' 화면의 발표자료 AI
   "/api/brand",         // 옛 로고 이미지 생성
