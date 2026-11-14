@@ -132,18 +132,20 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
    * shortcut: 수수료는 1천~10만원으로 자르고 한 달 건수는 바탕 줄의 한 달 매출이 유지되게 맞춘다, 업종별 수수료 줄이 생기면 그 값을 쓴다
    */
   let platform: typeof found = null, platformNamed = false;
-  if (!chosen && !chosenKsic && rules && PLATFORM.test(spelled) && !PLATFORM_OFFER.test((rule ?? hand)?.offer ?? "")) {
+  if (!chosenKsic && rules && PLATFORM.test(spelled) && !PLATFORM_OFFER.test((rule ?? hand)?.offer ?? "")) {
     const base = rules("중개 앱", sector => sector === "software");
     const supplier = rules(spelled.replace(/예약\s*서비스|중개|매칭|연결|플랫폼|사이트|서비스|앱|어플/g, " "), sector => sector !== "software");
     if (base && supplier) {
       const name = spelled.match(new RegExp(Array.from(supplier.word).map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s*"), "i"))?.[0] ?? supplier.word;
       const fee = Math.min(100_000, Math.max(1_000, Math.round(supplier.price * 0.1 / 500) * 500)), baseCount = Number(base.capacity.match(/\d+/)?.[0]) || 900;
       platform = { ...base, customer: supplier.customer, problem: supplier.problem, offer: `${name} 연결 수수료(1건)`, price: fee, unitCost: Math.round(fee * base.unitCost / base.price / 100) * 100,
-        capacity: `한 달 ${Math.max(10, Math.min(baseCount, Math.round(base.price * baseCount / fee / 10) * 10))}건`, word: `${name} 연결`, named: true };
+        // 혼자 손으로 잇는 시작 단계 기준 — 하루 두 건(한 달 60건)까지, 고정비는 앱 운영비가 아니라 소프트웨어 업종의 기본값(실측 2026-11-14: 검토에서 건수 근거가 없고 본전이 처리 한도를 넘었다)
+        // shortcut: 60건 · 기본 고정비는 어림값, 연결 사업 실제 사례가 쌓이면 업종별로 나눈다
+        cost: Math.min(base.cost, SECTOR_BASELINES.software.cost), capacity: `한 달 ${Math.max(10, Math.min(60, Math.round(base.price * baseCount / fee / 10) * 10))}건`, word: `${name} 연결`, named: true };
       platformNamed = true;
     } else platform = base;
   }
-  const kind = platform ?? rule ?? hand, sector = platform?.sector ?? rule?.sector ?? chosen ?? ranked[0];
+  const kind = platform ?? rule ?? hand, sector = (platform ? chosen ?? platform.sector : null) ?? rule?.sector ?? chosen ?? ranked[0];
   const read = readSentence(text);
   const picked = kind ?? SECTOR_BASELINES[sector];
   // 가게·병원 운영자나 공장·기업이 쓰는 프로그램이면 개인용 앱 값 대신 사업자용 출발값을 쓴다
