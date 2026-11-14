@@ -999,6 +999,9 @@ button.workLogRow { min-height: 32px; }
 .queueButton:hover { background: var(--app-raised); color: var(--app-body); }
 .queueNote { margin: -2px 0 0 4px !important; color: var(--app-muted); font-size: .71875rem; }
 /* 두 줄까지 감싼다 — 셋째 줄로 넘치는 칩은 SuggestRow 가 통째로 숨긴다(칩 중간에서 글자가 잘리지 않게) */
+.loginPrompt { display: grid; justify-items: center; align-content: center; gap: 14px; min-height: 60%; padding: 40px 16px; color: var(--app-body); font-size: .9375rem; text-align: center; }
+.loginPrompt p { margin: 0; }
+.loginPrompt .chip { text-decoration: none; }
 /* 새 대화 맨 처음 — 대화 방식 두 카드. 고르면 테두리가 진해지고 아래에 단계 질문이 이어진다 */
 .depthCards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 20px; }
 .depthCards h2 { grid-column: 1 / -1; margin: 0 0 2px; font-size: .9375rem; font-weight: 500; line-height: 1.6; color: var(--app-text); }
