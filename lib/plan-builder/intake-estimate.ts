@@ -43,6 +43,14 @@ const SOLD_AT: readonly (readonly [RegExp, string])[] = [[/스마트스토어/, 
 /** 거래처에 대 주는 일 — '도매시장에서 떼다 파는' 쪽은 아니다 */
 /** 파는 곳(판매 경로) 이름이 든 '…에서 · …(으)로' 구절 — 'A, B랑 C에서'처럼 나열해도 한 덩어리로 본다 */
 const VENUE_PHRASE = /(?:인스타(?:그램)?|유튜브|블로그|스마트스토어|라이브커머스|쿠팡|온라인|오픈마켓|플리마켓|프리마켓|야시장|아이디어스|당근(?:마켓)?|번개장터|네이버|카카오)[가-힣a-z]*?(?:\s*(?:[,·/]|와|과|이?랑|및)\s*[가-힣a-z0-9]+?)*(?:으로|로|에서)\s/gi;
+/** 파는 곳 뒤에 파는 · 알리는 · 주문받는 말이 바로 오는 구절 — 이름 목록에 없는 곳('맘카페랑 당근으로 알리고', '숨고에서 받아서')도 잡는다. 나열은 한 덩어리로 */
+const ROUTE_PHRASE = /[가-힣a-z0-9]+(?:\s*(?:[,·/]|와|과|이?랑|및)\s*[가-힣a-z0-9]+(?:\s[가-힣a-z0-9]+)?)*(?:으로|로|에서|에)도?\s+(?=(?:직접\s*)?(?:알리|알릴|홍보|주문\s*받|주문받|예약\s*받|예약받|모집|모을|모으|팔|판매|판다|구해|구하|받아|받으|받을|손님|회원을|입점|올려|올리))/gi;
+/** 파는 방식 — 무엇을 파는지가 따로 있으면 종류가 아니다('반찬을 정기배송') */
+const METHOD_PHRASE = /정기\s*(?:배송|배달|구독)/g;
+/** 값을 붙여 든 품목 하나('원피스 3만원대', '아메리카노 2천원') — 가게 전체의 종류가 따로 있으면 그것을 쓴다 */
+const PRICED_ITEM = /[가-힣a-z]+\s*(?:(?:하나|한\s?[가-힣]{1,2}|[0-9]+\s?[a-z가-힣]{1,3})에?\s*)?(?:[0-9][0-9,.]*\s*[천만]?|[일이삼사오육칠팔구]?[천만][0-9]?[천백]?)\s*원대?/gi;
+// 순서: 나열 전체를 잡는 것부터 — 뒤쪽 이름만 먼저 지워지면 앞 낱말이 남는다
+const NOT_KIND_PHRASES = [ROUTE_PHRASE, VENUE_PHRASE, METHOD_PHRASE, PRICED_ITEM];
 const SUPPLY = /납품|oem|odm|하청|임가공|도매(?!\s*(?:시장|상가|업체)?에서)/i;
 /** 문장에 적은 전문 분야('여드름 관리 전문', 'PT 전문') — 앞의 한두 어절 */
 const FOCUS = /((?:[가-힣a-z0-9]+\s)?[가-힣a-z0-9]+)\s?(전문|특화)(?![가-힣]*(?:가|의|직))/i;
@@ -74,10 +82,23 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 뒤에 붙인 값('…프로그램, 월 1만원')은 떼고 본다
   const tool = !chosen && TOOL_TAIL.test(spelled.trim().replace(/[,.]?\s*(?:월|한\s*달에?)?\s*[0-9.,]+\s*[천만]?\s*원.*$/, "").trim());
   const noised = tool ? spelled : spelled.replace(KIND_NOISE, " ");
-  // '인스타, 플리마켓에서 팔 거예요'의 플리마켓은 파는 곳이지 사업 종류가 아니다 — 파는 곳 구절을 빼고도 종류를 찾을 수 있으면 뺀 문장에서 찾는다
-  // ('플리마켓에서 이것저것 팔아요'처럼 남는 종류가 없으면 그대로 둔다: 그때는 플리마켓 판매가 사업이다)
-  const unvenued = tool || chosenKsic ? noised : spelled.replace(VENUE_PHRASE, " ").replace(KIND_NOISE, " ");
-  const heard = unvenued !== noised && (rules?.(unvenued, sector => sector !== "software") ?? businessKind(unvenued, chosen ?? rankedSectors(unvenued)[0])) ? unvenued : noised;
+  // 사업 종류가 아닌 구절(파는 곳 · 파는 방식 · 값을 붙인 품목 하나)을 빼고도 종류를 찾을 수 있으면 뺀 문장에서 찾는다 — 못 찾으면 그 구절이 곧 사업이라 그대로 둔다
+  // ('인스타, 플리마켓에서 팔 거예요'의 플리마켓, '맘카페로 알리고'의 맘카페, '반찬을 정기배송'의 정기배송, '원피스 3만원대'의 원피스)
+  const finds = (candidate: string) => !!(rules?.(candidate, sector => sector !== "software") ?? businessKind(candidate, chosen ?? rankedSectors(candidate)[0]));
+  let bare = spelled;
+  if (!tool && !chosenKsic) {
+    // 파는 곳을 빼면 종류가 안 남을 때('직접 볶은 원두를 스마트스토어에서 팔고 싶어요')는 'X를 팔다'를 'X 판매'로 읽어 한 번 더 찾는다
+    const routed = spelled.replace(ROUTE_PHRASE, " ").replace(VENUE_PHRASE, " ");
+    if (routed !== spelled && !finds(routed.replace(KIND_NOISE, " "))) {
+      const sold = routed.replace(/([가-힣a-z0-9]+)[을를]\s*(?:직접\s*)?(?:팔|판매)/gi, "$1 판매 ");
+      if (finds(sold.replace(KIND_NOISE, " "))) bare = sold;
+    }
+    for (const phrase of NOT_KIND_PHRASES) {
+      const next = bare.replace(phrase, " ");
+      if (next !== bare && finds(next.replace(KIND_NOISE, " "))) bare = next;
+    }
+  }
+  const heard = bare === spelled ? noised : bare.replace(KIND_NOISE, " ");
   // 'X도 (같이)'로 곁들인 것은 본업이 아니다('네일샵, 속눈썹도 같이'는 네일샵이다) — 그 앞쪽에서 종류를 찾을 수 있으면 앞쪽만 보고 찾는다
   const side = !tool && !chosenKsic ? heard.match(/([가-힣a-z0-9]{2,})도(?=\s*(?:같이|함께|병행|하|할|해|열|만들|제작|판매|팔|취급|운영|제공|가능|포함|,|$))/i) : null;
   // '도'로 끝나는 낱말(설계도·투시도·제주도)은 곁들임이 아니다
