@@ -67,6 +67,7 @@ suites.push("plan-quality-q9");
 suites.push("plan-quality-q10");
 suites.push("first-steps");
 suites.push("idea-understanding");
+suites.push("sample-finished");
 suites.push("status-badge");
 suites.push("app-button");
 suites.push("app-field");
