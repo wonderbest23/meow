@@ -6,6 +6,8 @@ import { SAMPLE as COFFEE } from "./coffee";
 import { SAMPLE as FLOWER_PSST } from "./flower-psst";
 import { SAMPLE as FLOWER_FM } from "./flower-fm";
 import { SAMPLE as PILATES, SAMPLE_ANSWERS as PILATES_ANSWERS } from "./pilates";
+import { SAMPLE as BANCHAN_EASY, SAMPLE_ANSWERS as BANCHAN_EASY_ANSWERS } from "./banchan-easy";
+import { SAMPLE as BANCHAN_EXPERT, SAMPLE_ANSWERS as BANCHAN_EXPERT_ANSWERS } from "./banchan-expert";
 import { SAMPLE_ANSWERS as COFFEE_ANSWERS } from "../sample-answers";
 import { FLOWER_ANSWERS } from "../sample-answers-flower";
 
@@ -13,7 +15,8 @@ export interface SampleDoc {
   id: string;
   title: string;
   planType: string;
-  sections: Record<string, { markdown: string; html: string }>;
+  /** coachRevision: 대화 상태(answers)가 함께 있는 예시가 "수정 내용 반영 필요"로 보이지 않게, 만든 때의 번호를 그대로 둔다 */
+  sections: Record<string, { markdown: string; html: string; coachRevision?: number | null }>;
   /** 업종 — 홈페이지 템플릿을 고르는 데 쓴다(없으면 일반 서비스로 잡힌다) */
   industry: string;
   /*
@@ -26,6 +29,9 @@ export interface SampleDoc {
 
 const SAMPLE_ANSWER_SETS: Record<string, Record<string, Record<string, unknown>>> = {
   sample_pilates: PILATES_ANSWERS,
+  /* 같은 반찬가게를 일반 · 전문가 두 대화 방식으로 만든 것(2026-11-14) — 비로그인 화면에서 구경하는 예시 */
+  sample_banchan_easy: BANCHAN_EASY_ANSWERS,
+  sample_banchan_expert: BANCHAN_EXPERT_ANSWERS,
   sample_coffee: COFFEE_ANSWERS,
   /* 꽃집 둘은 같은 사업을 다른 양식으로 쓴 것이라 답변을 공유한다 */
   sample_flower_psst: FLOWER_ANSWERS,
@@ -34,12 +40,14 @@ const SAMPLE_ANSWER_SETS: Record<string, Record<string, Record<string, unknown>>
 
 const SAMPLE_INDUSTRIES: Record<string, string> = {
   sample_pilates: "수업·예약",
+  sample_banchan_easy: "카페·음식점",
+  sample_banchan_expert: "카페·음식점",
   sample_coffee: "카페·음식점",
   sample_flower_psst: "매장·소매",
   sample_flower_fm: "매장·소매",
 };
 
-export const SAMPLE_DOCS: SampleDoc[] = [PILATES, COFFEE, FLOWER_PSST, FLOWER_FM].map((s) => ({
+export const SAMPLE_DOCS: SampleDoc[] = [BANCHAN_EASY, BANCHAN_EXPERT, PILATES, COFFEE, FLOWER_PSST, FLOWER_FM].map((s) => ({
   id: s.id,
   title: s.title,
   planType: s.planType,
@@ -49,7 +57,7 @@ export const SAMPLE_DOCS: SampleDoc[] = [PILATES, COFFEE, FLOWER_PSST, FLOWER_FM
 }));
 
 /** 내 사업 목록의 '완성 예시'에 보이는 샘플 */
-export const LISTED_SAMPLE_IDS: ReadonlySet<string> = new Set(["sample_pilates"]);
+export const LISTED_SAMPLE_IDS: ReadonlySet<string> = new Set(["sample_banchan_easy", "sample_banchan_expert", "sample_pilates"]);
 
 /** 샘플은 id 접두사로 판별 — 고치기·지우기·서버 저장 대상이 아니다 */
 export function isSampleId(id: string | null | undefined): boolean {
