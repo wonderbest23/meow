@@ -133,6 +133,9 @@ assert.match(cashflowReference(buildCashflowScenarios({ unitPrice: 3000, unitVar
   assert.doesNotMatch(text, /스토어|포장|택배|본전 판매량|더 팔 때/);
   assert.match(text, /서비스를 연 뒤/); assert.match(text, /본전 성사 건수/); assert.match(text, /한 건 수수료/);
   assert.equal(connect.breakEven, 35);
+  // 목표 기간은 세는 법을 한 줄로 넘긴다 — 장마다 '오늘부터'와 '개업 뒤'로 다르게 세지 않게
+  assert.match(cashflowReference(connect), /목표 기간 세는 법\(모든 장에서 같게 씁니다\): '6개월 안에'는 서비스를 열 때\(\d+주차\)부터 6개월로 셉니다/);
+  assert.doesNotMatch(cashflowReference(buildCashflowScenarios({ ...money, goal: "3개월 안에 개업", shape: cashflowShapeFor({ typeId: "platform", online: true, description: "과외 선생님 연결" }) })!), /목표 기간 세는 법/);
   // 물건을 파는 온라인 가게는 그대로 스토어 말을 쓴다
   const shop = buildCashflowScenarios({ ...money, shape: cashflowShapeFor({ typeId: "ship", online: true, description: "수제 캔들 스마트스토어" }) })!;
   assert.match(cashflowMarkdown(shop), /스토어를 공개한 뒤/); assert.match(cashflowMarkdown(shop), /포장·택배/);
