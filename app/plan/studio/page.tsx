@@ -9,5 +9,5 @@ import StudioLoading from "./loading";
  * 지운 사업 안내(DeletedBusinessGuard)는 여기서 한 번만 — 각 칸은 감싸기 없이 본문만 넣는다.
  */
 export default function StudioPage() {
-  return <BusinessKeyed adoptFirst fallback={<StudioLoading />}><Studio /></BusinessKeyed>;
+  return <BusinessKeyed adoptFirst keepSamples fallback={<StudioLoading />}><Studio /></BusinessKeyed>;
 }

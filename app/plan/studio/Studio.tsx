@@ -225,6 +225,9 @@ export default function Studio() {
   const [signedOut, setSignedOut] = useState(false);
   const account = useAccount();
   const [sampleFolded, setSampleFolded] = useState(false);
+  /* 누른 예시를 주소가 바뀌기 전에 먼저 펼친다 — 주소를 기다리면 누르고 한참 뒤에 카드가 열려 굼떠 보였다(2026-11-14). 주소가 따라오면 놓는다 */
+  const [pickedSample, setPickedSample] = useState<string | null>(null);
+  useEffect(() => { setPickedSample(current => current === planId ? null : current); }, [planId]);
   const [title, setTitle] = useState("");
   useEffect(() => {
     if (!planId || !intakeV2) return;
@@ -907,14 +910,14 @@ export default function Studio() {
                   <h2>완성 예시</h2>
                   <p>실제 AI가 만든 계획서예요. 고칠 수는 없고 구경만 할 수 있어요.</p>
                   {/* 누른 예시만 펼친다 — 카드 바로 아래에 그 계획서를 만든 대화가 이어지고, 다른 예시는 이름표와 제목만 남기고 접힌다(대표 요청 2026-11-14) */}
-                  {GUEST_SAMPLES.map(sample => { const current = planId === sample.id, open = current && !sampleFolded;
+                  {GUEST_SAMPLES.map(sample => { const current = (pickedSample ?? planId) === sample.id, open = current && !sampleFolded;
                     /* 어느 모드로 만든 것인지가 먼저 보여야 차이를 안다 — 모드 이름표를 가장 크게 */
                     const face = <><em data-kind={sample.kind}>{sample.kind}</em><strong>퇴근길 반찬가게</strong>{open && <><span>{sample.how}</span><small>{sample.note}</small></>}<ChevronDown className={styles.sampleMore} data-open={open || undefined} aria-hidden="true" /></>;
                     return <div key={sample.id} className={styles.sampleGroup} data-open={open || undefined} data-current={current || undefined}>
                       {/* 지금 보는 예시의 카드는 접기 · 펼치기 단추, 다른 예시의 카드는 그 예시로 가는 링크 */}
                       {current
                         ? <button type="button" className={styles.sampleItem} aria-expanded={open} aria-label={`${sample.kind} 예시 대화 ${open ? "접기" : "펼치기"}`} onClick={() => setSampleFolded(value => !value)}>{face}</button>
-                        : <Link href={`/plan/studio?planId=${sample.id}&tab=plan`} aria-expanded={false} className={styles.sampleItem} onClick={() => setSampleFolded(false)}>{face}</Link>}
+                        : <Link href={`/plan/studio?planId=${sample.id}${wide ? "&tab=plan" : ""}`} aria-expanded={false} className={styles.sampleItem} onClick={() => { setSampleFolded(false); setPickedSample(sample.id); }}>{face}</Link>}
                       {open && <div className={styles.sampleTalk} key={sample.id}>{/* 휴대폰은 계획서가 다른 칸이라 여기서 여는 길을 둔다 */}{!wide && <Link href={`/plan/studio?planId=${sample.id}&tab=plan`} className={styles.sampleView}>이 계획서 보기<ChevronRight size={16} aria-hidden="true" /></Link>}<SampleConversation planId={sample.id} /></div>}
                     </div>; })}
                   {noteGuideTurn}
@@ -933,7 +936,8 @@ export default function Studio() {
           {/* 미리보기 판 — PC 는 r16 흰 판(대화 열 오른쪽), 휴대폰은 머리 아래 전체 화면 */}
           <div className={styles.rightCol} data-visible={rightVisible || undefined} inert={!rightVisible}>
             <div className={styles.panes}>
-              {RIGHT_TABS.map(id => <Pane key={id} id={id} planId={planId} visible={rightVisible && rightTab === id} nav={navSeq[id] ?? 0} refresh={refreshSeq[id] ?? 0} className={styles.pane} headingRef={headingRef(id)}>
+              {/* 예시에서 예시로 옮길 때는 작업실을 다시 그리지 않으므로(BusinessKeyed keepSamples) 오른쪽 칸을 사업마다 새로 그린다 — 칸 본문은 처음 열 때만 주소의 사업을 읽는다 */}
+              {RIGHT_TABS.map(id => <Pane key={isSamplePlan(planId) ? `${id}:${planId}` : id} id={id} planId={planId} visible={rightVisible && rightTab === id} nav={navSeq[id] ?? 0} refresh={refreshSeq[id] ?? 0} className={styles.pane} headingRef={headingRef(id)}>
                 {rightBody(id)}
               </Pane>)}
             </div>
