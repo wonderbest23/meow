@@ -221,6 +221,13 @@ async function main() {
     assert.equal(estimateIntake("맞벌이 집에 주 2회 반찬을 정기배송하려고 해요. 당근이랑 네이버 밴드로 주문받고 한 번에 2만원", undefined, ruleKind).word, "반찬");
     assert.equal(estimateIntake("20대 여성 의류를 온라인 쇼핑몰이랑 지그재그, 에이블리에서 팔려고요. 원피스 3만원대", undefined, ruleKind).word, "여성의류");
     assert.equal(estimateIntake("직접 볶은 원두를 스마트스토어랑 오늘의집에서 팔고 싶어요. 200g에 만5천원", undefined, ruleKind).word, "원두판매");
+    // 두 쪽을 잇는 사업은 공급자가 하는 일이 아니라 연결이 사업이다 — 한 건 수수료(공급자 값의 10%)
+    const match = estimateIntake("학부모와 대학생 과외 선생님을 매칭해 주는 서비스를 하고 싶어요", undefined, ruleKind);
+    assert.equal(match.sector, "software"); assert.equal(match.word, "과외 선생님 연결"); assert.equal(match.answers.offer, "과외 선생님 연결 수수료(1건)"); assert.equal(match.answers.price, "40000원");
+    assert.equal(estimateIntake("반려견 보호자와 동네 펫시터를 연결해 주는 예약 서비스를 앱으로 만들려고요", undefined, ruleKind).word, "펫시터 연결");
+    // 이미 잇는 사업 줄(소개팅 주선)과 잇는 말이 없는 문장(과외를 직접 한다)은 그대로
+    assert.equal(estimateIntake("혼자 지내는 어르신을 서로 소개해 주는 소개팅 서비스를 하려고요", undefined, ruleKind).word, "소개팅");
+    assert.equal(estimateIntake("중학생 코딩 과외를 숨고와 김과외에서 구해서 하려고 합니다", undefined, ruleKind).sector, "education");
     // 남는 종류가 없으면 파는 곳이 곧 사업이다 — 다만 제목은 문장 앞부분
     assert.equal(estimateIntake("플리마켓에서 이것저것 팔아 보려고요", undefined, ruleKind).word, "플리마켓");
     const venue = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "플리마켓에서 이것저것 팔아 보려고요", revision: 0, requestId: randomUUID() }, off);
