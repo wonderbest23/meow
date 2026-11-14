@@ -200,6 +200,15 @@ async function main() {
     assert.match(readCoach(riding.plan.answers)!.fields.find(field => field.key === "offer")?.value ?? "", /승마/);
   }
   // 문장에 적은 자금·시간은 초안에 들어간다(적지 않았으면 위처럼 비워 둔다)
+  // 길게 적은 문장이 제목이 되지 않는다 — 기준표가 찾은 이름(적은 띄어쓰기대로), 못 찾으면 첫 구절만
+  {
+    const long = "강아지 수제 간식을 만들어서 스마트스토어랑 인스타에서 팔고 싶어요. 한 봉지에 8천원 정도 생각해요";
+    const named = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: long, revision: 0, requestId: randomUUID() }, off);
+    assert.equal(named.plan.title, "강아지 수제 간식");
+    assert.equal(readCoach(named.plan.answers)!.business.description, long, "적은 문장은 그대로 남는다");
+    const vague = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "뭔가 사람들한테 도움되는 걸 하고 싶어요. 아직 잘 모르겠지만 천천히 정해 보려고 합니다", revision: 0, requestId: randomUUID() }, off);
+    assert.equal(vague.plan.title, "뭔가 사람들한테 도움되는 걸 하고 싶어요");
+  }
   const stated = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "자본금 3천만원으로 주 20시간만 하는 네일샵을 열려고 해요", revision: 0, requestId: randomUUID() }, off);
   const statedFields = readCoach(stated.plan.answers)!.fields;
   assert.deepEqual(["budget", "hoursPerWeek"].map(key => statedFields.find(field => field.key === key)?.value), ["30000000원", "20시간"]);

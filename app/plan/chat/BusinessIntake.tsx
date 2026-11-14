@@ -979,7 +979,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     const bottom = container.scrollHeight - container.clientHeight;
     // 채팅처럼 새 내용이 오면 맨 아래까지 따라 내려간다. 다만 선택지가 길어 맨 아래로 가면
     // 지금 질문의 제목이 화면 위로 사라질 때는, 제목이 화면 맨 위에 오는 곳에서 멈춘다.
-    const turnTop = turn ? container.scrollTop + turn.getBoundingClientRect().top - containerTop - 16 : bottom;
+    // 지금 차례가 숨겨진 동안(적은 글을 읽는 중)은 맨 아래 — 읽는 중 줄이 보이게
+    const turnTop = turn && !turn.hidden ? container.scrollTop + turn.getBoundingClientRect().top - containerTop - 16 : bottom;
     let top = draftRef.current.editingId ? turnTop : Math.min(bottom, Math.max(0, turnTop));
     /*
      * 작업실의 작성 진행 카드는 사업안 카드 아래에 붙어, 지금 차례 맨 위에서 멈추면 1280 화면에서 카드 아래 절반이 잘렸다(점검 2026-10-23).
@@ -1675,6 +1676,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   }, [understandId]); // eslint-disable-line react-hooks/exhaustive-deps
   const understandingRef = useRef(false);
   useEffect(() => { understandingRef.current = understanding; });
+  // 읽기 시작하면 '적은 글을 읽고 있어요' 줄까지, 끝나면 다음 질문까지 내린다
+  useEffect(() => { follow.current = true; const frame = requestAnimationFrame(scrollToCurrent); return () => cancelAnimationFrame(frame); }, [understanding, scrollToCurrent]);
   const priceAnswer = plan?.intake.answers.price;
   /*
    * 계획서를 만든 대화의 입력창 — 고정 예시 칩 대신, 위 대화를 읽고 AI가 만든 '다음에 보낼 만한 말'을 회색 안내 글자로만 보인다(대표 결정 2026-11-13).

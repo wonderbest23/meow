@@ -65,7 +65,7 @@ export type KindRules = ((text: string, allow: (sector: ProposalSector, ksic: st
  * 질문 id → 짐작한 답(문자열). 고를 문구가 없는 질문은 빠진다 — 그 질문은 평소처럼 묻는다.
  * chosen·chosenKsic 은 사용자가 이미 고른 업종·분류다(짐작이 그것을 뒤집지 않는다). ksic 은 낱말 규칙으로 찾았을 때만 온다.
  */
-export function estimateIntake(text: string, chosen?: ProposalSector, rules?: KindRules, chosenKsic?: string | null): { sector: ProposalSector; ksic: string | null; /** 사전·규칙에서 사업 종류를 찾았는지 — 못 찾았으면 파는 것·고객은 짐작하지 않고 묻게 둔다 */ matched: boolean; answers: Record<string, string> } {
+export function estimateIntake(text: string, chosen?: ProposalSector, rules?: KindRules, chosenKsic?: string | null): { sector: ProposalSector; ksic: string | null; /** 사전·규칙에서 사업 종류를 찾았는지 — 못 찾았으면 파는 것·고객은 짐작하지 않고 묻게 둔다 */ matched: boolean; /** 찾은 사업 종류의 이름(임시 제목에 쓴다) */ word: string | null; answers: Record<string, string> } {
   // 흔한 표기 차이는 사전 표기로 맞춘 뒤 찾는다
   const spelled = text.replace(/까페/g, "카페").replace(/찌게/g, "찌개");
   // 문장이 앱·프로그램으로 끝나면 파는 것은 소프트웨어다 — 이때는 손님 업종 낱말('학원 전용')이 종류를 정하는 단서라 빼지 않는다
@@ -210,5 +210,5 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   if (sided && kind && answers.offer && !PLAIN_WORD.test(side![1]) && rules?.knows?.(side![1].toLowerCase()) && !answers.offer.includes(side![1])) answers.offer = `${answers.offer} · ${side![1]}`;
   // 종류를 못 찾았으면 업종 표의 넓은 답(1회 서비스·개인 소비자)을 채우지 않는다 — 그 두 질문은 평소처럼 묻는다. 문장에 적은 고객은 둔다
   if (!kind) { if (sector !== "software") delete answers.offer; if (!read.customer) delete answers.customer; }
-  return { sector, ksic: rule?.ksic ?? null, matched: !!kind, answers };
+  return { sector, ksic: rule?.ksic ?? null, matched: !!kind, word: kind?.word ?? null, answers };
 }

@@ -150,8 +150,9 @@ export default function StudioIntakeSummary({ snapshot }: { snapshot: IntakeSnap
     <div className={styles.sumBody} ref={list} data-empty={!rows.length || undefined}>
       {rows.length ? <>
         <div className={styles.sumHead} data-row={business ? "business" : undefined} data-fresh={business && fresh.includes("business") || undefined}>
-          <p className={styles.sumTitle}>{business?.value ?? (title || "아직 사업 소개를 정하지 않았어요")}{business && freshTag("business")}</p>
-          {business && title && <p className={styles.sumLead}>{title}</p>}
+          {/* 맨 위는 짧은 이름 — 길게 적은 문장은 그 아래 작은 글씨로(문장 전체가 제목이 되던 문제 2026-11-14) */}
+          <p className={styles.sumTitle}>{title || (business?.value ?? "아직 사업 소개를 정하지 않았어요")}{business && !title && freshTag("business")}</p>
+          {business && title && <p className={styles.sumLead}>{business.value}{freshTag("business")}</p>}
         </div>
         {textRows.length > 0 && <div className={styles.sumGroup}>
           <h4>사업</h4>
