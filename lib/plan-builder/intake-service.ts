@@ -12,7 +12,7 @@ import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, applyIntakeEstimates, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
+import { applyIntakeAnswer, applyIntakeEstimates, applyUnderstood, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { ruleKind } from "./kind-rules";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
@@ -175,6 +175,11 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     }
     else if (command.action === "resources") applyIntakeResources(plan, coach, intake, command, at);
     else if (command.action === "details") intake.detailsRequested = true;
+    else if (command.action === "understand") {
+      // 문장에서 읽은 답 — 계획서를 만든 뒤나 전문가 모드에서는 넣지 않는다(그때는 사용자가 직접 정한다)
+      if (!Object.keys(plan.sections).length && intake.depth !== "expert") applyUnderstood(coach, intake, command.understood ?? [], command.requestId, at);
+      intake.understood = true;
+    }
     else if (command.action === "depth") {
       // 대화 방식 바꾸기 — 계획서를 만든 뒤에는 질문이 아니라 계획서에서 고친다
       if (Object.keys(plan.sections).length) throw new IntakeError("depth_locked", "계획서를 만든 뒤에는 계획서에서 고칠 수 있어요", 409);

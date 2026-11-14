@@ -53,6 +53,15 @@ globalThis.fetch = async (input, init) => {
   const system = Array.isArray(body.system) ? body.system.map(b => b.text).join("\n") : String(body.system ?? "");
   if (!schema) { const m = system.match(/출력 스키마: (\{[\s\S]*\})\s*$/); if (m) { try { schema = JSON.parse(m[1]); } catch {} } }
   const wantsJson = !!schema || /유효한 JSON 객체 하나만/.test(system);
+  // 일반 모드의 '문장 읽기'(idea-understanding.ts)는 원문에 있는 구절만 받는다 — 가짜 답도 원문에서 뽑아 화면에 '이렇게 알아들었어요'가 보이게 한다
+  const said = body.output_config?.format?.name === "understood_idea" || /countPeriod/.test(JSON.stringify(schema ?? {}));
+  if (said) {
+    const source = (() => { try { return JSON.parse(userText(body.messages?.[0]?.content)).text ?? ""; } catch { return ""; } })();
+    const pick = re => source.match(re)?.[0] ?? "";
+    const fake = { price: pick(/\d+[만천]\s?원/), unitCost: "", monthlyCost: "", budget: "", hoursPerWeek: "", channel: pick(/스마트스토어|인스타|플리마켓/), customer: "", offer: "", goal: "",
+      staff: /혼자/.test(source) ? "solo" : "none", staffQuote: pick(/혼자[^.,]*/), days: /평일만/.test(source) ? "weekdays" : "none", daysQuote: pick(/평일만/), countPeriod: "none", countNumber: 0, countUnit: "", countQuote: "" };
+    return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(fake) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
+  }
   const text = schema ? JSON.stringify(gen(schema)) : wantsJson ? "{}" : markdown(userText(body.messages?.[0]?.content));
   console.log(`[fake-anthropic] ${schema ? "json" : wantsJson ? "json-noschema" : "text"} ${text.length}b`);
   // Optional pause so waiting screens (typing bubble, "정리 중") stay visible long enough to check.

@@ -223,6 +223,19 @@ async function main() {
       assert.match(String(confirmed.snapshot.intake.answers[unitCostId]?.value), /^50000/);
     } else assert.fail("전문가 방식 질문에 한 개 비용이 있어야 한다");
   }
+  // 일반 모드 '문장에서 읽은 답'(understand): 기준값으로 채운 답만 바꾸고(근거는 사용자), 사용자가 직접 답한 것은 건드리지 않는다. 사업마다 한 번 표시
+  {
+    const owner = `intake-estimate-${randomUUID()}`;
+    const made = await saveIntakeCommand(owner, { action: "start", mode: "startup", questionId: "business", value: "동네 네일샵을 열려고 해요", revision: 0, requestId: randomUUID() }, off);
+    const next = async (command: Record<string, unknown>) => { const current = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!; return saveIntakeCommand(owner, { ...command, planId: made.plan.id, revision: readCoach(current.answers)!.revision, requestId: randomUUID() } as never, off); };
+    await next({ action: "answer", questionId: "budget", value: 30000000 });
+    const priceId = made.snapshot.questions.find(question => question.fieldKey === "price")!.id;
+    const said = await next({ action: "understand", understood: [{ questionId: priceId, value: 45000 }, { questionId: "budget", value: 10000000 }, { questionId: "no-such-question", value: "x" }] });
+    assert.match(said.snapshot.intake.answers[priceId]!.messageId, /:said$/);
+    assert.equal(readCoach(said.plan.answers)!.fields.find(field => field.key === "price")?.basis, "user", "읽은 값은 사용자가 말한 값이다");
+    assert.match(String(said.snapshot.intake.answers.budget?.value), /^30000000/, "직접 답한 준비금은 읽은 값으로 덮지 않는다");
+    assert.equal(said.snapshot.intake.understood, true);
+  }
   assert.deepEqual(network, [], "네트워크 호출 0");
   console.log("intake-estimate: 8 businesses drafted from one sentence (AI 0회)");
 }

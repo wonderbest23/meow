@@ -1641,13 +1641,38 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   // 새 대화는 첫 화면의 두 카드로 고른다 — 이 작은 전환은 시작한 뒤 바꿀 때만
   const depthPick = !studioRoute && !loginGate && !!plan && !plan.hasDocuments && plan.intake.mode !== "operating" && !aiBusy;
   useEffect(() => { depthGateRef.current = depthGate; });
-  // 업종 기준값으로 채운 답(메시지 번호가 :estimate 로 끝난다) — 계획서를 만들기 전, 일반 모드에서만 보인다
-  const filledAnswers = plan && !plan.hasDocuments && plan.intake.depth !== "expert" ? plan.questions.flatMap(item => {
+  // 업종 기준값으로 채운 답(메시지 번호가 :estimate 로 끝난다)과 문장에서 읽은 답(:said) — 계획서를 만들기 전, 일반 모드에서만 보인다
+  const answerChips = (suffix: string) => plan && !plan.hasDocuments && plan.intake.depth !== "expert" ? plan.questions.flatMap(item => {
     const answer = plan.intake.answers[item.id];
-    if (!answer?.messageId?.endsWith(":estimate") || answer.status !== "answered") return [];
+    if (!answer?.messageId?.endsWith(suffix) || answer.status !== "answered") return [];
     const option = item.options?.find(choice => choice.value === answer.value)?.label;
-    return [{ id: item.id, label: item.label, value: option ?? (typeof answer.quote === "string" && answer.quote ? answer.quote : Array.isArray(answer.value) ? answer.value.join(", ") : `${answer.value ?? ""}${typeof answer.value === "number" ? item.unit ?? "" : ""}`) }];
+    const shown = option ?? (typeof answer.quote === "string" && answer.quote ? answer.quote : Array.isArray(answer.value) ? answer.value.join(", ") : `${answer.value ?? ""}`);
+    // 숫자만 남은 값에는 질문의 단위를 붙인다('9000' → '9000원')
+    return [{ id: item.id, label: item.label, value: /^\d[\d,]*$/.test(shown) ? `${shown}${item.unit ?? ""}` : shown }];
   }) : [];
+  const filledAnswers = answerChips(":estimate"), saidAnswers = answerChips(":said");
+  /*
+   * 일반 모드: 사업 문장을 적으면 AI로 한 번 읽어 말한 값을 기준값 대신 넣는다(/api/plan/chat/understand, 약 15원 · 2~4초).
+   * 기다리지 않는다 — 기준값으로 먼저 진행하고, 읽은 것이 오면 다시 불러와 '이렇게 알아들었어요'로 보인다. 실패하면 아무 일도 없다.
+   */
+  const understandId = plan && !plan.hasDocuments && plan.intake.mode === "startup" && plan.intake.depth !== "expert" && !plan.intake.understood && plan.intake.answers.business?.status === "answered" ? plan.planId : "";
+  const [understanding, setUnderstanding] = useState(false);
+  const understandAsked = useRef(new Set<string>());
+  useEffect(() => {
+    if (!understandId || understandAsked.current.has(understandId)) return;
+    understandAsked.current.add(understandId);
+    let alive = true;
+    setUnderstanding(true);
+    fetch("/api/plan/chat/understand", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ planId: understandId }) })
+      .then(async response => {
+        if (response.status !== 200) return;
+        // 답을 적는 중이면 끝난 뒤에 불러온다(reload 는 바쁘면 그냥 돌아온다)
+        for (let attempt = 0; attempt < 8 && alive; attempt++) { if (!busyRef.current) { await reload(); return; } await new Promise(resolve => setTimeout(resolve, 1500)); }
+      })
+      .catch(() => { /* 못 읽어도 기준값으로 진행된다 */ })
+      .finally(() => { if (alive) setUnderstanding(false); });
+    return () => { alive = false; };
+  }, [understandId]); // eslint-disable-line react-hooks/exhaustive-deps
   const priceAnswer = plan?.intake.answers.price;
   /*
    * 계획서를 만든 대화의 입력창 — 고정 예시 칩 대신, 위 대화를 읽고 AI가 만든 '다음에 보낼 만한 말'을 회색 안내 글자로만 보인다(대표 결정 2026-11-13).
@@ -1797,10 +1822,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
                 <Link href="/plan/chat?new=1" className={styles.textLink}>새 사업 기획</Link>
               </section>) : <>
             <ConversationHistory snapshot={plan} onEdit={editQuestion} receipt={receipt} readOnly={documentFixed} pro={pro} log={historyLog} />
-            {/* 일반 모드: 말하지 않아 채운 값을 한눈에 — '채웠어요' 한 줄만으로는 무엇을 어떻게 채웠는지 보이지 않았다. 누르면 그 답을 고친다 */}
-            {filledAnswers.length > 0 && <section className={styles.understood} aria-label="채운 내용">
-              <h3>말하지 않은 것은 이렇게 채웠어요 <small>다르면 눌러서 바꾸세요</small></h3>
-              <div>{filledAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value.replace(/\d{4,}/g, digits => Number(digits).toLocaleString("ko-KR"))}</button>)}</div>
+{/* 일반 모드: 문장에서 읽은 것(실선)과 말하지 않아 채운 것(점선)을 한눈에 — 누르면 그 답을 고친다 */}
+            {(saidAnswers.length > 0 || filledAnswers.length > 0) && <section className={styles.understood} aria-label="알아들은 내용">
+              {saidAnswers.length > 0 && <><h3>이렇게 알아들었어요 <small>다르면 눌러서 바꾸세요</small></h3>
+                <div data-said="">{saidAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value.replace(/\d{4,}/g, digits => Number(digits).toLocaleString("ko-KR"))}</button>)}</div></>}
+              {filledAnswers.length > 0 && <><h3>말하지 않은 것은 이렇게 채웠어요 <small>{understanding ? "적은 글을 읽고 있어요…" : "다르면 눌러서 바꾸세요"}</small></h3>
+                <div>{filledAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value.replace(/\d{4,}/g, digits => Number(digits).toLocaleString("ko-KR"))}</button>)}</div></>}
             </section>}
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}
