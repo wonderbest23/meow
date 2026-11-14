@@ -29,6 +29,7 @@ const RULES = [
   "- staff: 혼자 한다고 적혔으면 'solo', 직원 · 알바 · 동업자와 한다고 적혔으면 'team'. staffQuote 에 그 근거 구절을 원문 그대로.",
   "- days: 평일에만 한다고 적혔으면 'weekdays', 주말에만이면 'weekends'. daysQuote 에 근거 구절을 원문 그대로.",
   "- 하루 · 일주일 · 한 달에 감당하거나 받을 수 있는 양이 숫자로 적혔으면 countPeriod('하루'|'일주일'|'한 달') · countNumber(숫자) · countUnit(개 · 명 · 대 · 건 같은 세는 말) · countQuote(근거 구절 원문 그대로).",
+  "  기간 없이 '최대 15명까지'처럼 맡을 수 있는 전체 인원 · 양만 적혔으면 countPeriod 는 '한 달'로 둡니다. '4명씩 주 2회'처럼 한 번(한 반)의 인원과 횟수만 적힌 것은 전체 양이 아니므로 읽지 않습니다(none).",
 ].join("\n");
 // 출력 틀 — 없는 값은 빈 문자열 · "none" · 0 으로 적게 한다. '값 또는 null' 칸은 한 요청에 16개까지만 받아 준다(17개로 400, 2026-11-14)
 const text = { type: "string" };
@@ -64,7 +65,8 @@ export async function understandIdea(config: LLMConfig, text: string, signal?: A
   const raw = await completeJson(config, {
     kind: "intake-understand", system: RULES, user: JSON.stringify({ text: input }),
     jsonSchema: { name: "understood_idea", schema }, anthropicJsonSchema: true, effort: "low",
-    maxOutputTokens: 500, timeoutMs: 15_000, allowFallback: false, signal,
+    // 화면은 8초까지만 기다린다 — 서버가 그보다 먼저 포기해야 뒤늦게 저장해 사용자의 다음 답과 부딪히지 않는다
+    maxOutputTokens: 500, timeoutMs: 7_000, allowFallback: false, signal,
     onFailure: event => { failure = event.code; },
   });
   return { understood: cleanUnderstood(raw, input), model: config.model, totalMs: Date.now() - started, ...(failure ? { failure } : {}) };
