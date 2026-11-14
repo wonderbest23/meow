@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, ChevronRight, ArrowUp, Lightbulb, MoreHorizontal, Plus, Search } from "lucide-react";
+import { ArrowRight, ChevronRight, ArrowUp, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, readAuthFlag, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
@@ -14,6 +14,7 @@ import { DEPTH_PARAM, newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../.
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
 const openHref = planOpenHref;
+import { openLogin } from "../../components/login-dialog";
 import { GUEST_NEXT_KEY } from "./studio/StudioContext";
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
@@ -94,8 +95,8 @@ export default function PlanList() {
   // 로그인 여부 — 모르면(null) 로딩, 아니면(false) 로그인 화면으로. 확인에 실패하면 로딩이 '늦어지고 있어요'로 바뀌고 다시 시도가 새로 불러온다
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => { let alive = true; if (readAuthFlag()) setSignedIn(true); /* 직전에 로그인돼 있던 기기는 확인을 기다리지 않고 화면부터 그린다 — 풀렸으면 아래 확인이 로그인 화면으로 보낸다 */ loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}); return () => { alive = false; }; }, []);
-  // 로그인 전이면 로그인 화면만 세워 두지 않고 완성 예시 작업실로 보낸다(대표 요청 2026-11-14) — 예시 두 개를 구경하고 거기서 로그인 · 회원가입한다. 로그인하면 이 목록으로 돌아온다
-  useEffect(() => { if (signedIn !== false) return; try { sessionStorage.setItem(GUEST_NEXT_KEY, "/plan"); } catch { /* 못 적으면 새 대화로 */ } router.replace("/plan/studio?planId=sample_banchan_easy"); }, [signedIn, router]);
+  // 로그인 전에도 대화 입력 화면을 먼저 보여 준다(대표 결정 2026-11-14) — 예시 작업실로 바로 보내던 것을 바꿨다. 예시 두 개는 입력칸 아래 샘플 링크로, 보내면 로그인을 거쳐 그 문장으로 대화가 시작된다
+  useEffect(() => { if (signedIn !== false) return; try { sessionStorage.setItem(GUEST_NEXT_KEY, "/plan"); } catch { /* 못 적으면 새 대화로 */ } }, [signedIn]);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
   const plans = allPlans;
   const samples = state?.plans.filter(p => isSamplePlan(p.id) && LISTED_SAMPLE_IDS.has(p.id)) ?? [];
@@ -144,10 +145,11 @@ export default function PlanList() {
   }
   function sample(id: string) { setActivePlan(id); router.push(`/plan/document?planId=${encodeURIComponent(id)}`); }
 
-  /* 로그인 확인 전·로그인 안 됨 — 같은 틀 안에 로딩만(화면이 바뀌며 흔들리지 않게). 로그인 안 됐으면 위 effect 가 로그인 화면으로 보낸다 */
-  if (signedIn !== true) return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="new" backHref="/" home>
-    <PlanLoading fill variant="compact" note={signedIn === false ? "완성 예시를 열고 있어요" : "화면을 불러오고 있어요"} />
+  /* 로그인 확인 전 — 같은 틀 안에 로딩만(화면이 바뀌며 흔들리지 않게) */
+  if (signedIn === null) return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="new" backHref="/" home>
+    <PlanLoading fill variant="compact" note="화면을 불러오고 있어요" />
   </BusinessAppChrome></main>;
+  const guest = signedIn === false;
 
   const card = (p: Plan) => { const status=businessHubState(p); const display = planDisplayName(p); return <article key={p.id} className={`${mine.row} ${home.card}`}>
     {/* 썸네일 16:9 r8 — 문서 모양 자리 + 왼쪽 아래 상태 배지. 소개 글은 쓰지 않는다 — 글이 많아 번잡했고 제목·상태면 충분하다(2026-11-02 사장님) */}
@@ -194,13 +196,18 @@ export default function PlanList() {
       {!listOnly && <section className={home.hero} aria-labelledby="plan-home-greeting">
         {/* 인사말에 이름을 붙이지 않는다 — 계정에 이름이 없어 이메일 앞부분(rena35200+review님)이 그대로 보였다(운영 점검 2026-11-02). 동그라미 머리글자는 그대로 */}
         <h1 id="plan-home-greeting" className={home.greeting}>오늘은 어떤 사업을 시작해볼까요?</h1>
-        <Composer />
+        <Composer guest={guest} />
         {/* 휴대폰만 — 진행 중인 사업이 있으면 입력칸 아래에 최근 3개를 작게(바로 이어가게, 2026-11-04 사장님). 전체 목록은 아래 탭 '내 사업' 하나. PC는 아래 목록 카드가 보인다 */}
         {recent.length > 0 && <nav className={home.recent} aria-label="최근 사업">
           {recent.slice(0, 3).map(p => <Link key={p.id} href={openHref(p)} aria-label={`${planDisplayName(p)} 열기`}><span>{planDisplayName(p)}</span><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><ChevronRight size={16} aria-hidden="true" /></Link>)}
         </nav>}
+        {/* 완성 예시 두 개 — 아직 사업이 없는 사람(로그인 전 포함)만. 필요하면 눌러 본다 */}
+        {(guest || (!!state && allPlans.length === 0)) && <nav className={home.samples} aria-label="완성 예시">
+          <Link href="/plan/studio?planId=sample_banchan_easy">일반 (샘플)<ArrowRight size={14} aria-hidden="true" /></Link>
+          <Link href="/plan/studio?planId=sample_banchan_expert">전문가 (샘플)<ArrowRight size={14} aria-hidden="true" /></Link>
+        </nav>}
       </section>}
-      <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">
+      {!guest && <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">
         {/* 사업 카드만 보는 화면 — 제목(휴대폰은 lovable Projects 탭처럼 30/600 + 오른쪽 44 원 검색 단추) */}
         {listOnly && <div className={home.listHead}>
           <h1 className={home.listTitle}>내 사업</h1>
@@ -215,7 +222,7 @@ export default function PlanList() {
           {!listOnly && <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={home.browse}>전체 둘러보기<ArrowRight size={16} aria-hidden="true" /></Link>}
         </div>
         {list}
-      </section>
+      </section>}
       {/* 휴대폰 '내 사업' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
       {listOnly && <Link href={newChatHref()} className={home.newFloat}><Plus size={20} aria-hidden="true" />새 사업</Link>}
     </div>
@@ -224,9 +231,9 @@ export default function PlanList() {
 
 /*
  * 큰 입력칸 672×97 r28 — 보내면 새 대화로(첫 화면 입력칸과 같은 길: newChatHref(idea) + 5분 보관본 — 로그인을 거쳐도 이어진다).
- * Enter 보내기 · Shift+Enter 줄바꿈 · 한글 조합 중에는 보내지 않는다. 전구는 예시 문장 넣기. 말로 입력하기(마이크)는 뺐다(대표 결정 2026-11-14).
+ * Enter 보내기 · Shift+Enter 줄바꿈 · 한글 조합 중에는 보내지 않는다. 예시 문장 넣기(전구)는 뺐다 — 누를 때마다 같은 문장이고 입력칸에 이미 흐리게 보인다(대표 결정 2026-11-14). 말로 입력하기(마이크)는 뺐다(대표 결정 2026-11-14).
  */
-function Composer() {
+function Composer({ guest = false }: { guest?: boolean }) {
   const router = useRouter();
   const [text, setText] = useState("");
   const field = useRef<HTMLTextAreaElement>(null);
@@ -242,9 +249,12 @@ function Composer() {
     let storage: Storage | null = null;
     try { storage = window.sessionStorage; } catch { /* 저장소가 막혀 있으면 주소로만 넘어간다 */ }
     stashLandingIdea(storage, idea, Date.now());
+    const href = `${newChatHref(idea)}${depth === "expert" ? `&${DEPTH_PARAM}=expert` : ""}`;
+    /* 로그인 전 — 예시 작업실로 튕기지 않고 그 자리에서 로그인 창을 띄운다. 로그인하면 적은 문장으로 대화가 시작된다 */
+    if (guest) { openLogin(href); return; }
     setSending(true);
     /* 대화 화면이 홈에서 확대되며 열리고 입력칸이 대화 입력칸으로 이어진다(globals.css ::view-transition) */
-    navigateWithTransition(() => router.push(`${newChatHref(idea)}${depth === "expert" ? `&${DEPTH_PARAM}=expert` : ""}`));
+    navigateWithTransition(() => router.push(href));
   }
   function onKey(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); }
@@ -252,7 +262,6 @@ function Composer() {
   return <form className={home.composer} onSubmit={send} aria-busy={sending || undefined}>
     <TextArea ref={field} className={home.composerField} aria-label="어떤 사업을 시작할지 적어 주세요" placeholder={`예: ${EXAMPLE_IDEA}`} rows={1} maxLength={LANDING_IDEA_MAX} value={text} onChange={event => setText(event.target.value)} onKeyDown={onKey} />
     <div className={home.composerBar}>
-      <button type="button" className={home.circle} aria-label="예시 문장 넣기" title="예시 문장 넣기" onClick={() => { setText(EXAMPLE_IDEA); field.current?.focus(); }}><Lightbulb size={18} aria-hidden="true" /></button>
       <div className={home.mode} role="group" aria-label="대화 모드">
         {(["easy", "expert"] as const).map(value => <button key={value} type="button" aria-pressed={depth === value} aria-label={value === "easy" ? "일반 모드" : "전문가 모드"} title={value === "easy" ? "한 문장만 말하면 나머지는 채워서 바로 만들어요" : "하나씩 자세히 묻고 정해요"} onClick={() => setDepth(value)}>{value === "easy" ? "일반" : "전문가"}</button>)}
       </div>
