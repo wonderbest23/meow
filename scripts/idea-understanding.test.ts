@@ -20,7 +20,12 @@ assert.deepEqual(understoodAnswers(cleaned, questions, "직원·아르바이트 
 assert.deepEqual(understoodAnswers({ staff: "solo" }, questions, "직원·아르바이트 1~2명 / 하루 50건"), [{ questionId: "capacity", value: "대표자 혼자 / 하루 50건" }], "사람만 말했으면 양은 지금 값을 둔다");
 assert.deepEqual(understoodAnswers({ days: "weekends" }, questions, "대표자 혼자 / 하루 80건"), [{ questionId: "capacity", value: "대표자 혼자 · 주말만 / 일주일 160건" }]);
 assert.deepEqual(understoodAnswers({ channel: "스마트스토어", monthlyCost: "150만원" }, questions), [{ questionId: "structure.cost", value: 1_500_000 }, { questionId: "channel", value: ["스마트스토어"] }]);
-assert.deepEqual(understoodAnswers({ offer: "네일샵" }, [...questions, q("offer", "offer")]), [], "상품은 옮기지 않는다(가게 이름이 들어온다)");
+assert.deepEqual(understoodAnswers({ offer: "네일샵" }, [...questions, q("offer", "offer")]), [], "가게 이름은 상품으로 옮기지 않는다");
+assert.deepEqual(understoodAnswers({ offer: "작은 카페" }, [...questions, q("offer", "offer")]), []);
+// 상품 · 서비스 구절과 손님의 문제는 적은 말 그대로 옮긴다(2026-11-14 — 첨부를 빼면서 붙여 넣은 글이 같은 일을 하게)
+assert.deepEqual(understoodAnswers({ offer: "국 하나를 포함한 반찬 4가지 한 묶음", problem: "반찬을 만들 시간이 없다" }, [...questions, q("offer", "offer"), q("problem", "problem", "multi")]),
+  [{ questionId: "offer", value: "국 하나를 포함한 반찬 4가지 한 묶음" }, { questionId: "problem", value: ["반찬을 만들 시간이 없다"] }]);
+assert.equal(cleanUnderstood({ problem: "원문에 없는 문제" }, "반찬을 만들 시간이 없다").problem, undefined);
 assert.deepEqual(understoodAnswers({}, questions, "대표자 혼자 / 하루 50건"), []);
 // 보일 때는 사용자가 적은 말에 가깝게 — 저장값(일주일 N)은 계산용
 assert.equal(capacityDaysDisplay("대표자 혼자 · 평일만 / 일주일 400건"), "대표자 혼자 / 하루 80건 · 평일만");

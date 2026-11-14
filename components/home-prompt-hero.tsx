@@ -18,7 +18,6 @@ import { Children, cloneElement, isValidElement, useCallback, useEffect, useRef,
 import { useRouter } from "next/navigation";
 import { composerEnterSends } from "../app/plan/chat/intake-ui/guidance";
 import { newChatHref } from "../lib/plan-builder/studio";
-import { nativePlatform } from "../lib/native-app";
 import { LANDING_IDEA_MAX, normalizeLandingIdea, stashLandingIdea } from "../lib/plan-builder/landing-idea";
 import { IphoneMockup } from "./iphone-mockup";
 import styles from "./home-prompt-hero.module.css";
@@ -136,28 +135,6 @@ function ShowcaseView({ item, kind, note, loading }: { item: ShowcaseItem; kind:
   </>;
 }
 
-type SpeechRecognitionLike = {
-  lang: string; interimResults: boolean; continuous: boolean;
-  onresult: ((event: { resultIndex: number; results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }> }) => void) | null;
-  onerror: ((event: { error: string }) => void) | null;
-  onend: (() => void) | null;
-  start: () => void; stop: () => void;
-};
-type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
-function speechRecognition(): SpeechRecognitionCtor | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as { SpeechRecognition?: SpeechRecognitionCtor; webkitSpeechRecognition?: SpeechRecognitionCtor };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
-
-/*
- * 앱(아이폰·안드로이드) 안에서는 마이크 단추를 숨긴다 — 앱 설정(Info.plist)에 마이크·음성 인식 사용 설명이 없어
- * 눌러도 쓸 수 없다. 앱은 User-Agent 끝에 OneulstartApp 을 붙인다(mobile/capacitor.config.json).
- */
-function inNativeApp() {
-  return nativePlatform() !== null || (typeof navigator !== "undefined" && navigator.userAgent.includes("OneulstartApp"));
-}
-
 /*
  * 가운뎃점(·)으로 이은 낱말('계획서·홈페이지·개업')은 한 덩어리로 — 휴대폰에서 '·개업'처럼 점부터 새 줄이 시작됐다(2026-10-24).
  * 점 앞뒤에 줄바꿈 금지 문자(U+2060)를 넣는다. 관리자 문구(글·<br/> 조각)도 같은 규칙으로.
@@ -203,12 +180,8 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
   /* 움직임을 처음부터 다시 돌릴 때마다 하나씩 — 화면 안 움직임과 진행 막대를 같은 순간에 새로 시작한다 */
   const [run, setRun] = useState(0);
   const [slots, setSlots] = useState<Slot[]>(() => SLOTS.map(() => ({ set: 0, phase: "hold" })));
-  const [micReady, setMicReady] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [micNote, setMicNote] = useState("");
   const textarea = useRef<HTMLTextAreaElement>(null);
   const form = useRef<HTMLFormElement>(null);
-  const recognition = useRef<SpeechRecognitionLike | null>(null);
   const timers = useRef(new Set<number>());
   /** 마지막으로 친 예시 번호 — 입력칸을 비우고 나가면 처음이 아니라 다음 예시부터 친다 */
   const promptIndex = useRef(0);
@@ -224,11 +197,10 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setMounted(true);
     setReduced(media.matches);
-    setMicReady(!!speechRecognition() && !inNativeApp());
     const onChange = () => setReduced(media.matches);
     media.addEventListener("change", onChange);
     const pending = timers.current;
-    return () => { media.removeEventListener("change", onChange); pending.forEach(id => window.clearTimeout(id)); pending.clear(); recognition.current?.stop(); };
+    return () => { media.removeEventListener("change", onChange); pending.forEach(id => window.clearTimeout(id)); pending.clear(); };
   }, []);
 
   /*
@@ -350,7 +322,6 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
   const submit = () => {
     const idea = normalizeLandingIdea(text);
     if (idea) rememberLandingIdea(idea);
-    recognition.current?.stop();
     router.push(landingIdeaHref(idea));
   };
 
@@ -359,26 +330,6 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
       event.preventDefault();
       submit();
     }
-  };
-
-  const toggleMic = () => {
-    if (listening) { recognition.current?.stop(); return; }
-    const Recognition = speechRecognition();
-    if (!Recognition) return;
-    const engine = new Recognition();
-    engine.lang = "ko-KR";
-    engine.interimResults = false;
-    engine.continuous = false;
-    engine.onresult = event => {
-      let heard = "";
-      for (let i = event.resultIndex; i < event.results.length; i += 1) if (event.results[i].isFinal) heard += event.results[i][0].transcript;
-      if (heard.trim()) setText(current => `${current}${current && !/\s$/.test(current) ? " " : ""}${heard.trim()}`.slice(0, IDEA_LIMIT));
-    };
-    engine.onerror = event => setMicNote(event.error === "not-allowed" || event.error === "service-not-allowed" ? "마이크 사용을 허용하면 말로 적을 수 있어요." : event.error === "no-speech" ? "말소리가 들리지 않았어요. 다시 눌러 말해 주세요." : "음성 입력을 쓰지 못했어요. 글로 적어 주세요.");
-    engine.onend = () => { setListening(false); recognition.current = null; };
-    recognition.current = engine;
-    setMicNote("");
-    try { engine.start(); setListening(true); } catch { setListening(false); setMicNote("음성 입력을 쓰지 못했어요. 글로 적어 주세요."); }
   };
 
   const pickTab = (index: number) => { setManual(true); if (index === tabRef.current) setRun(value => value + 1); cutTo(index); };
@@ -422,11 +373,7 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
         {overlay && <p className={styles.typing} aria-hidden="true">{typed}<span className={styles.caret} /></p>}
       </div>
       <div className={styles.actions}>
-        {micNote && <p className={styles.micNote} role="status">{micNote}</p>}
         <span className={styles.spacer} />
-        {micReady && <button type="button" className={styles.iconButton} aria-label={listening ? "음성 입력 멈추기" : "음성으로 말하기"} aria-pressed={listening} data-listening={listening || undefined} onClick={toggleMic}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
-        </button>}
         <button type="submit" className={styles.send} aria-label="대화 시작하기">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg>
         </button>
