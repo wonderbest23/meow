@@ -3,13 +3,13 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, ChevronRight, ArrowUp, Mic, Lightbulb, MoreHorizontal, Plus, Search } from "lucide-react";
+import { ArrowRight, ChevronRight, ArrowUp, Lightbulb, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, readAuthFlag, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
 import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
 import { navigateWithTransition } from "../../lib/client/view-transition";
-import { newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
+import { DEPTH_PARAM, newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
@@ -222,26 +222,17 @@ export default function PlanList() {
   </BusinessAppChrome></main>;
 }
 
-type Recognition = { lang: string; interimResults: boolean; onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null; onend: (() => void) | null; onerror: (() => void) | null; start: () => void; stop: () => void };
-function speechRecognition(): (new () => Recognition) | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
-
 /*
  * 큰 입력칸 672×97 r28 — 보내면 새 대화로(첫 화면 입력칸과 같은 길: newChatHref(idea) + 5분 보관본 — 로그인을 거쳐도 이어진다).
- * Enter 보내기 · Shift+Enter 줄바꿈 · 한글 조합 중에는 보내지 않는다. ＋ 는 예시 문장 넣기, 마이크는 브라우저가 받아쓰기를 지원할 때만.
+ * Enter 보내기 · Shift+Enter 줄바꿈 · 한글 조합 중에는 보내지 않는다. 전구는 예시 문장 넣기. 말로 입력하기(마이크)는 뺐다(대표 결정 2026-11-14).
  */
 function Composer() {
   const router = useRouter();
   const [text, setText] = useState("");
-  const [listening, setListening] = useState(false);
-  const [canListen, setCanListen] = useState(false);
   const field = useRef<HTMLTextAreaElement>(null);
   const [sending, setSending] = useState(false);
-  const recognition = useRef<Recognition | null>(null);
-  useEffect(() => { setCanListen(!!speechRecognition()); return () => recognition.current?.stop(); }, []);
+  /* 대화 방식 — 처음엔 일반. 전문가를 고르고 보내면 주소 인자로 실어 대화가 전문가 모드로 시작한다(대표 결정 2026-11-14) */
+  const [depth, setDepth] = useState<"easy" | "expert">("easy");
   /* 작업실 경로를 미리 받아 둔다 — 보낼 때 코드 묶음을 그제야 받아 버벅였다 */
   useEffect(() => { router.prefetch(newChatHref()); }, [router]);
   const idea = normalizeLandingIdea(text);
@@ -253,28 +244,19 @@ function Composer() {
     stashLandingIdea(storage, idea, Date.now());
     setSending(true);
     /* 대화 화면이 홈에서 확대되며 열리고 입력칸이 대화 입력칸으로 이어진다(globals.css ::view-transition) */
-    navigateWithTransition(() => router.push(newChatHref(idea)));
+    navigateWithTransition(() => router.push(`${newChatHref(idea)}${depth === "expert" ? `&${DEPTH_PARAM}=expert` : ""}`));
   }
   function onKey(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); }
-  }
-  function listen() {
-    if (listening) { recognition.current?.stop(); return; }
-    const Speech = speechRecognition();
-    if (!Speech) return;
-    const r = new Speech();
-    r.lang = "ko-KR"; r.interimResults = false;
-    r.onresult = result => { const said = Array.from(result.results).map(item => item[0]?.transcript ?? "").join(" ").trim(); if (said) setText(value => (value ? `${value} ${said}` : said).slice(0, LANDING_IDEA_MAX)); };
-    r.onend = () => setListening(false); r.onerror = () => setListening(false);
-    recognition.current = r; setListening(true);
-    try { r.start(); } catch { setListening(false); }
   }
   return <form className={home.composer} onSubmit={send} aria-busy={sending || undefined}>
     <TextArea ref={field} className={home.composerField} aria-label="어떤 사업을 시작할지 적어 주세요" placeholder={`예: ${EXAMPLE_IDEA}`} rows={1} maxLength={LANDING_IDEA_MAX} value={text} onChange={event => setText(event.target.value)} onKeyDown={onKey} />
     <div className={home.composerBar}>
       <button type="button" className={home.circle} aria-label="예시 문장 넣기" title="예시 문장 넣기" onClick={() => { setText(EXAMPLE_IDEA); field.current?.focus(); }}><Lightbulb size={18} aria-hidden="true" /></button>
+      <div className={home.mode} role="group" aria-label="대화 모드">
+        {(["easy", "expert"] as const).map(value => <button key={value} type="button" aria-pressed={depth === value} aria-label={value === "easy" ? "일반 모드" : "전문가 모드"} title={value === "easy" ? "한 문장만 말하면 나머지는 채워서 바로 만들어요" : "하나씩 자세히 묻고 정해요"} onClick={() => setDepth(value)}>{value === "easy" ? "일반" : "전문가"}</button>)}
+      </div>
       <span className={home.spacer} />
-      {canListen && <button type="button" className={home.circle} aria-label={listening ? "받아쓰기 멈추기" : "말로 입력하기"} aria-pressed={listening} onClick={listen}><Mic size={18} aria-hidden="true" /></button>}
       <button type="submit" className={`${home.circle} ${home.send}`} aria-label="보내기 — 새 대화 시작" disabled={!idea}><ArrowUp size={16} aria-hidden="true" /></button>
     </div>
   </form>;

@@ -139,6 +139,8 @@ export function newChatHref(idea = "", studio = STUDIO_REDIRECT): string {
  * 첫 화면 '어떤 사업이든' 카드가 고른 시작 방식 — 새 대화의 첫 선택지(아이디어를 찾고 있어요 · 생각한 사업이 있어요 · 사업을 운영 중이에요)를
  * 대신 골라 준다(BusinessIntake 가 한 번 읽고 주소에서 지운다). 이름이 start 가 아닌 건 start=1(결제 뒤 작성 시작)과 겹치지 않게.
  */
+/** 첫 화면 입력창에서 고른 대화 방식(전문가)을 새 대화로 싣는 주소 인자 — 없으면 일반 모드(2026-11-14) */
+export const DEPTH_PARAM = "depth";
 export const ENTRY_PARAM = "entry";
 export const ENTRY_MODES = ["exploring", "startup", "operating"] as const;
 export type EntryMode = typeof ENTRY_MODES[number];
