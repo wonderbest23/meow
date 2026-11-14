@@ -63,17 +63,18 @@ function rememberLastIntake(planId: string, signedIn: boolean) {
 /** 로그인 전 방문자에게 질문 대신 보여 주는 첫 화면 — 안내 버튼을 한 번 더 누르지 않게 로그인 폼을 바로 펼친다. 로그인하면 지금 주소(새 대화·사업)로 돌아온다. */
 /*
  * 로그인이 필요한 대화 칸.
- * PC 작업실(guestStudio): 안내 상자를 세워 두지 않고 완성 예시 작업실로 보낸다 — 결제한 사람의 작업실처럼 왼쪽에 만들어진 사업 두 개,
+ * 작업실(guestStudio, PC · 휴대폰): 안내 상자를 세워 두지 않고 완성 예시 작업실로 보낸다 — 결제한 사람의 작업실처럼 왼쪽에 만들어진 사업 두 개,
  * 오른쪽에 그 계획서가 보이고 로그인 · 회원가입은 왼쪽 아래에 있다(대표 요청 2026-11-14). 오던 주소는 적어 두었다가 로그인 뒤 그리로 돌아간다.
- * 휴대폰: 예시만 볼 수 있다는 안내와 예시 두 개 아래에 로그인 폼을 그 자리에 펼친다.
+ * 작업실 밖(예전 대화 화면): 예시만 볼 수 있다는 안내와 예시 두 개 아래에 로그인 폼을 그 자리에 펼친다.
  */
-function LoginGate({ guestStudio = false }: { guestStudio?: boolean }) {
+function LoginGate({ guestStudio = false, wide = false }: { guestStudio?: boolean; wide?: boolean }) {
   const next = typeof window === "undefined" ? "/plan/chat?new=1" : `${window.location.pathname}${window.location.search}`;
   useEffect(() => {
     if (!guestStudio) return;
     try { sessionStorage.setItem(GUEST_NEXT_KEY, next); } catch { /* 못 적으면 로그인 뒤 새 대화로 간다 */ }
-    window.location.replace("/plan/studio?planId=sample_banchan_easy&tab=plan");
-  }, [guestStudio, next]);
+    // PC는 오른쪽에 계획서가 같이 보이고, 휴대폰은 예시 목록 · 대화 · 로그인 단추가 있는 대화 칸부터 연다
+    window.location.replace(`/plan/studio?planId=sample_banchan_easy${wide ? "&tab=plan" : ""}`);
+  }, [guestStudio, wide, next]);
   if (guestStudio) return <PlanLoading fill note="완성 예시를 열고 있어요" />;
   return <><div className={styles.loginNotice}>
     <strong>지금은 로그인 전이라 예시만 볼 수 있어요</strong>
@@ -1767,7 +1768,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
           {/* '사업계획서 만들기'를 누른 뒤 — 단추가 화면 밖으로 밀려도 알 수 있게 화면 전체에 같은 로딩(얇은 원)을 덮는다 */}
           {preparing && <div className={styles.prepareCover}><PlanLoading fill={!embedded} note="사업계획서를 준비하고 있어요" /></div>}
-          {!loaded ? <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate guestStudio={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} onDepth={coach ? setStartDepth : undefined} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><p>{MISSING_BUSINESS_DETAIL}</p><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan/chat?new=1" className={styles.textLink}>새 대화 시작하기</Link></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan" className={styles.textLink}>내 사업으로</Link></>}</section>
+          {!loaded ? <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate guestStudio={embedded} wide={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} onDepth={coach ? setStartDepth : undefined} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><p>{MISSING_BUSINESS_DETAIL}</p><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan/chat?new=1" className={styles.textLink}>새 대화 시작하기</Link></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan" className={styles.textLink}>내 사업으로</Link></>}</section>
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.

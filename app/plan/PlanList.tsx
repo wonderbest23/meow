@@ -14,6 +14,7 @@ import { newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-bu
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
 const openHref = planOpenHref;
+import { GUEST_NEXT_KEY } from "./studio/StudioContext";
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
 import BusinessEmptyState from "./BusinessEmptyState";
@@ -93,7 +94,8 @@ export default function PlanList() {
   // 로그인 여부 — 모르면(null) 로딩, 아니면(false) 로그인 화면으로. 확인에 실패하면 로딩이 '늦어지고 있어요'로 바뀌고 다시 시도가 새로 불러온다
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => { let alive = true; if (readAuthFlag()) setSignedIn(true); /* 직전에 로그인돼 있던 기기는 확인을 기다리지 않고 화면부터 그린다 — 풀렸으면 아래 확인이 로그인 화면으로 보낸다 */ loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}); return () => { alive = false; }; }, []);
-  useEffect(() => { if (signedIn === false) router.replace("/account?next=%2Fplan"); }, [signedIn, router]);
+  // 로그인 전이면 로그인 화면만 세워 두지 않고 완성 예시 작업실로 보낸다(대표 요청 2026-11-14) — 예시 두 개를 구경하고 거기서 로그인 · 회원가입한다. 로그인하면 이 목록으로 돌아온다
+  useEffect(() => { if (signedIn !== false) return; try { sessionStorage.setItem(GUEST_NEXT_KEY, "/plan"); } catch { /* 못 적으면 새 대화로 */ } router.replace("/plan/studio?planId=sample_banchan_easy"); }, [signedIn, router]);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
   const plans = allPlans;
   const samples = state?.plans.filter(p => isSamplePlan(p.id) && LISTED_SAMPLE_IDS.has(p.id)) ?? [];
@@ -144,7 +146,7 @@ export default function PlanList() {
 
   /* 로그인 확인 전·로그인 안 됨 — 같은 틀 안에 로딩만(화면이 바뀌며 흔들리지 않게). 로그인 안 됐으면 위 effect 가 로그인 화면으로 보낸다 */
   if (signedIn !== true) return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="new" backHref="/" home>
-    <PlanLoading fill variant="compact" note={signedIn === false ? "로그인 화면으로 가고 있어요" : "화면을 불러오고 있어요"} />
+    <PlanLoading fill variant="compact" note={signedIn === false ? "완성 예시를 열고 있어요" : "화면을 불러오고 있어요"} />
   </BusinessAppChrome></main>;
 
   const card = (p: Plan) => { const status=businessHubState(p); const display = planDisplayName(p); return <article key={p.id} className={`${mine.row} ${home.card}`}>
