@@ -1005,6 +1005,20 @@ button.workLogRow { min-height: 32px; }
 .loginNotice > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .loginNotice > div a { display: inline-flex; align-items: center; gap: 2px; min-height: 42px; padding: 0 14px; border: 1px solid var(--app-line-strong); border-radius: 999px; background: var(--app-surface); color: var(--app-text); font-weight: 600; text-decoration: none; }
 .loginNotice > div a:hover { background: var(--app-hover); }
+/* 일반 모드 첫 화면 — 적을 말의 예와, 다른 시작 길 두 개(작게) */
+.entryExample { margin: 6px 0 14px; color: var(--app-muted); font-size: .8125rem; line-height: 1.6; word-break: keep-all; }
+.entryOther { display: flex; flex-wrap: wrap; gap: 6px; }
+.entryOther button { min-height: 36px; padding: 0 12px; border: 1px solid var(--app-line); border-radius: 999px; background: transparent; color: var(--app-body); font: inherit; font-size: .8125rem; }
+.entryOther button:hover:not(:disabled) { border-color: var(--app-line-strong); color: var(--app-text); }
+/* 일반 모드에서 업종 기준값으로 채운 답 — 누르면 고친다 */
+.understood { margin: 4px 0 16px; padding: 14px; border: 1px solid var(--app-line); border-radius: 14px; background: var(--app-surface); animation: depthCardIn .35s both; }
+@media (prefers-reduced-motion: reduce) { .understood { animation: none; } }
+.understood h3 { margin: 0 0 10px; font-size: .875rem; font-weight: 700; color: var(--app-text); }
+.understood h3 small { margin-left: 6px; font-size: .75rem; font-weight: 400; color: var(--app-muted); }
+.understood > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.understood button { display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%; min-height: 36px; padding: 4px 12px; border: 1px dashed var(--app-line-strong); border-radius: 999px; background: transparent; color: var(--app-text); font: inherit; font-size: .8125rem; font-weight: 500; text-align: left; }
+.understood button small { flex: none; color: var(--app-muted); font-size: .75rem; font-weight: 400; }
+.understood button:hover:not(:disabled) { border-style: solid; border-color: var(--app-text); }
 /* 새 대화 맨 처음 — 대화 방식 두 카드. 고르면 테두리가 진해지고 아래에 단계 질문이 이어진다 */
 .depthCards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 20px; }
 .depthCards h2 { grid-column: 1 / -1; margin: 0 0 2px; font-size: .9375rem; font-weight: 500; line-height: 1.6; color: var(--app-text); }

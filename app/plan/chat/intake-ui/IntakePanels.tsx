@@ -85,7 +85,16 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false,
         {([["easy", "일반 모드", "한 문장만 말하면 나머지는 채워서 바로 만들어요", "처음이라면 이쪽"], ["expert", "전문가 모드", "가격·고객·비용을 하나씩 직접 정해요", "숫자를 이미 알고 있다면"]] as const).map(([value, name, text, who]) =>
           <button type="button" key={value} disabled={disabled} onClick={() => onDepth(value)}><strong>{name}</strong><span>{text}</span><small>{who}</small></button>)}
       </div>)}
-    {(initialMessage || greeted) && (!onDepth || depthPicked) && <div className={`${styles.question} ${styles.chatQuestion}`}>
+    {/*
+      * 일반 모드는 단계 · 업종을 고르게 하지 않고 하고 싶은 말을 바로 적게 한다(대표 결정 2026-11-14) — 적은 문장에서 업종을 찾고 나머지를 채우는 길은
+      * 이미 있다(입력창에 적으면 '생각한 사업이 있어요'로 시작). 정한 사업이 없거나 이미 운영 중인 사람을 위한 길만 작은 단추로 남긴다.
+      */}
+    {(initialMessage || greeted) && onDepth && depth === "easy" && <div className={`${styles.question} ${styles.chatQuestion}`}>
+      <h2 id="intake-entry-heading">어떤 사업을 하고 싶으세요? 편하게 적어 주세요.</h2>
+      <p className={styles.entryExample}>예: 퇴근길에 들르는 동네 반찬가게요. 혼자 할 거고 한 묶음에 15,000원 받으려고요</p>
+      <div className={styles.entryOther} role="group" aria-label="다른 시작"><button type="button" disabled={disabled} onClick={() => onStart("exploring")}>아직 정한 사업이 없어요</button><button type="button" disabled={disabled} onClick={() => onStart("operating")}>이미 운영 중이에요</button></div>
+    </div>}
+    {(initialMessage || greeted) && (!onDepth || depth === "expert") && <div className={`${styles.question} ${styles.chatQuestion}`}>
       <h2 id="intake-entry-heading">{ENTRY_QUESTION}</h2>
       <div className={styles.chipRow} role="group" aria-label="대화 시작 선택지">{choices.map(({ mode, label }) => <button type="button" key={mode} className={styles.chip} disabled={disabled} onClick={() => onStart(mode)}>{label}</button>)}</div>
     </div>}

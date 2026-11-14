@@ -1131,7 +1131,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const staleFailure = locked && !chatSent && !ownerChanged && !sessionLost && !loadFailed && status !== "conflict";
   const editTurn = chatEditMode && COACH_EDIT_CHAT && !!plan?.hasDocuments && !generating && !draft.editingId;
   // One input per turn: chip turns invite free text quietly, typing turns show an example, the industry turn searches.
-  const coachPlaceholder = !plan ? "어떤 사업인지 들려주세요" : replyTurn ? "메시지 보내기" : editTurn ? "바꿀 사업 내용이나 궁금한 점을 적어 주세요" : draft.mode === "ideas" && plan.intake.mode === "exploring" ? "원하는 사업을 적어 주세요" : question?.id === "candidate" && questionDraft.custom ? "어떤 사업인지 한 문장으로 적어 주세요" : question?.id === "industry" ? "업종 이름으로 찾기 (예: 네일, 반찬, 학원)" : question?.id === "business" ? "한 문장으로 적어 주세요 (예: 맞벌이 가정에 반찬 정기배송)" : question && (question.options?.length || ["single", "multi"].includes(question.kind) || question.kind === "number") ? "직접 적거나 궁금한 걸 물어보세요" : "메시지 보내기";
+  const coachPlaceholder = !plan ? "하고 싶은 사업을 편하게 적어 주세요" : replyTurn ? "메시지 보내기" : editTurn ? "바꿀 사업 내용이나 궁금한 점을 적어 주세요" : draft.mode === "ideas" && plan.intake.mode === "exploring" ? "원하는 사업을 적어 주세요" : question?.id === "candidate" && questionDraft.custom ? "어떤 사업인지 한 문장으로 적어 주세요" : question?.id === "industry" ? "업종 이름으로 찾기 (예: 네일, 반찬, 학원)" : question?.id === "business" ? "한 문장으로 적어 주세요 (예: 맞벌이 가정에 반찬 정기배송)" : question && (question.options?.length || ["single", "multi"].includes(question.kind) || question.kind === "number") ? "직접 적거나 궁금한 걸 물어보세요" : "메시지 보내기";
   /*
    * 코치 채팅: 고른 칩은 입력창에 글로 채워진다 — 칩을 누르는 것도 채팅을 치는 것처럼 보이게(소유자 피드백 2026-10-09).
    * 정해진 개수를 다 고르면 바로 보내고, 덜 골랐으면 입력창의 보내기로 보낸다(칩 옆 '이대로 보내기'는 없앴다).
@@ -1641,6 +1641,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   // 새 대화는 첫 화면의 두 카드로 고른다 — 이 작은 전환은 시작한 뒤 바꿀 때만
   const depthPick = !studioRoute && !loginGate && !!plan && !plan.hasDocuments && plan.intake.mode !== "operating" && !aiBusy;
   useEffect(() => { depthGateRef.current = depthGate; });
+  // 업종 기준값으로 채운 답(메시지 번호가 :estimate 로 끝난다) — 계획서를 만들기 전, 일반 모드에서만 보인다
+  const filledAnswers = plan && !plan.hasDocuments && plan.intake.depth !== "expert" ? plan.questions.flatMap(item => {
+    const answer = plan.intake.answers[item.id];
+    if (!answer?.messageId?.endsWith(":estimate") || answer.status !== "answered") return [];
+    const option = item.options?.find(choice => choice.value === answer.value)?.label;
+    return [{ id: item.id, label: item.label, value: option ?? (typeof answer.quote === "string" && answer.quote ? answer.quote : Array.isArray(answer.value) ? answer.value.join(", ") : `${answer.value ?? ""}${typeof answer.value === "number" ? item.unit ?? "" : ""}`) }];
+  }) : [];
   const priceAnswer = plan?.intake.answers.price;
   /*
    * 계획서를 만든 대화의 입력창 — 고정 예시 칩 대신, 위 대화를 읽고 AI가 만든 '다음에 보낼 만한 말'을 회색 안내 글자로만 보인다(대표 결정 2026-11-13).
@@ -1790,6 +1797,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
                 <Link href="/plan/chat?new=1" className={styles.textLink}>새 사업 기획</Link>
               </section>) : <>
             <ConversationHistory snapshot={plan} onEdit={editQuestion} receipt={receipt} readOnly={documentFixed} pro={pro} log={historyLog} />
+            {/* 일반 모드: 말하지 않아 채운 값을 한눈에 — '채웠어요' 한 줄만으로는 무엇을 어떻게 채웠는지 보이지 않았다. 누르면 그 답을 고친다 */}
+            {filledAnswers.length > 0 && <section className={styles.understood} aria-label="채운 내용">
+              <h3>말하지 않은 것은 이렇게 채웠어요 <small>다르면 눌러서 바꾸세요</small></h3>
+              <div>{filledAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value.replace(/\d{4,}/g, digits => Number(digits).toLocaleString("ko-KR"))}</button>)}</div>
+            </section>}
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}
             {updateNotice && !coach && <section className={styles.updateNotice} aria-label="변경 내용 반영 상태"><strong>저장된 결과 확인</strong><p>{updateNotice}</p><small>새로 만들기를 선택하기 전까지 기존 결과는 유지돼요.</small></section>}
