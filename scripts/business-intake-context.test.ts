@@ -215,11 +215,11 @@ async function main() {
   oversized["intake/details"] = Object.fromEntries(detailQuestions("b2b_service").map((question, index) => [question.id, { value: `Complete value ${index}: ${"x".repeat(3000)}`, unit: null, period: null, quote: "" }]));
   oversized["intake/details"]["b2b_service.decisionMaker"] = { value: "Do not partially include this value".repeat(1000), quote: "" };
   const bounded = confirmedIntakeContext(oversized), boundedData = parse(bounded);
-  assert(bounded.length <= 8000); assert(boundedData.omitted); assert(boundedData.details.length > 0);
+  assert(bounded.length <= INTAKE_CONTEXT_MAX_LENGTH); assert(boundedData.omitted); assert(boundedData.details.length > 0);
   assert.equal(boundedData.reportingPeriod?.value, reportingPeriod, "The reporting period has priority over optional detail volume");
   assert(!boundedData.details.some(detail => detail.questionId === "b2b_service.decisionMaker"));
   for (const detail of boundedData.details) assert.equal(detail.value, (oversized["intake/details"][detail.questionId] as { value: string }).value, "No factual value is truncated");
-  assert.throws(() => boundedIntakeContext("x".repeat(8001)), /INTAKE_CONTEXT_INVALID/);
+  assert.throws(() => boundedIntakeContext("x".repeat(INTAKE_CONTEXT_MAX_LENGTH + 1)), /INTAKE_CONTEXT_INVALID/);
 
   const chapter = PLAN_BLUEPRINT[0], section = chapter.sections[0];
   const baseInput: SectionGenInput = { chapter, section, answers: {}, business: coach.business, coachContext: coachContext(coach) };
@@ -291,7 +291,7 @@ async function main() {
   await assert.rejects(() => runtime.generate(payload), /review_failed/, "The same number remains unsupported without confirmed intake");
   await assert.rejects(() => runtime.generate(withConfirmedIntakeContext(payload, quoteOnly)), /review_failed/, "Refresh validation also ignores quote-only amounts");
   const priorCalls = captured.length;
-  const oversizedPayload = { ...contextualPayload, intakeContext: "x".repeat(8001) };
+  const oversizedPayload = { ...contextualPayload, intakeContext: "x".repeat(INTAKE_CONTEXT_MAX_LENGTH + 1) };
   await assert.rejects(() => runtime.generate(oversizedPayload), /INTAKE_CONTEXT_INVALID/);
   assert.equal(captured.length, priorCalls, "Oversized forwarded context fails before any model invocation");
   assert.deepEqual(answers, before);
@@ -307,7 +307,7 @@ async function main() {
   assert.equal(guide?.name, "카페(휴게음식점)");
   assert(guide?.steps.some(step => step.startsWith("휴게음식점 영업 신고")), JSON.stringify(guide?.steps));
   assert(guide?.rule.includes("관할 기관 확인"));
-  assert(confirmedIntakeContext(withKsic).length <= 8000);
+  assert(confirmedIntakeContext(withKsic).length <= INTAKE_CONTEXT_MAX_LENGTH);
   // 업종 코드가 없어도 사업 설명으로 가이드를 찾고, 그렇게 찾았다고 밝힌다. 큰 분류 이름('카페 · 음식점')만으로는 붙이지 않는다
   const described = structuredClone(answers);
   (described[COACH_KEY].state as CoachState).business.description = "아파트 상가 아침 빵집";
