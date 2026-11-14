@@ -220,7 +220,7 @@ export function homepageFillPrompt(plan: PlanLike): { system: string; user: stri
 }
 
 /*
- * 채운 글을 템플릿 자리에 넣는다 — 디자인을 옮긴 템플릿(0-1102·0-290·0-2226·0-2385·0-421)만 칸을 모두 쓰고,
+ * 채운 글을 템플릿 자리에 넣는다 — 디자인을 옮긴 템플릿(0-1102·0-290·0-2226·1-2226·0-2385·0-421)만 칸을 모두 쓰고,
  * 나머지는 큰 제목 아래 한 줄 소개만 넣는다.
  */
 /** '① 접수 — 설명' 한 줄을 번호·제목·설명 칸으로 나눈다(대시가 없으면 제목만) */
@@ -302,6 +302,34 @@ function copyNodes(page: string, copy: HomepageCopy, hasTagline: boolean): { tex
     if (copy.cta) { texts["I0:2372;0:4557"] = copy.cta; texts["I0:2233;0:4557"] = copy.cta; }
     return { texts, show };
   }
+  if (page === "1-2226") {
+    /*
+     * 동네 가게 2 — AI 글이 빠짐없이 들어가고 그대로 다시 읽히게(카드 6·숫자 3·메뉴 6·질문 4) 칸을 늘 다 쓴다.
+     * 없는 것은 빈 글로 두고(지난번 글이 남지 않게) 그 구역만 열지 않는다. 글 자리는 '1:번호' 로 제목·내용이 나란히 있다.
+     */
+    const show = ["1:30", "1:110", "1:120"];
+    const fill = <T,>(first: number, count: number, items: T[], pair: (item: T) => [string, string]) => {
+      for (let index = 0; index < count; index += 1) [texts[`1:${first + index * 2}`], texts[`1:${first + index * 2 + 1}`]] = items[index] ? pair(items[index]) : ["", ""];
+    };
+    texts["1:31"] = copy.cardsTitle;
+    texts["1:32"] = copy.cardsIntro;
+    fill(33, 6, copy.cards, (card) => [card.title, card.body]);
+    fill(21, 3, copy.facts, (fact) => [fact.value, fact.label]);
+    if (copy.facts.length) show.push("1:20");
+    texts["1:51"] = copy.menu.title || (copy.menu.items.length ? "메뉴·가격" : "");
+    texts["1:52"] = copy.menu.intro;
+    fill(53, 6, copy.menu.items, (item) => [item.name, item.price]);
+    if (copy.menu.items.length) show.push("1:50");
+    texts["1:81"] = copy.process.title;
+    texts["1:82"] = copy.process.steps.join("\n");
+    if (copy.process.steps.length) show.push("1:80");
+    fill(92, 4, copy.faq, (item) => [item.question, item.answer]);
+    if (copy.faq.length) show.push("1:90");
+    texts["1:121"] = copy.closing;
+    texts["1:122"] = copy.closingSub;
+    if (copy.cta) { texts["I1:14;1:15"] = copy.cta; texts["I1:123;1:124"] = copy.cta; }
+    return { texts, show };
+  }
   if (page === "0-421") {
     const show = ["0:558", "0:422"];
     // 이런 일을 해요 — 여섯까지
@@ -363,7 +391,7 @@ function copyNodes(page: string, copy: HomepageCopy, hasTagline: boolean): { tex
  * 주소만 있으면 첫 화면 버튼을 '오시는 길'(지도 검색)로. 그 밖에는 AI 버튼 글('예약 문의하기' 등), 쓸 수 없는 말이면 '문의하기'.
  */
 const CTA_ASKS_UNKNOWN = /(영업\s*시간|여는\s*시간|운영\s*시간|주소|위치|오시는\s*길|가격|휴무)/;
-export const WALK_IN_PAGES = new Set(["0-2226"]);
+export const WALK_IN_PAGES = new Set(["0-2226", "1-2226"]);
 
 export function homepageCta(aiCta: string, page: string, draft: Pick<LandingDraft, "businessPhone" | "businessContact" | "businessAddress" | "contact">): { label: string; hero?: { label: string; href: string }; callPhone: boolean } {
   const usable = aiCta.trim().length >= 2 && !CTA_ASKS_UNKNOWN.test(aiCta) ? aiCta.trim() : "문의하기";
@@ -413,7 +441,7 @@ export function applyHomepageCopy(draft: LandingDraft, rawCopy: HomepageCopy, op
     if (hero && (links[hero.button] === undefined || links[hero.button] === "contact")) links[hero.button] = cta.hero.href;
   }
   // 오시는 길·영업시간은 AI 가 아니라 사업자 정보에서(적어 둔 것만)
-  const texts = { ...copied, ...visitInfoTexts(bw.page, { address: draft.businessAddress, hours: draft.openHours }) };
+  const texts = { ...copied, ...visitInfoTexts(bw.page, { address: draft.businessAddress, hours: draft.openHours, phone: draft.businessPhone?.trim() || draftPhone(draft) }) };
   const nextTexts = { ...bw.texts };
   const written: Record<string, string> = {};
   for (const [id, value] of Object.entries(texts)) {
@@ -471,6 +499,7 @@ export function applyHomepageCopy(draft: LandingDraft, rawCopy: HomepageCopy, op
  * 디자인마다 칸 수가 달라 다 들어가지 않는 글은 copy 에 남아 있어, 칸이 많은 디자인으로 돌아가면 다시 나온다.
  */
 const MARKER = "\u0000";
+/* 메뉴 칸은 여섯까지 읽고 옮긴다 — AI 는 셋까지만 쓰지만(위 schema) '동네 가게 2'의 줄 메뉴는 사장님이 여섯까지 적을 수 있다. 다른 디자인은 앞의 셋(갤러리형은 둘)만 쓴다 */
 function markerCopy(): HomepageCopy {
   const m = (key: string) => `${MARKER}${key}${MARKER}`;
   return {
@@ -479,7 +508,7 @@ function markerCopy(): HomepageCopy {
     process: { title: m("process.title"), steps: Array.from({ length: 5 }, (_, i) => `${m(`step.${i}.head`)} — ${m(`step.${i}.body`)}`) },
     closing: m("closing"), closingSub: m("closingSub"), cta: m("cta"),
     facts: Array.from({ length: 3 }, (_, i) => ({ value: m(`fact.${i}.value`), label: m(`fact.${i}.label`) })),
-    menu: { title: m("menu.title"), intro: m("menu.intro"), items: Array.from({ length: 3 }, (_, i) => ({ name: m(`menu.${i}.name`), price: m(`menu.${i}.price`) })) },
+    menu: { title: m("menu.title"), intro: m("menu.intro"), items: Array.from({ length: 6 }, (_, i) => ({ name: m(`menu.${i}.name`), price: m(`menu.${i}.price`) })) },
     faq: Array.from({ length: 4 }, (_, i) => ({ question: m(`faq.${i}.question`), answer: m(`faq.${i}.answer`) })),
   };
 }
@@ -515,7 +544,7 @@ export function copyFromNodes(page: string, texts: Record<string, string>): Home
     process: { title: take("process.title"), steps: stepList.slice(0, 5) },
     closing: take("closing"), closingSub: take("closingSub"), cta: take("cta"),
     facts: Array.from({ length: 3 }, (_, i) => ({ value: take(`fact.${i}.value`), label: take(`fact.${i}.label`) })).filter((fact) => fact.value && fact.label),
-    menu: { title: take("menu.title"), intro: take("menu.intro"), items: Array.from({ length: 3 }, (_, i) => ({ name: take(`menu.${i}.name`), price: take(`menu.${i}.price`) })).filter((item) => item.name) },
+    menu: { title: take("menu.title"), intro: take("menu.intro"), items: Array.from({ length: 6 }, (_, i) => ({ name: take(`menu.${i}.name`), price: take(`menu.${i}.price`) })).filter((item) => item.name) },
     faq: Array.from({ length: 4 }, (_, i) => ({ question: take(`faq.${i}.question`), answer: take(`faq.${i}.answer`) })).filter((item) => item.question && item.answer),
   };
 }
@@ -532,7 +561,7 @@ function storedCopy(raw: unknown): HomepageCopy | null {
     process: { title: clip(value.process?.title, 28), steps: list<string>(value.process?.steps).map((step) => clip(step, 80)).filter(Boolean).slice(0, 5) },
     closing: clip(value.closing, 40), closingSub: clip(value.closingSub, 90), cta: clip(value.cta, 14),
     facts: list<{ value: string; label: string }>(value.facts).map((fact) => ({ value: clip(fact?.value, 12), label: clip(fact?.label, 40) })).filter((fact) => fact.value && fact.label).slice(0, 3),
-    menu: { title: clip(value.menu?.title, 28), intro: clip(value.menu?.intro, 90), items: list<{ name: string; price: string }>(value.menu?.items).map((item) => ({ name: clip(item?.name, 40), price: clip(item?.price, 24) })).filter((item) => item.name).slice(0, 3) },
+    menu: { title: clip(value.menu?.title, 28), intro: clip(value.menu?.intro, 90), items: list<{ name: string; price: string }>(value.menu?.items).map((item) => ({ name: clip(item?.name, 40), price: clip(item?.price, 24) })).filter((item) => item.name).slice(0, 6) },
     faq: list<{ question: string; answer: string }>(value.faq).map((item) => ({ question: clip(item?.question, 40), answer: clip(item?.answer, 160) })).filter((item) => item.question && item.answer).slice(0, 4),
   });
 }
@@ -603,7 +632,7 @@ export function switchHomepageDesign(draft: LandingDraft, page: string, build: (
   if (!data) return draft;
   const copy = homepageCopyOf(data);
   const brainwave = build(draft);
-  Object.assign(brainwave.texts, visitInfoTexts(page, { address: draft.businessAddress, hours: draft.openHours }));
+  Object.assign(brainwave.texts, visitInfoTexts(page, { address: draft.businessAddress, hours: draft.openHours, phone: draft.businessPhone?.trim() || draftPhone(draft) }));
   const fresh: LandingDraft = { ...draft, pageData: { ...data, brainwave, content: [] } };
   // 새 템플릿의 문의 버튼도 지금 연락 방법으로(전화면 전화) — 새로 만든 버튼은 '문의 양식'에서 시작한다
   const linked = applyContactMethod({ ...fresh, contact: DEFAULT_CONTACT }, fresh);
@@ -617,7 +646,7 @@ export function switchHomepageDesign(draft: LandingDraft, page: string, build: (
  * 칸마다 역할(큰 제목·소개·제공 내용…)이 있어(BUSINESS_TEMPLATE_PROFILES.fields) 새 디자인의 같은 역할 자리로 옮겨 담는다.
  * 이름·주소·영업시간·버튼 글은 사업 정보·연락 방법에서 따로 채우므로 옮기지 않는다. 옮길 자리가 없는 칸 수는 lost 로 알린다.
  */
-const DERIVED_FIELDS = new Set(["businessName", "address", "hours", "cta"]);
+const DERIVED_FIELDS = new Set(["businessName", "address", "hours", "phone", "cta"]);
 export function editedTextFields(page: string, texts: Record<string, string>, content: Parameters<typeof createBusinessTemplate>[0], aiTexts: Record<string, string> = {}): { fields: Record<string, string>; ids: string[] } {
   const profile = BUSINESS_TEMPLATE_PROFILES[page];
   if (!profile) return { fields: {}, ids: [] };
@@ -644,7 +673,7 @@ export function carryEditedTexts(page: string, texts: Record<string, string>, co
   return { texts: out, carried: ids.length - lost, lost };
 }
 
-const BUSINESS_HERO_SLOT: Record<string, string> = { "0-1102": "0:1325/0/0", "0-290": "0:411/0", "0-2226": "0:2362/0/0", "0-2385": "0:2550/0/0", "0-421": "0:1082/0/0" };
+const BUSINESS_HERO_SLOT: Record<string, string> = { "0-1102": "0:1325/0/0", "0-290": "0:411/0", "0-2226": "0:2362/0/0", "1-2226": "1:16", "0-2385": "0:2550/0/0", "0-421": "0:1082/0/0" };
 
 /**
  * 편집기 안에서 디자인을 바꿀 때 — 편집기는 초안 전체(주소·연락 방법)를 모르므로 글 자리만 옮겨 담는다.

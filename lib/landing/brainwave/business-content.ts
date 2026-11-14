@@ -16,7 +16,7 @@ export const businessContentSchema = z.object({
 });
 export type BusinessContent = z.infer<typeof businessContentSchema>;
 type Field = keyof BusinessContent | "headline" | "detailsTitle" | "contactTitle" | "contactInvite" | "contactDescription" | "offerLabel" | "customerLabel" | "priceLabel" | "one" | "two" | "three"
-  | "visitTitle" | "address" | "hoursLabel" | "hours" | "addressLabel" | "worksTitle" | "servicesTitle";
+  | "visitTitle" | "address" | "hoursLabel" | "hours" | "addressLabel" | "worksTitle" | "servicesTitle" | "phone" | "faqTitle" | "reviewsTitle";
 type Value = Partial<Record<Field, string>>;
 type Profile = {
   sections: string[];
@@ -58,6 +58,26 @@ export const BUSINESS_TEMPLATE_PROFILES: Record<string, Profile> = {
     },
     facts: [{ label: "0:2285", value: "0:2286" }, { label: "0:2294", value: "0:2295" }, { label: "0:2301", value: "0:2302" }],
     hide: ["0:2376/1", "0:2365", "0:2364", "0:2371", "0:2373", "0:2374", "0:2375", "0:2378", "0:2384", "0:2276", "0:2275", "0:2246", "0:2247", "0:2252", "0:2257", "0:2262", "0:2232", "0:2235", "0:2236/0", "0:2236/1"],
+  },
+  /*
+   * 동네 가게 2(자체 디자인, 킷 아님) — 동네 가게(0-2226)는 카드 셋·메뉴 사진 카드 셋뿐이라 AI 가 쓴 카드 다섯 중 둘과
+   * 자주 묻는 질문이 통째로 안 보였다(실제 AI 점검 2026-11-14 반찬가게). 같은 역할에 칸만 넉넉히 둔다:
+   *   첫 화면(1:10) → 숫자(1:20) → 소개 카드 여섯(1:30) → 메뉴·가격(1:50, 사진 카드 셋 + 줄 메뉴 여섯) → 사진(1:70)
+   *   → 이용 순서(1:80) → 자주 묻는 질문(1:90) → 후기(1:100) → 오시는 길·영업시간(1:110) → 마무리(1:120)
+   * 숫자·메뉴·이용 순서·질문은 AI 채우기가 찾았을 때 열고(편집기에서 켜서 직접 적어도 된다), 후기는 사장님만 적는다.
+   */
+  "1-2226": {
+    sections: ["1:10", "1:30", "1:70", "1:110", "1:120"], brand: "1:11", headline: "1:12", description: "1:13", button: "I1:14;1:15",
+    fields: {
+      "1:11": "businessName", "1:12": "headline", "1:13": "description", "I1:14;1:15": "cta",
+      "1:33": "offerLabel", "1:34": "offer", "1:35": "customerLabel", "1:36": "customer", "1:37": "priceLabel", "1:38": "price",
+      "1:71": "worksTitle", "1:91": "faqTitle", "1:101": "reviewsTitle",
+      "1:111": "visitTitle", "1:112": "address", "1:113": "hoursLabel", "1:114": "hours", "1:115": "phone",
+      "1:121": "contactInvite", "I1:123;1:124": "cta",
+    },
+    facts: [{ label: "1:33", value: "1:34" }, { label: "1:35", value: "1:36" }, { label: "1:37", value: "1:38" }],
+    optional: ["1:20", "1:50", "1:80", "1:90", "1:100"],
+    labels: { worksTitle: "사진" },
   },
   /*
    * 온라인 상점 — 첫 화면(큰 제목 + 소개) 아래로 제공 내용·이용 대상·가격 카드가
@@ -153,7 +173,7 @@ export const BUSINESS_TEMPLATE_IDS = Object.keys(BUSINESS_TEMPLATE_PROFILES);
  * Figma 디자인을 흐름 배치로 옮겨 둔 템플릿. 이 페이지들은 글 길이·사진과 상관없이
  * 늘 그 디자인으로 그린다(components/brainwave-business-*.tsx).
  */
-export const BUSINESS_DESIGNED_PAGES = new Set(["0-290", "0-1102", "0-2226", "0-2385", "0-421"]);
+export const BUSINESS_DESIGNED_PAGES = new Set(["0-290", "0-1102", "0-2226", "0-2385", "0-421", "1-2226"]);
 
 /** 편집기의 '숨긴 섹션 되살리기'로 켤 수 있는 섹션 — 기본으로 보이는 섹션과 켜서 쓰는 섹션 */
 export function restorableSections(page: string): string[] {
@@ -217,6 +237,8 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
     /* 기본 제목 — '오시는 길·영업시간'은 768px 에서 '·영업시간'이 줄 첫머리로 갈렸다(대표 결정 r40). 이미 저장된 글은 그대로 둔다 */
     visitTitle: "오시는 길과 영업시간", address: LOCAL_ADDRESS_PENDING, hoursLabel: "영업시간", hours: LOCAL_HOURS_PENDING,
     addressLabel: "오시는 길", worksTitle: "작업 사례", servicesTitle: "이런 일을 해요",
+    /* 전화번호는 사업자 정보에 있을 때만 들어간다(visitInfoTexts) — 기본은 비워 그 줄을 열지 않는다 */
+    phone: "", faqTitle: "자주 묻는 질문", reviewsTitle: "손님 후기",
     ...templateLabels(content, page, profile),
   };
   // Empty overrides cover every original slot, including sections later restored by the editor.
@@ -248,13 +270,14 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
  * 오시는 길·영업시간 칸 — 사업자 정보의 주소·영업시간을 그 템플릿의 자리에 넣는다.
  * 모르는 것은 빼고 돌려준다(기본 글 '문의 주시면 안내해 드려요'가 그대로 남는다).
  */
-export function visitInfoTexts(page: string, info: { address?: string; hours?: string }): Record<string, string> {
+export function visitInfoTexts(page: string, info: { address?: string; hours?: string; phone?: string }): Record<string, string> {
   const profile = BUSINESS_TEMPLATE_PROFILES[page];
   if (!profile) return {};
   const out: Record<string, string> = {};
   for (const [id, field] of Object.entries(profile.fields)) {
     if (field === "address" && info.address?.trim()) out[id] = info.address.trim();
     if (field === "hours" && info.hours?.trim()) out[id] = info.hours.trim();
+    if (field === "phone" && info.phone?.trim()) out[id] = info.phone.trim();
   }
   return out;
 }
