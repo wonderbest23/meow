@@ -41,6 +41,8 @@ const LEARNER_IN_CUSTOMER = /(?:초·?중·?고등?|초·?중등?|중·?고등?|
 /** 문장에 적은 파는 곳 — 물건·음식을 파는 업종에서 그 종류의 채널(매장 방문) 대신 이것을 둔다 */
 const SOLD_AT: readonly (readonly [RegExp, string])[] = [[/스마트스토어/, "스마트스토어"], [/쿠팡/, "쿠팡"], [/라이브\s*커머스/, "라이브커머스"], [/인스타(?:그램)?\s*(?:공구|마켓|로|에서)/, "인스타그램"], [/배달\s*(?:전문|전용)|배달로?만/, "배달앱"], [/트럭으로|이동\s*판매/, "아파트 장터·길거리"]];
 /** 거래처에 대 주는 일 — '도매시장에서 떼다 파는' 쪽은 아니다 */
+/** 파는 곳(판매 경로) 이름이 든 '…에서 · …(으)로' 구절 — 'A, B랑 C에서'처럼 나열해도 한 덩어리로 본다 */
+const VENUE_PHRASE = /(?:인스타(?:그램)?|유튜브|블로그|스마트스토어|라이브커머스|쿠팡|온라인|오픈마켓|플리마켓|프리마켓|야시장|아이디어스|당근(?:마켓)?|번개장터|네이버|카카오)[가-힣a-z]*?(?:\s*(?:[,·/]|와|과|이?랑|및)\s*[가-힣a-z0-9]+?)*(?:으로|로|에서)\s/gi;
 const SUPPLY = /납품|oem|odm|하청|임가공|도매(?!\s*(?:시장|상가|업체)?에서)/i;
 /** 문장에 적은 전문 분야('여드름 관리 전문', 'PT 전문') — 앞의 한두 어절 */
 const FOCUS = /((?:[가-힣a-z0-9]+\s)?[가-힣a-z0-9]+)\s?(전문|특화)(?![가-힣]*(?:가|의|직))/i;
@@ -71,7 +73,11 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 문장이 앱·프로그램으로 끝나면 파는 것은 소프트웨어다 — 이때는 손님 업종 낱말('학원 전용')이 종류를 정하는 단서라 빼지 않는다
   // 뒤에 붙인 값('…프로그램, 월 1만원')은 떼고 본다
   const tool = !chosen && TOOL_TAIL.test(spelled.trim().replace(/[,.]?\s*(?:월|한\s*달에?)?\s*[0-9.,]+\s*[천만]?\s*원.*$/, "").trim());
-  const heard = tool ? spelled : spelled.replace(KIND_NOISE, " ");
+  const noised = tool ? spelled : spelled.replace(KIND_NOISE, " ");
+  // '인스타, 플리마켓에서 팔 거예요'의 플리마켓은 파는 곳이지 사업 종류가 아니다 — 파는 곳 구절을 빼고도 종류를 찾을 수 있으면 뺀 문장에서 찾는다
+  // ('플리마켓에서 이것저것 팔아요'처럼 남는 종류가 없으면 그대로 둔다: 그때는 플리마켓 판매가 사업이다)
+  const unvenued = tool || chosenKsic ? noised : spelled.replace(VENUE_PHRASE, " ").replace(KIND_NOISE, " ");
+  const heard = unvenued !== noised && (rules?.(unvenued, sector => sector !== "software") ?? businessKind(unvenued, chosen ?? rankedSectors(unvenued)[0])) ? unvenued : noised;
   // 'X도 (같이)'로 곁들인 것은 본업이 아니다('네일샵, 속눈썹도 같이'는 네일샵이다) — 그 앞쪽에서 종류를 찾을 수 있으면 앞쪽만 보고 찾는다
   const side = !tool && !chosenKsic ? heard.match(/([가-힣a-z0-9]{2,})도(?=\s*(?:같이|함께|병행|하|할|해|열|만들|제작|판매|팔|취급|운영|제공|가능|포함|,|$))/i) : null;
   // '도'로 끝나는 낱말(설계도·투시도·제주도)은 곁들임이 아니다
