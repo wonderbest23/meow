@@ -855,7 +855,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
     void send({ action: "answer", questionId, value, ...(unknown ? { unknown: true } : {}), ...(extra?.ksic ? { ksic: extra.ksic } : {}) }, { answer: draftRef.current.answers[question.id] ?? emptyAnswer() });
   };
   const submitComposer = () => {
-    if (answerBlocked || !loaded || unfinishedText || depthGateRef.current) return;
+    if (answerBlocked || !loaded || unfinishedText || depthGateRef.current || understandingRef.current) return;
     if (!plan) {
       const text = entryMessage(draftRef.current);
       if (text.length > 1200) { setError("처음 사업 설명은 1,200자 이내로 나눠 보내 주세요. 입력한 내용은 그대로 보관했어요."); return; }
@@ -1656,23 +1656,24 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
    * 기다리지 않는다 — 기준값으로 먼저 진행하고, 읽은 것이 오면 다시 불러와 '이렇게 알아들었어요'로 보인다. 실패하면 아무 일도 없다.
    */
   const understandId = plan && !plan.hasDocuments && plan.intake.mode === "startup" && plan.intake.depth !== "expert" && !plan.intake.understood && plan.intake.answers.business?.status === "answered" ? plan.planId : "";
-  const [understanding, setUnderstanding] = useState(false);
+  /*
+   * 읽는 동안에는 다음 질문을 보이지 않는다 — 준비금 질문을 먼저 띄웠더니 읽은 값(문장 속 준비금)이 도착하며 질문이 바뀌고,
+   * 그 순간 적은 답이 저장되지 않았다(실제 AI 점검 2026-11-14). 읽기가 끝나거나 8초가 지나면 진행한다(늦으면 요청을 끊어 서버도 저장하지 않는다).
+   */
+  const [understandDone, setUnderstandDone] = useState("");
+  const understanding = !!understandId && understandDone !== understandId;
   const understandAsked = useRef(new Set<string>());
   useEffect(() => {
     if (!understandId || understandAsked.current.has(understandId)) return;
     understandAsked.current.add(understandId);
-    let alive = true;
-    setUnderstanding(true);
-    fetch("/api/plan/chat/understand", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ planId: understandId }) })
-      .then(async response => {
-        if (response.status !== 200) return;
-        // 답을 적는 중이면 끝난 뒤에 불러온다(reload 는 바쁘면 그냥 돌아온다)
-        for (let attempt = 0; attempt < 8 && alive; attempt++) { if (!busyRef.current) { await reload(); return; } await new Promise(resolve => setTimeout(resolve, 1500)); }
-      })
+    const controller = new AbortController(), timer = window.setTimeout(() => controller.abort(), 8000);
+    fetch("/api/plan/chat/understand", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ planId: understandId }), signal: controller.signal })
+      .then(async response => { if (response.status === 200) for (let attempt = 0; attempt < 4; attempt++) { if (!busyRef.current) { await reload(); return; } await new Promise(resolve => setTimeout(resolve, 500)); } })
       .catch(() => { /* 못 읽어도 기준값으로 진행된다 */ })
-      .finally(() => { if (alive) setUnderstanding(false); });
-    return () => { alive = false; };
+      .finally(() => { window.clearTimeout(timer); setUnderstandDone(understandId); });
   }, [understandId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const understandingRef = useRef(false);
+  useEffect(() => { understandingRef.current = understanding; });
   const priceAnswer = plan?.intake.answers.price;
   /*
    * 계획서를 만든 대화의 입력창 — 고정 예시 칩 대신, 위 대화를 읽고 AI가 만든 '다음에 보낼 만한 말'을 회색 안내 글자로만 보인다(대표 결정 2026-11-13).
@@ -1826,7 +1827,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
             {(saidAnswers.length > 0 || filledAnswers.length > 0) && <section className={styles.understood} aria-label="알아들은 내용">
               {saidAnswers.length > 0 && <><h3>이렇게 알아들었어요 <small>다르면 눌러서 바꾸세요</small></h3>
                 <div data-said="">{saidAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value.replace(/\d{4,}/g, digits => Number(digits).toLocaleString("ko-KR"))}</button>)}</div></>}
-              {filledAnswers.length > 0 && <><h3>말하지 않은 것은 이렇게 채웠어요 <small>{understanding ? "적은 글을 읽고 있어요…" : "다르면 눌러서 바꾸세요"}</small></h3>
+              {filledAnswers.length > 0 && <><h3>말하지 않은 것은 이렇게 채웠어요 <small>다르면 눌러서 바꾸세요</small></h3>
                 <div>{filledAnswers.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value.replace(/\d{4,}/g, digits => Number(digits).toLocaleString("ko-KR"))}</button>)}</div></>}
             </section>}
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
@@ -1836,7 +1837,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
             {showReview ? <><ExtractionReview key={plan.planId} snapshot={plan} disabled={blocked} onCommand={command => void send(command)} /><AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => setDeferredReview(reviewKey)}>나중에 확인하고 대화 이어가기</AppButton></> : reviewCandidates.length > 0 && <AppButton type="button" variant="text" className={styles.textButton} disabled={blocked || hasLocalInput(draft)} onClick={() => { follow.current = true; setDeferredReview(""); }}>메모에서 찾은 내용 {reviewCandidates.length}개 확인</AppButton>}
             {!locked && questionNote && !questionHandled && <section className={styles.noteReceipt} aria-label="저장한 질문"><p>질문을 저장했어요</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "help", message: lastMessage!.text })}><MessageCircle size={16} aria-hidden="true" />AI 답변 받기</AppButton></section>}
             {!locked && memoPending && <AppButton type="button" variant="text" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</AppButton>}
-            <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview}>
+            {understanding && <p className={styles.understandWait} role="status">적은 글을 읽고 있어요<span aria-hidden="true">…</span></p>}
+            <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview || understanding}>
               {/* 쓰는 동안 받아 둔 요청을 보내 채팅 수정 화면이 되어도 마무리 말(계획서 보기 · 홈페이지 만들기)을 먼저 남기고 그 아래에 제안 카드 */}
               {editTurn && !replyTurn ? <>{studioTurn}<EditChatTurn pro={pro} chapters={editChapters} snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : locked && !replyTurn ? <>{studioTurn ?? <DocumentLockedTurn pro={pro} planId={plan.planId} chatEdit={COACH_EDIT_CHAT} onChatEdit={embedded ? () => { follow.current = true; focusComposer(); } : undefined} />}{nextStep === "prepare" && !studioRun && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || amountConfirmation || sectorConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat cardLabel={questionCardLabel} cardFoot={questionCardFoot} question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={answerBlocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onCarry={carryDraft} onComposer={focusComposer} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</AppButton></section> : <section className={styles.complete}>
                 {designRunning || designStarting ? <DesignProgress snapshot={plan} announce /> : <>
@@ -1904,7 +1906,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
             {!studioRoute && askingAI && <div className={styles.composerContext}><MessageCircle size={14} aria-hidden="true" />AI에게 질문<AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => storeComposerNote("memo")}><Bookmark size={14} aria-hidden="true" />메모로 저장</AppButton></div>}
             {(studioRoute ? studioNote : composerNote) && <p className={styles.composerHint} role="status" aria-live="polite">{studioRoute ? studioNote : composerNote}</p>}
             <div className={styles.composerRow}>
-              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" data-reply-hint={replyHintText ? "" : undefined} placeholder={depthGate ? "위에서 방식을 먼저 골라 주세요" : replyHintText ? replyHintText : studioRoute ? studioPlaceholder : coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!studioRoute && !!replyTurn} disabled={!loaded || loadFailed || ownerChanged || depthGate} rows={1} enterKeyHint="enter" maxLength={1200} value={studioRoute ? studioText : composerShown} onPaste={event => {
+              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" data-reply-hint={replyHintText ? "" : undefined} placeholder={depthGate ? "위에서 방식을 먼저 골라 주세요" : understanding ? "적은 글을 읽고 있어요…" : replyHintText ? replyHintText : studioRoute ? studioPlaceholder : coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!studioRoute && !!replyTurn} disabled={!loaded || loadFailed || ownerChanged || depthGate || understanding} rows={1} enterKeyHint="enter" maxLength={1200} value={studioRoute ? studioText : composerShown} onPaste={event => {
                 const input = event.currentTarget, pasted = event.clipboardData.getData("text");
                 setPasteCut(pasted.length > 1200 - (input.value.length - (input.selectionEnd - input.selectionStart)));
               }} onChange={event => {

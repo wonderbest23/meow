@@ -65,7 +65,8 @@ export async function understandIdea(config: LLMConfig, text: string, signal?: A
   const raw = await completeJson(config, {
     kind: "intake-understand", system: RULES, user: JSON.stringify({ text: input }),
     jsonSchema: { name: "understood_idea", schema }, anthropicJsonSchema: true, effort: "low",
-    maxOutputTokens: 500, timeoutMs: 15_000, allowFallback: false, signal,
+    // 화면은 8초까지만 기다린다 — 서버가 그보다 먼저 포기해야 뒤늦게 저장해 사용자의 다음 답과 부딪히지 않는다
+    maxOutputTokens: 500, timeoutMs: 7_000, allowFallback: false, signal,
     onFailure: event => { failure = event.code; },
   });
   return { understood: cleanUnderstood(raw, input), model: config.model, totalMs: Date.now() - started, ...(failure ? { failure } : {}) };
