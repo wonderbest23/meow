@@ -17,7 +17,7 @@ const log = [], write = entry => { log.push(entry); fs.writeFileSync(`${S}/walk-
 const READ = `(() => {
   const vis = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const txt = el => (el?.innerText || "").trim().replace(/\\s+/g, " ");
-  const cards = document.querySelector('[aria-label="대화 방식"] strong') ? [...document.querySelectorAll('[aria-label="대화 방식"] button')].map(txt) : null;
+  const cards = document.querySelector('[aria-label="대화 모드"] strong') ? [...document.querySelectorAll('[aria-label="대화 모드"] button')].map(txt) : null;
   const entry = [...document.querySelectorAll('[aria-label="대화 시작 선택지"] button')].map(txt);
   const q = document.querySelector("[data-chat-question]");
   const input = q?.querySelector("input[type=radio], input[type=checkbox]");
@@ -30,7 +30,7 @@ const READ = `(() => {
     qButtons: q ? [...q.querySelectorAll("button")].filter(vis).filter(b => !b.disabled).map(txt).filter(Boolean).slice(0, 12) : [],
     turnButtons: turn ? [...turn.querySelectorAll("button, a")].filter(vis).filter(b => !b.disabled && !b.closest("[data-chat-question]")).map(txt).filter(Boolean).slice(0, 12) : [],
     area: area ? { disabled: area.disabled, placeholder: area.placeholder, value: area.value } : null,
-    depthToggle: [...document.querySelectorAll('footer [aria-label="대화 방식"] button')].map(b => txt(b) + (b.getAttribute("aria-pressed") === "true" ? "*" : "")),
+    depthToggle: [...document.querySelectorAll('footer [aria-label="대화 모드"] button')].map(b => txt(b) + (b.getAttribute("aria-pressed") === "true" ? "*" : "")),
     alerts: [...document.querySelectorAll('[role=alert]')].filter(vis).map(txt).filter(Boolean),
     busy: turn?.getAttribute("aria-busy") === "true" || !!document.querySelector('[class*="typing"]'),
     lastAssistant: txt([...document.querySelectorAll('[class*="assistantMessage"]')].at(-1)).slice(0, 140),
@@ -61,9 +61,9 @@ for (let step = 0; step < 60; step++) {
     await page.goto(page.url(), { waitUntil: "load" }); await sleep(6000); continue;
   }
   if (variant === "type-first" && step === 0) { write({ step, check: "카드 전에 입력창", area: s.area, cards: s.cards }); }
-  if (s.cards) { did = `방식 카드 → ${depth === "expert" ? "전문가" : "일반"}`; await clickText(page, depth === "expert" ? "전문가" : "일반", '[aria-label="대화 방식"]'); }
+  if (s.cards) { did = `방식 카드 → ${depth === "expert" ? "전문가 모드" : "일반 모드"}`; await clickText(page, depth === "expert" ? "전문가 모드" : "일반 모드", '[aria-label="대화 모드"]'); }
   else if (s.entry.length) { did = `단계 → ${STAGE}`; await clickText(page, STAGE, '[aria-label="대화 시작 선택지"]'); }
-  else if (variant === "switch" && !switched && s.depthToggle.length && step > 3) { switched = true; const to = depth === "expert" ? "일반" : "전문가"; did = `중간에 방식 바꾸기 → ${to}`; await clickText(page, to, 'footer [aria-label="대화 방식"]'); }
+  else if (variant === "switch" && !switched && s.depthToggle.length && step > 3) { switched = true; const to = depth === "expert" ? "일반 모드" : "전문가 모드"; did = `중간에 방식 바꾸기 → ${to}`; await clickText(page, to, 'footer [aria-label="대화 모드"]'); }
   else if (same >= 2 && s.qButtons.some(t => /잘 모르겠어요|모르겠/.test(t))) { did = "같은 질문 반복 → 잘 모르겠어요"; await clickText(page, s.qButtons.find(t => /모르겠/.test(t)), "[data-chat-question]"); }
   else if (variant === "unknown" && s.question && s.qid !== "business" && s.qButtons.some(t => /모르겠/.test(t))) { did = "잘 모르겠어요"; await clickText(page, s.qButtons.find(t => /모르겠/.test(t)), "[data-chat-question]"); }
   else if (s.options.length && !(s.qid in NUMBER) && !(s.qid in TEXT)) { const pick = s.options.find(o => /카페 · 음식점|매장|직접|개|묶음/.test(o)) ?? s.options[0]; did = `고르기 → ${pick.slice(0, 30)}`; await clickText(page, pick.slice(0, 12), "[data-chat-question]"); await sleep(500); const next = (await page.evaluate(READ)).qButtons.find(t => /^(다음|확인|저장|이걸로|선택)/.test(t)); if (next) { await clickText(page, next, "[data-chat-question]"); did += ` → [${next}]`; } else if (same >= 1) { const sent = await page.evaluate(`(() => { const b = document.querySelector('footer[aria-label="대화 입력창"] button[type=submit]'); if (b && !b.disabled) { b.click(); return true; } return false; })()`); if (sent) did += " → [보내기]"; } }

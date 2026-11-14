@@ -3,7 +3,7 @@
 
 export const SAMPLE = {
  "id": "sample_banchan_easy",
- "title": "예시 · 퇴근길 반찬가게 (일반 방식)",
+ "title": "예시 · 퇴근길 반찬가게 (일반 모드)",
  "planType": "일반 사업계획서",
  "sections": {
   "overview/summary": {
