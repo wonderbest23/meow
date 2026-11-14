@@ -2,7 +2,7 @@
 
 import { ChevronDown, Clock, MapPin, Navigation, Phone, Quote } from "lucide-react";
 import type { ReactNode } from "react";
-import { LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING } from "../lib/landing/brainwave/business-content";
+import { LOCAL_ADDRESS_PENDING } from "../lib/landing/brainwave/business-content";
 import { mapUrl } from "./brainwave-business-local";
 import { kitPieces, revealProps, useKitMotion, type BusinessDesignProps } from "./brainwave-business-pieces";
 import motion from "./brainwave-business-motion.module.css";
@@ -56,7 +56,7 @@ export function BusinessLocalTwo1_2226({ overrides, hidden, sectionOrder, onPick
     [HERO]: () => {
       // 첫 화면 아래 한 줄 — 영업시간·위치(적어 둔 것만). 누르면 오시는 길로 내려간다
       const chips = [
-        hours && hours !== LOCAL_HOURS_PENDING ? { icon: <Clock size={15} aria-hidden />, label: hours.split("\n")[0] } : null,
+        hours && !hours.endsWith("문의 주시면 안내해 드려요") ? { icon: <Clock size={15} aria-hidden />, label: hours.split("\n")[0] } : null,
         address && address !== LOCAL_ADDRESS_PENDING && map ? { icon: <MapPin size={15} aria-hidden />, label: address.split("\n")[0] } : null,
       ].filter(Boolean) as Array<{ icon: ReactNode; label: string }>;
       return <section key={HERO} data-bw-node={HERO} className={styles.hero} data-scroll>

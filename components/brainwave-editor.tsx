@@ -8,7 +8,7 @@ import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical, Image as ImageIcon, Layo
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
+import { createBusinessTemplate, restorableSections } from "../lib/landing/brainwave/business-content";
 import { carryCopyToDesign, carryEditedTexts } from "../lib/landing/ai-fill";
 import { BrainwavePage, loadBrainwavePage, menuItemsOf, orderedSections, sectionBands, type BrainwavePageData } from "./brainwave-page";
 import { brainwaveSections } from "../lib/landing/brainwave/button-action";
@@ -414,6 +414,7 @@ export function BrainwaveEditor({
    * 글 자리 — 그 자리에서 고친다. 고르는 순간 오른쪽에 텍스트 판이 떠서
    * 내용·크기를 세세하게 만질 수 있다(화면의 글자와 양방향으로 같이 움직인다).
    */
+  const hintText = useRef<string | null>(null);
   const pickText = (id: string, el: HTMLElement) => {
     if (editing?.el === el) return;
     finishText();
@@ -435,10 +436,14 @@ export function BrainwaveEditor({
     setMenu(null);
     el.contentEditable = "plaintext-only";
     el.focus();
+    /* 빈 칸의 흐린 안내 글(data-bw-hint)은 글이 아니다 — 통째로 골라 두어 치면 바로 바뀌게 하고, 그대로 나오면 빈 칸으로 둔다.
+       예전엔 눌렀다 나오기만 해도 안내 글이 진짜 글로 저장돼 손님 화면에 나갔다 */
+    hintText.current = el.dataset.bwHint !== undefined ? el.innerText : null;
+    if (hintText.current !== null) window.getSelection()?.selectAllChildren(el);
     select("글", id, el);
     setEditing({ id, el });
     setSizeTarget(id);
-    setDraftText(el.innerText);
+    setDraftText(hintText.current !== null ? "" : el.innerText);
     editStartText.current = el.innerText;
     histPushed.current = false;
     el.oninput = () => setDraftText(el.innerText);
@@ -494,7 +499,8 @@ export function BrainwaveEditor({
     el.oninput = null;
     /* 판에서 글을 다 지우면 화면의 글 요소가 사라졌다가 새로 생긴다 — 그때 잡아 둔 옛 요소를 읽으면 고친 글이 옛 글로 돌아갔다.
        요소가 화면에서 떨어졌으면 판의 값(draftText)을 쓴다 */
-    const text = el.isConnected ? el.innerText : draftText;
+    const typed = el.isConnected ? el.innerText : draftText;
+    const text = typed === hintText.current ? "" : typed;
     const original = meta?.slots.text.find((t) => t.id === id)?.text ?? "";
     const current = overRef.current;
     const next = { ...current, texts: { ...current.texts } };
@@ -688,6 +694,8 @@ export function BrainwaveEditor({
   /* 사장님이 직접 숨긴 것만 — 디자인이 처음부터 안 쓰는 칸까지 세면 '숨긴 적 없는데 9개'가 된다 */
   const baseHidden = useMemo(() => new Set(contentMode === "business" && businessContent ? createBusinessTemplate(businessContent, page).hidden : (init.hidden ?? [])), [contentMode, businessContent, page, init.hidden]);
   const userHidden = over.hidden.filter((id) => !baseHidden.has(id));
+  /* 디자인이 처음엔 닫아 둔 구역(후기·자주 묻는 질문 등) — 구역 순서 판에서 켠다. 휴대폰 화면에는 켜는 단추가 없었고 PC 는 이름 없는 단추뿐이었다 */
+  const offSections = restorableSections(page).filter((id) => baseHidden.has(id) && over.hidden.includes(id));
 
   /* 우클릭 메뉴(Wix 식) — 글/사진/버튼/섹션에서 숨기기·편집을 바로 연다 */
   const [ctx, setCtx] = useState<{ x: number; y: number; entries: Array<{ label: string; danger?: boolean; act: () => void }> } | null>(null);
@@ -1207,6 +1215,19 @@ export function BrainwaveEditor({
               );
             })}
           </ul>
+          {offSections.length ? (
+            <>
+              <p className="bw-menu-hint">아직 안 쓰는 구역이에요. 켜면 빈 칸이 생겨 직접 적을 수 있어요.</p>
+              <ul className="bw-hidden-list">
+                {offSections.map((id) => (
+                  <li key={id}>
+                    <span>{sectionNameKo(meta?.root.ch?.find((n) => n.id === id)?.name)}</span>
+                    <button type="button" onClick={() => restore(id)}><Plus size={13} /> 켜기</button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
           {userHidden.length ? (
             <>
               <p className="bw-menu-hint">숨긴 구역·글은 아래에서 되살릴 수 있어요.</p>

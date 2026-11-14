@@ -202,7 +202,7 @@ export function businessTemplateDefaults(content: BusinessContent): Set<string> 
   const values = [
     name, content.headline ?? "", content.offer, content.description, content.customer, content.price, content.cta,
     "이용 안내", "제공 내용", "이용 대상", "가격 안내", "01", "02", "03",
-    "오시는 길과 영업시간", "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING, "진료 시간·오시는 길", CLINIC_HOURS_PENDING, "찾아오시는 길", "운영 시간", "오시는 길", "작업 사례", "이런 일을 해요",
+    "오시는 길과 영업시간", "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING, "진료 시간·오시는 길", CLINIC_HOURS_PENDING, ...VISITING_LABELS.flatMap((labels) => Object.values(labels)), "찾아오시는 길", "운영 시간", "오시는 길", "작업 사례", "이런 일을 해요",
     /* 마무리 띠는 사업 이름 없이 '문의해 보세요'(2026-10-24, 이름은 바로 위 제목에 이미 있다). 예전 '○○에 문의해 보세요'도 자동 문구로 본다 */
     `${name} 문의`, `${name}에 문의해 보세요`, "문의해 보세요",
     [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
@@ -214,7 +214,19 @@ export function businessTemplateDefaults(content: BusinessContent): Set<string> 
  * 템플릿 전용 기본 글. 병원 디자인의 '진료 시간·오시는 길'은 병원일 때만 쓴다 — 빵집이 병원 디자인을
  * 고르면 '진료 시간'이 손님에게 그대로 보였다. 병원이 아니면 동네 가게와 같은 '오시는 길과 영업시간'.
  */
+/* 가게 없이 손님에게 찾아가는 사업(방문 과외·출장 서비스) — '오시는 길과 영업시간'이 맞지 않는다 */
+const NO_STOREFRONT = /(출장|찾아가[는서]|가정\s*방문|방문\s*(과외|수업|레슨|교습|교육|수리|청소|설치|관리|케어|미용|돌봄|세차|점검|서비스))/;
+const LESSON = /(과외|수업|레슨|교습|강습)/;
+export const VISITING_LABELS: Value[] = [
+  { visitTitle: "수업 시간과 문의", hoursLabel: "수업 시간", hours: "수업 시간은 문의 주시면 안내해 드려요", address: "" },
+  { visitTitle: "이용 시간과 문의", hoursLabel: "이용 시간", hours: "이용 시간은 문의 주시면 안내해 드려요", address: "" },
+];
 function templateLabels(content: BusinessContent, page: string, profile: Profile): Value | undefined {
+  /* 동네 가게 2 에서만 — 기존 다섯 배치의 글은 그대로 둔다. 주소 줄은 비워 닫는다(사업자 정보에 주소를 적으면 열린다) */
+  if (page === "1-2226") {
+    const about = [content.businessName, content.headline ?? "", content.offer, content.description, content.customer].join(" ");
+    return NO_STOREFRONT.test(about) ? { ...profile.labels, ...VISITING_LABELS[LESSON.test(about) ? 0 : 1] } : profile.labels;
+  }
   if (page !== "0-2385") return profile.labels;
   const medical = designPageForSector([content.businessName, content.headline ?? "", content.offer, content.description].join(" ")) === "0-2385";
   return medical ? profile.labels : undefined;

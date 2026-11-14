@@ -200,3 +200,16 @@ assert.equal(count(editor, "<details"), count(editor, "<details open"), "answers
 assert.ok(!editor.includes("map.naver.com") && !editor.includes('href="#visit"'), "editor does not navigate away");
 
 console.log(JSON.stringify({ passed: 77 }));
+
+/* 가게 없이 찾아가는 사업 — 동네 가게 2 의 칸 제목이 '오시는 길과 영업시간'이 아니다(기존 다섯 배치는 그대로) */
+{
+  const base = created.pageData!.businessContent!;
+  const title = (page: string, description: string) => createBusinessTemplate({ ...base, businessName: "우리 사업", headline: "", offer: "", customer: "", description }, page).texts;
+  const tutor = title(NEW, "초등학생 집으로 찾아가는 방문 과외");
+  assert.equal(tutor["1:111"], "수업 시간과 문의");
+  assert.equal(tutor["1:113"], "수업 시간");
+  assert.equal(tutor["1:112"], "", "no address row until the owner writes one");
+  assert.equal(title(NEW, "에어컨 출장 청소")["1:111"], "이용 시간과 문의");
+  assert.equal(title(NEW, "퇴근길 직장인에게 반찬 묶음을 파는 가게")["1:111"], "오시는 길과 영업시간");
+  assert.equal(title("0-2226", "초등학생 집으로 찾아가는 방문 과외")["0:2281"], "오시는 길과 영업시간", "the existing layouts keep their words");
+}
