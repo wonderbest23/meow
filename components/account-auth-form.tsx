@@ -336,7 +336,8 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img className={styles.logo} src={DEFAULT_LOGO.src} alt="오늘창업" width={DEFAULT_LOGO.width} height={DEFAULT_LOGO.height} />
           </Link>
-          <h1 id={titleId} className={styles.title}>{mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 재설정" : mode === "reset" ? "새 비밀번호" : "로그인"}</h1>
+          {/* 로그인 화면은 제목을 보이지 않는다 — 바로 아래 '로그인' 단추가 같은 말을 한다(대표 요청 2026-11-14). 화면 낭독용 이름은 남기고, 회원가입 · 비밀번호 재설정처럼 화면이 바뀐 것을 알려야 할 때만 보인다 */}
+          <h1 id={titleId} className={mode === "login" ? styles.srOnly : styles.title}>{mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 재설정" : mode === "reset" ? "새 비밀번호" : "로그인"}</h1>
           {mode === "recover" && <p className={styles.sub}>가입한 이메일로 재설정 링크를 보내드려요.</p>}
           {mode === "reset" && <p className={styles.sub}>8자 이상으로 정해 주세요.</p>}
         </header>
