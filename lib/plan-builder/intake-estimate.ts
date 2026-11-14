@@ -51,6 +51,10 @@ const METHOD_PHRASE = /정기\s*(?:배송|배달|구독)/g;
 const PRICED_ITEM = /[가-힣a-z]+\s*(?:(?:하나|한\s?[가-힣]{1,2}|[0-9]+\s?[a-z가-힣]{1,3})에?\s*)?(?:[0-9][0-9,.]*\s*[천만]?|[일이삼사오육칠팔구]?[천만][0-9]?[천백]?)\s*원대?/gi;
 // 순서: 나열 전체를 잡는 것부터 — 뒤쪽 이름만 먼저 지워지면 앞 낱말이 남는다
 const NOT_KIND_PHRASES = [ROUTE_PHRASE, VENUE_PHRASE, METHOD_PHRASE, PRICED_ITEM];
+/** 두 쪽을 잇는 사업을 가리키는 말 — 'A와 B를 연결 · 매칭 · 이어 주는 · 중개', '중개 플랫폼 · 매칭 앱' */
+const PLATFORM = /[가-힣a-z0-9]+(?:와|과|랑|끼리)\s[^.!?\n]*?(?:연결|매칭|이어\s*주|중개)|(?:중개|매칭|연결)\s*(?:플랫폼|앱|어플|사이트|서비스)/i;
+/** 찾은 줄이 이미 잇는 사업이면(소개팅 주선 · 견적 수수료 · 주차 공유) 그대로 둔다 */
+const PLATFORM_OFFER = /수수료|중개|연결|플랫폼|거래|주선|공유|매칭/;
 const SUPPLY = /납품|oem|odm|하청|임가공|도매(?!\s*(?:시장|상가|업체)?에서)/i;
 /** 문장에 적은 전문 분야('여드름 관리 전문', 'PT 전문') — 앞의 한두 어절 */
 const FOCUS = /((?:[가-힣a-z0-9]+\s)?[가-힣a-z0-9]+)\s?(전문|특화)(?![가-힣]*(?:가|의|직))/i;
@@ -122,7 +126,24 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   // 사전에도 있지만 낱말 규칙이 그보다 짧지 않은 낱말로 맞았으면(청소 → 입주청소, 식당 → 식자재납품) 더 구체적인 규칙 줄을 쓴다. 사업자용 앱·프로그램은 예외다(카페용 앱은 카페가 아니다)
   const handWord = hand?.word.toLowerCase().replace(/\s/g, "") ?? "";
   const rule = !hand || (found && (found.word.length >= handWord.length || found.named) && !CHANNEL_WORD.test(found.word) && (hand.sector !== "software" || found.sector === "software")) ? found : null;
-  const kind = rule ?? hand, sector = rule?.sector ?? chosen ?? ranked[0];
+  /*
+   * 두 쪽을 잇는 사업('보호자와 펫시터를 연결해 주는', '과외 선생님을 매칭해 주는')은 공급자가 하는 일(펫시팅 · 과외)이 아니라 연결이 사업이다(2026-11-14 문장 15개 점검).
+   * 연결 앱 줄을 바탕으로 하고, 공급자 쪽 종류를 찾았으면 그 손님 · 문제를 쓰고 한 건 수수료를 그 값의 10%로 둔다.
+   * shortcut: 수수료는 1천~10만원으로 자르고 한 달 건수는 바탕 줄의 한 달 매출이 유지되게 맞춘다, 업종별 수수료 줄이 생기면 그 값을 쓴다
+   */
+  let platform: typeof found = null, platformNamed = false;
+  if (!chosen && !chosenKsic && rules && PLATFORM.test(spelled) && !PLATFORM_OFFER.test((rule ?? hand)?.offer ?? "")) {
+    const base = rules("중개 앱", sector => sector === "software");
+    const supplier = rules(spelled.replace(/예약\s*서비스|중개|매칭|연결|플랫폼|사이트|서비스|앱|어플/g, " "), sector => sector !== "software");
+    if (base && supplier) {
+      const name = spelled.match(new RegExp(Array.from(supplier.word).map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s*"), "i"))?.[0] ?? supplier.word;
+      const fee = Math.min(100_000, Math.max(1_000, Math.round(supplier.price * 0.1 / 500) * 500)), baseCount = Number(base.capacity.match(/\d+/)?.[0]) || 900;
+      platform = { ...base, customer: supplier.customer, problem: supplier.problem, offer: `${name} 연결 수수료(1건)`, price: fee, unitCost: Math.round(fee * base.unitCost / base.price / 100) * 100,
+        capacity: `한 달 ${Math.max(10, Math.min(baseCount, Math.round(base.price * baseCount / fee / 10) * 10))}건`, word: `${name} 연결`, named: true };
+      platformNamed = true;
+    } else platform = base;
+  }
+  const kind = platform ?? rule ?? hand, sector = platform?.sector ?? rule?.sector ?? chosen ?? ranked[0];
   const read = readSentence(text);
   const picked = kind ?? SECTOR_BASELINES[sector];
   // 가게·병원 운영자나 공장·기업이 쓰는 프로그램이면 개인용 앱 값 대신 사업자용 출발값을 쓴다
@@ -237,5 +258,5 @@ export function estimateIntake(text: string, chosen?: ProposalSector, rules?: Ki
   if (sided && kind && answers.offer && !PLAIN_WORD.test(side![1]) && rules?.knows?.(side![1].toLowerCase()) && !answers.offer.includes(side![1])) answers.offer = `${answers.offer} · ${side![1]}`;
   // 종류를 못 찾았으면 업종 표의 넓은 답(1회 서비스·개인 소비자)을 채우지 않는다 — 그 두 질문은 평소처럼 묻는다. 문장에 적은 고객은 둔다
   if (!kind) { if (sector !== "software") delete answers.offer; if (!read.customer) delete answers.customer; }
-  return { sector, ksic: rule?.ksic ?? null, matched: !!kind, word: kind?.word ?? null, answers };
+  return { sector, ksic: (platform ?? rule)?.ksic ?? null, matched: !!kind, word: platform && !platformNamed ? null : kind?.word ?? null, answers };
 }

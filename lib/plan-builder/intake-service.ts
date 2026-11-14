@@ -14,6 +14,7 @@ import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-sto
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
 import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { ruleKind } from "./kind-rules";
+import { estimateIntake } from "./intake-estimate";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
 import { EDITABLE_FACT_IDS } from "./fact-highlight";
@@ -122,7 +123,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         if (command.depth === "expert") intake.depth = "expert";
         if (process.env.INTAKE_ESTIMATE === "1" && intake.depth !== "expert") applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
         // 전문가 모드는 기준값을 채우지 않지만 제목만은 찾은 이름으로(긴 문장이 중간에서 잘린 제목이 되던 문제)
-        else if (intake.mode === "startup" && typeof command.value === "string") nameFromKind(coach, command.value.trim(), ruleKind(command.value, () => true)?.word ?? null);
+        else if (intake.mode === "startup" && typeof command.value === "string") { const guess = estimateIntake(command.value, undefined, ruleKind); nameFromKind(coach, command.value.trim(), guess.word, guess.answers.offer); }
       } else if (!savedIntake && command.depth === "expert") intake.depth = "expert";
       if (command.message) storeDeferredNote(coach, intake, command, at);
       coach.stage = intake.mode === "operating" ? "operating" : intake.mode === "exploring" && !coach.fields.some(field => field.key === "business") ? "exploring" : "startup";

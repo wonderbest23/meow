@@ -868,10 +868,11 @@ const ESTIMATE_SUFFIX = ":estimate";
  * 제목이 아직 문장 앞부분(임시 제목)이면 기준표가 찾은 이름으로 바꾼다 — 사용자가 적은 띄어쓰기대로('강아지 수제 간식').
  * 두 글자 이름('과외' · '캔들')은 제목으로 너무 짧고, 'X에서 팔아요'의 X(플리마켓 · 인스타)는 파는 곳이지 사업 이름이 아니다 — 그때는 문장 앞부분을 둔다.
  */
-export function nameFromKind(coach: CoachState, business: string, word: string | null) {
+export function nameFromKind(coach: CoachState, business: string, word: string | null, offer = "") {
   if (!word || coach.business.nameConfirmed || coach.business.name !== draftNameFromIdea(business)) return;
   const pattern = Array.from(word.replace(/\s/g, "")).map(ch => ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s*");
-  const spaced = business.match(new RegExp(pattern, "i"))?.[0] ?? word;
+  // 문장에 그대로 없으면 그 줄의 파는 것에서 띄어쓰기를 가져온다('원두판매' → '커피 원두 판매'의 '원두 판매')
+  const spaced = business.match(new RegExp(pattern, "i"))?.[0] ?? offer.match(new RegExp(pattern, "i"))?.[0] ?? word;
   const place = new RegExp(`${pattern}(?:(?:\\s*[,·/]\\s*|(?:와|과|랑|이랑)\\s*)[가-힣a-z0-9]+?)*에서(?:\\s|$)`, "i").test(business);
   if (!place && Array.from(spaced.replace(/\s/g, "")).length >= 3) coach.business.name = spaced;
 }
@@ -893,7 +894,7 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   const { sector, ksic, matched, word, answers } = free ? estimateIntake(business, undefined, rules) : estimateIntake(business, intake.sector, rules, intake.ksic);
   // 업종도 모르고 종류도 못 찾았으면 아무것도 채우지 않는다 — 업종 질문을 먼저 묻고, 고르면 그 업종으로 다시 채운다
   if (!picked && open("industry") && !matched) return;
-  if (!picked) nameFromKind(coach, business, word);
+  if (!picked) nameFromKind(coach, business, word, answers.offer);
   if (!picked && (open("industry") || free && matched)) {
     // 낱말 규칙으로 찾은 분류도 짐작이다 — 값·수량 이름(월 회비·프로젝트 1건)이 그 분류를 따르게 넣어 두고, 사용자가 업종을 고르면 그것으로 바뀐다
     intake.sector = sector; intake.ksic = ksic;
