@@ -216,6 +216,11 @@ async function main() {
     const { ruleKind } = await import("../lib/plan-builder/kind-rules");
     assert.equal(estimateIntake("직접 만든 비누를 플리마켓이랑 스마트스토어에서 팔아 보려고요", undefined, ruleKind).word, "비누");
     assert.equal(estimateIntake("수제청을 담가 인스타그램과 플리마켓에서 팔 계획이에요", undefined, ruleKind).word, "수제청");
+    // 목록에 없는 파는 곳(맘카페) · 파는 방식(정기배송) · 값을 붙인 품목 하나(원피스)는 종류가 아니다 — 2026-11-14 문장 66개 점검
+    assert.equal(estimateIntake("초등학생 4명 소그룹 코딩 학원을 열려고 해요. 맘카페랑 당근으로 알리고 월 20만원", undefined, ruleKind).word, "코딩학원");
+    assert.equal(estimateIntake("맞벌이 집에 주 2회 반찬을 정기배송하려고 해요. 당근이랑 네이버 밴드로 주문받고 한 번에 2만원", undefined, ruleKind).word, "반찬");
+    assert.equal(estimateIntake("20대 여성 의류를 온라인 쇼핑몰이랑 지그재그, 에이블리에서 팔려고요. 원피스 3만원대", undefined, ruleKind).word, "여성의류");
+    assert.equal(estimateIntake("직접 볶은 원두를 스마트스토어랑 오늘의집에서 팔고 싶어요. 200g에 만5천원", undefined, ruleKind).word, "원두판매");
     // 남는 종류가 없으면 파는 곳이 곧 사업이다 — 다만 제목은 문장 앞부분
     assert.equal(estimateIntake("플리마켓에서 이것저것 팔아 보려고요", undefined, ruleKind).word, "플리마켓");
     const venue = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "플리마켓에서 이것저것 팔아 보려고요", revision: 0, requestId: randomUUID() }, off);
