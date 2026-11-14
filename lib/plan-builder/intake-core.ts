@@ -635,6 +635,8 @@ export function intakeSectorSuggestion(plan: Pick<ServerPlan, "sections">, coach
   const industry = intake.answers.industry;
   if (!business || industry?.status !== "answered" || intake.ksic || intake.sector === "general" || Object.keys(plan.sections).length) return null;
   if (intake.sectorCheck?.business === business) return null;
+  // 업종을 사용자가 고른 게 아니라 기준표가 채운 것이면 묻지 않는다 — 자기가 짐작한 업종을 다시 바꾸자고 하게 된다(과외 매칭 → 소프트웨어로 채우고 '교육으로 정리할까요?')
+  if (industry.messageId.endsWith(ESTIMATE_SUFFIX)) return null;
   let suggested = descriptionSector(business);
   if (suggested === "general") {
     // 구어 표현으로 찾은 분류 후보가 모두 한 업종일 때만(필라테스 → 체육시설·사진 촬영처럼 갈리면 묻지 않는다)

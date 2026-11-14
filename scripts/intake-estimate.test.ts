@@ -228,6 +228,16 @@ async function main() {
     // 이미 잇는 사업 줄(소개팅 주선)과 잇는 말이 없는 문장(과외를 직접 한다)은 그대로
     assert.equal(estimateIntake("혼자 지내는 어르신을 서로 소개해 주는 소개팅 서비스를 하려고요", undefined, ruleKind).word, "소개팅");
     assert.equal(estimateIntake("중학생 코딩 과외를 숨고와 김과외에서 구해서 하려고 합니다", undefined, ruleKind).sector, "education");
+    // 실제 대화 흐름: 문장부터 적으면 연결 수수료 값이 채워지고, 스스로 채운 업종을 바꾸자고 묻지 않는다. 업종을 골라도 값은 연결 수수료다
+    {
+      const text = "학부모와 대학생 과외 선생님을 매칭해 주는 서비스를 하고 싶어요. 성사되면 수수료 10%";
+      const made = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: text, revision: 0, requestId: randomUUID() }, off);
+      const offer = readCoach(made.plan.answers)!.fields.find(field => field.key === "offer")?.value ?? "";
+      assert.match(offer, /연결 수수료/, offer);
+      assert.equal(made.snapshot.sectorSuggestion ?? null, null);
+      const chosen = estimateIntake(text, "education", ruleKind);
+      assert.equal(chosen.sector, "education"); assert.match(chosen.answers.offer, /연결 수수료/);
+    }
     // 남는 종류가 없으면 파는 곳이 곧 사업이다 — 다만 제목은 문장 앞부분
     assert.equal(estimateIntake("플리마켓에서 이것저것 팔아 보려고요", undefined, ruleKind).word, "플리마켓");
     const venue = await saveIntakeCommand(`intake-estimate-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "플리마켓에서 이것저것 팔아 보려고요", revision: 0, requestId: randomUUID() }, off);
