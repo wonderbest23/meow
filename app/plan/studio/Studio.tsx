@@ -224,6 +224,7 @@ export default function Studio() {
    */
   const [signedOut, setSignedOut] = useState(false);
   const account = useAccount();
+  const [sampleFolded, setSampleFolded] = useState(false);
   const [title, setTitle] = useState("");
   useEffect(() => {
     if (!planId || !intakeV2) return;
@@ -906,14 +907,16 @@ export default function Studio() {
                   <h2>완성 예시</h2>
                   <p>실제 AI가 만든 계획서예요. 고칠 수는 없고 구경만 할 수 있어요.</p>
                   {/* 누른 예시만 펼친다 — 카드 바로 아래에 그 계획서를 만든 대화가 이어지고, 다른 예시는 이름표와 제목만 남기고 접힌다(대표 요청 2026-11-14) */}
-                  {GUEST_SAMPLES.map(sample => { const open = planId === sample.id; return <div key={sample.id} className={styles.sampleGroup} data-open={open || undefined}>
-                    <Link href={`/plan/studio?planId=${sample.id}&tab=plan`} aria-current={open ? "page" : undefined} aria-expanded={open} className={styles.sampleItem}>
-                      {/* 어느 모드로 만든 것인지가 먼저 보여야 차이를 안다 — 모드 이름표를 가장 크게 */}
-                      <em data-kind={sample.kind}>{sample.kind}</em><strong>퇴근길 반찬가게</strong>{open && <><span>{sample.how}</span><small>{sample.note}</small></>}
-                      {!open && <ChevronDown className={styles.sampleMore} aria-hidden="true" />}
-                    </Link>
-                    {open && <div className={styles.sampleTalk} key={sample.id}><SampleConversation planId={sample.id} /></div>}
-                  </div>; })}
+                  {GUEST_SAMPLES.map(sample => { const current = planId === sample.id, open = current && !sampleFolded;
+                    /* 어느 모드로 만든 것인지가 먼저 보여야 차이를 안다 — 모드 이름표를 가장 크게 */
+                    const face = <><em data-kind={sample.kind}>{sample.kind}</em><strong>퇴근길 반찬가게</strong>{open && <><span>{sample.how}</span><small>{sample.note}</small></>}<ChevronDown className={styles.sampleMore} data-open={open || undefined} aria-hidden="true" /></>;
+                    return <div key={sample.id} className={styles.sampleGroup} data-open={open || undefined} data-current={current || undefined}>
+                      {/* 지금 보는 예시의 카드는 접기 · 펼치기 단추, 다른 예시의 카드는 그 예시로 가는 링크 */}
+                      {current
+                        ? <button type="button" className={styles.sampleItem} aria-expanded={open} aria-label={`${sample.kind} 예시 대화 ${open ? "접기" : "펼치기"}`} onClick={() => setSampleFolded(value => !value)}>{face}</button>
+                        : <Link href={`/plan/studio?planId=${sample.id}&tab=plan`} aria-expanded={false} className={styles.sampleItem} onClick={() => setSampleFolded(false)}>{face}</Link>}
+                      {open && <div className={styles.sampleTalk} key={sample.id}>{/* 휴대폰은 계획서가 다른 칸이라 여기서 여는 길을 둔다 */}{!wide && <Link href={`/plan/studio?planId=${sample.id}&tab=plan`} className={styles.sampleView}>이 계획서 보기<ChevronRight size={16} aria-hidden="true" /></Link>}<SampleConversation planId={sample.id} /></div>}
+                    </div>; })}
                   {noteGuideTurn}
                 </div>
                 <div className={styles.sampleFoot}>{account?.authenticated === false
