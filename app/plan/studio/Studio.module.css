@@ -253,6 +253,21 @@
  * 예전엔 내 사업 화면 틀(아래 110px · 오른쪽 96px 여백)을 그대로 써 위·왼쪽으로 쏠렸다. 빈 블록의 화면 높이 기준 최소 높이도 걷는다.
  */
 .paneBody > .chatNote { flex:1 1 auto; margin-block:0; }
+/* 예시 사업의 왼쪽 칸 — 위: 완성 예시 목록(눌러서 오른쪽에 연다), 아래: 로그인 · 회원가입 또는 내 사업 시작 */
+.paneBody > .sampleCol { flex:1 1 auto; }
+.sampleCol { min-height:0; display:flex; flex-direction:column; }
+.sampleList { flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding:20px 16px; }
+.sampleList h2 { margin:0; font-size:1.0625rem; font-weight:700; color:var(--app-text); }
+.sampleList > p { margin:-4px 0 6px; font-size:.8125rem; line-height:1.6; color:var(--app-muted); word-break:keep-all; }
+.sampleItem { display:grid; gap:2px; padding:14px 16px; border:1.5px solid var(--app-line); border-radius:14px; background:var(--app-surface); color:var(--app-text); text-decoration:none; transition:border-color .15s; }
+.sampleItem:hover { border-color:var(--app-line-strong); }
+.sampleItem[aria-current=page] { border-color:var(--app-text); box-shadow:0 0 0 1px var(--app-text); }
+.sampleItem strong { font-size:.9375rem; font-weight:700; }
+.sampleItem span { font-size:.875rem; color:var(--app-body); }
+.sampleItem small { font-size:.75rem; color:var(--app-muted); }
+.sampleFoot { flex:none; display:grid; gap:10px; padding:14px 16px calc(16px + env(safe-area-inset-bottom)); border-top:1px solid var(--app-line); background:var(--app-surface); }
+.sampleFoot p { margin:0; font-size:.8125rem; color:var(--app-muted); text-align:center; }
+.sampleFoot > div { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .chatNote, .missingNote { min-height:0; display:flex; flex-direction:column; justify-content:center; overflow-y:auto; overscroll-behavior:contain; }
 .missingNote { flex:1; }
 .chatNote > div, .missingNote > div { width:100%; padding:24px 20px; }
