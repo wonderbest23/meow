@@ -56,11 +56,15 @@ export type IntakeState = {
    * 계획서를 만들기 전까지만 바꿀 수 있다.
    */
   depth?: "expert";
+  /** 일반 모드에서 사업 문장을 AI로 한 번 읽었다(읽은 것이 없어도 켠다 — 사업마다 한 번만 부른다) */
+  understood?: boolean;
 };
-export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss", "sector-keep", "depth"] as const;
+export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss", "sector-keep", "depth", "understand"] as const;
 export type IntakeCommand = {
   action: (typeof INTAKE_ACTIONS)[number];
   planId?: string; revision: number; requestId: string;
+  /** action "understand": 사용자가 적은 문장에서 읽은 답(서버가 AI로 읽어 넣는다 — 화면이 보내지 않는다) */
+  understood?: Array<{ questionId: string; value: IntakeValue }>;
   /** action "start"(새 대화) · "depth"(진행 중 바꾸기): 대화 방식 */
   depth?: "easy" | "expert";
   mode?: IntakeMode; questionId?: string; value?: IntakeValue; unknown?: boolean;

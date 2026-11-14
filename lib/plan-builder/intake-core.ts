@@ -901,6 +901,27 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   if (filled && !coach.messages.some(message => message.id === messageId)) coach.messages.push({ id: messageId, role: "assistant", text: "나머지는 같은 업종 기준값으로 먼저 채웠어요. 다르면 눌러서 고칠 수 있어요.", at });
 }
 
+export const SAID_SUFFIX = ":said";
+/**
+ * 사용자가 적은 문장에서 읽은 답을 넣는다(idea-understanding.ts) — 업종 기준값으로 채운 답만 바꾸고, 사용자가 이미 직접 답한 것은 건드리지 않는다.
+ * 말한 것이므로 근거는 '사용자'(계획서에서 '대표님이 정한 값'). 형식이 안 맞는 값은 버린다. 넣은 수를 돌려준다.
+ */
+export function applyUnderstood(coach: CoachState, intake: IntakeState, items: NonNullable<IntakeCommand["understood"]>, requestId: string, at: string): number {
+  const messageId = `${requestId}${SAID_SUFFIX}`, questions = intakeQuestions(intake, coach);
+  let applied = 0;
+  for (const item of items) {
+    const question = questions.find(candidate => candidate.id === item.questionId), now = intake.answers[item.questionId];
+    if (!question || question.id === "business" || question.id === "industry" || now && !now.messageId.endsWith(ESTIMATE_SUFFIX)) continue;
+    try {
+      const value = validatedAnswer(question, item.value);
+      intake.answers[question.id] = { status: "answered", value, messageId, at, quote: displayIntakeValue(item.value) };
+      if (question.fieldKey) setField(coach, question.fieldKey, `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, messageId, displayIntakeValue(item.value), "user");
+      applied += 1;
+    } catch { /* 형식이 안 맞으면 버린다 — 기준값이 그대로 남는다 */ }
+  }
+  return applied;
+}
+
 /** 전문가 방식으로 바꿀 때 — 기준값으로 채운 답(제안)을 걷어 하나씩 다시 묻게 한다. 업종은 질문 묶음을 정하므로 그대로 두고, 사용자가 직접 답한 것은 건드리지 않는다 */
 export function clearIntakeEstimates(coach: CoachState, intake: IntakeState) {
   for (const question of intakeQuestions(intake, coach)) {
