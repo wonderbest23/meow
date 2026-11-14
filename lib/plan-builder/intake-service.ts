@@ -180,11 +180,11 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       if (Object.keys(plan.sections).length) throw new IntakeError("depth_locked", "계획서를 만든 뒤에는 계획서에서 고칠 수 있어요", 409);
       if (command.depth === "expert") {
         intake.depth = "expert"; clearIntakeEstimates(coach, intake);
-        coach.messages.push({ id: `${command.requestId}:depth`, role: "assistant", text: "전문가 방식으로 바꿨어요. 하나씩 자세히 물어볼게요.", at });
+        coach.messages.push({ id: `${command.requestId}:depth`, role: "assistant", text: "전문가 모드로 바꿨어요. 하나씩 자세히 물어볼게요.", at });
       } else {
         delete intake.depth;
         if (process.env.INTAKE_ESTIMATE === "1") applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
-        coach.messages.push({ id: `${command.requestId}:depth`, role: "assistant", text: "일반 방식으로 바꿨어요. 꼭 필요한 것만 물어볼게요.", at });
+        coach.messages.push({ id: `${command.requestId}:depth`, role: "assistant", text: "일반 모드로 바꿨어요. 꼭 필요한 것만 물어볼게요.", at });
       }
     }
     else if (command.action === "name") {

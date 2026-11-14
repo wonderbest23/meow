@@ -3,7 +3,7 @@
 
 export const SAMPLE = {
  "id": "sample_banchan_expert",
- "title": "예시 · 퇴근길 반찬가게 (전문가 방식)",
+ "title": "예시 · 퇴근길 반찬가게 (전문가 모드)",
  "planType": "일반 사업계획서",
  "sections": {
   "overview/summary": {

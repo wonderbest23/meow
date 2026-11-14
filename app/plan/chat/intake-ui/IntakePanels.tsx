@@ -78,11 +78,11 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false,
     {/* 한 번에 질문 하나 — 고르기 전에는 두 카드만, 고르면 카드는 내 답 말풍선으로 접히고 그다음에 단계를 묻는다(대표 요청 2026-11-13). 말풍선 아래 '바꾸기'로 다시 고른다 */}
     {(initialMessage || greeted) && onDepth && (depthPicked
       ? <><div className={`${styles.question} ${styles.chatQuestion}`}><h2>어떻게 만들까요?</h2></div>
-        <article className={styles.userMessage} data-coach-message="user"><p>{depth === "expert" ? "전문가" : "일반"}</p></article>
+        <article className={styles.userMessage} data-coach-message="user"><p>{depth === "expert" ? "전문가 모드" : "일반 모드"}</p></article>
         <button type="button" className={styles.depthChange} disabled={disabled} onClick={() => onDepth(null)}>바꾸기</button></>
-      : <div className={styles.depthCards} role="group" aria-label="대화 방식">
+      : <div className={styles.depthCards} role="group" aria-label="대화 모드">
         <h2>어떻게 만들까요?</h2>
-        {([["easy", "일반", "한 문장만 말하면 나머지는 채워서 바로 만들어요", "처음이라면 이쪽"], ["expert", "전문가", "가격·고객·비용을 하나씩 직접 정해요", "숫자를 이미 알고 있다면"]] as const).map(([value, name, text, who]) =>
+        {([["easy", "일반 모드", "한 문장만 말하면 나머지는 채워서 바로 만들어요", "처음이라면 이쪽"], ["expert", "전문가 모드", "가격·고객·비용을 하나씩 직접 정해요", "숫자를 이미 알고 있다면"]] as const).map(([value, name, text, who]) =>
           <button type="button" key={value} disabled={disabled} onClick={() => onDepth(value)}><strong>{name}</strong><span>{text}</span><small>{who}</small></button>)}
       </div>)}
     {(initialMessage || greeted) && (!onDepth || depthPicked) && <div className={`${styles.question} ${styles.chatQuestion}`}>
