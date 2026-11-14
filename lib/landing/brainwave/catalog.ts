@@ -13,6 +13,8 @@ export const BRAINWAVE_PAGES: BrainwavePageMeta[] = [
   { id: "0-2555", node: "0:2555", name: "01-Agency",            group: "landing", h: 7713, ko: "에이전시" },
   { id: "0-2385", node: "0:2385", name: "02-SaaS Subscription", group: "landing", h: 6035, ko: "병원·클리닉" },
   { id: "0-2226", node: "0:2226", name: "03-Coworking",         group: "landing", h: 5719, ko: "동네 가게" },
+  /* 킷에 없는 자체 디자인(1-…) — 동네 가게와 같은 역할이지만 카드 6·메뉴 6·사진·자주 묻는 질문·후기 칸까지 다 보여 준다 */
+  { id: "1-2226", node: "1:2226", name: "11-Local Shop 2",    group: "landing", h: 4800, ko: "동네 가게 2" },
   { id: "0-1950", node: "0:1950", name: "04-Job Site",          group: "landing", h: 5951, ko: "채용 사이트" },
   { id: "0-1371", node: "0:1371", name: "05-Web Application",   group: "landing", h: 5107, ko: "웹 서비스" },
   { id: "0-1102", node: "0:1102", name: "06-ECommerce",         group: "landing", h: 5998, ko: "온라인 상점" },

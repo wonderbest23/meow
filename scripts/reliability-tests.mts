@@ -39,6 +39,7 @@ suites.push("synthetic-preview");
 suites.push("business-design");
 suites.push("business-launch-shape");
 suites.push("consult-reply", "homepage-design-carry");
+suites.push("homepage-copy-coverage");
 suites.push("document-render");
 suites.push("online-store-plan");
 suites.push("answer-number");
