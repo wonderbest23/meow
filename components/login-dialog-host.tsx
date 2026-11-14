@@ -122,8 +122,6 @@ export function LoginDialogHost() {
           <button type="button" className={styles.close} onClick={close} aria-label="로그인 닫기"><X size={20} /></button>
           {/* 열 때마다 새 폼 — 이전 입력·메시지를 남기지 않는다 */}
           <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm key={opened} next={next} initialMode={mode} titleId="login-dialog-title" /></div>
-          {/* 로그인 전에도 구경할 수 있는 읽기 전용 예시(lib/plan-builder/samples) — 팝업이 화면을 가려 대화 칸의 예시 링크가 안 보였다(2026-11-14) */}
-          <p className={styles.samples}>로그인 전에 완성 예시부터 볼 수 있어요<span><a href="/plan/document?planId=sample_banchan_easy" onClick={close}>일반으로 만든 예시</a><a href="/plan/document?planId=sample_banchan_expert" onClick={close}>전문가로 만든 예시</a></span></p>
         </div>
       )}
     </dialog>

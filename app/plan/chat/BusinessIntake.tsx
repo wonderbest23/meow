@@ -24,7 +24,7 @@ import styles from "./intake.module.css";
 import chatUi from "../../../components/coach-chat-ui.module.css";
 import ChatLoading from "./loading";
 import { GenerationCard, GenerationDialog, generationFinished, generationStalled, useGenerationProgress } from "../GenerationProgress";
-import { InlineLogin, LoginLink, openLogin } from "../../../components/login-dialog";
+import { InlineLogin, LoginLink } from "../../../components/login-dialog";
 import { ResourcePanel } from "./intake-ui/ResourcePanel";
 import { IdeaExploration } from "./intake-ui/IdeaExploration";
 import { attachmentMessage, businessDescriptionText, incompleteChoiceText, nextRefinementQuestion, questionPromptText } from "./intake-ui/model";
@@ -62,19 +62,18 @@ function rememberLastIntake(planId: string, signedIn: boolean) {
 }
 /** 로그인 전 방문자에게 질문 대신 보여 주는 첫 화면 — 안내 버튼을 한 번 더 누르지 않게 로그인 폼을 바로 펼친다. 로그인하면 지금 주소(새 대화·사업)로 돌아온다. */
 /*
- * 로그인이 필요한 대화 칸. 휴대폰은 그 자리에 로그인 폼을 펼치고, PC 작업실(popup)은 팝업 하나만 띄운다 —
- * 좁은 왼쪽 칸에도 폼이 펼쳐져 팝업과 로그인이 두 군데로 보였다(대표 요청 2026-11-14). 팝업을 닫아도 다시 열 수 있게 단추를 남긴다.
+ * 로그인이 필요한 대화 칸. 로그인 전이라는 것과, 그래도 볼 수 있는 완성 예시 두 개(같은 반찬가게를 두 대화 방식으로 만든 실제 완성본,
+ * lib/plan-builder/samples)를 처음부터 눈에 띄게 보인다(대표 요청 2026-11-14 — 팝업이 먼저 떠서 예시를 가렸다).
+ * PC 작업실(popup)은 좁은 왼쪽 칸에 폼을 펼치지 않고 '로그인' 단추로 팝업을 열고, 휴대폰은 안내 아래에 폼을 그대로 둔다.
  */
 function LoginGate({ popup = false }: { popup?: boolean }) {
   const next = typeof window === "undefined" ? "/plan/chat?new=1" : `${window.location.pathname}${window.location.search}`;
-  useEffect(() => { if (popup) openLogin(next); }, [popup, next]);
-  // 로그인 전에도 구경할 수 있는 읽기 전용 예시 — 같은 반찬가게를 두 대화 방식으로 만든 실제 완성본(lib/plan-builder/samples)
-  const samples = <div className={styles.loginSamples}><p>로그인 전에 완성 예시부터 볼 수 있어요</p>
-    <a href="/plan/document?planId=sample_banchan_easy">일반으로 만든 예시<ChevronRight size={15} aria-hidden="true" /></a>
-    <a href="/plan/document?planId=sample_banchan_expert">전문가로 만든 예시<ChevronRight size={15} aria-hidden="true" /></a></div>;
-  if (popup) return <div className={styles.loginPrompt}><p>로그인하면 바로 시작할 수 있어요</p><LoginLink next={next} className={`${styles.chip} ${styles.chipStrong}`}>로그인</LoginLink>{samples}</div>;
-  // 휴대폰은 로그인 폼이 한 화면을 다 차지해 아래에 두면 안 보인다 — 예시를 위에 둔다
-  return <>{samples}<InlineLogin next={next} /></>;
+  const notice = <div className={styles.loginNotice}>
+    <strong>지금은 로그인 전이라 예시만 볼 수 있어요</strong>
+    <div><a href="/plan/document?planId=sample_banchan_easy">일반으로 만든 예시<ChevronRight size={15} aria-hidden="true" /></a><a href="/plan/document?planId=sample_banchan_expert">전문가로 만든 예시<ChevronRight size={15} aria-hidden="true" /></a></div>
+    {popup && <><p>로그인하면 내 사업을 바로 시작할 수 있어요</p><LoginLink next={next} className={`${styles.chip} ${styles.chipStrong}`}>로그인</LoginLink></>}
+  </div>;
+  return popup ? notice : <>{notice}<InlineLogin next={next} /></>;
 }
 
 /** sessionStorage — 막힌 브라우저(사생활 보호 등)에서는 꺼내기만 해도 오류가 나므로 null로 둔다 */

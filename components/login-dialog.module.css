@@ -15,10 +15,6 @@
 /* 새 대화 화면 안에 펼친 로그인 — 팝업 카드 없이 대화 영역 가운데에 */
 .inline { min-height: 0; max-width: 400px; margin: 0 auto; padding: clamp(24px, 8vh, 72px) 0 40px; background: transparent; }
 .auth h1 { font-size: 1.5rem; }
-.samples { display: grid; justify-items: center; gap: 10px; margin: 20px 0 4px; padding-top: 18px; border-top: 1px solid #eef0f2; color: #6b7684; font-size: .8125rem; text-align: center; }
-.samples span { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.samples a { display: inline-flex; align-items: center; min-height: 38px; padding: 0 14px; border: 1px solid #e5e8eb; border-radius: 999px; color: #191f28; font-size: .875rem; font-weight: 500; text-decoration: none; }
-.samples a:hover { border-color: #b0b8c1; }
 .close {
   position: absolute;
   top: 12px;

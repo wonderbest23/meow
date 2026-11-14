@@ -999,13 +999,14 @@ button.workLogRow { min-height: 32px; }
 .queueButton:hover { background: var(--app-raised); color: var(--app-body); }
 .queueNote { margin: -2px 0 0 4px !important; color: var(--app-muted); font-size: .71875rem; }
 /* 두 줄까지 감싼다 — 셋째 줄로 넘치는 칩은 SuggestRow 가 통째로 숨긴다(칩 중간에서 글자가 잘리지 않게) */
-.loginPrompt { display: grid; justify-items: center; align-content: center; gap: 14px; min-height: 60%; padding: 40px 16px; color: var(--app-body); font-size: .9375rem; text-align: center; }
-.loginPrompt p { margin: 0; }
-.loginPrompt .chip { text-decoration: none; }
-.loginSamples { display: grid; justify-items: center; gap: 8px; margin-top: 20px; padding: 0 16px 20px; color: var(--app-muted); font-size: .8125rem; text-align: center; }
-.loginSamples p { margin: 0 0 2px; }
-.loginSamples a { display: inline-flex; align-items: center; gap: 2px; min-height: 40px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 999px; background: var(--app-surface); color: var(--app-text); font-size: .875rem; font-weight: 500; text-decoration: none; }
-.loginSamples a:hover { border-color: var(--app-line-strong); }
+/* 로그인 전 안내 — 예시만 볼 수 있다는 것을 눈에 띄게, 예시 두 개는 바로 아래 */
+.loginNotice { display: grid; justify-items: center; gap: 12px; margin: 16px; padding: 20px 16px; border: 1.5px solid var(--app-text); border-radius: 16px; background: var(--app-surface); color: var(--app-body); font-size: .875rem; text-align: center; }
+.loginNotice strong { font-size: 1rem; font-weight: 700; line-height: 1.5; color: var(--app-text); word-break: keep-all; }
+.loginNotice > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.loginNotice > div a { display: inline-flex; align-items: center; gap: 2px; min-height: 42px; padding: 0 14px; border: 1px solid var(--app-line-strong); border-radius: 999px; background: var(--app-surface); color: var(--app-text); font-weight: 600; text-decoration: none; }
+.loginNotice > div a:hover { background: var(--app-hover); }
+.loginNotice p { margin: 6px 0 0; color: var(--app-muted); font-size: .8125rem; }
+.loginNotice .chip { text-decoration: none; }
 /* 새 대화 맨 처음 — 대화 방식 두 카드. 고르면 테두리가 진해지고 아래에 단계 질문이 이어진다 */
 .depthCards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 4px 0 20px; }
 .depthCards h2 { grid-column: 1 / -1; margin: 0 0 2px; font-size: .9375rem; font-weight: 500; line-height: 1.6; color: var(--app-text); }
