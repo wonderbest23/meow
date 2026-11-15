@@ -1,7 +1,7 @@
 /* 휴대폰 아래 3탭 막대(lovable 실측 2026-11-01) — 296×57 r999 안쪽 4, 칸 48 r999, 화면 아래 24px(+안전 영역) 위에 가운데. PC 폭에서는 그리지 않는다 */
 .bar { display:none; }
 @media (max-width:900px) {
-  .bar { position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); z-index:60; display:flex; align-items:center; box-sizing:border-box; width:296px; max-width:calc(100% - 32px); height:57px; padding:4px; border-radius:999px; border:1px solid var(--app-line); background:color-mix(in srgb, var(--app-panel) 80%, transparent); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:0 1px 3px rgb(0 0 0 / .1), 0 8px 24px -8px rgb(0 0 0 / .12); transform:translateX(-50%); }
+  .bar { position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); z-index:60; display:flex; align-items:center; box-sizing:border-box; width:200px; max-width:calc(100% - 32px); height:57px; padding:4px; border-radius:999px; border:1px solid var(--app-line); background:color-mix(in srgb, var(--app-panel) 80%, transparent); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); box-shadow:0 1px 3px rgb(0 0 0 / .1), 0 8px 24px -8px rgb(0 0 0 / .12); transform:translateX(-50%); }
   .tab { flex:1; display:flex; align-items:center; justify-content:center; min-width:44px; height:47px; border-radius:999px; color:var(--app-text); text-decoration:none; -webkit-tap-highlight-color:transparent; }
   .tab svg { width:24px; height:24px; stroke-width:1.8; }
   .tab[aria-current=page] { background:var(--app-nav-selected); color:var(--app-text); }
