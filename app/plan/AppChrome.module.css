@@ -89,7 +89,8 @@
 .circle { display:inline-grid; flex:none; place-items:center; width:44px; height:44px; border-radius:50%; background:var(--app-surface); box-shadow:var(--app-ring-shadow); color:var(--app-text); text-decoration:none; }
 .circle:hover { background:var(--app-raised); }
 /* 휴대폰 '내 사업' 목록(?view=all) — lovable Projects 탭처럼 위 머리 없이 제목(30/600)부터 */
-@media (max-width:900px) { :global(main[data-list-only]) .homeBar { display:none; } }
+/* 머리는 따로 두지 않고, 프로필 동그라미만 제목 줄 오른쪽에 띄운다(2026-11-15 — 이 화면에서도 계정 설정 · 고객센터 · 로그아웃으로 갈 수 있게) */
+@media (max-width:900px) { :global(main[data-list-only]) .homeBar { position:absolute; top:calc(env(safe-area-inset-top) + 16px); right:16px; z-index:5; min-height:0; padding:0; } }
 .circle:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
 .circleSpace { flex:none; width:44px; height:44px; }
 .settingsTitle { margin:0; min-width:0; overflow:hidden; color:var(--app-text); font-size:1rem; font-weight:500; line-height:1.4; text-overflow:ellipsis; white-space:nowrap; }
