@@ -254,7 +254,8 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
     : null, [studioHeader, addOnTop, addDisabled]);
   useStudioHeaderActions(headerNode);
   /* 휴대폰 아래 막대의 파란 '기록 추가'(lovable 구조 2단계) — 제목 옆 '기간 기록' 단추와 같다(예시 · 고치는 중이면 하지 않는다) */
-  useStudioCommand("operations-add", () => { if (canAddPeriod && !addDisabled) editRef.current(); }, !!pane);
+  /* 기록을 불러온 뒤에 받는다 — 유지보수 첫 화면에서 누르면 이 화면이 막 열리는 중이라, 불러오기 전에 받으면 명령이 그냥 사라졌다 */
+  useStudioCommand("operations-add", () => { if (canAddPeriod && !addDisabled) editRef.current(); }, !!pane && !!state);
 
   return <div className={styles.root}>
     <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{/* 둘 다 0개면 숫자 줄을 숨긴다(빈 칸이 이미 말한다) · 항목마다 줄바꿈하지 않게(r37 점검) */}{state ? (state.periods.length || state.reports.length ? <p className={styles.counts}><span>운영 기록 {state.periods.length}개</span> <span aria-hidden="true">·</span> <span>개선 리포트 {state.reports.length}개</span></p> : null) : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{addOnTop && <AppButton variant="primary" className={studioHeader ?`${styles.primary} ${paneHeader.narrowOnly}` : styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</AppButton>}</header>
