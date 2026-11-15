@@ -7,7 +7,7 @@
 .agree input { flex:none; width:18px; height:18px; margin:2px 0 0; accent-color:var(--app-primary); }
 .form .acts { display:flex; margin-top:8px; }
 .error { margin:0; font-size:.875rem; color:var(--app-danger); }
-.ok { color:var(--app-success); font-weight:500; white-space:nowrap; }
+.ok { white-space:nowrap; }
 .acts { display:inline-flex; gap:6px; }
 .moments { display:flex; flex-wrap:wrap; gap:8px; width:100%; margin:4px 0 0; padding:0; list-style:none; font-size:.8125rem; color:var(--app-body); }
 .moments li { padding:6px 12px; border-radius:999px; background:var(--app-soft); }

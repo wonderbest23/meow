@@ -19,6 +19,8 @@ export default function StageAlerts() {
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // 지우기는 두 번 눌러야 지운다 — 한 번에 번호와 동의 기록이 사라지지 않게
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -69,10 +71,10 @@ export default function StageAlerts() {
         : loadError ? <SettingsRow title="진행 단계 안내 받기" description={loadError} />
         : !contact || editing ? <SettingsRow stack title={editing ? "받는 번호 바꾸기" : "진행 단계 안내 받기"} description={editing ? "새 번호로 다시 동의해 주세요." : "휴대폰 번호를 등록하고 동의하면 켜져요."}>{form}</SettingsRow>
         : <>
-          <SettingsRow inline title="진행 단계 안내 받기" descriptionId="stage-alert-desc" description={contact.enabled ? "단계가 넘어갈 때 다음 할 일을 보내 드려요." : "꺼 두었어요. 번호와 동의 기록은 남아 있어요."}
+          <SettingsRow inline title="진행 단계 안내 받기" descriptionId="stage-alert-desc" description={contact.enabled ? "지금 받고 있어요." : "꺼 두었어요. 번호와 동의 기록은 남아 있어요."}
             control={<SettingsToggle checked={contact.enabled} disabled={busy} onChange={value => void send({ action: "toggle", enabled: value })} label="진행 단계 안내 받기" describedBy="stage-alert-desc" />} />
-          <SettingsRow title="받는 번호" description={<>{contact.phone} <span className={styles.ok}>· 동의함 {new Date(contact.agreedAt).toLocaleDateString("ko-KR")}</span></>}
-            control={<span className={styles.acts}><AppButton type="button" variant="soft" size="adaptive" disabled={busy} onClick={() => { setEditing(true); setError(""); }}>바꾸기</AppButton><AppButton type="button" variant="soft" size="adaptive" disabled={busy} onClick={() => void send({ action: "remove" })}>지우기</AppButton></span>} />
+          <SettingsRow title="받는 번호" description={<>{contact.phone} <span className={styles.ok}>· {new Date(contact.agreedAt).toLocaleDateString("ko-KR", { dateStyle: "long" })} 동의</span></>}
+            control={<span className={styles.acts}><AppButton type="button" variant="soft" size="adaptive" disabled={busy} onClick={() => { setEditing(true); setError(""); }}>바꾸기</AppButton><AppButton type="button" variant="soft" size="adaptive" disabled={busy} onBlur={() => setConfirmRemove(false)} onClick={() => { if (confirmRemove) { setConfirmRemove(false); void send({ action: "remove" }); } else setConfirmRemove(true); }}>{confirmRemove ? "한 번 더 누르면 지워요" : "지우기"}</AppButton></span>} />
           <SettingsRow title="보내는 시간" description="아침 8시 ~ 밤 9시. 밤에 생긴 알림은 아침에 보내요." />
           {error && <SettingsRow title="저장하지 못했어요" description={<span role="alert" className={styles.error}>{error}</span>} />}
         </>}
