@@ -6,6 +6,7 @@ import { pollAutoRegistrations } from "../landing/domain-registrar";
 import { purgeExpiredLeadsNow } from "../landing/lead-retention";
 import { sweepConfirmingOrders } from "../payments/stuck-confirming";
 import { runTaxRemindersNow } from "../operations/tax-reminders";
+import { runJourneyAlertsNow } from "../notify/journey-alerts";
 import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
 import { buildSectionOutline, OUTLINE_MAX_CHARS } from "./section-outline";
@@ -321,13 +322,15 @@ async function runServiceOperation(input: z.infer<typeof serviceRequestSchema>) 
         const weekly = await step("weekly_report", runWeeklyReportsNow);
         // 세금 신고 마감 문자 — 마감 7일·1일 전 9시 이후에만 일한다(그 밖에는 바로 돌아온다)
         const tax = await step("tax_reminder", runTaxRemindersNow);
+        // 진행 단계 안내 — 번호를 등록하고 켜 둔 계정에, 넘어간 단계만, 아침 8시 ~ 밤 9시에
+        const journey = await step("journey_alerts", runJourneyAlertsNow);
         // 도메인 자동 등록(.com) 진행 상태 확인 — 끝나면 등록 완료·연결·알림까지
         const domains = await step("domain_registrar", () => pollAutoRegistrations());
         // 승인 응답을 놓쳐 '확인 중'에 멈춘 카드 결제 다시 맞추기
         const payments = await step("payment_sweep", () => sweepConfirmingOrders());
         // 보관 기간이 지난 홈페이지 문의 지우기(개인정보 안내문의 보유 기간)
         const purged = await step("lead_purge", purgeExpiredLeadsNow);
-        const result = { ok: true, ...leads, weekly, tax, domains, purged, payments };
+        const result = { ok: true, ...leads, weekly, tax, journey, domains, purged, payments };
         // 실패·마이그레이션 필요 사유가 있으면 전체 결과를 남긴다(예약 실행 로그는 앞 200자만 남겨 뒤쪽 결과가 잘렸다)
         if (/_FAILED|query_failed|migration_required|delete_failed/.test(JSON.stringify(result))) console.warn("[sweep] attention", JSON.stringify(result).slice(0, 2000));
         return Response.json({ result });

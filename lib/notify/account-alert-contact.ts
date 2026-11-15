@@ -60,6 +60,15 @@ export async function setAlertContactEnabled(ownerId: string, enabled: boolean, 
   return store(ownerId, { ...current, disabledAt: enabled ? null : now.toISOString() });
 }
 
+/** 켜 둔 계정 모두 — 발송(journey-alerts)이 돈다 */
+export async function listEnabledAlertContacts(): Promise<Array<{ ownerId: string; phone: string }>> {
+  const supabase = getServerSupabase();
+  if (!supabase) return [...memory.entries()].filter(([, contact]) => contact.disabledAt === null).map(([ownerId, contact]) => ({ ownerId, phone: contact.phone }));
+  const { data, error } = await supabase.from("account_alert_contacts").select("owner_id,phone").is("disabled_at", null).limit(5000);
+  if (error) { if (missingTable(error)) return []; throw error; }
+  return (data ?? []).map(row => ({ ownerId: String(row.owner_id), phone: String(row.phone) })).filter(row => /^010\d{8}$/.test(row.phone));
+}
+
 /** 번호와 동의 기록을 지운다 */
 export async function removeAlertContact(ownerId: string): Promise<void> {
   const supabase = getServerSupabase();

@@ -66,6 +66,7 @@ export async function deleteAccount(userId: string): Promise<AccountDeleteResult
     result.deleted.businessChecks = await optionalDelete("business_checks", "owner_id", userId);
     // 진행 단계 안내 번호 · 동의 기록(표가 없으면 건너뜀)
     result.deleted.alertContacts = await optionalDelete("account_alert_contacts", "owner_id", userId);
+    await optionalDelete("journey_notifications", "owner_id", userId);
 
     // 4) 추천 선호
     const prefs = checked(await supabase.from("opportunity_preferences").delete({ count: "exact" }).eq("owner_id", userId), "opportunity_preferences");

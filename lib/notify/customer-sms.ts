@@ -66,14 +66,15 @@ export async function sendCustomerSms(config: CustomerSmsConfig, input: { eventI
  * 문구는 여전히 중계가 만든다. 예전 중계(v3)는 v4 를 400 으로 거절한다 → relayUnsupported 로 알아보고
  * 부르는 쪽이 메일이나 v3 고정 문구로 물러선다(결제·문의 접수 경로로 오류를 던지지 않는다).
  */
-export type RelayV4Event = "payment-paid" | "payment-receipt" | "homepage-lead-contact" | "lead-received" | "domain-connect-started" | "tax-deadline";
+export type RelayV4Event = "payment-paid" | "payment-receipt" | "homepage-lead-contact" | "lead-received" | "domain-connect-started" | "tax-deadline" | "journey-stage";
 export type RelayV4Params =
   | { product: string; amount: number; orderId: string }
   | { product: string; orderId: string }
   | { name: string; phone: string }
   | { store: string }
   | { domain: string }
-  | { kind: "income" | "vat"; days: 1 | 7; month: number; day: number };
+  | { kind: "income" | "vat"; days: 1 | 7; month: number; day: number }
+  | { stage: "design" | "plan" | "homepage" | "launch" };
 /** 받는 번호(recipient) 또는 운영자 번호(ownerPhone — 요청에는 번호 대신 HMAC 확인값만 간다) */
 export type RelayV4Input = { eventId: string; eventType: RelayV4Event; params: RelayV4Params } & ({ recipient: string } | { ownerPhone: string });
 

@@ -242,6 +242,18 @@ export async function countPublishedOwnerSites(guestTokenHash: string): Promise<
   return data?.length ?? 0;
 }
 
+/** 이 주인이 홈페이지를 공개한 사업(planId)들 — 진행 단계 안내가 '홈페이지 공개' 단계를 알아챈다 */
+export async function publishedOwnerPlanIds(guestTokenHash: string): Promise<Set<string>> {
+  const projects = (await listOwnedProjectRefs(guestTokenHash)).filter(project => project.planId);
+  if (!projects.length) return new Set();
+  const supabase = getServerSupabase();
+  if (!supabase) return new Set(projects.filter(project => demo.sites.get(demo.projectIndex.get(project.id) ?? "")?.publishedVersion != null).map(project => project.planId as string));
+  const { data, error } = await supabase.from("landing_sites").select("project_id").in("project_id", projects.map(project => project.id)).not("published_version", "is", null);
+  if (error) throw error;
+  const ids = new Set((data ?? []).map(row => String(row.project_id)));
+  return new Set(projects.filter(project => ids.has(project.id)).map(project => project.planId as string));
+}
+
 /**
  * 문의 '처리 완료' 표시·해제 — 이 프로젝트 홈페이지의 문의일 때만.
  * 주인 확인은 getLandingForProject(주인 해시로 프로젝트를 찾는다)가 한다.
