@@ -1,12 +1,13 @@
 /* 진행 단계 안내 — 번호 등록 칸 · 동의 체크 · 보내는 때 목록 */
-.form { display:flex; flex-direction:column; gap:12px; width:100%; }
-.field { display:flex; flex-wrap:wrap; gap:8px; }
-.field > :first-child { flex:1; min-width:160px; }
-.agree { display:flex; align-items:flex-start; gap:10px; font-size:.875rem; line-height:1.6; color:var(--app-body); cursor:pointer; }
+.form { display:flex; flex-direction:column; gap:8px; width:100%; max-width:440px; margin-top:8px; }
+.label { font-size:.8125rem; font-weight:500; color:var(--app-text); }
+.input { display:grid; }
+.agree { display:flex; align-items:flex-start; gap:12px; margin-top:8px; padding:14px 16px; border-radius:14px; background:var(--app-soft); font-size:.8125rem; line-height:1.6; color:var(--app-muted); cursor:pointer; }
+.agree b { display:block; font-size:.875rem; font-weight:500; color:var(--app-text); }
 .agree input { flex:none; width:18px; height:18px; margin:2px 0 0; accent-color:var(--app-primary); }
+.form .acts { display:flex; margin-top:8px; }
 .error { margin:0; font-size:.875rem; color:var(--app-danger); }
 .ok { color:var(--app-success); font-weight:500; white-space:nowrap; }
 .acts { display:inline-flex; gap:6px; }
-.moments { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px 18px; width:100%; margin:0; padding:0; list-style:none; font-size:.875rem; color:var(--app-body); }
-.moments li::before { content:"·"; margin-right:6px; color:var(--app-muted); }
-@media (max-width:560px) { .moments { grid-template-columns:1fr; } }
+.moments { display:flex; flex-wrap:wrap; gap:8px; width:100%; margin:4px 0 0; padding:0; list-style:none; font-size:.8125rem; color:var(--app-body); }
+.moments li { padding:6px 12px; border-radius:999px; background:var(--app-soft); }
