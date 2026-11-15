@@ -730,9 +730,9 @@ async function main() {
   assert.ok(pricedPrepare.includes("첫 항목 먼저 보기 · 전체 49,000원"), "the plan button shows the price before payment");
   const minimalPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal onDesign={noop} onPrepare={noop} />);
   assert.ok(minimalPrepare.includes("사업계획서 만들기</button>") && minimalPrepare.includes("몇 분 걸려요.") && !minimalPrepare.includes("진행 단계"), "the result screen ends with one plan button");
-  // 사업 방향 정리 중: 마지막 답을 보낸 순간부터 막대와 단계가 보인다(작업 접수 전에도)
+  // 사업 방향 정리 중: 마지막 답을 보낸 순간부터 지금 하는 일 한 줄이 보인다(작업 접수 전에도). 네 단계를 한꺼번에 늘어놓지 않는다(2026-11-15 — 메타 AI 방식)
   const starting = renderToStaticMarkup(<DesignProgress snapshot={nextSnapshot({}, { design: undefined })} />);
-  assert.ok(starting.includes('role="progressbar"') && starting.includes("답변 모으기") && starting.includes("시작 범위 제안하기") && starting.includes("보통 30~40초"), "design progress shows a bar and steps before the job is accepted");
+  assert.ok(starting.includes('role="progressbar"') && starting.includes("data-thinking") && starting.includes("답변 모으기") && !starting.includes("시작 범위 제안하기") && starting.includes("보통 30~40초"), "design progress shows one current-step line before the job is accepted");
   assert.equal(renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ coreComplete: false }, {})} prepared={false} disabled={false} aiBusy={false} onDesign={noop} onPrepare={noop} />), "");
   // Legacy timing estimates remain compatible but are not shown as measured progress.
   assert.equal(jobProgress("queued", 0, 25_000, 60_000).percent, 3);

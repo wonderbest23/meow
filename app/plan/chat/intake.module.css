@@ -1399,3 +1399,14 @@ button.workLogRow { min-height: 32px; }
  */
 .page .focusPill.focusPill { display: none; }
 .page[data-embedded]:not([data-studio-pro]) .conversation { -webkit-mask-image: linear-gradient(to bottom, transparent 0, var(--app-text) 56px); mask-image: linear-gradient(to bottom, transparent 0, var(--app-text) 56px); }
+
+/* 기다리는 동안의 한 줄(메타 AI 방식, 2026-11-15) — 보조 글씨 14 */
+.thinking { display: grid; gap: 6px; max-width: 100%; }
+.thinking > p { margin: 0; color: var(--app-muted); font-size: .875rem; line-height: 1.5; word-break: keep-all; }
+.thinkingHead { display: flex; align-items: center; gap: 8px; }
+.thinkingHead svg { flex: none; color: var(--app-primary); }
+.thinking > .thinkingNote { margin-left: 7px; padding-left: 15px; border-left: 1.5px solid var(--app-line-strong); }
+/* 대화 칸 글씨 세 가지로(2026-11-15 사장님, 메타 AI 실측): 본문 16 · 소제목 24 · 보조 14. 눈에 띄는 보조 글(시각 · 보내는 중 · 기록 카드)부터 맞춘다 */
+.page.page[data-embedded] .messageMeta, .page.page[data-embedded] .messageStatus, .page.page[data-embedded] .jobChatNote { font-size: .875rem; }
+.page.page[data-embedded] .workLogCardTitle { font-size: 1rem; }
+.page.page[data-embedded] .workLogCardSub, .page.page[data-embedded] .workLogCardButton { font-size: .875rem; }

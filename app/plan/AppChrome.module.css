@@ -106,3 +106,6 @@
 .railAvatar { display:inline-grid; place-items:center; flex:none; width:32px; height:32px; padding:0; border:0; border-radius:999px; background:var(--app-primary); color:var(--app-on-primary); font:inherit; font-size:.8125rem; font-weight:600; cursor:pointer; }
 .railLogin { flex:none; padding:8px 0; color:var(--app-body); font-size:.8125rem; font-weight:500; text-decoration:none; }
 .railLogin:hover { color:var(--app-text); text-decoration:underline; text-underline-offset:3px; }
+/* 넓은 메뉴 오른쪽 위의 접기 단추(로고와 같은 줄) */
+@media (min-width:901px) { .side { position:relative; } }
+.railCollapse { position:absolute; top:10px; right:10px; z-index:1; width:32px; height:32px; color:var(--app-muted); }
