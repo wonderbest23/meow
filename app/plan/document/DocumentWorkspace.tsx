@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Download, MessageSquare, PenLine } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Download, MessageSquare, PenLine, Highlighter } from "lucide-react";
+import { highlightAmounts } from "../../../lib/client/amount-highlight";
 import BusinessAppChrome from "../BusinessAppChrome";
 import InlineDocEditor, { withBodyHeadingLevels } from "../InlineDocEditor";
 import PlanLoading from "../PlanLoading";
@@ -188,6 +189,12 @@ export default function DocumentWorkspace(props: Props) {
   const announced = useRef<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
+  /* 금액 · 비율 형광펜 — 켜고 끄기는 이 기기에 기억한다(기본 켬) */
+  const [emphasis, setEmphasis] = useState(true);
+  useEffect(() => { try { if (localStorage.getItem("oneul-plan-emphasis") === "off") setEmphasis(false); } catch { /* 못 읽으면 켠 채로 */ } }, []);
+  /* 본문 칸은 문서를 불러온 뒤에 생긴다 — 생긴 칸을 상태로 받아 그때 칠한다 */
+  const [scrollNode, setScrollNode] = useState<HTMLDivElement | null>(null);
+  useEffect(() => highlightAmounts(scrollNode, emphasis && !factMode && !summaryMode), [scrollNode, emphasis, factMode, summaryMode]);
   /*
    * 실제로 내려가는 상자 — 작업실 칸 안에서는 본문(.scroll)이 아니라 바깥 칸(studio-panel-*)이 내려간다.
    * 본문이 따로 스크롤 상자이던 때는 그 위에서 휠·손가락이 먹지 않았다(오른쪽 칸 따라가기 점검 2026-10-24).
@@ -585,7 +592,8 @@ export default function DocumentWorkspace(props: Props) {
             {toolbarHas && <div className={styles.toolbarActions} data-next={(showNext && !studioHeader) || undefined}>{toolbarButtons}</div>}
           </div>}
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
-          <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
+          <div ref={node => { scroll.current = node; setScrollNode(node); }} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
+            {!summaryMode && !factMode && grouped.length > 0 && <div className={styles.emphasisBar}><button type="button" aria-pressed={emphasis} onClick={() => { const next = !emphasis; setEmphasis(next); try { localStorage.setItem("oneul-plan-emphasis", next ? "on" : "off"); } catch { /* 못 적어도 이번에는 바뀐다 */ } }}><Highlighter size={15} aria-hidden="true" />숫자 강조</button></div>}
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
             {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong>{planId && !studioHeader && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
             {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <EmptyState className={styles.empty} data-pane={pane ? "" : undefined} icon={FileText} heading={pane ? "h2" : "h1"} title="아직 만든 문서가 없어요" description={pane ? undefined : "사업 이야기를 이어서 계획서를 만들어 보세요."}

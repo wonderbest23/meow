@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, BookOpen, Check, ChevronRight, CircleHelp, Contrast, CreditCard, Inbox, LayoutGrid, LogIn, Monitor, Moon, Settings, Sun, User, UserPlus } from "lucide-react";
+import { Bell, BookOpen, Check, ChevronRight, CircleHelp, Contrast, CreditCard, LayoutGrid, LogIn, Monitor, Moon, Settings, Sun, User, UserPlus } from "lucide-react";
 import { useThemePreference } from "../../components/app-theme";
 import { THEME_OPTIONS } from "../../lib/client/app-theme";
 import { openSupportChat } from "../../lib/client/open-support-chat";
@@ -64,7 +64,7 @@ export default function ProfileMenu({ open, onClose, account, unanswered, inquir
       </div> : <div className={styles.who}><div className={styles.whoText}><p className={styles.name}>로그인하면 내 사업이 보여요</p></div></div>}
       <nav aria-label="프로필 메뉴 목록">
         {signedIn
-          ? inquiriesClosed ? null : row("/plan/inquiries", <Inbox aria-hidden="true" />, "받은 알림", unanswered ? <b className={styles.count} aria-label={`답할 문의 ${unanswered}건`}>{unanswered}</b> : null, true)
+          ? null /* '받은 알림'(손님 문의)은 뺐다(2026-11-15 사장님) — 홈페이지를 공개한 사업의 유지보수 화면 '문의 접수'로 연다 */
           : <>
             {row(`/account?next=${next}`, <LogIn aria-hidden="true" />, "로그인", null, true)}
             {row(`/account?mode=register&next=${next}`, <UserPlus aria-hidden="true" />, "회원가입", null, true)}

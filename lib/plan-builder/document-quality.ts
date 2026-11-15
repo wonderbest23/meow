@@ -31,7 +31,8 @@ function quantityMatches(text: string): Array<{ raw: string; value: string }> {
  * 실제 AI 재측정(2026-10-29)에서 이 반올림 하나로 '비용' 장이 품질 검사에 두 번 걸려 통째로 빠졌다. 근거 없는 새 금액은 여전히 막는다.
  */
 function sourceQuantities(source: string): Set<string> {
-  const allowed = new Set<string>();
+  // 0원은 지어낸 금액이 아니다 — '남는 돈이 0원을 넘는지', '광고비 0원' 같은 말로 '12주 할 일' 장이 통째로 두 번 거절됐다(실측 2026-11-14)
+  const allowed = new Set<string>(["0:원"]);
   for (const value of quantities(source)) {
     const [number, unit] = value.split(":");
     for (const exact of [Number(number), Math.abs(Number(number))]) {

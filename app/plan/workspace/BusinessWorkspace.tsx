@@ -19,6 +19,7 @@ import LaunchWorkspace from "./LaunchWorkspace";
 import ExpertEditor from "./ExpertEditor";
 import launchStyles from "./LaunchWorkspace.module.css";
 import OperatingWorkspace, { chatRecordFrom } from "./OperatingWorkspace";
+import OperationsHub, { type OpsApp } from "./OperationsHub";
 import { useHomepage } from "../use-homepage";
 import { NextServices } from "../../../components/next-services";
 import { WorkspaceDocumentStatus, WorkspaceHomepageCare, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
@@ -180,6 +181,12 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
   const done=plan && action ? actionStatus(plan,action.action) : "pending";
   const chat=plan ? businessChatHref(plan.id) : "/plan/chat?new=1";
   /* 점검·실적(유지보수 본문)이 열리는지 — 작업실 칸은 홈페이지를 공개한 뒤부터, 예전 화면은 늘 */
+  /* 유지보수 첫 화면의 아이콘으로 연 화면 하나(없으면 첫 화면) — 기록을 고치던 중이면 묻고 돌아간다 */
+  const [app, setApp] = useState<OpsApp | null>(null);
+  useEffect(() => { setApp(null); }, [plan?.id]);
+  async function closeApp() { if (operatingDirty) { if (!await confirmLeave(OPERATING_LEAVE)) return; setOperatingDirty(false); } setApp(null); }
+  /* 휴대폰 아래 막대의 '기록 추가' — 첫 화면에서 누르면 기간별 실적을 열고, 명령은 그 화면이 이어받는다 */
+  useEffect(() => { const open = (event: Event) => { if ((event as CustomEvent<string>).detail === "operations-add") setApp(current => current ?? "periods"); }; window.addEventListener("oneulstart:studio-command", open); return () => window.removeEventListener("oneulstart:studio-command", open); }, []);
   const careOpen=!embedded || homepage.status==="published" || (!!plan && isSamplePlan(plan.id));
   /* 개업 준비가 남은 사업은 유지보수 칸 맨 앞에 펼쳐 두고, 마친 사업은 맨 아래에 접어 둔다(예시 사업은 기록부터). 열 때 한 번만 정한다 — 마지막 단계를 마치는 순간 자리가 바뀌지 않게 */
   const launchFront=useMemo(()=>!!plan && !isSamplePlan(plan.id) && launchProgress(plan)!=="done",[plan?.id]);
@@ -236,13 +243,18 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={async ()=>{ if (!expertDirty || await askConfirm({ title: "기본 모드로 돌아갈까요?", message: EXPERT_LEAVE, cancelLabel: "계속 작성", confirmLabel: "저장하지 않고 돌아가기" })) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
         <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? JOURNEY_LABELS.document : view==="operations" ? "유지보수" : view==="launch" ? journeyLabel("launch", hub.coach?.stage === "operating") : "다음 할 일"}>
           {/* 작업실 유지보수 칸 — 공개 전에는 개업 준비 할 일을 위에 펼쳐 두고, 공개한 뒤에는 점검·실적 아래에 접어 둔다(2026-11-10 4쪽 → 3쪽) */}
-          {view==="operations" && embedded && (!careOpen || launchFront) && launchBlock}
+          {view==="operations" && embedded && !careOpen && launchBlock}
           {view==="operations" && embedded && !careOpen && <p className={styles.muted}>홈페이지를 공개하면 매주 점검과 실적 기록이 열려요.</p>}
-          {view==="operations" && careOpen && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} sample={isSamplePlan(plan.id)} />}
+          {/* 첫 화면은 지금 할 일 · 아이콘 다섯 칸 · 한 줄 요약, 아이콘을 누르면 그 화면 하나만(2026-11-15 사장님) */}
+          {view==="operations" && careOpen && !app && <OperationsHub planId={plan.id} sample={isSamplePlan(plan.id)} homepage={homepage.status} onOpen={setApp} />}
+          {/* 공개한 뒤에도 개업 준비가 남았으면 첫 화면 바로 아래에 펼쳐 둔다 — 예전엔 맨 위라 지금 할 일 · 아이콘이 밀려 내려갔다 */}
+          {view==="operations" && embedded && careOpen && launchFront && !app && launchBlock}
+          {view==="operations" && careOpen && app && <p className={styles.tabLink}><AppButton type="button" variant="text" className={styles.textButton} onClick={() => void closeApp()}>← 유지보수</AppButton></p>}
+          {view==="operations" && careOpen && app==="homepage" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} sample={isSamplePlan(plan.id)} />}
           {/* 실적 기록이 먼저, 맡길 일(마케팅) 상담 신청은 그 아래 — 예전엔 서비스 판매 카드가 기록보다 위에 있었다 */}
-          {view==="operations" && careOpen && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} chatRecord={hub.coach?.stage === "operating" ? chatRecordFrom(plan.answers as Record<string, Record<string, unknown>>) : null} />}
-          {view==="operations" && careOpen && <NextServices key={`services-${plan.id}`} plan={plan} homepagePublished={homepage.status === "published"} hasHomepage={homepage.status === "draft" || homepage.status === "published"} />}
-          {view==="operations" && embedded && careOpen && !launchFront && <details open={new URLSearchParams(window.location.search).has("step")}><summary>{journeyLabel("launch", hub.coach?.stage === "operating")}</summary>{launchBlock}</details>}
+          {view==="operations" && careOpen && (app==="periods" || app==="reports") && <OperatingWorkspace key={`${plan.id}-${app}`} initialMode={app} planId={plan.id} onDirtyChange={setOperatingDirty} chatRecord={hub.coach?.stage === "operating" ? chatRecordFrom(plan.answers as Record<string, Record<string, unknown>>) : null} />}
+          {view==="operations" && careOpen && app==="marketing" && <NextServices key={`services-${plan.id}`} plan={plan} homepagePublished={homepage.status === "published"} hasHomepage={homepage.status === "draft" || homepage.status === "published"} />}
+          {view==="operations" && embedded && careOpen && !launchFront && !app && <details open={new URLSearchParams(window.location.search).has("step")}><summary>{journeyLabel("launch", hub.coach?.stage === "operating")}</summary>{launchBlock}</details>}
           {view==="summary" && expert && hub.coach && <ExpertEditor key={plan.id} plan={plan} onSaved={setPlan} onDirtyChange={setExpertDirty} />}
           {view==="summary" && (!expert || !hub.coach) && <WorkspaceSummary headingRef={heading} description={design?.startingPlan.scope || hub.coach?.business.description || "만들어 둔 사업계획서를 이어서 볼 수 있어요."} stale={hub.stale} fields={hub.coach?.fields}>
             {hub.coach ? <><AppButton variant="primary" className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}<ChevronRight size={18} aria-hidden="true" /></AppButton>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <AppButton variant="primary" className={styles.primary} onClick={openLegacy}>사업계획서 이어보기</AppButton>}

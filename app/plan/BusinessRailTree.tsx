@@ -4,7 +4,7 @@ import { Fragment, Suspense, useEffect, useMemo, useRef, useState, useSyncExtern
 import { nativePlatform } from "../../lib/native-app";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Check, ChevronDown, ChevronRight, FolderClosed } from "lucide-react";
+import { Check, ChevronRight, FolderClosed } from "lucide-react";
 import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan, type PlanTitleNotice } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
@@ -286,10 +286,8 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
   if (grouped) {
     return <div className={`${styles.tree} ${styles.grouped}`}>
       <Suspense fallback={null}><UrlPlanWatcher onChange={setUrlPlanId} /></Suspense>
-      <button type="button" className={styles.group} aria-expanded={listOpen} aria-controls="rail-plan-list" onClick={toggleList}>
-        <span>내 사업</span><ChevronDown className={styles.groupCaret} data-open={listOpen || undefined} aria-hidden="true" />
-      </button>
-      {listOpen && mounted && <div className={styles.list} id="rail-plan-list">
+      {/* '내 사업' 접기 단추는 뺐다(2026-11-15 사장님) — 목록은 늘 펼쳐 둔다 */}
+      {mounted && <div className={styles.list} id="rail-plan-list">
         {remoteFailed && plans.length === 0 && <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>}
         {checked && !remoteFailed && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요</p>}
         {plans.map(plan => {

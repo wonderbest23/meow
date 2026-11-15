@@ -17763,3 +17763,7 @@ html:has([data-app-surface]) { background: #fff; }
 @keyframes app-fade-out { to { opacity: 0; } }
 @keyframes app-grow-in { from { opacity: 0; transform: scale(.94); } }
 @media (prefers-reduced-motion: reduce) { ::view-transition-old(root), ::view-transition-new(root), ::view-transition-group(chat-composer) { animation: none; } }
+
+/* 계획서 금액 · 비율 형광펜(lib/client/amount-highlight.ts) — 라이트 · 다크 모두 노란 바탕에 검은 글씨 */
+:root { --app-marker:#ffe14d; --app-on-marker:#111; }
+::highlight(plan-amount) { background-color:var(--app-marker); color:var(--app-on-marker); }

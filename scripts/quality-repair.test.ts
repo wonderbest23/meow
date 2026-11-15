@@ -47,3 +47,9 @@ const copied = "이 사업은 캠핑 공간을 빌려주고 숙박을 제공합�
 assert.equal(qualityRepairIssues(`## 요약\n\n${copied}\n\n근거를 확인하고 다음 행동을 정합니다.`, source, [copied]).length, 1);
 assert.equal(qualityRepairIssues("## 출처\n자세한 내용은 https://example.com/fake 에 있습니다. 근거를 확인하고 다음 행동을 정합니다.", source)[0].reason.includes("출처 주소"), true);
 console.log("quality-repair tests passed");
+
+// 0원은 입력에 없어도 지어낸 금액으로 보지 않는다(2026-11-15) — 다른 없는 금액 · 비율은 그대로 막는다
+const zero = "## 12주 할 일\n입력된 판매가 50,000원을 근거로, 한 건에 남는 돈이 0원을 넘는지 확인하고 광고비 0원으로 다음 행동을 정합니다. 이 문단은 길이를 채우기 위한 설명입니다.";
+assert.equal(checkDocumentQuality(zero, source).ok, true);
+assert.equal(checkDocumentQuality(zero.replace("광고비 0원", "광고비 7,000원"), source).ok, false);
+assert.equal(checkDocumentQuality(zero.replace("0원을 넘는지", "0.5%를 넘는지"), source).ok, false);
