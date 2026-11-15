@@ -8,7 +8,7 @@ import type { ServerPlan } from "../lib/plan-builder/plan-server-store";
 import type { IntakeCandidate, IntakeCommand, IntakeSnapshot } from "../lib/plan-builder/intake-types";
 import { createIntake, intakeSnapshot } from "../lib/plan-builder/intake-core";
 import { structureQuestions, coreQuestions, detailQuestions, intakeSectorOptions } from "../lib/plan-builder/intake-questions";
-import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCandidateDraftKey, optionGroups, selectedCount, stepVisible, withCount, draftKey, emptyAnswer, emptyDraft, entryMessage, hasExclusiveOptions, isHybridQuestion, isPrefillQuestion, needsPolling, parseDraft, periodDates, periodPresetRange, persistDraft, plainText, previewIntakeAnswer, readIntakePayload, readableFinancialSummary, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, suggestedIntakeIndustry, summaryAnswerText, toggleChip, typedChoiceAnswer, typedEntryCommand, unfinishedAnswerText, unmatchedPieces, jobProgress, intakeNextStep } from "../app/plan/chat/intake-ui/model";
+import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCandidateDraftKey, optionGroups, selectedCount, stepVisible, withCount, draftKey, emptyAnswer, emptyDraft, entryMessage, hasExclusiveOptions, isHybridQuestion, isPrefillQuestion, needsPolling, parseDraft, periodDates, periodPresetRange, persistDraft, plainText, previewIntakeAnswer, readIntakePayload, readableFinancialSummary, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, suggestedIntakeIndustry, summaryAnswerText, toggleChip, typedChoiceAnswer, typedEntryCommand, unfinishedAnswerText, unmatchedPieces, jobProgress, intakeNextStep, looseUnknownReply } from "../app/plan/chat/intake-ui/model";
 import { amountRanges, rangeMidpoint, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
@@ -734,6 +734,9 @@ async function main() {
   const starting = renderToStaticMarkup(<DesignProgress snapshot={nextSnapshot({}, { design: undefined })} />);
   assert.ok(starting.includes('role="progressbar"') && starting.includes("data-thinking") && starting.includes("답변 모으기") && !starting.includes("시작 범위 제안하기") && starting.includes("보통 30~40초"), "design progress shows one current-step line before the job is accepted");
   assert.equal(renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ coreComplete: false }, {})} prepared={false} disabled={false} aiBusy={false} onDesign={noop} onPrepare={noop} />), "");
+  // 일반 모드: 모른다 · 맡긴다는 말만 있으면 '모르겠어요'로 넘어간다. 다른 내용이 섞이면 아니다(2026-11-15)
+  for (const text of ["몰라 알아서 해줘", "아직 생각 안 해봤어", "글쎄 상관없어", "음 모르겠는데", "아무거나"]) assert.equal(looseUnknownReply(text), true, text);
+  for (const text of ["잘 모르겠는데 대충 직장인", "300만원", "돈은 별로 없어", "모르겠지만 3000", "ㅇㅇ", ""]) assert.equal(looseUnknownReply(text), false, text);
   // Legacy timing estimates remain compatible but are not shown as measured progress.
   assert.equal(jobProgress("queued", 0, 25_000, 60_000).percent, 3);
   assert.equal(jobProgress("running", 25_000, 25_000, 60_000).percent, 80);
