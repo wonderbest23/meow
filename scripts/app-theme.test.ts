@@ -65,7 +65,7 @@ for (const path of ["app/page.tsx", "app/account/page.tsx", "app/home-page.tsx"]
 assert.match(read("components/app-theme.tsx"), /removeAttribute\(THEME_ATTRIBUTE\)/, "로그인 뒤 화면을 떠나면 표식을 뗀다");
 
 // 5) 고르는 곳
-assert.match(read("app/plan/ProfileMenu.tsx"), /role="radiogroup" aria-label="화면 테마"/, "프로필 메뉴 '화면 설정'에 테마 선택이 없다");
+// 프로필 메뉴의 화면 설정은 뺐다(2026-11-15) — 고르는 곳은 환경설정 하나
 assert.match(read("app/plan/settings/preferences/Preferences.tsx"), /label="화면 테마"/, "환경설정에 테마 선택이 없다");
 
 console.log("app theme: passed");

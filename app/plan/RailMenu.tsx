@@ -74,10 +74,7 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className={menu.logoFull} src={DEFAULT_LOGO.src} alt="" width={DEFAULT_LOGO.width} height={DEFAULT_LOGO.height} />
     </Link>
-    {/* 계정 단추 240×32 — 누르면 프로필 메뉴(받은 알림 · 프로필 · 계정 설정 · 결제 내역 · 고객센터 · 이용 안내 · 화면 설정) */}
-    {account?.authenticated && <button type="button" className={menu.ws} aria-haspopup="dialog" aria-expanded={profile === "top"} onClick={() => setProfile(profile === "top" ? null : "top")} title={account.email ?? "내 계정"}>
-      <b aria-hidden="true">{accountInitial(account)}</b><span>{name || "내 계정"}</span><ChevronsUpDown aria-hidden="true" />
-    </button>}
+    {/* 위쪽 계정 단추는 뺐다(2026-11-15 사장님) — 아래 동그라미 하나로 프로필 메뉴를 연다 */}
     <div className={menu.nav}>
       <Link href={newChatHref()} className={menu.item} title="새 대화" aria-current={here("new")}>
         <SquarePen aria-hidden="true" /><span>새 대화</span>
