@@ -1,9 +1,12 @@
 /* 대화 끝 권유 카드 — 다음 할 일을 카카오톡으로 받기 */
-.offer { display:flex; flex-direction:column; gap:10px; margin-top:16px; padding:16px; border-radius:18px; background:var(--app-panel); box-shadow:0 0 0 1px var(--app-line); }
+.offer { display:flex; flex-direction:column; gap:8px; max-width:440px; margin-top:16px; padding:20px; border-radius:18px; background:var(--app-panel); box-shadow:0 0 0 1px var(--app-line); }
 .offer strong { font-size:.9375rem; font-weight:600; color:var(--app-text); }
-.offer > p { margin:-6px 0 0; font-size:.875rem; color:var(--app-body); }
-.agree { display:flex; align-items:flex-start; gap:10px; font-size:.8125rem; line-height:1.6; color:var(--app-body); cursor:pointer; }
+.offer > p { margin:-4px 0 8px; font-size:.875rem; color:var(--app-muted); }
+.label { font-size:.8125rem; font-weight:500; color:var(--app-text); }
+.input { display:grid; }
+.agree { display:flex; align-items:flex-start; gap:12px; margin-top:8px; padding:14px 16px; border-radius:14px; background:var(--app-soft); font-size:.8125rem; line-height:1.6; color:var(--app-muted); cursor:pointer; }
+.agree b { display:block; font-size:.875rem; font-weight:500; color:var(--app-text); }
 .agree input { flex:none; width:18px; height:18px; margin:2px 0 0; accent-color:var(--app-primary); }
-.acts { display:flex; flex-wrap:wrap; gap:8px; }
+.acts { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
 .offer > p.error { margin:0; color:var(--app-danger); }
 .done { margin:16px 0 0; font-size:.875rem; color:var(--app-body); }
