@@ -1,5 +1,6 @@
 "use client";
 
+import { koreanNumeralsToDigits } from "../../../lib/plan-builder/answer-number";
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -935,7 +936,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     if (coach && question?.id === "industry" && !askingAI) { setInputHint("찾은 업종 중 가까운 걸 눌러 주세요. 없으면 다른 이름으로 찾거나 아래 보기에서 골라도 돼요."); return; }
     if (askingAI) { if (!aiBusy) void send({ action: "help", message: composerVisible }, { composer: captureComposer() }); return; }
     const target = question?.id === "candidate" && questionDraft.custom ? getIntakeQuestion("startup", plan.intake.sector, "business", plan.structure?.values) ?? null : question;
-    const route = routeComposerInput(plan, target ?? null, composerText);
+    /* 일반 모드 · 숫자를 묻는 질문: 한글로 쓴 숫자('삼백' · '이천만원')를 숫자로 바꿔 읽는다. 예산에 단위 없이 작은 수만 적으면('한 삼백') 만원으로 본다 */
+    let routedText = composerText;
+    if (depthNow === "easy" && target && (target.kind === "number" || target.id === "budget" || target.id === "hoursPerWeek")) {
+      routedText = koreanNumeralsToDigits(composerText);
+      if (target.id === "budget" && routedText !== composerText && !/[원만억천]/.test(routedText)) routedText = routedText.replace(/(\d{1,4})(?!\d)/, "$1만원");
+    }
+    const route = routeComposerInput(plan, target ?? null, routedText);
     if (route.kind === "invalid") { setInputHint(route.hint); return; }
     /*
      * 일반 모드는 '이 내용은 어떻게 남길까요?'(AI에게 질문 · 메모로 남기기 · 질문으로 돌아가기) 세 단추로 되묻지 않는다(2026-11-15 사장님: 자유롭게 적는 대화) —

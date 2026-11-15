@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { parseWonAmount, rangeLowerText, stripAnswerPeriod } from "../lib/plan-builder/answer-number";
+import { koreanNumeralsToDigits, parseKoreanNumber, parseWonAmount, rangeLowerText, stripAnswerPeriod } from "../lib/plan-builder/answer-number";
 import { checkCoachFeasibility, coachAmount, coachAmountLower } from "../lib/plan-builder/coach-feasibility";
 import { parseWon } from "../lib/plan-builder/fact-highlight";
 import { parseAmount } from "../lib/plan-builder/financials";
@@ -88,5 +88,11 @@ assert.equal(composerLimitNote(2000, 2000), "2,000자를 다 채웠어요. 나�
 assert.equal(landingEmailIssue(""), "");
 assert.equal(landingEmailIssue("hello@mybusiness.kr"), "");
 assert.equal(landingEmailIssue("hello@"), "사업자 이메일 형식을 확인해 주세요 (예: hello@mybusiness.kr)");
+
+// 한글로 쓴 숫자(2026-11-15) — 숫자 질문에서 말하듯 적은 답을 읽는다. 낱말 속 글자는 건드리지 않는다
+assert.equal(parseKoreanNumber("삼백"), 300); assert.equal(parseKoreanNumber("이천만"), 20_000_000); assert.equal(parseKoreanNumber("만오천"), 15_000); assert.equal(parseKoreanNumber("삼억오천만"), 350_000_000); assert.equal(parseKoreanNumber("이십"), 20); assert.equal(parseKoreanNumber("천오백"), 1500);
+assert.equal(parseKoreanNumber("사이"), undefined); assert.equal(parseKoreanNumber("이"), undefined); assert.equal(parseKoreanNumber("백천"), undefined); assert.equal(parseKoreanNumber("이이백"), undefined);
+assert.equal(koreanNumeralsToDigits("돈은 별로 없어 한 삼백"), "돈은 별로 없어 한 300"); assert.equal(koreanNumeralsToDigits("이천만원"), "20000000원"); assert.equal(koreanNumeralsToDigits("한 만오천원쯤"), "한 15000원쯤"); assert.equal(koreanNumeralsToDigits("일주일에 이십 시간"), "일주일에 20 시간");
+assert.equal(koreanNumeralsToDigits("우리 사이 좋아"), "우리 사이 좋아"); assert.equal(koreanNumeralsToDigits("이천에서 가게 할거야"), "이천에서 가게 할거야"); assert.equal(koreanNumeralsToDigits("300만원"), "300만원"); assert.equal(koreanNumeralsToDigits("직장인 대상"), "직장인 대상");
 
 console.log("answer-number: 금액·기간·범위·견적·이름·입력창 도우미 규칙 통과");

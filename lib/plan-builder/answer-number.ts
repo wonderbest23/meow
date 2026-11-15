@@ -55,3 +55,37 @@ export function stripAnswerPeriod(text: string, period: string | undefined): str
   const stripped = text.trim().replace(words.prefix, "").replace(words.suffix, "").trim();
   return /\d/.test(stripped) ? stripped : text;
 }
+
+/*
+ * 한글로 쓴 숫자를 아라비아 숫자로 — '삼백' → 300 · '이천만원' → 20000000원 · '만오천원' → 15000원(2026-11-15 사장님: 일반 모드는 말하듯 적는다).
+ * 숫자를 묻는 질문에서만 쓴다. 두 글자 이상이고 십·백·천·만·억이 들어 있으며, 앞이 한글이 아니고 뒤가 단위·띄어쓰기·끝일 때만 바꾼다('이천 시'·'사이'는 건드리지 않는다).
+ */
+const KO_DIGIT: Record<string, number> = { 일: 1, 이: 2, 삼: 3, 사: 4, 오: 5, 육: 6, 칠: 7, 팔: 8, 구: 9 };
+const KO_SMALL: Record<string, number> = { 천: 1000, 백: 100, 십: 10 };
+function koreanSection(text: string): number | undefined {
+  let total = 0, digit = 0, last = 10_000;
+  for (const char of text) {
+    if (char in KO_DIGIT) { if (digit) return undefined; digit = KO_DIGIT[char]; continue; }
+    const unit = KO_SMALL[char];
+    if (!unit || unit >= last) return undefined;
+    total += (digit || 1) * unit; digit = 0; last = unit;
+  }
+  return total + digit;
+}
+export function parseKoreanNumber(text: string): number | undefined {
+  if (!/^[일이삼사오육칠팔구십백천만억]{2,}$/.test(text) || !/[십백천만억]/.test(text)) return undefined;
+  const [eokPart, rest] = text.includes("억") ? [text.slice(0, text.indexOf("억")), text.slice(text.indexOf("억") + 1)] : [null, text];
+  if (rest.includes("억")) return undefined;
+  const [manPart, low] = rest.includes("만") ? [rest.slice(0, rest.indexOf("만")), rest.slice(rest.indexOf("만") + 1)] : [null, rest];
+  if (low.includes("만")) return undefined;
+  const eok = eokPart === null ? 0 : eokPart === "" ? 1 : koreanSection(eokPart), man = manPart === null ? 0 : manPart === "" ? 1 : koreanSection(manPart), tail = koreanSection(low);
+  if (eok === undefined || man === undefined || tail === undefined) return undefined;
+  const value = eok * 100_000_000 + man * 10_000 + tail;
+  return value > 0 ? value : undefined;
+}
+export function koreanNumeralsToDigits(text: string): string {
+  return text.replace(/(^|[^가-힣\d])([일이삼사오육칠팔구십백천만억]{2,})(?=원|쯤|정도|개|명|건|시간|[\s.,!?~]|$)/g, (match, before: string, run: string) => {
+    const value = parseKoreanNumber(run);
+    return value === undefined ? match : `${before}${value}`;
+  });
+}
