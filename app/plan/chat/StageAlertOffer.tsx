@@ -44,7 +44,7 @@ export default function StageAlertOffer() {
     <label className={styles.agree}><input id="stage-offer-agree" type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /><span>{STAGE_ALERT_CONSENT}</span></label>
     {error && <p id="stage-offer-error" role="alert" className={styles.error}>{error}</p>}
     <div className={styles.acts}>
-      <AppButton type="submit" variant="primary" disabled={busy || !phone.trim() || !agreed}>받을게요</AppButton>
+      <AppButton type="submit" variant="primary" disabled={busy}>받을게요</AppButton>
       {/* 괜찮아요 — 다시 묻지 않는다. 기억하지 못해도(연결 끊김) 이번 화면에서는 닫는다 */}
       <AppButton type="button" variant="soft" disabled={busy} onClick={() => { setShow(false); void send({ action: "decline" }); }}>괜찮아요</AppButton>
     </div>

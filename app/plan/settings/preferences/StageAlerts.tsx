@@ -49,14 +49,18 @@ export default function StageAlerts() {
   }
 
   const moments = <ul className={styles.moments}>{STAGE_ALERT_MOMENTS.map(item => <li key={item}>{item}</li>)}</ul>;
+  // 동의 글은 한 덩어리(기록과 같은 글)지만 화면에서는 첫 문장을 제목으로, 나머지를 설명으로 나눠 보인다
+  const cut = STAGE_ALERT_CONSENT.indexOf(". ") + 1;
   const form = <form className={styles.form} onSubmit={register} noValidate>
-    <div className={styles.field}>
-      <TextField id="stage-alert-phone" type="tel" inputMode="numeric" autoComplete="tel" placeholder="010-0000-0000" aria-label="알림 받을 휴대폰 번호" aria-describedby={error ? "stage-alert-error" : undefined} aria-invalid={!!error || undefined} value={phone} onChange={event => setPhone(event.target.value)} />
-      <AppButton type="submit" variant="primary" disabled={busy || !phone.trim() || !agreed}>{busy ? "저장 중…" : "등록하기"}</AppButton>
+    <label className={styles.label} htmlFor="stage-alert-phone">휴대폰 번호</label>
+    <div className={styles.input}><TextField id="stage-alert-phone" type="tel" inputMode="numeric" autoComplete="tel" placeholder="010-0000-0000" aria-describedby={error ? "stage-alert-error" : undefined} aria-invalid={error.includes("번호") || undefined} value={phone} onChange={event => setPhone(event.target.value)} /></div>
+    <label className={styles.agree}><input id="stage-alert-agree" type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /><span><b>{STAGE_ALERT_CONSENT.slice(0, cut - 1)}</b>{STAGE_ALERT_CONSENT.slice(cut)}</span></label>
+    {error && <p id="stage-alert-error" role="alert" className={styles.error}>{error}</p>}
+    {/* 단추는 늘 눌린다 — 빠진 것(번호 · 동의)은 눌렀을 때 글로 알려 준다(2026-11-15 사장님: 꺼진 단추가 헷갈린다) */}
+    <div className={styles.acts}>
+      <AppButton type="submit" variant="primary" disabled={busy}>{busy ? "저장 중…" : "등록하기"}</AppButton>
       {editing && <AppButton type="button" variant="soft" disabled={busy} onClick={() => { setEditing(false); setError(""); }}>취소</AppButton>}
     </div>
-    <label className={styles.agree}><input id="stage-alert-agree" type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /><span>{STAGE_ALERT_CONSENT}</span></label>
-    {error && <p id="stage-alert-error" role="alert" className={styles.error}>{error}</p>}
   </form>;
 
   return <SettingsSection id="pref-stage-alerts" title="진행 단계 안내" description="단계가 넘어갈 때 다음 할 일을 문자로 보내 드려요.">
