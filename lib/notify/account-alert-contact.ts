@@ -10,8 +10,9 @@ export type AlertContact = { phone: string; agreedAt: string; disabledAt: string
 export type AlertContactView = { phone: string; agreedAt: string; enabled: boolean };
 
 /** 동의 문구 — 화면과 기록이 같은 글을 쓴다. 바꾸면 다시 동의를 받아야 한다 */
-export const STAGE_ALERT_MOMENTS = ["사업 방향 정리 완료", "사업계획서 완성", "홈페이지 공개", "사업자등록 단계 도달", "개업 준비 완료", "첫 손님 문의 도착"] as const;
-export const STAGE_ALERT_CONSENT = "진행 단계 안내 수신 동의 (선택). 아래 여섯 가지 때 다음 순서를 이 번호로 카카오 알림톡(안 되면 문자)으로 받는 데 동의합니다. 번호는 알림에만 쓰고 언제든 끌 수 있어요.";
+/* 지금 실제로 보내는 네 가지만 적는다(발송 1차) — 동의한 것과 받는 것이 같아야 한다. 단계를 늘리면 여기도 늘린다 */
+export const STAGE_ALERT_MOMENTS = ["사업 방향 정리 완료", "사업계획서 완성", "홈페이지 공개", "개업 준비 완료"] as const;
+export const STAGE_ALERT_CONSENT = "진행 단계 안내 수신 동의 (선택). 아래 때에 다음 순서를 이 번호로 문자(카카오 알림톡을 시작하면 알림톡)로 받는 데 동의합니다. 번호는 알림에만 쓰고 언제든 끌 수 있어요.";
 
 export const maskAlertPhone = (phone: string) => `${phone.slice(0, 3)}-••••-${phone.slice(-4)}`;
 export const viewOf = (contact: AlertContact | null): AlertContactView | null =>

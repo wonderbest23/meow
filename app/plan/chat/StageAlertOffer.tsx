@@ -7,7 +7,7 @@ import { STAGE_ALERT_CONSENT } from "../../../lib/notify/account-alert-contact";
 import styles from "./StageAlertOffer.module.css";
 
 /*
- * 대화 끝(사업 방향을 정리한 직후)에 한 번 권한다 — "다음 할 일을 카카오톡으로 받아 볼까요?"(2026-11-15 사장님).
+ * 대화 끝(사업 방향을 정리한 직후)에 한 번 권한다 — "다음 할 일을 문자로 받아 볼까요?"(2026-11-15 사장님 — 알림톡을 붙이기 전까지는 문자라고 말한다).
  * 계정에 한 번만: 번호를 등록했거나 '괜찮아요'를 누른 계정에는 다시 묻지 않는다(서버가 기억). 나중에는 환경설정 → 진행 단계 안내에서 켠다.
  */
 export default function StageAlertOffer() {
@@ -38,7 +38,7 @@ export default function StageAlertOffer() {
   if (!show) return null;
   if (done) return <p className={styles.done} role="status">등록했어요. 단계가 넘어가면 다음 할 일을 보내 드릴게요.</p>;
   return <form className={styles.offer} data-stage-alert-offer onSubmit={async event => { event.preventDefault(); if (await send({ action: "register", phone, agreed })) setDone(true); }} noValidate>
-    <strong>다음 할 일을 카카오톡으로 받아 볼까요?</strong>
+    <strong>다음 할 일을 문자로 받아 볼까요?</strong>
     <p>계획서 완성, 홈페이지 공개처럼 단계가 넘어갈 때만 보내요.</p>
     <TextField id="stage-offer-phone" type="tel" inputMode="numeric" autoComplete="tel" placeholder="010-0000-0000" aria-label="알림 받을 휴대폰 번호" aria-invalid={!!error || undefined} aria-describedby={error ? "stage-offer-error" : undefined} value={phone} onChange={event => setPhone(event.target.value)} />
     <label className={styles.agree}><input id="stage-offer-agree" type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /><span>{STAGE_ALERT_CONSENT}</span></label>

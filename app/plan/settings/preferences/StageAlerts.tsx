@@ -59,7 +59,7 @@ export default function StageAlerts() {
     {error && <p id="stage-alert-error" role="alert" className={styles.error}>{error}</p>}
   </form>;
 
-  return <SettingsSection id="pref-stage-alerts" title="진행 단계 안내" description="단계가 넘어갈 때 다음 할 일을 카카오톡(안 되면 문자)으로 보내 드려요.">
+  return <SettingsSection id="pref-stage-alerts" title="진행 단계 안내" description="단계가 넘어갈 때 다음 할 일을 문자로 보내 드려요.">
     <SettingsCard mobile="band">
       {contact === undefined ? <SettingsRow title="진행 단계 안내 받기" description="불러오는 중…" />
         : loadError ? <SettingsRow title="진행 단계 안내 받기" description={loadError} />
