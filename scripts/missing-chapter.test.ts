@@ -22,6 +22,7 @@ assert.equal(dropMissingReferences(md, [], "markdown"), md);
 const html = "<h3>가격</h3><p>함께 확인합니다. 방법은 '12주 할 일과 매달 볼 숫자' 장에 있습니다.</p><p>방법은 <strong>'12주 할 일과 매달 볼 숫자'</strong> 장에 있습니다.</p><ul><li>순서는 '12주 할 일과 매달 볼 숫자' 장에서 정합니다.</li><li>남는 항목</li></ul>";
 assert.equal(dropMissingReferences(html, missing, "html"), "<h3>가격</h3><p>함께 확인합니다.</p><ul><li>남는 항목</li></ul>");
 
+assert.equal(dropMissingReferences("<p>남는 문장. 방법은 &#39;12주 할 일과 매달 볼 숫자&#39; 장에 있습니다. 이것도 남는다.</p>", missing, "html"), "<p>남는 문장. 이것도 남는다.</p>");
 // 화면에 이어져 있다 — 문서 위 알림과 '다시 만들기' 명령
 const body = readFileSync(new URL("../app/plan/document/PlanDocumentBody.tsx", import.meta.url), "utf8");
 assert.match(body, /dropMissingReferences\(/);

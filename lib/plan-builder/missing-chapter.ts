@@ -16,7 +16,9 @@ export function dropMissingReferences(text: string, missingTitles: string[], for
   const titles = missingTitles.filter(Boolean);
   if (!titles.length || !text) return text;
   // '○○' 장 · ‘○○’ 장 · "○○" 장 — 따옴표로 묶어 장이라고 부른 것만(같은 낱말이 본문에 그냥 나온 것은 두다)
-  const pattern = new RegExp(`['‘’"“”](?:${titles.map(escape).join("|")})['‘’"“”]\\s*(?:<\\/[a-z]+>\\s*)?장`);
+  // 저장된 HTML 은 따옴표가 &#39; · &quot; 로 바뀌어 있다(화면에서 문장이 안 빠져서 알았다)
+  const quote = `(?:['‘’"“”]|&#39;|&apos;|&quot;)`;
+  const pattern = new RegExp(`${quote}(?:${titles.map(escape).join("|")})${quote}\\s*(?:<\\/[a-z]+>\\s*)?장`);
   if (!pattern.test(text)) return text;
   if (format === "html") return text.replace(/<(p|li)>([\s\S]*?)<\/\1>/g, (whole, tag: string, inner: string) => {
     const kept = dropFromBlock(inner, pattern);
