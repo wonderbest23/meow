@@ -10,6 +10,7 @@ import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, type P
 import { planDisplayName } from "../../../../lib/plan-builder/business-name";
 import { homepageHref } from "../../../../lib/plan-builder/journey";
 import styles from "../settings.module.css";
+import StageAlerts from "./StageAlerts";
 
 /*
  * 환경설정 — 지금 있는 설정만 둔다(없는 설정을 만들지 않는다).
@@ -54,5 +55,6 @@ export default function Preferences() {
             control={<AppButton href={`${homepageHref(plan.id)}#hk-leads`} variant="soft" size="adaptive" aria-label={`${planDisplayName(plan)} 문의 알림 번호 설정`}>설정</AppButton>} />)}
       </SettingsCard>
     </SettingsSection>
+    <StageAlerts />
   </div>;
 }

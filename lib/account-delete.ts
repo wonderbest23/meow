@@ -11,7 +11,7 @@ import { disconnectProjectDomains } from "./plan-builder/plan-homepage-cleanup";
  *   대신 계정 식별자(owner_id)를 끊어 사람과 연결되지 않게 분리한다.
  */
 export interface AccountDeleteResult {
-  deleted: { plans: number; projects: number; conversations: number; preferences: number; consultSessions?: number; serviceRequests?: number; businessChecks?: number };
+  deleted: { plans: number; projects: number; conversations: number; preferences: number; consultSessions?: number; serviceRequests?: number; businessChecks?: number; alertContacts?: number };
   keptForLegalRetention: { paymentOrders: number; refundRequests: number };
 }
 
@@ -64,6 +64,9 @@ export async function deleteAccount(userId: string): Promise<AccountDeleteResult
     result.deleted.consultSessions = await optionalDelete("consult_sessions", "owner_hash", ownerHash);
     result.deleted.serviceRequests = await optionalDelete("service_requests", "owner_id", userId);
     result.deleted.businessChecks = await optionalDelete("business_checks", "owner_id", userId);
+    // 진행 단계 안내 번호 · 동의 기록(표가 없으면 건너뜀)
+    result.deleted.alertContacts = await optionalDelete("account_alert_contacts", "owner_id", userId);
+    await optionalDelete("journey_notifications", "owner_id", userId);
 
     // 4) 추천 선호
     const prefs = checked(await supabase.from("opportunity_preferences").delete({ count: "exact" }).eq("owner_id", userId), "opportunity_preferences");

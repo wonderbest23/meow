@@ -23,6 +23,7 @@ import { sectorCheckPrompt } from "../../../lib/plan-builder/intake-core";
 import styles from "./intake.module.css";
 import chatUi from "../../../components/coach-chat-ui.module.css";
 import ChatLoading from "./loading";
+import StageAlertOffer from "./StageAlertOffer";
 import { GenerationCard, GenerationDialog, generationFinished, generationStalled, useGenerationProgress } from "../GenerationProgress";
 import { InlineLogin } from "../../../components/login-dialog";
 import { coachFieldDisplay } from "../../../lib/plan-builder/coach-presentation";
@@ -1879,6 +1880,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
                 {!nextStep && refinement && <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "살펴볼 사업 정하기" : "사업 소개 정하기"}<ChevronRight size={17} aria-hidden="true" /></AppButton>}
                 {/* 작업실 안: 작성 중이면 진행 카드, 방금 끝났으면 마무리 말이 다음 단계 단추 자리를 대신한다 */}
                 {studioTurn ?? <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce minimal={coach && !!currentIdentity(plan)} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}
+                {/* 사업 방향을 정리한 직후 한 번 — 다음 할 일을 카카오톡으로 받을지 권한다(계정에 한 번만) */}
+                {nextStep === "prepare" && signedIn && <StageAlertOffer />}
                 </>}
                 {generating && generation.state && !embedded && <AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => setGenerationOpen(true)}>사업계획서 작성 중 {generation.state.done}/{generation.state.total} · 진행 보기</AppButton>}
                 {!signedIn && <p className={styles.guestSaveNote}>로그인하지 않으면 이 브라우저에만 저장돼요. <Link href={loginHref}>로그인</Link>하면 다른 기기·브라우저에서도 이어서 볼 수 있어요.</p>}

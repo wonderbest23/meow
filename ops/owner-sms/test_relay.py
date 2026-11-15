@@ -373,6 +373,7 @@ class V4RelayTests(unittest.TestCase):
         self.assertEqual(v4_message("lead-received", {"store": "오늘 카페\n☎ 010"}), "[오늘 카페 010] 문의가 접수됐어요. 곧 연락드릴게요.")
         self.assertEqual(v4_message("domain-connect-started", {"domain": "www.mybrand.co.kr"}), "[오늘창업] 도메인 www.mybrand.co.kr 연결을 시작했어요")
         self.assertEqual(v4_message("tax-deadline", {"kind": "income", "days": 7, "month": 5, "day": 31}), "[오늘창업] 종합소득세 신고 마감 D-7 (5/31)")
+        self.assertEqual(v4_message("journey-stage", {"stage": "plan"}), "[오늘창업] 사업계획서 완성! 다음은 홈페이지 만들기 oneulstart.com/plan")
         # 완성형에 없는 한글은 빼고, 이름은 10자·가게 이름은 12자까지
         self.assertEqual(v4_message("homepage-lead-contact", {"name": "똠양꿍" + "가" * 20, "phone": ""}).split(" ")[3], "양꿍" + "가" * 8)
         self.assertEqual(v4_message("lead-received", {"store": "가" * 30}), "[" + "가" * 12 + "] 문의가 접수됐어요. 곧 연락드릴게요.")
@@ -383,11 +384,14 @@ class V4RelayTests(unittest.TestCase):
                            ("homepage-lead-contact", {"name": 1, "phone": ""}), ("lead-received", {"store": "!!!"}), ("lead-received", {}),
                            ("domain-connect-started", {"domain": "evil.example.org"}), ("domain-connect-started", {"domain": "a.com/광고"}),
                            ("tax-deadline", {"kind": "income", "days": 3, "month": 5, "day": 31}), ("tax-deadline", {"kind": "corp", "days": 1, "month": 5, "day": 31}),
-                           ("tax-deadline", {"kind": "vat", "days": 1, "month": 13, "day": 1}), ("support-inquiry", {})]:
+                           ("tax-deadline", {"kind": "vat", "days": 1, "month": 13, "day": 1}), ("support-inquiry", {}),
+                           ("journey-stage", {"stage": "sale"}), ("journey-stage", {"stage": "plan", "text": "광고"}), ("journey-stage", {"stage": 1})]:
             self.assertIsNone(v4_message(event, bad), (event, bad))
 
     def test_sizes_sms_or_lms(self):
         self.assertLessEqual(sms_bytes(v4_message("tax-deadline", {"kind": "income", "days": 7, "month": 12, "day": 31})), 90)
+        for stage in ("design", "plan", "homepage", "launch"):
+            self.assertLessEqual(sms_bytes(v4_message("journey-stage", {"stage": stage})), 90, stage)
         self.assertLessEqual(sms_bytes(v4_message("lead-received", {"store": "가" * 12})), 90, "방문자 확인 문자는 늘 SMS")
         self.assertLessEqual(sms_bytes(v4_message("homepage-lead-contact", {"name": "가" * 10, "phone": "01012345678"})), 90, "이름 10자·번호 11자리여도 SMS")
         self.assertLessEqual(sms_bytes(v4_message("payment-paid", {"product": "bundle", "amount": 10000000, "orderId": ORDER})), 90)

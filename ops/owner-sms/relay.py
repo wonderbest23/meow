@@ -34,7 +34,7 @@ INQUIRIES = "oneulstart.com/plan/inquiries"
 MAX_SMS_BYTES = 90
 # v4 — 운영자(ownerPhone) 알림과 받는 번호가 있는 알림. 문구는 v4_message 가 고정 틀에 검사한 값만 채운다.
 OPERATOR_EVENTS = ("payment-paid",)
-CUSTOMER_EVENTS_V4 = ("payment-receipt", "homepage-lead-contact", "lead-received", "domain-connect-started", "tax-deadline")
+CUSTOMER_EVENTS_V4 = ("payment-receipt", "homepage-lead-contact", "lead-received", "domain-connect-started", "tax-deadline", "journey-stage")
 # 90바이트를 넘을 수 있는 것만 LMS 로(제목 고정). 나머지는 넘으면 보내지 않는다
 LMS_EVENTS = ("payment-paid", "payment-receipt", "homepage-lead-contact", "domain-connect-started")
 MAX_LMS_BYTES = 2000
@@ -43,6 +43,13 @@ LMS_TITLE = "오늘창업 알림"
 PRODUCTS = {"plan": "사업계획서", "homepage": "홈페이지", "bundle": "계획서+홈페이지", "regen": "다시 생성 10회",
             "domain": "도메인 연결", "domain-purchase": "도메인 구매", "tokens": "AI 수정 토큰"}
 TAX_KINDS = {"income": "종합소득세", "vat": "부가세"}
+# 진행 단계 안내 — 단계 이름만 받고 글은 여기 고정 문구(앱의 lib/notify/journey-alerts.ts JOURNEY_SMS_TEXT 와 같은 글, 모두 90바이트 안)
+JOURNEY_TEXT = {
+    "design": "[오늘창업] 사업 방향 정리 완료! 다음은 사업계획서 만들기 oneulstart.com/plan",
+    "plan": "[오늘창업] 사업계획서 완성! 다음은 홈페이지 만들기 oneulstart.com/plan",
+    "homepage": "[오늘창업] 홈페이지 공개 완료! 다음은 개업 준비 oneulstart.com/plan",
+    "launch": "[오늘창업] 개업 준비 완료! 이제 유지보수 단계예요 oneulstart.com/plan",
+}
 ORDER_ID = r"PB-[a-z0-9]{6,12}-[a-f0-9]{12}"
 DOMAIN = r"(?:www\.)?[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.(?:com|kr|co\.kr)"
 EVENT_ID = r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}"
@@ -168,6 +175,10 @@ def v4_message(event_type, params):
                 or type(params["day"]) is not int or not 1 <= params["day"] <= 31):
             return None
         return "[오늘창업] %s 신고 마감 D-%d (%d/%d)" % (TAX_KINDS[params["kind"]], params["days"], params["month"], params["day"])
+    if event_type == "journey-stage":
+        if keys != {"stage"} or not isinstance(params["stage"], str) or params["stage"] not in JOURNEY_TEXT:
+            return None
+        return JOURNEY_TEXT[params["stage"]]
     return None
 
 
