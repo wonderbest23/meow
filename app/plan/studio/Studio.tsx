@@ -1,7 +1,7 @@
 "use client";
 
 import { settleTransition } from "../../../lib/client/view-transition";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode, useLayoutEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, History, Layers, List, LayoutGrid, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, SquarePen, X } from "lucide-react";
@@ -231,12 +231,16 @@ export default function Studio() {
   useEffect(() => { setPickedSample(current => current === planId ? null : current); }, [planId]);
   const [title, setTitle] = useState("");
   const [focusHint, setFocusHint] = useState(false);
+  /* 이 기기 저장본으로 한 칸 대화인지 먼저 본다 — 서버를 기다리는 동안 두 칸 작업실이 잠깐 보였다가 한 칸으로 바뀌지 않게(2026-11-14).
+     화면을 그리기 전에 정한다(useLayoutEffect) — 그린 뒤에 정하면 왼쪽 메뉴가 늦게 끼어들어 본문이 옆으로 밀렸다(2026-11-15, 흔들림 0.64) */
+  useLayoutEffect(() => {
+    if (!planId || !intakeV2) return;
+    const local = loadState().plans.find(item => item.id === planId);
+    setFocusHint(!!local && !!readCoach(local.answers) && !businessHubState(local).documents.length && !local.answers.__coach_generation);
+  }, [planId, intakeV2]);
   useEffect(() => {
     if (!planId || !intakeV2) return;
     let alive = true;
-    /* 이 기기 저장본으로 한 칸 대화인지 먼저 본다 — 서버를 기다리는 동안 두 칸 작업실이 잠깐 보였다가 한 칸으로 바뀌지 않게(2026-11-14) */
-    const local = loadState().plans.find(item => item.id === planId);
-    setFocusHint(!!local && !!readCoach(local.answers) && !businessHubState(local).documents.length && !local.answers.__coach_generation);
     hydrateFromServer().catch(() => loadState()).then(async state => {
       if (!alive) return;
       const found = state.plans.find(item => item.id === planId) ?? null;

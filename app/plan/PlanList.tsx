@@ -42,7 +42,8 @@ import { PLAN_VIEW_ALL } from "./MobileTabBar";
  */
 type Filter = "search" | "mine" | "recent" | "samples";
 /* 검색 알약은 뺐다(2026-11-15 사장님) — 사업이 몇 개뿐이라 찾을 일이 없다 */
-const FILTERS: Array<[Filter, string]> = [["mine", "내 사업"], ["recent", "최근 본 항목"], ["samples", "예시"]];
+/* 최근 본 항목 알약은 뺐다(2026-11-15 사장님) — 내 사업과 같은 목록을 순서만 바꿔 보여 줬다 */
+const FILTERS: Array<[Filter, string]> = [["mine", "내 사업"], ["samples", "예시"]];
 const EXAMPLE_IDEA = "성수동에 작은 쿠키 공방을 열고 싶어요";
 
 /** 수정됨 n일 전 — 30일이 넘으면 날짜 */
@@ -207,7 +208,8 @@ export default function PlanList() {
           <Link href="/plan/studio?planId=sample_banchan_expert">전문가 (샘플)<ArrowRight size={14} aria-hidden="true" /></Link>
         </nav>}
       </section>}
-      {!guest && <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">
+      {/* 첫 화면에는 입력칸만 — 사업 목록은 '내 사업'에서만 본다(2026-11-15 사장님: 새 대화 · 내 사업 둘만). 전에는 PC 첫 화면 아래에 같은 목록이 또 있었다 */}
+      {!guest && listOnly && <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">
         {/* 사업 카드만 보는 화면 — 제목(휴대폰은 lovable Projects 탭처럼 30/600 + 오른쪽 44 원 검색 단추) */}
         {listOnly && <div className={home.listHead}>
           <h1 className={home.listTitle}>내 사업</h1>
@@ -218,7 +220,6 @@ export default function PlanList() {
             {FILTERS.filter(([key]) => filter !== "search" || key === "search").map(([key, label]) => <button key={key} type="button" className={home.filterPill} aria-pressed={filter === key} onClick={() => { if (key === "search") toggleSearch(); else setFilter(key); }}>{key === "search" && <Search size={16} aria-hidden="true" />}{label}</button>)}
             {filter === "search" && <TextField ref={searchInput} type="search" className={home.search} aria-label="사업 이름으로 찾기" placeholder="사업 이름으로 찾기" value={query} onChange={event => setQuery(event.target.value)} onKeyDown={event => { if (event.key === "Escape") toggleSearch(); }} />}
           </div>
-          {!listOnly && <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={home.browse}>전체 둘러보기<ArrowRight size={16} aria-hidden="true" /></Link>}
         </div>
         {list}
       </section>}
