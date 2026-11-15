@@ -24,7 +24,8 @@
  * 첫 화면(/plan) — 판 자체가 그라데이션 히어로(lovable 구조: 위는 판 색, 아래로 갈수록 진해지는 빛 덩어리).
  * 그림은 우리 것 — 파랑·하늘·남색 radial-gradient 만(lovable 그림·분홍/주황 표식은 쓰지 않는다). 라이트/다크 따로.
  */
-.hero.hero { background-color:var(--app-panel); background-image:
+/* 두 칸 작업실(테두리 없는 판, data-bare)에서도 같은 배경 — 예시 작업실이 첫 화면과 같은 느낌을 갖는다(2026-11-14 사장님) */
+.hero.hero, .surface.surface.hero[data-bare] { background-color:var(--app-panel); background-image:
   /* 전문가 모드에서 한 겹 더 — --hero-deep 이 0이면 보이지 않는다 */
   linear-gradient(rgb(31 85 241 / calc(.07 * var(--hero-deep))), rgb(31 85 241 / calc(.07 * var(--hero-deep)))),
   radial-gradient(120% 62% at 50% 100%, rgb(31 85 241 / calc(.34 * var(--hero-deep))) 0%, transparent 76%),

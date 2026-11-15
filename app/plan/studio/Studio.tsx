@@ -4,7 +4,7 @@ import { settleTransition } from "../../../lib/client/view-transition";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, Globe, History, Layers, List, LayoutGrid, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, SquarePen, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, History, Layers, List, LayoutGrid, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, SquarePen, X } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -845,20 +845,20 @@ export default function Studio() {
     </div>
     {!missing && !focus && <div className={styles.toolbar}>
       <div className={styles.viewGroup} role="group" aria-label="미리보기 도구">
-        <span className={styles.previewPill}><Globe aria-hidden="true" />미리보기</span>
-        <ToolButton className={styles.groupTool} label="사업계획서 내려받기" title={planTools ? "사업계획서 내려받기" : "계획서를 쓰면 내려받을 수 있어요"} icon={<Download aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-download")} />
         <ToolButton className={styles.groupTool} label="쉽게 보기 · 전체 문서로 돌아가기" title={planTools ? "쉽게 보기 ↔ 전체 문서" : "계획서를 쓰면 볼 수 있어요"} icon={<FileText aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-summary")} />
         <PopMenu buttonClassName={styles.groupTool} buttonLabel="더 보기 — 직접 고치기 · 실적 기록 · 저장" buttonTitle="더 보기" menuLabel="미리보기 더 보기" label={<Layers aria-hidden="true" />} groups={[{ key: "more", items: moreItems }]} />
+        <ToolButton className={styles.groupTool} label="사업계획서 내려받기" title={planTools ? "사업계획서 내려받기" : "계획서를 쓰면 내려받을 수 있어요"} icon={<Download aria-hidden="true" />} disabled={!planTools} onClick={() => runPlan("plan-download")} />
       </div>
       <span className={styles.grow} />
       <div className={styles.toolCenter}>
-        {!chatOnly && centerSlot(rightTab)}
+        {/* 장 고르기는 위 막대에서 뺐다(2026-11-14 사장님) — 본문 아래 앞 · 다음 장 단추로 넘긴다 */}
+        {!chatOnly && rightTab !== "plan" && centerSlot(rightTab)}
         <div className={styles.selectWrap}>
           <ToolButton className={styles.refresh} label="새로고침" title="최신 내용 다시 불러오기" icon={<RotateCw aria-hidden="true" />} disabled={!planId} onClick={refreshView} />
           <PageSelect options={pageOptions} value={rightTab} status={statusText || undefined} live={live} onSelect={pickPage} className={styles.pageSelect} />
         </div>
-        {openHref ? <a className={styles.tool} href={openHref} target="_blank" rel="noreferrer" aria-label="새 창에서 열기" title={rightTab === "homepage" && publicUrl ? "공개한 홈페이지 새 창으로 보기" : "이 화면을 새 창에서 열기"}><ExternalLink aria-hidden="true" /></a>
-          : <ToolButton label="새 창에서 열기" title="사업이 생기면 열 수 있어요" icon={<ExternalLink aria-hidden="true" />} disabled onClick={() => {}} />}
+        {/* 새 창 열기는 공개한 홈페이지가 있을 때만 — 같은 화면을 새 창으로 여는 단추는 뺐다(2026-11-14 사장님) */}
+        {rightTab === "homepage" && publicUrl && <a className={styles.tool} href={publicUrl} target="_blank" rel="noreferrer" aria-label="공개한 홈페이지 새 창으로 보기" title="공개한 홈페이지 새 창으로 보기"><ExternalLink aria-hidden="true" /></a>}
       </div>
       <span className={styles.grow} />
       <div className={styles.tbActs}>
@@ -912,14 +912,14 @@ export default function Studio() {
 
   return <StudioNavContext.Provider value={nav}>
     <main className={`${frame.page} ${styles.page}`} data-wide={wide || undefined} data-focus={focus || undefined} onClickCapture={onClickCapture}>
-      <BusinessAppChrome title={businessTitle} subtitle={missing ? undefined : statusText} showRail={false} bare={wide && !focus} hero={focus} rail={wide && focus ? focusRail : undefined} backHref="/plan" active={fresh ? "new" : "plans"} topBar={menu => (wide ? pcBar(menu) : mobileHead)}>
+      <BusinessAppChrome title={businessTitle} subtitle={missing ? undefined : statusText} showRail={false} bare={wide && !focus} hero rail={wide && focus ? focusRail : undefined} backHref="/plan" active={fresh ? "new" : "plans"} topBar={menu => (wide ? pcBar(menu) : mobileHead)}>
         {/* 로그인이 풀렸을 때(휴대폰) — 머리 아래 한 줄에 다시 로그인하기 */}
         {!wide && relogin && <div className={styles.reloginRow}>{relogin}</div>}
         {/* 주소의 사업을 찾지 못했으면 칸마다 따로 알리지 않고(왼쪽·오른쪽 두 번 보였다) 작업실에서 한 번만 */}
         {/* 로그인이 안 돼 못 찾았으면 '로그인하기'(팝업, 끝나면 이 주소로 돌아온다) — 처음 온 사람도 이 화면을 보므로 '풀렸어요'라고 하지 않는다(2026-11-14) */}
         {missing ? <div className={styles.missingNote}><div className={hub.content}>{signedOut
           ? <MissingBusinessBody title="로그인이 필요해요" detail="로그인하면 이 사업을 볼 수 있어요." action={<AppButton type="button" variant="primary" className={hub.primary} onClick={() => openLogin()}>로그인하기</AppButton>} />
-          : <MissingBusinessBody />}</div></div> : <div className={styles.studio} data-wide={wide || undefined} data-collapsed={wide && chatCollapsed && !focus || undefined} data-focus={focus || undefined} data-opened={slidIn || undefined}>
+          : <MissingBusinessBody />}</div></div> : <div className={styles.studio} data-wide={wide || undefined} data-collapsed={wide && chatCollapsed && !focus || undefined} data-focus={focus || undefined} data-sample={isSamplePlan(planId) || undefined} data-opened={slidIn || undefined}>
           <Pane id="chat" planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} refresh={refreshSeq.chat ?? 0} className={styles.chatCol} headingRef={headingRef("chat")}>
             {/* PC 에서 오른쪽에 보이는 열린 칸 — 대화 칸이 '홈페이지를 대화로 고치기' 같은 제안을 고른다(막힌 칸이면 null) */}
             {/* 예시 사업은 서버에 대화가 없어 대화 칸이 '사업을 찾지 못했어요 · 내 사업으로'를 보였다(감사 2026-10-23) — 읽기 전용 안내와 새 대화 길로 */}
@@ -948,7 +948,10 @@ export default function Studio() {
                 </div>
                 <div className={styles.sampleFoot}>{account?.authenticated === false
                   ? <><p>로그인하면 내 사업을 바로 시작할 수 있어요</p><div><AppButton type="button" variant="primary" onClick={() => openLogin(guestNext())}>로그인</AppButton><AppButton type="button" variant="secondary" onClick={() => openLogin(guestNext(), "register")}>회원가입</AppButton></div></>
-                  : <AppButton variant="primary" href={newChatHref()}><span className={styles.nowrap}>대화로 내 사업 시작하기</span><ChevronRight size={18} aria-hidden="true" /></AppButton>}</div>
+                  /* 지금 보는 단계의 다음 할 일을 단추로(2026-11-14 사장님) — 계획서 → 홈페이지 → 운영 → 내 사업 시작. 내 사업 시작은 작은 링크로 늘 둔다 */
+                  : rightTab === "plan" || rightTab === "homepage"
+                    ? <><AppButton type="button" variant="primary" onClick={() => selectTab(rightTab === "plan" ? "homepage" : "operations")}><span className={styles.nowrap}>{rightTab === "plan" ? "홈페이지 만들기 (다음 단계)" : "유지보수 하기"}</span><ChevronRight size={18} aria-hidden="true" /></AppButton></>
+                    : <AppButton variant="primary" href={newChatHref()}><span className={styles.nowrap}>대화로 내 사업 시작하기</span><ChevronRight size={18} aria-hidden="true" /></AppButton>}</div>
               </div>
               : noChat
                 ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>

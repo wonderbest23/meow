@@ -25,6 +25,13 @@
   main.page.page { --studio-chat-w:430px; background:var(--app-base); }
   .chatCol { padding-left:1px; }
   .studio { grid-template-columns:var(--studio-chat-w) minmax(0,1fr); background:transparent; }
+  /* 대화 열 접기 · 펴기는 옆으로 스르륵(2026-11-14 사장님) — 열 너비만 움직이고 안쪽은 원래 너비를 지켜 찌그러지지 않는다 */
+  .studio { transition:grid-template-columns .32s cubic-bezier(.2,.8,.2,1); }
+  .studio:not([data-focus]) .chatCol > .paneBody { min-width:calc(var(--studio-chat-w) - 1px); }
+  .chatCol { transition:opacity .2s ease, visibility 0s linear .32s; }
+  .studio[data-collapsed] .chatCol { opacity:0; }
+  .studio:not([data-collapsed]) .chatCol { transition:opacity .28s ease .06s; }
+  @media (prefers-reduced-motion:reduce) { .studio, .chatCol { transition:none !important; } }
   .studio[data-collapsed] { grid-template-columns:0 minmax(0,1fr); }
   .chatCol { grid-column:1; background:transparent; }
   .rightCol { grid-column:2; margin:0 8px 8px 1px; border-radius:16px; background:var(--app-panel); box-shadow:var(--app-ring-shadow); overflow:hidden; }
@@ -261,7 +268,11 @@
 .sampleList > p { margin:-4px 0 6px; font-size:.875rem; line-height:1.6; color:var(--app-body); word-break:keep-all; }
 .sampleItem { position:relative; width:100%; font:inherit; text-align:left; cursor:pointer; display:grid; justify-items:start; gap:4px; padding:16px; border:1.5px solid var(--app-line-strong); border-radius:14px; background:var(--app-surface); color:var(--app-text); text-decoration:none; transition:border-color .15s; }
 .sampleItem:hover { border-color:var(--app-text); }
-.sampleGroup[data-current] .sampleItem { border-color:var(--app-text); box-shadow:0 0 0 1.5px var(--app-text); }
+/* 지금 보는 예시 — 첫 화면 입력칸과 같은 흰 카드(굵은 검은 테두리는 뺐다, 2026-11-14 사장님) */
+.sampleItem { border-width:1px; border-color:transparent; background:color-mix(in srgb, var(--app-surface) 60%, transparent); }
+/* 지금 보는 예시는 흰 카드 없이 배경 위에 바로 — 새 대화 화면과 같은 느낌 */
+.sampleGroup[data-current] .sampleItem { border-color:transparent; background:transparent; box-shadow:none; padding-inline:4px; }
+.studio .chatCol { background:transparent; }
 .sampleItem em { margin-bottom:4px; padding:4px 12px; border-radius:999px; font-style:normal; font-size:.9375rem; font-weight:700; line-height:1.4; }
 .sampleItem em[data-kind="일반 모드"] { background:var(--app-hover); color:var(--app-text); }
 .sampleItem em[data-kind="전문가 모드"] { background:var(--app-text); color:var(--app-surface); }
@@ -277,14 +288,15 @@
 @media (prefers-reduced-motion: reduce) { .sampleMore { transition:none; } }
 /* 펼친 예시의 대화 — 카드에 이어 붙은 칸으로, 위에서 아래로 열린다 */
 .sampleGroup[data-open] .sampleItem { border-bottom-left-radius:0; border-bottom-right-radius:0; }
-.sampleTalk { padding:14px 12px 6px; border:1.5px solid var(--app-text); border-top:0; border-radius:0 0 14px 14px; background:var(--app-raised); box-shadow:0 0 0 1.5px var(--app-text); clip-path:inset(0 -4px -4px -4px); animation:sampleTalkIn .38s ease both; transform-origin:top; }
+.sampleTalk { padding:14px 12px 6px; border:0; background:transparent; padding-inline:0; animation:sampleTalkIn .38s ease both; transform-origin:top; }
 @keyframes sampleTalkIn { from { transform:translateY(-10px) scaleY(.96); } }
 @media (prefers-reduced-motion: reduce) { .sampleTalk { animation:none; } }
 .sampleView { display:flex; align-items:center; justify-content:center; gap:2px; min-height:44px; margin:0 0 14px; border-radius:999px; background:var(--app-text); color:var(--app-surface); font-size:.9375rem; font-weight:600; text-decoration:none; }
 .sampleTalk h3 { margin:0 4px 8px; font-size:.9375rem; font-weight:700; color:var(--app-text); }
 .sampleTalk h3 small { margin-left:6px; font-size:.8125rem; font-weight:500; color:var(--app-body); }
-.sampleTalk > section > div { min-height:0; height:auto; background:transparent; }
-.sampleFoot { flex:none; display:grid; gap:10px; padding:14px 16px calc(16px + env(safe-area-inset-bottom)); border-top:1px solid var(--app-line); background:var(--app-surface); }
+/* 대화 화면 자체 배경(회색)이 불러오는 순서에 따라 이겨서 카드 안에 회색 상자가 보였다 — 두 번 적어 항상 이긴다 */
+.sampleTalk.sampleTalk > section > div[data-embedded] { min-height:0; height:auto; background:transparent; }
+.sampleFoot { flex:none; display:grid; gap:10px; padding:14px 16px calc(16px + env(safe-area-inset-bottom)); background:transparent; }
 .sampleFoot p { margin:0; font-size:.8125rem; color:var(--app-muted); text-align:center; }
 .sampleFoot > div { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 .chatNote, .missingNote { min-height:0; display:flex; flex-direction:column; justify-content:center; overflow-y:auto; overscroll-behavior:contain; }

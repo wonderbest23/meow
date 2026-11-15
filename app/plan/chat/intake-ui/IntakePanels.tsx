@@ -80,7 +80,7 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false,
     {(initialMessage || greeted) && depth === "easy" && <div className={`${styles.question} ${styles.chatQuestion}`}>
       <h2 id="intake-entry-heading">어떤 사업을 하고 싶으세요? 편하게 적어 주세요.</h2>
       <p className={styles.entryExample}>예: 퇴근길에 들르는 동네 반찬가게요. 혼자 할 거고 한 묶음에 15,000원 받으려고요</p>
-      <div className={styles.entryOther} role="group" aria-label="다른 시작"><button type="button" disabled={disabled} onClick={() => onStart("exploring")}>아직 정한 사업이 없어요</button><button type="button" disabled={disabled} onClick={() => onStart("operating")}>이미 운영 중이에요</button></div>
+      <div className={styles.entryOther} role="group" aria-label="다른 시작"><button type="button" disabled={disabled} onClick={() => onStart("exploring")}>아직 정한 사업이 없어요<ChevronRight size={14} aria-hidden="true" /></button><button type="button" disabled={disabled} onClick={() => onStart("operating")}>이미 운영 중이에요<ChevronRight size={14} aria-hidden="true" /></button></div>
     </div>}
     {(initialMessage || greeted) && depth === "expert" && <div className={`${styles.question} ${styles.chatQuestion}`}>
       <h2 id="intake-entry-heading">{ENTRY_QUESTION}</h2>
