@@ -884,7 +884,7 @@ export default function Studio() {
   /* 한 칸 대화의 왼쪽 좁은 줄(PC) — 메뉴 펴기(전체 메뉴 서랍) · 새 대화 · 내 사업 */
   const focusRail = (menu: ChromeMenu) => <>
     {menu.button(styles.tool, 16)}
-    <Link className={styles.tool} href={newChatHref()} aria-label="새 대화" title="새 대화"><SquarePen aria-hidden="true" /></Link>
+    <Link className={styles.tool} href="/plan" aria-label="새 대화" title="새 대화"><SquarePen aria-hidden="true" /></Link>
     <Link className={styles.tool} href={`/plan?view=${PLAN_VIEW_ALL}`} aria-label="내 사업" title="내 사업"><LayoutGrid aria-hidden="true" /></Link>
   </>;
   const mobileHead = chatVisible ? <header className={styles.mHead} data-focus={focus || undefined}>

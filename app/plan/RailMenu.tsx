@@ -76,7 +76,7 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
     </Link>
     {/* 위쪽 계정 단추는 뺐다(2026-11-15 사장님) — 아래 동그라미 하나로 프로필 메뉴를 연다 */}
     <div className={menu.nav}>
-      <Link href={newChatHref()} className={menu.item} title="새 대화" aria-current={here("new")}>
+      <Link href="/plan" className={menu.item} title="새 대화" aria-current={here("new")}>
         <SquarePen aria-hidden="true" /><span>새 대화</span>
       </Link>
       <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={menu.item} title="내 사업" aria-current={here("plans")} aria-expanded={plansOpen} aria-controls="rail-plan-list" onClick={togglePlans}>

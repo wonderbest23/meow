@@ -1760,7 +1760,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   /* 문서 첨부는 뺐다(대표 결정 2026-11-14) — 같은 글을 입력창에 붙여 넣으면 더 빠르고 싸게 같은 답이 채워진다(실측: 첨부 8.4초 · 39원, 붙여 넣기 3.2초 · 24원) */
   const plusItems: PopMenuItem[] = [
     ...(plan && summaryToggle ? [{ key: "answers", label: view === "summary" ? "대화로 돌아가기" : "지금까지 답 보기", icon: <ListChecks />, onSelect: () => { if (view === "summary") setView("input"); else openSummary(); } }] : []),
-    { key: "new", label: "새 대화 시작", icon: <SquarePen />, href: newChatHref() },
+    { key: "new", label: "새 대화 시작", icon: <SquarePen />, href: "/plan" },
   ];
   const homepageEditable = embedded && !!plan && loaded && !loginGate && !!studioNav?.editHandler?.("homepage") && studioNav?.editHandler?.("homepage")?.available?.() !== false;
   const chapterModes = pro && !!plan?.hasDocuments && editChatReady && !editWorking ? editChapterList : [];
