@@ -914,6 +914,24 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     if (editTurn) { if (isConsultationText(composerVisible)) { if (!aiBusy) void send({ action: "help", message: composerVisible }, { composer: captureComposer() }); } else void send({ action: "edit", message: composerVisible }, { composer: captureComposer() }); return; }
     // In coach chat the composer is the industry search box on the industry turn; results appear as chips to tap.
     // 보내기를 눌러도 아무 일이 없던 문제(2026-10-22) — 찾은 업종을 누르라고 한 줄로 알려 준다
+    /*
+     * 일반 모드는 업종도 그냥 적어 보내면 된다(2026-11-15 사장님: 자유롭게 적는 대화인데 '찾은 업종을 눌러 주세요'에서 막혔다) —
+     * 적은 말로 업종을 찾아 가장 가까운 것을 고르고, 못 찾으면 '새로운 사업 · 기타 업종'으로 넘어간다. 틀리면 '앞 질문 고치기'로 바꾼다.
+     * 전문가 모드는 예전처럼 찾은 업종을 직접 고르게 안내한다.
+     */
+    if (coach && question?.id === "industry" && !askingAI && depthNow === "easy") {
+      const text = composerVisible, asked = question, composer = captureComposer();
+      void fetch(`/api/plan/chat?ksic=${encodeURIComponent(text)}`, { headers: { "x-business-intake": "2" }, cache: "no-store" })
+        .then(response => response.ok ? response.json() : null, () => null)
+        .then(data => {
+          const first = Array.isArray(data?.ksicCandidates) ? data.ksicCandidates[0] : null;
+          const other = asked.options?.find(option => option.label.includes("기타"));
+          if (first?.sector) void send({ action: "answer", questionId: "industry", value: first.sector, ksic: first.code, message: text }, { answer: questionDraft, composer });
+          else if (other) void send({ action: "answer", questionId: "industry", value: other.value, message: text }, { answer: questionDraft, composer });
+          else setInputHint("업종을 찾지 못했어요. 아래 보기에서 골라 주세요.");
+        });
+      return;
+    }
     if (coach && question?.id === "industry" && !askingAI) { setInputHint("찾은 업종 중 가까운 걸 눌러 주세요. 없으면 다른 이름으로 찾거나 아래 보기에서 골라도 돼요."); return; }
     if (askingAI) { if (!aiBusy) void send({ action: "help", message: composerVisible }, { composer: captureComposer() }); return; }
     const target = question?.id === "candidate" && questionDraft.custom ? getIntakeQuestion("startup", plan.intake.sector, "business", plan.structure?.values) ?? null : question;
