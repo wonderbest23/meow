@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronRight, ChevronsUpDown, Inbox, LayoutGrid, SquarePen } from "lucide-react";
+import { ChevronRight, ChevronsUpDown, LayoutGrid, SquarePen } from "lucide-react";
 import { unansweredCount, useInquiries } from "./inquiries/use-inquiries";
 import menu from "./RailMenu.module.css";
 import { DEFAULT_LOGO } from "../../components/site-header";
@@ -98,7 +98,6 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
         <button type="button" className={menu.footAvatar} aria-haspopup="dialog" aria-expanded={profile === "bottom"} aria-label={`프로필 메뉴 열기 (${account.email ?? "로그인됨"})${openInquiries ? ` · 답할 문의 ${openInquiries}건` : ""}`} onClick={() => setProfile(profile === "bottom" ? null : "bottom")}>
           <span className={menu.avatar} aria-hidden="true">{accountInitial(account)}{openInquiries ? <em>{openInquiries > 9 ? "9+" : openInquiries}</em> : null}</span>
         </button>
-        {!inquiriesClosed && <Link href="/plan/inquiries" className={menu.footIcon} aria-label="받은 알림" title="받은 알림"><Inbox aria-hidden="true" /></Link>}
       </div>
     ) : (
       /* /account?next= 는 로그인 팝업이 받아 이 화면에서 연다 */

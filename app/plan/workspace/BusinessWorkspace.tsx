@@ -243,10 +243,12 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={async ()=>{ if (!expertDirty || await askConfirm({ title: "기본 모드로 돌아갈까요?", message: EXPERT_LEAVE, cancelLabel: "계속 작성", confirmLabel: "저장하지 않고 돌아가기" })) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
         <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? JOURNEY_LABELS.document : view==="operations" ? "유지보수" : view==="launch" ? journeyLabel("launch", hub.coach?.stage === "operating") : "다음 할 일"}>
           {/* 작업실 유지보수 칸 — 공개 전에는 개업 준비 할 일을 위에 펼쳐 두고, 공개한 뒤에는 점검·실적 아래에 접어 둔다(2026-11-10 4쪽 → 3쪽) */}
-          {view==="operations" && embedded && (!careOpen || launchFront) && !app && launchBlock}
+          {view==="operations" && embedded && !careOpen && launchBlock}
           {view==="operations" && embedded && !careOpen && <p className={styles.muted}>홈페이지를 공개하면 매주 점검과 실적 기록이 열려요.</p>}
           {/* 첫 화면은 지금 할 일 · 아이콘 다섯 칸 · 한 줄 요약, 아이콘을 누르면 그 화면 하나만(2026-11-15 사장님) */}
           {view==="operations" && careOpen && !app && <OperationsHub planId={plan.id} sample={isSamplePlan(plan.id)} homepage={homepage.status} onOpen={setApp} />}
+          {/* 공개한 뒤에도 개업 준비가 남았으면 첫 화면 바로 아래에 펼쳐 둔다 — 예전엔 맨 위라 지금 할 일 · 아이콘이 밀려 내려갔다 */}
+          {view==="operations" && embedded && careOpen && launchFront && !app && launchBlock}
           {view==="operations" && careOpen && app && <p className={styles.tabLink}><AppButton type="button" variant="text" className={styles.textButton} onClick={() => void closeApp()}>← 유지보수</AppButton></p>}
           {view==="operations" && careOpen && app==="homepage" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} sample={isSamplePlan(plan.id)} />}
           {/* 실적 기록이 먼저, 맡길 일(마케팅) 상담 신청은 그 아래 — 예전엔 서비스 판매 카드가 기록보다 위에 있었다 */}
