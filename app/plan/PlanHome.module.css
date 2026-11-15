@@ -189,3 +189,36 @@
 .listBody > :is([data-business-empty], section[aria-hidden]) { min-height:220px; }
 .listBody > [role=alert] { display:grid; justify-items:start; gap:12px; margin:8px 0 0; color:var(--app-danger); font-size:.875rem; line-height:1.6; }
 .listBody > [role=alert] p { margin:0; }
+
+/* 카드 그림 — 단계마다 다르게. 같은 조각(.skeleton 안의 줄 · 칸)을 단계에 맞춰 다시 놓는다 */
+/* 대화 중: 말풍선 셋(왼쪽 · 오른쪽 · 왼쪽) */
+.skeleton[data-stage="chat"] { gap:9px; justify-content:center; }
+.skeleton[data-stage="chat"] > span { display:none; }
+.skeleton[data-stage="chat"] > i { height:22px; border-radius:11px; }
+.skeleton[data-stage="chat"] > i:first-child { width:56%; height:22px; background:color-mix(in srgb, var(--app-text) 9%, transparent); }
+.skeleton[data-stage="chat"] > i:nth-child(2) { width:42%; align-self:flex-end; background:color-mix(in srgb, var(--app-accent) 26%, transparent); }
+.skeleton[data-stage="chat"] > i:nth-child(3) { width:66%; }
+.skeleton[data-stage="chat"] > i:last-child { width:30%; align-self:flex-end; background:color-mix(in srgb, var(--app-accent) 26%, transparent); }
+/* 홈페이지: 브라우저 창(주소 줄 · 큰 그림 · 카드 셋) */
+.skeleton[data-stage="homepage"] { inset:14px 16px 0; padding:8px 8px 0; border-radius:8px 8px 0 0; background:var(--app-panel); box-shadow:0 0 0 1px var(--app-line); }
+.skeleton[data-stage="homepage"] > i:first-child { width:38%; height:6px; }
+.skeleton[data-stage="homepage"] > i:nth-child(2) { width:100%; height:44px; border-radius:6px; background:color-mix(in srgb, var(--app-accent) 22%, transparent); }
+.skeleton[data-stage="homepage"] > i:nth-child(3), .skeleton[data-stage="homepage"] > i:last-child { display:none; }
+.skeleton[data-stage="homepage"] > span { margin-top:0; }
+.skeleton[data-stage="homepage"] > span i { height:40px; background:color-mix(in srgb, var(--app-text) 7%, transparent); }
+/* 유지보수: 막대그래프 */
+.skeleton[data-stage="operations"] > i:nth-child(2), .skeleton[data-stage="operations"] > i:nth-child(3) { display:none; }
+.skeleton[data-stage="operations"] > span { flex:1; align-items:flex-end; gap:10px; margin-top:8px; padding:0 8%; }
+.skeleton[data-stage="operations"] > span i { border-radius:5px 5px 0 0; background:color-mix(in srgb, var(--app-success) 34%, transparent); }
+.skeleton[data-stage="operations"] > span i:first-child { height:42%; background:color-mix(in srgb, var(--app-success) 34%, transparent); }
+.skeleton[data-stage="operations"] > span i:nth-child(2) { height:68%; background:color-mix(in srgb, var(--app-success) 34%, transparent); }
+.skeleton[data-stage="operations"] > span i:nth-child(3) { height:96%; background:color-mix(in srgb, var(--app-success) 58%, transparent); }
+.skeleton[data-stage="operations"] > i:last-child { width:100%; height:2px; margin-bottom:22px; }
+/* 휴대폰의 작은 그림(64×72)에서도 단계가 보이게 — 막대그래프는 칸 줄을 다시 켜고, 브라우저 창은 테두리 안쪽으로 */
+@media (max-width:900px) {
+  .listCard[data-list-only] .skeleton[data-stage="operations"] > span { display:flex; gap:4px; margin-top:4px; padding:0; }
+  .listCard[data-list-only] .skeleton[data-stage="operations"] > i:last-child { margin-bottom:0; }
+  .listCard[data-list-only] .skeleton[data-stage="chat"] { gap:5px; }
+  .listCard[data-list-only] .skeleton[data-stage="chat"] > i { height:10px; }
+  .listCard[data-list-only] .skeleton[data-stage="chat"] > i:first-child { height:10px; }
+}

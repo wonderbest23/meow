@@ -27,6 +27,7 @@ import home from "./PlanHome.module.css";
 import { StatusBadge } from "../../components/status-badge";
 import { askConfirm } from "../../components/confirm-dialog";
 import { useHomepageStatus } from "./use-homepage";
+import { readOperatingState } from "../../lib/plan-builder/operating-records";
 import { AppButton } from "../../components/app-button";
 import { TextArea, TextField } from "../../components/app-field";
 import { loadAuthSession } from "../../lib/client/auth-session";
@@ -40,7 +41,8 @@ import { PLAN_VIEW_ALL } from "./MobileTabBar";
  * 로그인해야 열린다 — 아니면 로그인 화면으로(2026-11-02 사장님: 로그인 없이 들어와졌다). 목록의 데이터·상태(불러오기 실패·빈 화면·이름 변경·삭제 안내)는 예전 그대로.
  */
 type Filter = "search" | "mine" | "recent" | "samples";
-const FILTERS: Array<[Filter, string]> = [["search", "검색"], ["mine", "내 사업"], ["recent", "최근 본 항목"], ["samples", "예시"]];
+/* 검색 알약은 뺐다(2026-11-15 사장님) — 사업이 몇 개뿐이라 찾을 일이 없다 */
+const FILTERS: Array<[Filter, string]> = [["mine", "내 사업"], ["recent", "최근 본 항목"], ["samples", "예시"]];
 const EXAMPLE_IDEA = "성수동에 작은 쿠키 공방을 열고 싶어요";
 
 /** 수정됨 n일 전 — 30일이 넘으면 날짜 */
@@ -112,7 +114,6 @@ export default function PlanList() {
   const toggleSearch = () => { if (filter === "search") { setFilter("mine"); setQuery(""); } else { setFilter("search"); setSearchFocus(n => n + 1); } };
   const onParams = useMemo(() => (nextView: string | null, search: boolean) => {
     setView(nextView);
-    if (search) { setFilter("search"); setSearchFocus(n => n + 1); }
   }, []);
   const listOnly = view === PLAN_VIEW_ALL;
   const recent = useMemo(() => {
@@ -155,7 +156,7 @@ export default function PlanList() {
     {/* 썸네일 16:9 r8 — 문서 모양 자리 + 왼쪽 아래 상태 배지. 소개 글은 쓰지 않는다 — 글이 많아 번잡했고 제목·상태면 충분하다(2026-11-02 사장님) */}
     <Link className={mine.open} href={openHref(p)} data-plan-open={p.id} aria-label={`${display} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "내 사업 화면 열기"}`}>
       <span className={home.thumb}>
-        <span className={home.skeleton} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span>
+        <StageArt plan={p} written={status.documents.length > 0} />
         <StatusBadge tone={status.statusTone} className={home.thumbBadge}>{status.status}</StatusBadge>
       </span>
       <span className={home.meta}>
@@ -211,7 +212,6 @@ export default function PlanList() {
         {/* 사업 카드만 보는 화면 — 제목(휴대폰은 lovable Projects 탭처럼 30/600 + 오른쪽 44 원 검색 단추) */}
         {listOnly && <div className={home.listHead}>
           <h1 className={home.listTitle}>내 사업</h1>
-          <button type="button" className={home.headCircle} aria-label="사업 이름으로 찾기" aria-pressed={filter === "search"} onClick={toggleSearch}><Search size={20} aria-hidden="true" /></button>
         </div>}
         <div className={home.filterRow}>
           <div className={home.filters} role="group" aria-label="목록 보기">
@@ -275,6 +275,17 @@ function Composer({ guest = false }: { guest?: boolean }) {
  * 카드의 홈페이지 상태 — 문서 상태('문서 완성')만 보여 홈페이지를 공개했는지 목록에서 알 수 없었다(감사 r36).
  * 공개 상태 확인은 사업마다 한 번(같은 사업은 요청을 나눠 쓴다 — use-homepage). 아직 모르거나 홈페이지가 없으면 아무것도 안 쓴다.
  */
+/**
+ * 카드 그림을 단계마다 다르게(2026-11-15 사장님 — 전부 같은 문서 그림이라 어디까지 왔는지 안 보였다).
+ * 대화 중 = 말풍선 · 계획서 = 문서 · 홈페이지 = 브라우저 창 · 유지보수(공개했고 실적 기록이 있음) = 막대그래프
+ */
+function StageArt({ plan, written }: { plan: Plan; written: boolean }) {
+  const homepage = useHomepageStatus(isSamplePlan(plan.id) ? null : plan.id);
+  let recorded = false;
+  try { recorded = readOperatingState(plan.answers).periods.length > 0; } catch { /* 못 읽으면 기록 없음으로 */ }
+  const stage = homepage === "published" && recorded ? "operations" : homepage === "published" || homepage === "draft" ? "homepage" : written ? "plan" : "chat";
+  return <span className={home.skeleton} data-stage={stage} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span>;
+}
 function HomepageStage({ planId }: { planId: string }) {
   const status = useHomepageStatus(isSamplePlan(planId) ? null : planId);
   if (status !== "published" && status !== "draft") return null;
