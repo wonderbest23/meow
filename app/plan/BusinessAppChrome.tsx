@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronsUpDown, Menu, UserRound, X } from "lucide-react";
+import { ChevronLeft, Menu, UserRound, X } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import drawer from "./AppDrawer.module.css";
 import styles from "./chat/page.module.css";
@@ -18,7 +18,7 @@ import { STUDIO_CLASSIC_PARAM, STUDIO_ENABLED, studioEntryHref } from "../../lib
 import chrome from "./AppChrome.module.css";
 import ProfileMenu from "./ProfileMenu";
 import MobileTabBar from "./MobileTabBar";
-import { accountInitial, accountName, useAccount } from "./use-account";
+import { accountInitial, useAccount } from "./use-account";
 import { unansweredCount, useInquiries } from "./inquiries/use-inquiries";
 
 /*
@@ -143,11 +143,9 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
       <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
     </aside>}
     <div className={`${styles.appSurface} ${chrome.surface} ${home || hero ? chrome.hero : ""}`} data-app-surface="" data-solo={showRail || rail ? undefined : ""} data-bare={bare || undefined} data-tabbar={tabBar ? "" : undefined} data-settings={settings ? "" : undefined} inert={open || profile}>
-      {/* 휴대폰 첫 화면 머리 56px — 계정 알약(누르면 내 사업 메뉴 서랍) · 아바타(프로필 시트) */}
+      {/* 휴대폰 첫 화면 머리 56px — 오른쪽에 아바타(프로필 시트) 하나 */}
       {home && <header className={chrome.homeBar}>
-        <button type="button" className={chrome.pill} aria-haspopup="dialog" aria-expanded={open} aria-label="내 사업 메뉴 열기" onClick={() => setOpen(true)}>
-          <b aria-hidden="true">{accountInitial(account)}</b><span>{accountName(account) || "오늘창업"}</span><ChevronsUpDown aria-hidden="true" />
-        </button>
+        {/* 왼쪽 계정 알약(내 사업 메뉴)은 뺐다(2026-11-15 사장님) — 아래 막대의 '내 사업'과 겹쳤다. 서랍은 프로필 시트의 '내 사업 메뉴'로 연다 */}
         {avatarButton}
       </header>}
       {/* 첫 화면은 위 머리(homeBar)만 — PC 는 머리줄 없이 판 전체가 첫 화면이다 */}
