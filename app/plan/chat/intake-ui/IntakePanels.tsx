@@ -78,9 +78,9 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false,
       * 이미 있다(입력창에 적으면 '생각한 사업이 있어요'로 시작). 정한 사업이 없거나 이미 운영 중인 사람을 위한 길만 작은 단추로 남긴다.
       */}
     {(initialMessage || greeted) && depth === "easy" && <div className={`${styles.question} ${styles.chatQuestion}`}>
-      <h2 id="intake-entry-heading">어떤 사업을 하고 싶으세요? 편하게 적어 주세요.</h2>
-      <p className={styles.entryExample}>예: 퇴근길에 들르는 동네 반찬가게요. 혼자 할 거고 한 묶음에 15,000원 받으려고요</p>
-      <div className={styles.entryOther} role="group" aria-label="다른 시작"><button type="button" disabled={disabled} onClick={() => onStart("exploring")}>아직 정한 사업이 없어요<ChevronRight size={14} aria-hidden="true" /></button><button type="button" disabled={disabled} onClick={() => onStart("operating")}>이미 운영 중이에요<ChevronRight size={14} aria-hidden="true" /></button></div>
+      {/* 인사 한 줄 + 입력칸만(2026-11-15 사장님: 적으라는 건지 고르라는 건지 헷갈린다) — 같은 말을 되풀이하던 질문 줄과 예시 줄은 빼고(예시는 입력칸 안내 글로), 다른 길 두 개는 작은 글 링크로 낮췄다 */}
+      <h2 id="intake-entry-heading" className={styles.srOnly}>어떤 사업을 하고 싶으세요? 편하게 적어 주세요.</h2>
+      <div className={styles.entryOther} role="group" aria-label="다른 시작"><button type="button" disabled={disabled} onClick={() => onStart("exploring")}>아직 정한 사업이 없어요</button><button type="button" disabled={disabled} onClick={() => onStart("operating")}>이미 운영 중이에요</button></div>
     </div>}
     {(initialMessage || greeted) && depth === "expert" && <div className={`${styles.question} ${styles.chatQuestion}`}>
       <h2 id="intake-entry-heading">{ENTRY_QUESTION}</h2>
