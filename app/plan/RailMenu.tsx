@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronRight, ChevronsUpDown, Inbox, LayoutGrid, MessagesSquare, Search, SquarePen } from "lucide-react";
+import { ChevronRight, ChevronsUpDown, Inbox, LayoutGrid, SquarePen } from "lucide-react";
 import { unansweredCount, useInquiries } from "./inquiries/use-inquiries";
 import menu from "./RailMenu.module.css";
 import { DEFAULT_LOGO } from "../../components/site-header";
@@ -78,24 +78,10 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
       <Link href={newChatHref()} className={menu.item} title="새 대화" aria-current={here("new")}>
         <SquarePen aria-hidden="true" /><span>새 대화</span>
       </Link>
-      {/* 검색 — 사업 카드 화면을 열고 검색칸에 초점을 둔다 */}
-      <Link href={`/plan?view=${PLAN_VIEW_ALL}&search=1`} className={menu.item} title="검색">
-        <Search aria-hidden="true" /><span>검색</span>
-      </Link>
       <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={menu.item} title="내 사업" aria-current={here("plans")}>
         <LayoutGrid aria-hidden="true" /><span>내 사업</span>
       </Link>
-      {/* 손님 문의 — 홈페이지로 들어온 손님 문의를 메신저처럼. 사업이 하나도 없으면 받을 문의가 없으니 막아 둔다 */}
-      {/* 공개한 홈페이지가 없으면 막는다 — 문의가 올 곳이 없는데 빈 화면에 단추만 셋이었다(2026-11-04 사장님). 세지 못한 동안(null)은 막지 않는다 */}
-      {inquiriesClosed ? (
-        <span className={`${menu.item} ${menu.disabled}`} aria-disabled="true" title="홈페이지를 공개하면 열려요">
-          <MessagesSquare aria-hidden="true" /><span className={menu.disabledText}>손님 문의<small>홈페이지를 공개하면 열려요</small></span>
-        </span>
-      ) : (
-        <Link href="/plan/inquiries" className={menu.item} title="손님 문의" aria-current={here("inquiries")}>
-          <MessagesSquare aria-hidden="true" /><span>손님 문의</span>{openInquiries ? <b className={menu.count} aria-label={`답할 문의 ${openInquiries}건`}>{openInquiries}</b> : null}
-        </Link>
-      )}
+      {/* 검색 · 손님 문의는 왼쪽 메뉴에서 뺐다(2026-11-15 사장님) — 손님 문의는 홈페이지를 공개한 사업의 유지보수 화면 '문의 접수'로 연다 */}
     </div>
     {/* 내 사업 묶음(사업 → 그 사업의 목차) */}
     <BusinessRailTree documentToc={documentToc} onPlanCount={setPlanCount} grouped />

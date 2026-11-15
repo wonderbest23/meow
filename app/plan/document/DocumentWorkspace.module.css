@@ -586,3 +586,12 @@
 /* 태블릿 폭(761~900px) — 문서 옆 목차가 보이는데 도구 줄에 '목차' 단추도 있어 같은 목차가 두 번이었다(r40 768px 점검). 옆 목차가 있으면 단추는 뺀다 */
 @media (min-width:761px) and (max-width:900px) { .layout:has(> .sidebar) .tocToggle { display:none; } }
 /* 태블릿 폭(761~900px) — 도구 줄과 장 머리에 '대화로 고치기'가 함께 보였다. 도구 줄 단추가 있으면 장 머리 것은 뺀다(대표 결정 r40, 장 머리 '직접 고치기'는 그대로) */
+
+/* 금액 · 비율 형광펜 켜고 끄기 — 문서 맨 위 오른쪽의 작은 단추 */
+.emphasisBar { display:flex; justify-content:flex-end; max-width:1020px; margin:0 auto; padding:12px 44px 0; }
+.emphasisBar + .article { padding-top:20px; }
+.emphasisBar button { display:inline-flex; align-items:center; gap:6px; min-height:32px; padding:0 12px; border:1px solid var(--app-line); border-radius:999px; background:transparent; color:var(--app-muted); font:inherit; font-size:.8125rem; cursor:pointer; }
+.emphasisBar button[aria-pressed="true"] { border-color:transparent; background:var(--app-marker); color:var(--app-on-marker); font-weight:600; }
+.emphasisBar button:focus-visible { outline:2px solid var(--app-focus-ring, currentColor); outline-offset:2px; }
+@media (max-width:760px) { .emphasisBar { padding:10px 16px 0; } }
+@media (pointer:coarse) { .emphasisBar button { min-height:40px; } }

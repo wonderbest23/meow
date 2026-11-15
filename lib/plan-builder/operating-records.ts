@@ -173,3 +173,15 @@ export function reportMarkdown(report: OperatingReport) {
     ] : []),
   ].filter(Boolean).join("\n\n");
 }
+
+/** 가장 최근 기록 — 끝난 날이 늦은 것 */
+export const latestPeriod = (periods: OperatingPeriod[]) => [...periods].sort((a, b) => b.end.localeCompare(a.end))[0] ?? null;
+
+/** 저장된 기록만으로 만든 한 줄(AI 호출 없음) — 적은 숫자만 말하고, 비교할 이전 기록이 있을 때만 증감률을 붙인다 */
+export function recordSummary(periods: OperatingPeriod[]): string {
+  const period = latestPeriod(periods);
+  if (!period) return "";
+  const parts = comparePeriods(period, previousPeriod(periods, period)).filter(row => (row.key === "revenue" || row.key === "inquiries") && row.current !== null)
+    .map(row => `${row.label} ${metricValue(row.current, row.unit)}${row.percent !== null ? `(이전 기간보다 ${row.percent > 0 ? "+" : ""}${row.percent.toFixed(1)}%)` : ""}`);
+  return [parts.join(", "), period.change ? `바꿀 점: ${period.change}` : ""].filter(Boolean).join(" · ");
+}

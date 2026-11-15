@@ -63,14 +63,14 @@ function PeriodNotes({ period, archivedAnalysis = false }: { period: OperatingPe
     ["고객 반응", period.feedback], ["유지할 점", period.keep], ["바꿀 점", period.change], [archivedAnalysis ? "입력 당시 개선 행동" : "다음 개선 행동", period.nextAction], [archivedAnalysis ? "입력 당시 확인 기준" : "확인 기준", period.successCriterion],
   ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "미입력"}</dd></div>)}</dl>;
 }
-export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord = null }: { planId: string; onDirtyChange: (dirty: boolean) => void; chatRecord?: ChatRecord | null }) {
+export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord = null, initialMode = "periods" }: { planId: string; onDirtyChange: (dirty: boolean) => void; chatRecord?: ChatRecord | null; initialMode?: "periods" | "reports" }) {
   const [state, setState] = useState<OperatingState | null>(null);
   const [analysisTarget, setAnalysisTarget] = useState<AnalysisTarget | null>(null);
   const [analysisDirty, setAnalysisDirty] = useState(false);
   const acceptState = useCallback((next: OperatingState) => setState(current => current && current.revision > next.revision ? current : next), []);
   const [selected, setSelected] = useState("");
   const [reportId, setReportId] = useState("");
-  const [mode, setMode] = useState<"periods" | "reports">("periods");
+  const [mode, setMode] = useState<"periods" | "reports">(initialMode);
   const [editor, setEditor] = useState<{ id: string; revision: number | null; original: string } | null>(null);
   const [draft, setDraft] = useState<Draft>(() => draftFor());
   const [busy, setBusy] = useState(false);
