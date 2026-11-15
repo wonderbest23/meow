@@ -92,11 +92,7 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
     {/* 예전 문서 화면이면 그 목차가 여기 붙는다 */}
     {children}
     <div className={menu.spring} />
-    {/* 안내 카드 240×64 — 고객센터 */}
-    <Link href="/account/support" className={menu.promo} aria-current={here("support")}>
-      <span className={menu.promoText}><span className={menu.promoTitle}>고객센터</span><span className={menu.promoDesc}>궁금한 점을 남기면 답해 드려요</span></span>
-      <i aria-hidden="true" />
-    </Link>
+    {/* 고객센터 안내 카드는 뺐다(2026-11-15 사장님: 새 대화 · 내 사업 둘만) — 고객센터는 프로필 메뉴와 오른쪽 아래 상담 단추에 있다 */}
     {account === null ? null : account.authenticated ? (
       <div className={menu.foot}>
         <button type="button" className={menu.footAvatar} aria-haspopup="dialog" aria-expanded={profile === "bottom"} aria-label={`프로필 메뉴 열기 (${account.email ?? "로그인됨"})${openInquiries ? ` · 답할 문의 ${openInquiries}건` : ""}`} onClick={() => setProfile(profile === "bottom" ? null : "bottom")}>
