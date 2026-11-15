@@ -17,7 +17,7 @@ import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
 import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
 import { useAnswerSuggestions } from "./intake-ui/AnswerSuggestions";
-import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, readIntakePayload, routeComposerInput, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber } from "./intake-ui/model";
+import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, readIntakePayload, routeComposerInput, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber, looseUnknownReply } from "./intake-ui/model";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import { sectorCheckPrompt } from "../../../lib/plan-builder/intake-core";
 import styles from "./intake.module.css";
@@ -937,6 +937,16 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     const target = question?.id === "candidate" && questionDraft.custom ? getIntakeQuestion("startup", plan.intake.sector, "business", plan.structure?.values) ?? null : question;
     const route = routeComposerInput(plan, target ?? null, composerText);
     if (route.kind === "invalid") { setInputHint(route.hint); return; }
+    /*
+     * 일반 모드는 '이 내용은 어떻게 남길까요?'(AI에게 질문 · 메모로 남기기 · 질문으로 돌아가기) 세 단추로 되묻지 않는다(2026-11-15 사장님: 자유롭게 적는 대화) —
+     * 글 속에 숫자가 하나 있으면 그 값으로 답하고, 아니면 적은 말을 메모로 남기고 같은 질문을 이어 간다. 전문가 모드는 예전처럼 묻는다.
+     */
+    if (route.kind === "clarify" && depthNow === "easy") {
+      if (route.suggested && question) void send({ action: "answer", questionId: question.id, value: route.suggested.value, message: composerVisible }, { answer: questionDraft, composer: captureComposer() });
+      else if (question && looseUnknownReply(composerText)) void send({ action: "answer", questionId: question.id, value: null, unknown: true }, { answer: questionDraft, composer: captureComposer() });
+      else storeComposerNote("memo");
+      return;
+    }
     if (route.kind === "clarify") { setIntentPrompt({ text: composerText, questionId: question?.id ?? null, revision: plan.coach.revision, canAnswer: route.canAnswer, ...(route.suggested ? { suggested: route.suggested } : {}) }); follow.current = true; return; }
     if (route.kind === "note") { storeComposerNote(route.intent); return; }
     const check = !route.unknown && route.questionId === question?.id ? answerCheckPrompt(question, route.value) : null;
