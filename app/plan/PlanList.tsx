@@ -156,14 +156,13 @@ export default function PlanList() {
     {/* 썸네일 16:9 r8 — 문서 모양 자리 + 왼쪽 아래 상태 배지. 소개 글은 쓰지 않는다 — 글이 많아 번잡했고 제목·상태면 충분하다(2026-11-02 사장님) */}
     <Link className={mine.open} href={openHref(p)} data-plan-open={p.id} aria-label={`${display} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "내 사업 화면 열기"}`}>
       <span className={home.thumb}>
-        <StageArt plan={p} written={status.documents.length > 0} />
-        <StatusBadge tone={status.statusTone} className={home.thumbBadge}>{status.status}</StatusBadge>
+        <StageArt plan={p} status={status} />
       </span>
       <span className={home.meta}>
         <span className={home.avatar} aria-hidden="true">{display.trim().charAt(0) || "사"}</span>
         <span className={home.metaText}>
           <strong className={mine.title}>{planDisplayName(p)}</strong>
-          <span className={mine.meta}><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><HomepageStage planId={p.id} /></span>
+          <span className={mine.meta}><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><StageBadge plan={p} status={status} className={home.metaStage} /></span>
         </span>
       </span>
     </Link>
@@ -279,15 +278,24 @@ function Composer({ guest = false }: { guest?: boolean }) {
  * 카드 그림을 단계마다 다르게(2026-11-15 사장님 — 전부 같은 문서 그림이라 어디까지 왔는지 안 보였다).
  * 대화 중 = 말풍선 · 계획서 = 문서 · 홈페이지 = 브라우저 창 · 유지보수(공개했고 실적 기록이 있음) = 막대그래프
  */
-function StageArt({ plan, written }: { plan: Plan; written: boolean }) {
+type HubStatus = ReturnType<typeof businessHubState>;
+/** 지금 진행 중인 일(만드는 중 · 다시 확인 필요 등)은 그 말을 그대로, 아니면 단계 이름 */
+const BUSY_STATUS = ["수정 내용 반영 필요", "문서 제작 중", "답변 준비 중", "다시 확인 필요"];
+function usePlanStage(plan: Plan, status: HubStatus) {
   const homepage = useHomepageStatus(isSamplePlan(plan.id) ? null : plan.id);
   let recorded = false;
   try { recorded = readOperatingState(plan.answers).periods.length > 0; } catch { /* 못 읽으면 기록 없음으로 */ }
-  const stage = homepage === "published" && recorded ? "operations" : homepage === "published" || homepage === "draft" ? "homepage" : written ? "plan" : "chat";
-  return <span className={home.skeleton} data-stage={stage} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span>;
+  const stage = homepage === "published" && recorded ? "operations" : homepage === "published" || homepage === "draft" ? "homepage" : status.documents.length > 0 ? "plan" : "chat";
+  if (BUSY_STATUS.includes(status.status)) return { stage, label: status.status, tone: status.statusTone };
+  if (stage === "operations") return { stage, label: "유지보수", tone: "success" as const };
+  if (stage === "homepage") return { stage, label: homepage === "published" ? "홈페이지 공개 중" : "홈페이지 공개 전", tone: homepage === "published" ? "success" as const : "neutral" as const };
+  return { stage, label: status.complete ? "계획서 완성" : status.status, tone: status.statusTone };
 }
-function HomepageStage({ planId }: { planId: string }) {
-  const status = useHomepageStatus(isSamplePlan(planId) ? null : planId);
-  if (status !== "published" && status !== "draft") return null;
-  return <StatusBadge tone={status === "published" ? "success" : "neutral"}>{status === "published" ? "홈페이지 공개 중" : "홈페이지 공개 전"}</StatusBadge>;
+function StageBadge({ plan, status, className }: { plan: Plan; status: HubStatus; className?: string }) {
+  const { label, tone } = usePlanStage(plan, status);
+  return <StatusBadge tone={tone} className={className}>{label}</StatusBadge>;
+}
+function StageArt({ plan, status }: { plan: Plan; status: HubStatus }) {
+  const { stage } = usePlanStage(plan, status);
+  return <><span className={home.skeleton} data-stage={stage} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span><StageBadge plan={plan} status={status} className={home.thumbBadge} /></>;
 }

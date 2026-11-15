@@ -222,3 +222,8 @@
   .listCard[data-list-only] .skeleton[data-stage="chat"] > i { height:10px; }
   .listCard[data-list-only] .skeleton[data-stage="chat"] > i:first-child { height:10px; }
 }
+
+/* 단계 배지 — PC 는 그림 위에, 휴대폰 목록(그림이 작아 배지가 없다)은 이름 아래에 */
+.metaStage.metaStage { display:none; }
+@media (max-width:900px) { .listCard[data-list-only] .metaStage.metaStage { display:inline-flex; } }
+.thumbBadge.thumbBadge[data-tone="neutral"] { background:var(--app-panel); box-shadow:0 0 0 1px var(--app-line); }
