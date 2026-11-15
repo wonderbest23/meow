@@ -169,7 +169,9 @@ const sameWorkspaceTab = (event: { preventDefault: () => void }, planId: string,
   window.dispatchEvent(new CustomEvent(WORKSPACE_TAB_REQUEST, { detail: tab }));
 };
 
-export default function BusinessRailTree({ documentToc, onPlanCount, grouped = false }: {
+export default function BusinessRailTree({ documentToc, onPlanCount, grouped = false, open = true }: {
+  /** 묶음 모양(grouped)에서 목록을 펼칠지 — 왼쪽 메뉴의 '내 사업'을 누르면 열린다 */
+  open?: boolean;
   documentToc?: DocumentToc;
   /** 사업이 몇 개인지 확인되면 알려 준다(못 불러왔으면 부르지 않는다) — 사업이 없으면 메뉴가 '내 문의'를 막는다 */
   onPlanCount?: (count: number) => void;
@@ -286,8 +288,8 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
   if (grouped) {
     return <div className={`${styles.tree} ${styles.grouped}`}>
       <Suspense fallback={null}><UrlPlanWatcher onChange={setUrlPlanId} /></Suspense>
-      {/* '내 사업' 접기 단추는 뺐다(2026-11-15 사장님) — 목록은 늘 펼쳐 둔다 */}
-      {mounted && <div className={styles.list} id="rail-plan-list">
+      {/* '내 사업' 접기 단추는 뺐다(2026-11-15 사장님) — 왼쪽 메뉴의 '내 사업'을 누르면 이 목록이 나온다 */}
+      {open && mounted && <div className={styles.list} id="rail-plan-list">
         {remoteFailed && plans.length === 0 && <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>}
         {checked && !remoteFailed && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요</p>}
         {plans.map(plan => {

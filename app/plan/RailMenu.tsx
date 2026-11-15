@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronRight, ChevronsUpDown, LayoutGrid, SquarePen } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronsUpDown, LayoutGrid, SquarePen } from "lucide-react";
 import { unansweredCount, useInquiries } from "./inquiries/use-inquiries";
 import menu from "./RailMenu.module.css";
 import { DEFAULT_LOGO } from "../../components/site-header";
@@ -55,6 +55,10 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
   const inquiries = useInquiries(account?.authenticated === true);
   /* 사업 수 — 모르는 동안(null)은 손님 문의를 막지 않는다 */
   const [planCount, setPlanCount] = useState<number | null>(null);
+  /* '내 사업'을 누르면 아래에 사업 목록이 나온다(다시 누르면 접힌다) — 이 기기에 기억한다 */
+  const [plansOpen, setPlansOpen] = useState(false);
+  useEffect(() => { try { if (localStorage.getItem("oneulstart:rail-plans-shown") === "1") setPlansOpen(true); } catch { /* 닫힌 채로 */ } }, []);
+  const togglePlans = () => setPlansOpen(open => { try { localStorage.setItem("oneulstart:rail-plans-shown", open ? "0" : "1"); } catch { /* 이번 화면에서만 */ } return !open; });
   const openInquiries = inquiries.items ? unansweredCount(inquiries.items) : 0;
   /* 손님 문의 닫힘 — 사업이 없거나 공개한 홈페이지가 없고 답할 문의도 없을 때. 세지 못한 동안(null)은 막지 않는다 */
   const inquiriesClosed = (planCount === 0 || inquiries.published === 0) && !openInquiries;
@@ -78,13 +82,13 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
       <Link href={newChatHref()} className={menu.item} title="새 대화" aria-current={here("new")}>
         <SquarePen aria-hidden="true" /><span>새 대화</span>
       </Link>
-      <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={menu.item} title="내 사업" aria-current={here("plans")}>
-        <LayoutGrid aria-hidden="true" /><span>내 사업</span>
+      <Link href={`/plan?view=${PLAN_VIEW_ALL}`} className={menu.item} title="내 사업" aria-current={here("plans")} aria-expanded={plansOpen} aria-controls="rail-plan-list" onClick={togglePlans}>
+        <LayoutGrid aria-hidden="true" /><span>내 사업</span><ChevronDown aria-hidden="true" style={{ marginLeft: "auto", width: 16, height: 16, opacity: .6, transform: plansOpen ? "rotate(180deg)" : undefined, transition: "transform .2s ease" }} />
       </Link>
       {/* 검색 · 손님 문의는 왼쪽 메뉴에서 뺐다(2026-11-15 사장님) — 손님 문의는 홈페이지를 공개한 사업의 유지보수 화면 '문의 접수'로 연다 */}
     </div>
     {/* 내 사업 묶음(사업 → 그 사업의 목차) */}
-    <BusinessRailTree documentToc={documentToc} onPlanCount={setPlanCount} grouped />
+    <BusinessRailTree documentToc={documentToc} onPlanCount={setPlanCount} grouped open={plansOpen} />
     {/* 예전 문서 화면이면 그 목차가 여기 붙는다 */}
     {children}
     <div className={menu.spring} />
