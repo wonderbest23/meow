@@ -96,3 +96,13 @@
 .settingsTitle { margin:0; min-width:0; overflow:hidden; color:var(--app-text); font-size:1rem; font-weight:500; line-height:1.4; text-overflow:ellipsis; white-space:nowrap; }
 /* '내 사업' 목록(?view=all) — 히어로가 없는 화면이라 그라데이션 없이 판 색만 */
 :global(main[data-list-only]) .hero.hero { background-image:none; }
+
+/* 첫 화면 · 내 사업의 좁은 아이콘 줄(PC) — 메타 AI 실측: 누르는 자리 32, 아이콘 24. 우리는 36 · 20 */
+.railTool { display:inline-grid; place-items:center; flex:none; width:36px; height:36px; padding:0; border:0; border-radius:10px; background:transparent; color:var(--app-body); cursor:pointer; }
+.railTool:hover { background:var(--app-hover); color:var(--app-text); }
+.railTool[aria-current=page] { background:var(--app-nav-selected); color:var(--app-text); }
+.railTool:focus-visible, .railAvatar:focus-visible, .railLogin:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:2px; }
+.railSpring { flex:1; }
+.railAvatar { display:inline-grid; place-items:center; flex:none; width:32px; height:32px; padding:0; border:0; border-radius:999px; background:var(--app-primary); color:var(--app-on-primary); font:inherit; font-size:.8125rem; font-weight:600; cursor:pointer; }
+.railLogin { flex:none; padding:8px 0; color:var(--app-body); font-size:.8125rem; font-weight:500; text-decoration:none; }
+.railLogin:hover { color:var(--app-text); text-decoration:underline; text-underline-offset:3px; }
