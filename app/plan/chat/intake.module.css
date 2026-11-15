@@ -1006,12 +1006,11 @@ button.workLogRow { min-height: 32px; }
 .loginNotice > div a { display: inline-flex; align-items: center; gap: 2px; min-height: 42px; padding: 0 14px; border: 1px solid var(--app-line-strong); border-radius: 999px; background: var(--app-surface); color: var(--app-text); font-weight: 600; text-decoration: none; }
 .loginNotice > div a:hover { background: var(--app-hover); }
 /* 일반 모드 첫 화면 — 적을 말의 예와, 다른 시작 길 두 개(작게) */
-/* 간격: 인사 → 질문 12 · 질문 → 예 6 · 예 → 단추 14(다른 규칙이 여백을 0으로 덮어 붙어 보였다, 2026-11-14 사장님) */
-.page.page.page[data-embedded] .greeting.greeting:has(+ .chatQuestion .entryExample) { min-height: 0; margin-bottom: 12px; }
-.page .chatQuestion .entryExample.entryExample { margin: 6px 0 14px; color: var(--app-muted); font-size: .8125rem; line-height: 1.6; word-break: keep-all; }
-.entryOther { display: flex; flex-wrap: wrap; gap: 6px; }
-.entryOther button { display: inline-flex; align-items: center; gap: 2px; min-height: 36px; padding: 0 8px 0 12px; border: 1px solid var(--app-line); border-radius: 999px; background: transparent; color: var(--app-body); font: inherit; font-size: .8125rem; }
-.entryOther button:hover:not(:disabled) { border-color: var(--app-line-strong); color: var(--app-text); }
+/* 인사 한 줄 아래에 다른 길 두 개를 작은 글 링크로(2026-11-15) — 알약 모양이면 '적기'와 '고르기'가 같은 무게로 보였다 */
+.page.page.page[data-embedded] .greeting.greeting:has(+ .chatQuestion .entryOther) { min-height: 0; margin-bottom: 8px; }
+.entryOther { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.entryOther button { min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--app-muted); font: inherit; font-size: .8125rem; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--app-line-strong); cursor: pointer; }
+.entryOther button:hover:not(:disabled) { color: var(--app-text); }
 /* 일반 모드에서 업종 기준값으로 채운 답 — 누르면 고친다 */
 .understood { margin: 4px 0 16px; padding: 14px; border: 1px solid var(--app-line); border-radius: 14px; background: var(--app-surface); animation: depthCardIn .35s both; }
 @media (prefers-reduced-motion: reduce) { .understood { animation: none; } }
