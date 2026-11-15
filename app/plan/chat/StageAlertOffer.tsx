@@ -40,8 +40,10 @@ export default function StageAlertOffer() {
   return <form className={styles.offer} data-stage-alert-offer onSubmit={async event => { event.preventDefault(); if (await send({ action: "register", phone, agreed })) setDone(true); }} noValidate>
     <strong>다음 할 일을 문자로 받아 볼까요?</strong>
     <p>계획서 완성, 홈페이지 공개처럼 단계가 넘어갈 때만 보내요.</p>
-    <TextField id="stage-offer-phone" type="tel" inputMode="numeric" autoComplete="tel" placeholder="010-0000-0000" aria-label="알림 받을 휴대폰 번호" aria-invalid={!!error || undefined} aria-describedby={error ? "stage-offer-error" : undefined} value={phone} onChange={event => setPhone(event.target.value)} />
-    <label className={styles.agree}><input id="stage-offer-agree" type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /><span>{STAGE_ALERT_CONSENT}</span></label>
+    <label className={styles.label} htmlFor="stage-offer-phone">휴대폰 번호</label>
+    <div className={styles.input}><TextField id="stage-offer-phone" type="tel" inputMode="numeric" autoComplete="tel" placeholder="010-0000-0000" aria-invalid={error.includes("번호") || undefined} aria-describedby={error ? "stage-offer-error" : undefined} value={phone} onChange={event => setPhone(event.target.value)} /></div>
+    {/* 환경설정 등록 칸과 같은 모양 — 번호 → 회색 동의 상자 → 단추. 동의 글은 첫 문장을 제목으로 나눠 보인다 */}
+    <label className={styles.agree}><input id="stage-offer-agree" type="checkbox" checked={agreed} onChange={event => setAgreed(event.target.checked)} /><span><b>{STAGE_ALERT_CONSENT.slice(0, STAGE_ALERT_CONSENT.indexOf(". "))}</b>{STAGE_ALERT_CONSENT.slice(STAGE_ALERT_CONSENT.indexOf(". ") + 1)}</span></label>
     {error && <p id="stage-offer-error" role="alert" className={styles.error}>{error}</p>}
     <div className={styles.acts}>
       <AppButton type="submit" variant="primary" disabled={busy}>받을게요</AppButton>
