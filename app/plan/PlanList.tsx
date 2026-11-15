@@ -9,7 +9,7 @@ import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
 import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
 import { navigateWithTransition } from "../../lib/client/view-transition";
-import { DEPTH_PARAM, newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
+import { DEPTH_PARAM, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
@@ -198,9 +198,14 @@ export default function PlanList() {
         {/* 인사말에 이름을 붙이지 않는다 — 계정에 이름이 없어 이메일 앞부분(rena35200+review님)이 그대로 보였다(운영 점검 2026-11-02). 동그라미 머리글자는 그대로 */}
         <h1 id="plan-home-greeting" className={home.greeting}>오늘은 어떤 사업을 시작해볼까요?</h1>
         <Composer guest={guest} />
+        {/* 적는 것이 기본, 다른 길 세 개는 입력칸 아래 작은 글로(2026-11-15 사장님: 새 대화도 이 화면 하나로). 일반/전문가 전환은 입력칸에서 빼고 '하나씩 자세히'로 옮겼다 */}
+        <nav className={home.alt} aria-label="다른 시작">
+          {([["아직 정한 사업이 없어요", newChatEntryHref("exploring")], ["이미 운영 중이에요", newChatEntryHref("operating")], ["하나씩 자세히 정할게요", `${newChatHref()}&${DEPTH_PARAM}=expert`]] as const).map(([label, href]) =>
+            <Link key={label} href={href} onClick={event => { if (guest) { event.preventDefault(); openLogin(href); } }}>{label}</Link>)}
+        </nav>
         {/* 휴대폰 첫 화면의 최근 사업 3개는 뺐다(2026-11-15 사장님) — 첫 화면은 입력칸만, 사업은 아래 탭 '내 사업'에서 */}
         {/* 완성 예시 두 개 — 아직 사업이 없는 사람(로그인 전 포함)만. 필요하면 눌러 본다 */}
-        {(guest || (!!state && allPlans.length === 0)) && <nav className={home.samples} aria-label="완성 예시">
+        {guest && <nav className={home.samples} aria-label="완성 예시">
           <Link href="/plan/studio?planId=sample_banchan_easy">일반 (샘플)<ArrowRight size={14} aria-hidden="true" /></Link>
           <Link href="/plan/studio?planId=sample_banchan_expert">전문가 (샘플)<ArrowRight size={14} aria-hidden="true" /></Link>
         </nav>}
@@ -221,7 +226,7 @@ export default function PlanList() {
         {list}
       </section>}
       {/* 휴대폰 '내 사업' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
-      {listOnly && <Link href={newChatHref()} className={home.newFloat}><Plus size={20} aria-hidden="true" />새 사업</Link>}
+      {listOnly && <Link href="/plan" className={home.newFloat}><Plus size={20} aria-hidden="true" />새 사업</Link>}
     </div>
   </BusinessAppChrome></main>;
 }
@@ -235,8 +240,6 @@ function Composer({ guest = false }: { guest?: boolean }) {
   const [text, setText] = useState("");
   const field = useRef<HTMLTextAreaElement>(null);
   const [sending, setSending] = useState(false);
-  /* 대화 방식 — 처음엔 일반. 전문가를 고르고 보내면 주소 인자로 실어 대화가 전문가 모드로 시작한다(대표 결정 2026-11-14) */
-  const [depth, setDepth] = useState<"easy" | "expert">("easy");
   /* 작업실 경로를 미리 받아 둔다 — 보낼 때 코드 묶음을 그제야 받아 버벅였다 */
   useEffect(() => { router.prefetch(newChatHref()); }, [router]);
   const idea = normalizeLandingIdea(text);
@@ -246,7 +249,7 @@ function Composer({ guest = false }: { guest?: boolean }) {
     let storage: Storage | null = null;
     try { storage = window.sessionStorage; } catch { /* 저장소가 막혀 있으면 주소로만 넘어간다 */ }
     stashLandingIdea(storage, idea, Date.now());
-    const href = `${newChatHref(idea)}${depth === "expert" ? `&${DEPTH_PARAM}=expert` : ""}`;
+    const href = newChatHref(idea);
     /* 로그인 전 — 예시 작업실로 튕기지 않고 그 자리에서 로그인 창을 띄운다. 로그인하면 적은 문장으로 대화가 시작된다 */
     if (guest) { openLogin(href); return; }
     setSending(true);
@@ -259,9 +262,6 @@ function Composer({ guest = false }: { guest?: boolean }) {
   return <form className={home.composer} onSubmit={send} aria-busy={sending || undefined}>
     <TextArea ref={field} className={home.composerField} aria-label="어떤 사업을 시작할지 적어 주세요" placeholder={`예: ${EXAMPLE_IDEA}`} rows={1} maxLength={LANDING_IDEA_MAX} value={text} onChange={event => setText(event.target.value)} onKeyDown={onKey} />
     <div className={home.composerBar}>
-      <div className={home.mode} role="group" aria-label="대화 모드">
-        {(["easy", "expert"] as const).map(value => <button key={value} type="button" aria-pressed={depth === value} aria-label={value === "easy" ? "일반 모드" : "전문가 모드"} title={value === "easy" ? "한 문장만 말하면 나머지는 채워서 바로 만들어요" : "하나씩 자세히 묻고 정해요"} onClick={() => setDepth(value)}>{value === "easy" ? "일반" : "전문가"}</button>)}
-      </div>
       <span className={home.spacer} />
       <button type="submit" className={`${home.circle} ${home.send}`} aria-label="보내기 — 새 대화 시작" disabled={!idea}><ArrowUp size={16} aria-hidden="true" /></button>
     </div>

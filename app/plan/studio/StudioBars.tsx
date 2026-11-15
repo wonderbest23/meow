@@ -43,7 +43,7 @@ export function BizMenu({ planId, title, canRename, onRenamed, className, label,
     { key: "others", heading: "다른 사업", items: others.map(item => ({ key: item.id, label: businessDisplayName(item.title), icon: <b className={styles.menuAvatar}>{businessDisplayName(item.title).slice(0, 1)}</b>, href: studioHref(item.id, "chat") })) },
     { key: "more", items: [
       { key: "all", label: "모든 사업 보기", icon: <LayoutGrid />, href: "/plan?view=all" },
-      { key: "new", label: "새 대화", icon: <Plus />, href: newChatHref() },
+      { key: "new", label: "새 대화", icon: <Plus />, href: "/plan" },
     ] },
   ];
   return <PopMenu label={label} buttonClassName={className} buttonTitle={`${title} — 사업 전환 · 이름 바꾸기`} groups={groups} menuLabel="사업 메뉴" align={align} />;

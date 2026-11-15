@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, Menu, UserRound, X } from "lucide-react";
+import { ChevronLeft, LayoutGrid, Menu, PanelLeft, SquarePen, UserRound, X } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import drawer from "./AppDrawer.module.css";
 import styles from "./chat/page.module.css";
@@ -82,6 +82,13 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
   const pathname = usePathname();
   /* 프로필 시트(휴대폰 아바타) — 로그인 상태·답할 문의 수는 왼쪽 메뉴와 같은 곳에서 읽는다(요청은 나눠 쓴다) */
   const [profile, setProfile] = useState(false);
+  /* PC 좁은 줄 맨 아래 동그라미가 여는 프로필 메뉴(동그라미 위에 뜬다) — 휴대폰 시트(profile)와 따로 */
+  const [railProfile, setRailProfile] = useState(false);
+  /* 첫 화면 · 내 사업의 왼쪽 메뉴 — 기본은 넓게, 위쪽 단추로 56px 아이콘 줄로 접는다(이 기기에 기억). 그리기 전에 읽어 접힌 채로 깜빡이지 않게 */
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  useLayoutEffect(() => { try { if (localStorage.getItem("oneulstart:rail-collapsed") === "1") setRailCollapsed(true); } catch { /* 넓은 채로 */ } }, []);
+  const collapseRail = (value: boolean) => { setRailCollapsed(value); setRailProfile(false); try { localStorage.setItem("oneulstart:rail-collapsed", value ? "1" : "0"); } catch { /* 이번 화면에서만 */ } };
+  const narrowRail = home && railCollapsed;
   const account = useAccount(pathname ?? "");
   const inquiries = useInquiries(account?.authenticated === true);
   const unanswered = inquiries.items ? unansweredCount(inquiries.items) : 0;
@@ -124,10 +131,24 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     {children}
   </>;
   return <>
-    {showRail && <aside className={`${chrome.side} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open || profile} data-app-side="">
+    {/*
+      첫 화면 · 내 사업(home)의 PC 왼쪽 — 기본은 넓은 메뉴(새 대화 · 내 사업 · 사업 목록), 오른쪽 위 단추로 56px 아이콘 줄로 접었다 편다
+      (2026-11-15 사장님 — 로그인 뒤 메타 AI 실측: 넓은 메뉴가 기본이고 단추로 접는다). 접힌 줄: 펴기 · 새 대화 · 내 사업, 맨 아래 프로필 동그라미(손님은 작은 '로그인').
+    */}
+    {narrowRail && <aside className={`${chrome.side} ${chrome.railSide} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open || profile} data-app-side="">
+      <button type="button" className={chrome.railTool} aria-label="메뉴 펴기" title="메뉴 펴기" aria-expanded={false} onClick={() => collapseRail(false)}><PanelLeft size={20} aria-hidden="true" /></button>
+      <Link className={chrome.railTool} href="/plan" aria-label="새 대화" title="새 대화" aria-current={active === "new" ? "page" : undefined}><SquarePen size={20} aria-hidden="true" /></Link>
+      <Link className={chrome.railTool} href="/plan?view=all" aria-label="내 사업" title="내 사업" aria-current={active === "plans" ? "page" : undefined}><LayoutGrid size={20} aria-hidden="true" /></Link>
+      <span className={chrome.railSpring} />
+      {account === null ? null : account.authenticated
+        ? <button type="button" className={chrome.railAvatar} aria-haspopup="dialog" aria-expanded={railProfile} aria-label="프로필 메뉴 열기" onClick={() => setRailProfile(value => !value)}>{accountInitial(account)}</button>
+        : <a className={chrome.railLogin} href="/account?next=%2Fplan">로그인</a>}
+    </aside>}
+    {showRail && !narrowRail && <aside className={`${chrome.side} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open || profile} data-app-side="">
+      {home && <button type="button" className={`${chrome.railTool} ${chrome.railCollapse}`} aria-label="메뉴 접기" title="메뉴 접기" aria-expanded={true} onClick={() => collapseRail(true)}><PanelLeft size={18} aria-hidden="true" /></button>}
       {settings ? <SettingsMenu /> : <RailMenu active={active} documentToc={documentToc} />}
     </aside>}
-    {!showRail && rail && <aside className={`${chrome.side} ${chrome.railSide} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open || profile}>{rail({ button: menuButton, open: () => setOpen(true), isOpen: open })}</aside>}
+    {!showRail && !home && rail && <aside className={`${chrome.side} ${chrome.railSide} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open || profile}>{rail({ button: menuButton, open: () => setOpen(true), isOpen: open })}</aside>}
     {/*
       폰·좁은 화면 메뉴 — PC 왼쪽 메뉴와 똑같은 것(내 사업 → 사업 → 목차)을 서랍으로 연다.
       예전엔 여기만 따로 만든 링크 목록이어서 PC와 폰의 메뉴가 달랐다.
@@ -187,5 +208,6 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     </div>
     {tabBar && <MobileTabBar />}
     <ProfileMenu open={profile} onClose={() => setProfile(false)} account={account} unanswered={unanswered} inquiriesClosed={inquiries.published === 0 && !unanswered} anchor="sheet" onOpenMenu={() => setOpen(true)} />
+    {narrowRail && <ProfileMenu open={railProfile} onClose={() => setRailProfile(false)} account={account} unanswered={unanswered} anchor="bottom" />}
   </>;
 }

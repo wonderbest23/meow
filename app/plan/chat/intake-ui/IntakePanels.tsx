@@ -813,14 +813,20 @@ export function DesignProgress({ snapshot, announce = false }: { snapshot: Intak
   // 서버가 작업을 받기 전(마지막 답 저장 중)에도 첫 단계부터 움직이게 시작한다
   const view = active && job ? jobProgress(job.status, sync.base + (monotonicNow() - sync.at), timing.expectedMs, timing.limitMs) : { percent: 3, elapsedSeconds: 0, slow: false };
   const current = Math.min(DESIGN_STEPS.length - 1, Math.floor(view.percent / (100 / DESIGN_STEPS.length)));
+  /* 기다리는 동안 — 지금 하는 일 한 줄(2026-11-15 사장님, 메타 AI 방식): 돌아가는 표시 + 지금 단계 이름, 그 아래 가는 세로선 옆 회색 설명 한 줄.
+     단계가 넘어가면 같은 자리에서 글만 바뀐다. 끝나면 이 줄은 사라지고 결과와 작업 기록 한 줄이 남는다. 예전엔 막대 + 네 단계 목록 카드였다 */
   return <div className={styles.jobChat} data-kind="design" data-design-progress>
-    <ChatSpeaker status="사업 방향 정리 중" />
-    <div className={styles.designProgress}>
-      <div className={styles.jobProgressBar} role="progressbar" aria-label="사업 방향 정리" aria-valuemin={0} aria-valuemax={100} aria-valuenow={view.percent}><span style={{ width: `${view.percent}%` }} /></div>
-      <ol className={styles.designSteps}>{DESIGN_STEPS.map((step, index) => <li key={step} data-state={index < current ? "done" : index === current ? "current" : "todo"}>{index < current ? <Check size={14} aria-hidden="true" /> : index === current ? <LoaderCircle size={14} className={styles.spinner} aria-hidden="true" /> : <span aria-hidden="true" />}{step}</li>)}</ol>
-    </div>
+    <ThinkingLine title={DESIGN_STEPS[current]} note={view.slow ? `평소보다 오래 걸리고 있어요 · ${view.elapsedSeconds}초. 답변은 저장돼 있어요.` : "답변을 바탕으로 사업 방향을 한 장으로 정리하고 있어요. 보통 30~40초 걸려요."} />
+    <span className={styles.srOnly} role="progressbar" aria-label="사업 방향 정리" aria-valuemin={0} aria-valuemax={100} aria-valuenow={view.percent} />
     {announce && <span className={styles.srOnly} role="status" aria-live="polite">사업 방향 정리 중 · {DESIGN_STEPS[current]}</span>}
-    <small className={styles.jobChatNote}>{view.slow ? `평소보다 오래 걸리고 있어요 · ${view.elapsedSeconds}초. 답변은 저장돼 있어요.` : "답변을 바탕으로 사업 방향을 한 장으로 정리하고 있어요. 보통 30~40초 걸려요."}</small>
+  </div>;
+}
+
+/** 기다리는 동안의 한 줄 — 돌아가는 표시 + 지금 하는 일, 아래 회색 설명(가는 세로선 옆) */
+export function ThinkingLine({ title, note }: { title: string; note: string }) {
+  return <div className={styles.thinking} data-thinking>
+    <p className={styles.thinkingHead}><LoaderCircle size={16} className={styles.spinner} aria-hidden="true" /><span>{title}</span></p>
+    <p className={styles.thinkingNote}>{note}</p>
   </div>;
 }
 
@@ -846,10 +852,8 @@ export function JobProgress({ snapshot, announce = false, variant = "gauge" }: {
   // In the conversation the job reads like the coach replying: current step beside the name, a typing bubble,
   // and elapsed time only once it runs longer than usual.
   if (variant === "chat") return <div className={styles.jobChat} data-kind={job.kind} data-job-chat>
-    <ChatSpeaker status={title} />
-    <TypingBubble />
+    <ThinkingLine title={title} note={view.slow ? `평소보다 오래 걸리고 있어요 · ${view.elapsedSeconds}초` : job.kind === "design" ? "기본 질문이 끝나서 바로 정리를 시작했어요. 보통 30~40초 걸려요." : "답변은 저장돼 있어요. 나가도 결과는 여기 남아요."} />
     {announce && <span className={styles.srOnly} role="status" aria-live="polite">{title}</span>}
-    <small className={styles.jobChatNote}>{view.slow ? `평소보다 오래 걸리고 있어요 · ${view.elapsedSeconds}초` : job.kind === "design" ? "기본 질문이 끝나서 바로 정리를 시작했어요. 보통 30~40초 걸려요." : "답변은 저장돼 있어요. 나가도 결과는 여기 남아요."}</small>
   </div>;
   return <div className={styles.jobProgress} data-kind={job.kind}>
     <div className={styles.jobProgressTitle}><LoadingStatus note={job.status === "queued" ? "요청을 접수했어요" : JOB_TITLES[job.kind]} announce={announce} /></div>
