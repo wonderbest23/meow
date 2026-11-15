@@ -32,7 +32,7 @@ import { AppButton, type AppButtonSize } from "../../../components/app-button";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { restoreRangeTildes } from "../../../lib/plan-builder/range-tildes";
 import { withTableCellLabels } from "../../../lib/plan-builder/table-cells";
-import { publishPlanView, useStudioCommand, useStudioHeaderActions, useStudioHeaderCenter, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import { publishPlanView, sendStudioCommand, useStudioCommand, useStudioHeaderActions, useStudioHeaderCenter, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import paneHeader from "../workspace/PaneHeaderActions.module.css";
 import { paneLinkCapture } from "./pane-link";
 import { planChapterComposeRequest } from "../../../lib/plan-builder/studio-plan-edit";
@@ -75,6 +75,8 @@ type Props = {
   /** 내려받기 — 파일을 받았으면 true(창을 닫고 '내려받았어요'를 잠깐 보인다) */
   onDownload: (format: Format, view?: "summary" | "detailed") => Promise<boolean> | boolean | void; canDownload: (format: Format, view?: "summary" | "detailed") => boolean;
   summary?: ExecutiveSummary | null; summaryError?: string;
+  /** 만들지 못한 항목 이름(두 번 거절돼 건너뜀) — 문서 위에 알리고 다시 만들 길을 준다 */
+  missing?: string[];
   reviewSource?: DocumentReviewSource | null;
   onReviewed?: (key: string, section: StoredSection, updatedAt: string) => void;
   /** The owner re-applied changed facts: the document is being rewritten, so restart the progress polling. */
@@ -592,6 +594,7 @@ export default function DocumentWorkspace(props: Props) {
             {toolbarHas && <div className={styles.toolbarActions} data-next={(showNext && !studioHeader) || undefined}>{toolbarButtons}</div>}
           </div>}
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
+          {!!props.missing?.length && !props.writing && !isSample && <div className={`${styles.notice} ${styles.missingNotice}`} role="status" data-missing-notice><span>‘{props.missing.join("’ · ‘")}’ 항목을 만들지 못했어요.</span>{pane ? <AppButton type="button" variant="secondary" size="small" onClick={() => sendStudioCommand("plan-retry")}><RefreshCw size={15} aria-hidden="true" />다시 만들기</AppButton> : coachHref && <AppButton variant="secondary" size="small" href={coachHref}>대화에서 다시 만들기</AppButton>}</div>}
           <div ref={node => { scroll.current = node; setScrollNode(node); }} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
             {!summaryMode && !factMode && grouped.length > 0 && <div className={styles.emphasisBar}><button type="button" aria-pressed={emphasis} onClick={() => { const next = !emphasis; setEmphasis(next); try { localStorage.setItem("oneul-plan-emphasis", next ? "on" : "off"); } catch { /* 못 적어도 이번에는 바뀐다 */ } }}><Highlighter size={15} aria-hidden="true" />숫자 강조</button></div>}
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
