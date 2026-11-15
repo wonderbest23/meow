@@ -1751,6 +1751,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    * ＋ 는 지금까지 답 보기 · 새 대화, 모드 알약은 말을 보낼 곳(대화 · 사업계획서 장 · 홈페이지) — 예전 '고칠 곳 고르기'·'지금까지 답 보기'와 같다.
    * 말로 적기(마이크)는 뺐다(대표 결정 2026-11-14).
    */
+  /* 계획서 칸의 '다시 만들기'(만들지 못한 항목) — 대화 칸 진행 카드의 '남은 항목 이어서 쓰기'와 같은 일 */
+  useStudioCommand("plan-retry", startPrepare, embedded && !!plan && !blocked && !aiBusy && !preparing);
   useStudioCommand("chat-summary", () => { if (!plan) return; setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }, embedded && !!plan);
   /* 고른 선택지 알약이 내 말풍선으로 옮겨 가는 짧은 전환(6단계) — 대화 칸이 그려진 뒤에 붙인다 */
   useChipFlight(conversation, loaded && !!(plan || newEntry));

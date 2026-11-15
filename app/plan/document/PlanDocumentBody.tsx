@@ -2,7 +2,8 @@
 
 import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useGenerationProgress } from "../GenerationProgress";
+import { generationStalled, useGenerationProgress } from "../GenerationProgress";
+import { dropMissingReferences } from "../../../lib/plan-builder/missing-chapter";
 import { useRouter } from "next/navigation";
 import DocumentWorkspace from "./DocumentWorkspace";
 import PlanLoading from "../PlanLoading";
@@ -218,22 +219,25 @@ export function PlanDocumentBody() {
     return map;
   }, [planType, arrangement]);
 
+  /* 만들지 못한 항목(두 번 거절돼 건너뜀) — 문서 위에 알리고, 그 항목을 가리키는 문장은 보여 줄 때 · 내려받을 때 뺀다(저장된 글은 그대로) */
+  const missingTitles = useMemo(() => generationStalled(generation.state) ? (generation.state?.sections ?? []).filter(section => !section.done).map(section => section.title) : [], [generation.state]);
+  const shown = useMemo(() => missingTitles.length ? sections.map(section => ({ ...section, markdown: dropMissingReferences(section.markdown, missingTitles, "markdown"), html: dropMissingReferences(section.html, missingTitles, "html") })) : sections, [sections, missingTitles]);
   // 챕터별 그룹 (문서 흐름·목차 공용)
   const grouped = useMemo(() => {
     if (arrangement) {
-      const byKey = new Map(sections.map((s) => [s.key, s]));
+      const byKey = new Map(shown.map((s) => [s.key, s]));
       return arrangement
         .map((part) => [part.title, part.keys.map((k) => byKey.get(k)).filter((x): x is (typeof sections)[number] => !!x)] as const)
         .filter(([, list]) => list.length > 0) as Array<[string, typeof sections]>;
     }
     const map = new Map<string, typeof sections>();
-    for (const s of sections) {
+    for (const s of shown) {
       const list = map.get(s.chapterTitle) ?? [];
       list.push(s);
       map.set(s.chapterTitle, list);
     }
     return [...map.entries()];
-  }, [sections, arrangement]);
+  }, [shown, arrangement]);
 
   /** 내보내기용 — 화면과 같은 배치·같은 챕터 제목으로 보낸다 */
   const exportSections = useMemo(
@@ -417,7 +421,7 @@ export function PlanDocumentBody() {
     generation.restart();
     if (pane && studioNav?.markActivity) { selfMarked.current = true; studioNav.markActivity("plan"); }
   };
-  return <DocumentWorkspace onReflected={onReflected}onFactsSaved={reloadSections} writing={writing} freshKeys={freshKeys} title={title} identity={identity} overview={overview} planId={documentPlanId} planType={planType} ready={ready}
+  return <DocumentWorkspace missing={missingTitles} onReflected={onReflected}onFactsSaved={reloadSections} writing={writing} freshKeys={freshKeys} title={title} identity={identity} overview={overview} planId={documentPlanId} planType={planType} ready={ready}
     summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
       if (!documentPlanId) return;
