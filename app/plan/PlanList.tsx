@@ -198,10 +198,7 @@ export default function PlanList() {
         {/* 인사말에 이름을 붙이지 않는다 — 계정에 이름이 없어 이메일 앞부분(rena35200+review님)이 그대로 보였다(운영 점검 2026-11-02). 동그라미 머리글자는 그대로 */}
         <h1 id="plan-home-greeting" className={home.greeting}>오늘은 어떤 사업을 시작해볼까요?</h1>
         <Composer guest={guest} />
-        {/* 휴대폰만 — 진행 중인 사업이 있으면 입력칸 아래에 최근 3개를 작게(바로 이어가게, 2026-11-04 사장님). 전체 목록은 아래 탭 '내 사업' 하나. PC는 아래 목록 카드가 보인다 */}
-        {recent.length > 0 && <nav className={home.recent} aria-label="최근 사업">
-          {recent.slice(0, 3).map(p => <Link key={p.id} href={openHref(p)} aria-label={`${planDisplayName(p)} 열기`}><span>{planDisplayName(p)}</span><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><ChevronRight size={16} aria-hidden="true" /></Link>)}
-        </nav>}
+        {/* 휴대폰 첫 화면의 최근 사업 3개는 뺐다(2026-11-15 사장님) — 첫 화면은 입력칸만, 사업은 아래 탭 '내 사업'에서 */}
         {/* 완성 예시 두 개 — 아직 사업이 없는 사람(로그인 전 포함)만. 필요하면 눌러 본다 */}
         {(guest || (!!state && allPlans.length === 0)) && <nav className={home.samples} aria-label="완성 예시">
           <Link href="/plan/studio?planId=sample_banchan_easy">일반 (샘플)<ArrowRight size={14} aria-hidden="true" /></Link>

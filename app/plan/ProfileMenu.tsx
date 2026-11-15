@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, BookOpen, Check, ChevronRight, CircleHelp, Contrast, CreditCard, LayoutGrid, LogIn, Monitor, Moon, Settings, Sun, User, UserPlus } from "lucide-react";
-import { useThemePreference } from "../../components/app-theme";
-import { THEME_OPTIONS } from "../../lib/client/app-theme";
+import { ChevronRight, CircleHelp, CreditCard, LogIn, LogOut, Settings, UserPlus } from "lucide-react";
+import { clearLocalState } from "../../lib/plan-builder/plan-store";
 import { openSupportChat } from "../../lib/client/open-support-chat";
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import { accountInitial, accountName, type Account } from "./use-account";
@@ -29,8 +28,16 @@ export default function ProfileMenu({ open, onClose, account, unanswered, inquir
 }) {
   const pathname = usePathname() || "/plan";
   const ref = useDialogFocus<HTMLDivElement>(open, { onEscape: onClose });
-  const [display, setDisplay] = useState(false);
-  const [themePref, setThemePref] = useThemePreference();
+  const [leaving, setLeaving] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
+  /* 내 계정 화면의 로그아웃과 같은 순서 — 서버 세션이 끊긴 걸 확인한 뒤에만 이 기기 저장본을 비운다 */
+  async function logout() {
+    setLeaving(true); setLogoutError("");
+    const res = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+    if (!res || !res.ok) { setLeaving(false); setLogoutError("로그아웃하지 못했어요. 연결을 확인하고 다시 시도해 주세요."); return; }
+    clearLocalState();
+    window.location.assign("/plan");
+  }
   const [pending, setPending] = useState<string | null>(null);
   useEffect(() => { if (!open) setPending(null); }, [open]);
   if (!open) return null;
@@ -69,25 +76,17 @@ export default function ProfileMenu({ open, onClose, account, unanswered, inquir
             {row(`/account?next=${next}`, <LogIn aria-hidden="true" />, "로그인", null, true)}
             {row(`/account?mode=register&next=${next}`, <UserPlus aria-hidden="true" />, "회원가입", null, true)}
           </>}
-        {row("/plan", <Bell aria-hidden="true" />, "새로운 소식", <span className={styles.hint}>오늘 할 일</span>, true)}
-        {onOpenMenu && <button type="button" className={styles.row} onClick={() => { onClose(); onOpenMenu(); }}><LayoutGrid aria-hidden="true" /><span className={styles.label}>내 사업 메뉴</span><ChevronRight className={styles.chev} aria-hidden="true" /></button>}
-        <div className={styles.hr} />
+        {/* '내 사업 메뉴' 줄도 뺐다 — 아래 탭 '내 사업'과 같은 곳이다 */}
+        {!signedIn && <div className={styles.hr} />}
+        {/* 네 줄만(2026-11-15 사장님: 복잡한 것은 자른다) — 프로필 · 이용 안내 · 화면 설정은 '계정 설정' 안에 있다 */}
         {signedIn && <>
-          {row("/plan/me", <User aria-hidden="true" />, "프로필")}
           {/* 계정 설정 — 휴대폰은 전체 화면 목록(시안 MSettings: 내 계정 · 환경설정 · 보안 · 기기 및 앱), PC 는 설정 메뉴가 있는 내 계정 화면 */}
           {row(anchor === "sheet" ? "/plan/settings" : "/plan/me#me-info", <Settings aria-hidden="true" />, "계정 설정", null, anchor === "sheet")}
           {row("/plan/me#me-payments", <CreditCard aria-hidden="true" />, "결제 내역")}
         </>}
         {row("/account/support", <CircleHelp aria-hidden="true" />, "고객센터", null, true, support)}
-        {row("/plan/info", <BookOpen aria-hidden="true" />, "이용 안내", null, true)}
-        {/* 화면 설정 — 시스템 / 라이트 / 다크(lovable 과 같은 세 가지). 이 기기에 저장되고 기본은 라이트 */}
-        <button type="button" className={styles.row} aria-expanded={display} aria-controls="profile-display-options" onClick={() => setDisplay(value => !value)}><Contrast aria-hidden="true" /><span className={styles.label}>화면 설정</span><ChevronRight className={styles.chev} data-open={display || undefined} aria-hidden="true" /></button>
-        {display && <div id="profile-display-options" className={styles.themeGroup} role="radiogroup" aria-label="화면 테마">
-          {THEME_OPTIONS.map(([value, label]) => <button key={value} type="button" role="radio" aria-checked={themePref === value} className={`${styles.row} ${styles.themeRow}`} onClick={() => setThemePref(value)}>
-            {value === "system" ? <Monitor aria-hidden="true" /> : value === "light" ? <Sun aria-hidden="true" /> : <Moon aria-hidden="true" />}
-            <span className={styles.label}>{label}</span>{themePref === value && <Check className={styles.check} aria-hidden="true" />}
-          </button>)}
-        </div>}
+        {signedIn && <button type="button" className={styles.row} disabled={leaving} onClick={() => void logout()}><LogOut aria-hidden="true" /><span className={styles.label}>{leaving ? "로그아웃 중…" : "로그아웃"}</span></button>}
+        {logoutError && <p role="alert" className={styles.hint} style={{ padding: "4px 12px 8px" }}>{logoutError}</p>}
       </nav>
     </div>
   </>;
