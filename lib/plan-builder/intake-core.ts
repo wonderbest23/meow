@@ -1,4 +1,5 @@
 import { freeReflectsLeft } from "./free-reflect";
+import { capacityForOperatingDays, operatingDaysFrom } from "./operating-days";
 import { chaptersForType, sectionKey } from "./blueprint";
 import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, cashflowShapeFor, type CashflowShape, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
@@ -978,7 +979,24 @@ export function applyIntakeCandidates(coach: CoachState, intake: IntakeState, co
   coach.ready = coach.stage !== "exploring" && !!coach.fields.find(field => field.key === "business" && field.basis === "user")?.value;
 }
 
+/*
+ * 영업일을 말했으면('주말에만' 메모 · 사업 설명) 업종 기준값으로 채운 처리량('하루 80건')을 그 날수로 맞춘다 — 계산표가 월 26일 대신 맞는 날수를 쓴다.
+ * 직접 답한 처리량은 건드리지 않는다(답이 이긴다). 한 번 맞춘 값은 '일주일 ○건'이라 다시 돌아도 그대로다.
+ */
+function alignCapacityToOperatingDays(coach: CoachState, intake: IntakeState) {
+  const field = coach.fields.find(item => item.key === "capacity");
+  if (!field || field.basis !== "proposal" || !/하루\s*[\d,]+/.test(field.value)) return;
+  const business = coach.fields.find(item => item.key === "business" && item.basis === "user")?.value;
+  const days = operatingDaysFrom([business, ...intake.notes.filter(note => note.intent !== "question").map(note => note.text)]);
+  if (!days) return;
+  const value = capacityForOperatingDays(field.value, days.daysPerWeek);
+  if (value === field.value) return;
+  coach.fields = coach.fields.map(item => item === field ? { ...item, value } : item);
+  for (const answer of Object.values(intake.answers)) if (typeof answer.value === "string" && answer.value === field.value && answer.messageId === field.messageId) answer.value = value;
+}
+
 export function finishIntakeMutation(coach: CoachState, before: string, answers: ServerPlan["answers"], intake = readIntake(answers)) {
+  if (intake) alignCapacityToOperatingDays(coach, intake);
   const changed = before !== intakeBusinessFingerprint(coach, answers, intake);
   const documentRevision = coachDocumentRevision(coach);
   coach.revision += 1;
