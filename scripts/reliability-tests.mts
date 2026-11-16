@@ -43,6 +43,7 @@ suites.push("homepage-copy-coverage");
 suites.push("document-render");
 suites.push("online-store-plan");
 suites.push("answer-number");
+suites.push("operating-days");
 suites.push("plan-account-switch");
 suites.push("landing-idea-carry");
 suites.push("studio-navigation", "route-loading");

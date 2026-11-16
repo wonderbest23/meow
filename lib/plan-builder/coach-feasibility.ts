@@ -1,4 +1,5 @@
 import type { CoachField } from "./coach";
+import { DEFAULT_DAYS_PER_MONTH, monthDaysFromFields } from "./operating-days";
 import { parseWonAmount, rangeLowerText } from "./answer-number";
 
 export type FeasibilityCheck = {
@@ -41,16 +42,15 @@ export function coachAmountLower(value: string | undefined): number | undefined 
   return coachAmount(lower ?? value);
 }
 
-const CAPACITY_MONTH_FACTOR: Record<string, number> = { "하루": 26, "일주일": 4.3, "한 달": 1 };
-/** 처리량 답변("대표자 혼자 / 하루 20건")을 월 판매량으로 환산한다. 하루는 월 26일 영업, 일주일은 4.3주 가정이며 기간이 없으면 환산하지 않는다. */
-export function monthlyVolumeFromCapacity(text: string | null | undefined): { volume: number; unit: string; note: string } | null {
+/** 처리량 답변("대표자 혼자 / 하루 20건")을 월 판매량으로 환산한다. 하루는 한 달 영업일(기본 월 26일 — operating-days.ts), 일주일은 4.3주 가정이며 기간이 없으면 환산하지 않는다. */
+export function monthlyVolumeFromCapacity(text: string | null | undefined, monthDays = DEFAULT_DAYS_PER_MONTH): { volume: number; unit: string; note: string } | null {
   const match = text?.match(/(하루|일주일|한 달)\s*([\d,]+)\s*([가-힣·]*)/);
   if (!match) return null;
   const count = Number(match[2].replace(/,/g, ""));
   if (!Number.isFinite(count) || count < 0) return null;
-  const factor = CAPACITY_MONTH_FACTOR[match[1]], unit = match[3] || "건", volume = Math.round(count * factor);
+  const factor = match[1] === "하루" ? monthDays : match[1] === "일주일" ? 4.3 : 1, unit = match[3] || "건", volume = Math.round(count * factor);
   const shown = (n: number) => n.toLocaleString("ko-KR");
-  return { volume, unit, note: factor === 1 ? `월 ${shown(count)}${unit} 감당 기준` : `${match[1]} ${shown(count)}${unit} × ${factor === 26 ? "월 26일 영업" : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
+  return { volume, unit, note: match[1] === "한 달" ? `월 ${shown(count)}${unit} 감당 기준` : `${match[1]} ${shown(count)}${unit} × ${match[1] === "하루" ? `월 ${monthDays}일 영업` : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
 }
 
 /** These are arithmetic checks on supplied/proposed inputs, not a business viability score. */
@@ -103,7 +103,7 @@ export function checkCoachFeasibility(fields: CoachField[]): FeasibilityCheck[] 
     workloadCheck.detail = "주당 가능 시간이 일주일 전체 시간인 168시간을 넘습니다. 시간의 단위를 확인해야 하며 이 값으로 작업 가능량을 판단하지 않습니다.";
   } else if (volume == null && minutes == null && hours != null && hours > 0) {
     // 건당 작업시간을 묻지 않는 흐름: 처리량(월 환산)과 주당 가능 시간으로 1건에 쓸 수 있는 평균 시간을 보여 준다(판단이 아니라 기준값).
-    const capacity = monthlyVolumeFromCapacity(map.get("capacity")?.value);
+    const capacity = monthlyVolumeFromCapacity(map.get("capacity")?.value, monthDaysFromFields(fields));
     if (capacity && capacity.volume > 0) {
       const perSale = hours * 52 / 12 * 60 / capacity.volume;
       workloadCheck.inputs = inputs("hoursPerWeek", "capacity");

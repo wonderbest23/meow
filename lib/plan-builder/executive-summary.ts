@@ -150,7 +150,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
     version: 1, title: plan.title, planType: plan.planType, sourceVersion: `${plan.id}:${plan.updatedAt}:coach-${coach ? coachDocumentRevision(coach) : "legacy"}:operations-${operations.revision}`,
     abbreviated, note, blocks,
     ...(flow && !implausible.length && flow.contribution > 0 && flow.breakEven > 0 ? { easy: {
-      unit: flow.unit, price: flow.unitPrice, perDay: flow.daily && flow.breakEven / 26 >= 1, enroll: flow.shape.cycle === "enroll", contribution: flow.contribution, fixed: flow.monthlyFixedCost,
+      unit: flow.unit, price: flow.unitPrice, perDay: flow.daily && flow.breakEven / flow.days >= 1, enroll: flow.shape.cycle === "enroll", contribution: flow.contribution, fixed: flow.monthlyFixedCost,
       breakEven: flow.breakEven, cap: flow.capacity?.volume ?? null, budget: flow.budget, limit: flow.setupLimit, shortfall: flow.reviewShortfall,
     } } : {}),
   };

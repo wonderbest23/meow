@@ -22,6 +22,7 @@
  * - 매장을 빌리는 사업은 한도를 보증금 상한과 써서 없어지는 돈 상한으로 나눠 보이고, 감당하기 어려우면 대안 자리를 나란히 둔다
  * - 서비스·수업에는 물건 판매 말(처리량·판매량·수량) 대신 예약·시술 건수, 등록 학생 수로 쓴다
  */
+import { DEFAULT_DAYS_PER_MONTH, monthDaysFromFields } from "./operating-days";
 import { chapterRef } from "./blueprint";
 import type { BusinessStructure } from "./business-structure";
 import { BUSINESS_TYPES, type BusinessTypeId } from "./business-types";
@@ -160,6 +161,8 @@ const GOODS_UNIT = /^(?:개|잔|세트|병|봉|봉지|판|상자|박스|인분|�
 export type CashflowInputs = {
   unitPrice: number; unitVariableCost: number; monthlyFixedCost: number;
   capacity?: string; goal?: string; budget?: string; setupCost?: string;
+  /** 한 달 영업일 — 사업 정보 표의 주당 영업일에서 온다. 없으면 월 26일(operating-days.ts) */
+  monthDays?: number;
   /** 대표 상품 — '세트'처럼 처리량과 다른 단위로 파는지 알아보는 데만 쓴다 */
   offer?: string;
   /** 온라인으로 파는 사업(스마트스토어 등) — '문 열기 전/후', '월 26일 영업' 대신 '스토어 공개 전/후', '월 26일 작업'으로 쓴다 */
@@ -194,7 +197,7 @@ export function cashflowTerms(shape: Pick<CashflowShape, "cycle" | "trade" | "se
 }
 type Scenario = { key: "careful" | "breakeven" | "goal"; label: string; volumes: number[]; net: number[]; cumulative: number[] };
 export type CashflowScenarios = {
-  unit: string; daily: boolean; unitPrice: number; monthlyFixedCost: number;
+  unit: string; daily: boolean; /** 한 달 영업일(하루 환산의 기준) */ days: number; unitPrice: number; monthlyFixedCost: number;
   /** 판매가에 들어 있는 부가세(일반과세자, 판매가의 1/11) */
   vat: number;
   /** 한 건에 실제 남는 돈 = 판매가 − 부가세 − 한 건당 비용. 본전·통장 흐름은 모두 이 값으로 계산한다 */
@@ -277,9 +280,10 @@ const count = (value: number, unit: string) => `${Math.round(value).toLocaleStri
  * 하루 환산(월 26일 영업) — 처리량을 '하루 ○개'로 답한 사업(매장·카페처럼 날마다 파는 곳)만 쓴다.
  * 주·월 단위로 일하는 사업(출장 촬영, 학원)에 '하루 약 1건'을 붙이면 엉뚱한 기준이 된다. 하루 1개가 안 되면 말하지 않는다.
  */
-const perDay = (daily: boolean, monthly: number, unit: string, wrap: (text: string) => string) => (daily && monthly / 26 >= 1 ? wrap(`하루 약 ${count(monthly / 26, unit)}`) : "");
+type DayBasis = { daily: boolean; days: number };
+const perDay = (basis: DayBasis, monthly: number, unit: string, wrap: (text: string) => string) => (basis.daily && monthly / basis.days >= 1 ? wrap(`하루 약 ${count(monthly / basis.days, unit)}`) : "");
 /** 처리량 환산 문구('하루 20개 × 월 26일 영업')를 사업에 맞는 말로 */
-const dayWord = (result: { words: Words }, text: string) => text.replace(/월 26일 영업/g, `월 26일 ${result.words.day}`);
+const dayWord = (result: { words: Words }, text: string) => text.replace(/월 (\d+)일 영업/g, (_whole, days: string) => `월 ${days}일 ${result.words.day}`);
 /** 경우가 두 개(목표가 매출이 아닐 때)인지 세 개인지 */
 const kinds = (result: { scenarios: unknown[] }) => (result.scenarios.length === 3 ? "세 가지" : "두 가지");
 
@@ -302,10 +306,10 @@ function goalMonths(goal: string | undefined): number {
  * 판매량으로 적은 목표('6개월 안에 월 40건', '3개월 안에 하루 150잔') → 월 판매량. 매출 목표가 없을 때만 쓴다.
  * '재방문 고객 100명', '단골 가게 20곳'처럼 한 달 판매량이 아닌 목표는 바꾸지 않는다(없는 숫자를 만들지 않는다).
  */
-export function parseVolumeGoal(goal: string | undefined): { volume: number; months: number } | null {
+export function parseVolumeGoal(goal: string | undefined, monthDays = DEFAULT_DAYS_PER_MONTH): { volume: number; months: number } | null {
   const monthly = goal?.match(/월\s*([\d,]+)\s*(?:건|개|잔|명|곳|회|벌|박)(?:\s*판매)?/);
   const daily = goal?.match(/하루\s*([\d,]+)\s*(?:건|개|잔|명|회|벌)/);
-  const volume = monthly ? Number(monthly[1].replace(/,/g, "")) : daily ? Number(daily[1].replace(/,/g, "")) * 26 : 0;
+  const volume = monthly ? Number(monthly[1].replace(/,/g, "")) : daily ? Number(daily[1].replace(/,/g, "")) * monthDays : 0;
   return volume > 0 ? { volume, months: goalMonths(goal) } : null;
 }
 
@@ -316,7 +320,8 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const vat = shape.vat === "exempt" ? 0 : vatInPrice(input.unitPrice);
   const contribution = realUnitMargin(input.unitPrice, input.unitVariableCost, shape.vat);
   if (!(input.unitPrice > 0) || contribution <= 0 || input.monthlyFixedCost < 0) return null;
-  const capacityParsed = monthlyVolumeFromCapacity(input.capacity);
+  const monthDays = input.monthDays ?? DEFAULT_DAYS_PER_MONTH;
+  const capacityParsed = monthlyVolumeFromCapacity(input.capacity, monthDays);
   /*
    * 월 등록 사업(과외·구독)은 '일주일 6명'이 한 달 26명이 아니라 동시에 맡는 6명이다 — 4.3을 곱하지 않는다(Q7).
    * 등록 인원이 아닌 단위(회·시간)로 답했으면 등록 인원과 비교할 수 없어 상한으로 쓰지 않는다.
@@ -335,7 +340,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
    * 진행·변경 기준이 같은 1건에 걸렸다(Q7 과외) — 본전이 1이면 조심스러운 경우는 0으로 둔다.
    */
   const careful = cap(breakEven <= 1 ? 0 : Math.ceil(breakEven / 2));
-  const revenueGoal = parseRevenueGoal(input.goal), volumeGoal = revenueGoal ? null : parseVolumeGoal(input.goal);
+  const revenueGoal = parseRevenueGoal(input.goal), volumeGoal = revenueGoal ? null : parseVolumeGoal(input.goal, monthDays);
   // 판매량 목표는 매출로 바꿔 같은 계산을 쓴다(표의 '대표 목표'도 매출로 보인다)
   const goal = revenueGoal ?? (volumeGoal ? { revenue: volumeGoal.volume * input.unitPrice, months: volumeGoal.months } : null);
   const make = (key: Scenario["key"], label: string, volumes: number[]): Scenario => {
@@ -410,10 +415,10 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const taxableBreakEven = shape.vat === "exempt" && taxableMargin > 0 ? Math.ceil(input.monthlyFixedCost / taxableMargin) : null;
   const words = shape.service ? OPEN_SERVICE_WORDS : store ? ONLINE_WORDS : shape.premises ? STORE_WORDS : SERVICE_WORDS;
   const unitNote = /세트/.test(input.offer ?? "") && capacityParsed && !/세트/.test(capacityParsed.unit)
-    ? `처리량(${capacityParsed.note.replace(/월 26일 영업/g, `월 26일 ${words.day}`)})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
+    ? `처리량(${capacityParsed.note.replace(/월 (\d+)일 영업/g, (_whole, days: string) => `월 ${days}일 ${words.day}`)})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
     : null;
   const goalPeriod = /개업|오픈|문\s*열|출시|영업\s*시작/.test(input.goal ?? "") ? null : Number(input.goal?.match(/(\d+)\s*개월\s*(?:안|내|이내|뒤|후)/)?.[1]) || null;
-  return { goalPeriodMonths: goalPeriod, unit, daily: /하루/.test(input.capacity ?? "") && shape.cycle !== "enroll", unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || store, breakEven, capacity, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, reviewShortfall, stopMonth, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: store, shape, prepCost, prep, depositSplit, terms, taxableBreakEven };
+  return { goalPeriodMonths: goalPeriod, unit, daily: /하루/.test(input.capacity ?? "") && shape.cycle !== "enroll", days: monthDays, unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || store, breakEven, capacity, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, reviewShortfall, stopMonth, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: store, shape, prepCost, prep, depositSplit, terms, taxableBreakEven };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < result.breakEven;
@@ -556,7 +561,7 @@ function goalLine(result: CashflowScenarios): string {
 }
 
 /** 같은 기간끼리 비교하도록 하루(월 26일)·일주일(월 4.3주)·한 달을 함께 쓴다 */
-const periods = (daily: boolean, monthly: number, unit: string) => [perDay(daily, monthly, unit, text => text), monthly / 4.3 >= 1 ? `일주일 약 ${count(monthly / 4.3, unit)}` : "", `한 달 ${count(monthly, unit)}`].filter(Boolean).join(" / ");
+const periods = (basis: DayBasis, monthly: number, unit: string) => [perDay(basis, monthly, unit, text => text), monthly / 4.3 >= 1 ? `일주일 약 ${count(monthly / 4.3, unit)}` : "", `한 달 ${count(monthly, unit)}`].filter(Boolean).join(" / ");
 /** 관심 조사 결과와 견줄 한 기간 — 하루 판매 사업은 일주일(조사를 일주일 단위로 하므로), 그보다 적으면 한 달 */
 const surveyPeriod = (monthly: number, unit: string) => (monthly / 4.3 >= 1 ? `일주일 약 ${count(monthly / 4.3, unit)}` : `한 달 ${count(monthly, unit)}`);
 /*
@@ -642,7 +647,7 @@ function decisionLines(result: CashflowScenarios): string[] {
   const { decision, unit, terms } = result;
   const reach = (rate: number) => {
     const monthly = Math.ceil(decision.go / rate);
-    return result.daily ? `하루 약 ${Math.ceil(monthly / 26).toLocaleString("ko-KR")}명` : monthly / 4.3 >= 1 && result.shape.cycle === "weekly" ? `일주일 약 ${Math.ceil(monthly / 4.3).toLocaleString("ko-KR")}명` : `한 달 ${monthly.toLocaleString("ko-KR")}명`;
+    return result.daily ? `하루 약 ${Math.ceil(monthly / result.days).toLocaleString("ko-KR")}명` : monthly / 4.3 >= 1 && result.shape.cycle === "weekly" ? `일주일 약 ${Math.ceil(monthly / 4.3).toLocaleString("ko-KR")}명` : `한 달 ${monthly.toLocaleString("ko-KR")}명`;
   };
   const { ask, kept } = SURVEY_ASK[result.shape.cycle](unit);
   const discount = result.shape.service === "connect" && result.shape.cycle !== "enroll"
@@ -659,8 +664,8 @@ function decisionLines(result: CashflowScenarios): string[] {
    */
   const twoWay = decision.go - decision.floor <= 1;
   const rule = twoWay
-    ? `${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로, 그보다 적으면(${periods(result.daily, decision.floor, unit)}) 시작안을 바꿉니다. 본전이 작아 '본전의 절반'을 따로 두면 기준이 겹치므로 규모를 줄이는 중간 단계는 두지 않습니다.`
-    : `${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로, 그보다 적고 본전의 절반(${periods(result.daily, decision.floor, unit)})보다 많으면 규모(${scale})를 줄여서, 본전의 절반 이하면 시작안을 바꿉니다.`;
+    ? `${decision.goLabel}(${periods(result, decision.go, unit)}) 이상이면 계획대로, 그보다 적으면(${periods(result, decision.floor, unit)}) 시작안을 바꿉니다. 본전이 작아 '본전의 절반'을 따로 두면 기준이 겹치므로 규모를 줄이는 중간 단계는 두지 않습니다.`
+    : `${decision.goLabel}(${periods(result, decision.go, unit)}) 이상이면 계획대로, 그보다 적고 본전의 절반(${periods(result, decision.floor, unit)})보다 많으면 규모(${scale})를 줄여서, 본전의 절반 이하면 시작안을 바꿉니다.`;
   const pass = twoWay
     ? `${iga(expect)} 본전(${surveyPeriodFor(result, decision.go)}) 이상이고 ${kept} 수가 위 ${people} 이상이면 진행을 검토하고, 그보다 적으면 시작안을 바꿉니다.`
     : `${iga(expect)} 본전(${surveyPeriodFor(result, decision.go)}) 이상이고 ${kept} 수가 위 ${people}${result.shape.cycle === "enroll" ? "" : `(쓴 ${result.shape.cycle === "once" ? "개수" : "횟수"} 가정을 함께 밝힘)`} 이상이면 ${result.shape.premises ? "계약을 검토하고" : "진행을 검토하고"}, ${iga(expect)} 본전의 절반(${surveyPeriodFor(result, decision.floor)}) 이하이면 ${result.shape.premises ? "계약하지 않고 " : ""}시작안을 바꾸며, 그 사이면 규모를 줄여 다시 조사합니다.`;
@@ -709,7 +714,7 @@ export function cashflowMarkdown(result: CashflowScenarios): string {
     "",
     `### ${kinds(result)} 경우로 본 한 달`,
     "",
-    `한 ${unit}에 실제 남는 돈 ${won(result.contribution)}으로 매달 나가는 ${won(result.monthlyFixedCost)}을 메우는 ${breakEvenWord(result)} 월 ${count(result.breakEven, unit)}${perDay(result.daily, result.breakEven, unit, text => `, ${text}(월 26일 ${result.words.day} 기준)`)}입니다.`,
+    `한 ${unit}에 실제 남는 돈 ${won(result.contribution)}으로 매달 나가는 ${won(result.monthlyFixedCost)}을 메우는 ${breakEvenWord(result)} 월 ${count(result.breakEven, unit)}${perDay(result, result.breakEven, unit, text => `, ${text}(월 ${result.days}일 ${result.words.day} 기준)`)}입니다.`,
     "",
     `| 경우 | 한 달 ${result.terms.sold} | 들어오는 돈(매출) | 나가는 돈${result.shape.vat === "exempt" ? "" : "(부가세 포함)"} | 남거나 모자라는 돈 | 근거 |`,
     "| --- | ---: | ---: | ---: | ---: | --- |",
@@ -768,15 +773,15 @@ export function cashflowReference(result: CashflowScenarios, options: { basis?: 
     `- 한 ${result.unit}에 실제 남는 돈에서 ${unknown}는 아직 빼지 않았습니다(확인 필요). 그래서 ${breakEvenWord(result)} 낙관적인 쪽이고, 이 값을 지어서 채우지 않습니다. ${VAT_POINTER}`,
     `- ${ownerShareLine(result)}`,
     // 하루 환산(월 26일 영업 — 처리량 환산과 같은 가정): 실행 장이 '하루 몇 개면 바꾼다' 같은 판단 기준을 숫자를 지어내지 않고 세우게 한다
-    perDay(result.daily, result.breakEven, result.unit, text => `- 하루 환산(월 26일 ${result.words.day} 가정): 본전 ${text}`),
-    ...result.scenarios.map(s => `- ${s.label}(${scenarioBasis(result, s)}): 월 ${count(s.volumes.at(-1)!, result.unit)}${perDay(result.daily, s.volumes.at(-1)!, result.unit, text => `(${text})`)}${s.volumes[0] !== s.volumes.at(-1) ? `, 첫 달 월 ${count(s.volumes[0], result.unit)}${perDay(result.daily, s.volumes[0], result.unit, text => `(${text})`)}` : ""}, 한 달에 ${won(s.net.at(-1)!)}, 12개월 누적 ${won(s.cumulative.at(-1)!)}`),
+    perDay(result, result.breakEven, result.unit, text => `- 하루 환산(월 ${result.days}일 ${result.words.day} 가정): 본전 ${text}`),
+    ...result.scenarios.map(s => `- ${s.label}(${scenarioBasis(result, s)}): 월 ${count(s.volumes.at(-1)!, result.unit)}${perDay(result, s.volumes.at(-1)!, result.unit, text => `(${text})`)}${s.volumes[0] !== s.volumes.at(-1) ? `, 첫 달 월 ${count(s.volumes[0], result.unit)}${perDay(result, s.volumes[0], result.unit, text => `(${text})`)}` : ""}, 한 달에 ${won(s.net.at(-1)!)}, 12개월 누적 ${won(s.cumulative.at(-1)!)}`),
     ...cashflowFindings(result, { reference: true }).map(line => `- ${line}`),
     ...decisionLines(result).map(line => `- ${line}`),
     // 참고 문장은 중단선까지만 달수를 쓰고 잔액 0원까지는 한 마디로(중단선이 월 고정비 3개월분이라 최대 3개월 더) — intake-context 8,000자 상한
     result.survival.length ? `- 매출이 없어도 중단선까지 버티는 기간((준비 예산 − 초기 지출${result.prepCost > 0 ? ` − ${prepLabel(result)}` : ""} − 중단선) ÷ 월 고정비, 잔액 0원까지는 최대 3개월 더): ${result.survival.map(row => `초기 지출 ${won(row.spend)}이면 ${monthsText(row.toStop)}`).join(", ")}` : "",
     goalLine(result),
     result.goalPeriodMonths ? `- 목표 기간 세는 법(모든 장에서 같게 씁니다): '${result.goalPeriodMonths}개월 안에'는 ${result.words.at}${result.prep.openWeek ? `(${result.prep.openWeek}주차)` : ""}부터 ${result.goalPeriodMonths}개월로 셉니다(가정). 오늘부터 세지 않습니다.` : undefined,
-    result.priceAlternatives.length ? `- 가격을 바꾸면(${won(Math.abs(result.priceAlternatives[0].price - result.unitPrice))}씩, 한 건당 비용은 같다고 가정, ${result.shape.vat === "exempt" ? "부가세는 면세로 봄" : "부가세는 가격마다 다시 뺌"}, ${chapterRef("strategy/price")}에서 씀): ${result.priceAlternatives.map(alt => `${won(alt.price)} → 본전 ${result.daily && alt.breakEven / 26 >= 1 ? `하루 약 ${count(alt.breakEven / 26, result.unit)} / 한 달 ${count(alt.breakEven, result.unit)}` : surveyPeriodFor(result, alt.breakEven)}`).join(" / ")}` : "",
+    result.priceAlternatives.length ? `- 가격을 바꾸면(${won(Math.abs(result.priceAlternatives[0].price - result.unitPrice))}씩, 한 건당 비용은 같다고 가정, ${result.shape.vat === "exempt" ? "부가세는 면세로 봄" : "부가세는 가격마다 다시 뺌"}, ${chapterRef("strategy/price")}에서 씀): ${result.priceAlternatives.map(alt => `${won(alt.price)} → 본전 ${result.daily && alt.breakEven / result.days >= 1 ? `하루 약 ${count(alt.breakEven / result.days, result.unit)} / 한 달 ${count(alt.breakEven, result.unit)}` : surveyPeriodFor(result, alt.breakEven)}`).join(" / ")}` : "",
     "- 초기 지출(입력이 없으면), 대표님 개인 생활비, 소득세는 이 계산에 빠져 있습니다.",
   ].filter(Boolean).join("\n");
 }
@@ -786,7 +791,7 @@ export function cashflowReference(result: CashflowScenarios, options: { basis?: 
  * 판매가·한 건당 비용만 알면 계산되며, 이 세 금액은 사실이 아니라 '이만큼이면'이라는 가정이다. 실제 견적이 나오면 그 값으로 바꾼다.
  */
 export const ASSUMED_FIXED_COSTS = [500_000, 1_500_000, 3_000_000] as const;
-export type FixedCostAssumptions = { unit: string; daily: boolean; unitPrice: number; vat: number; contribution: number; rows: Array<{ fixed: number; breakEven: number }> };
+export type FixedCostAssumptions = { unit: string; daily: boolean; days: number; unitPrice: number; vat: number; contribution: number; rows: Array<{ fixed: number; breakEven: number }> };
 
 export function fixedCostAssumptionsFromFields(fields: Array<{ key: string; value: string }>): FixedCostAssumptions | null {
   const get = (key: string) => fields.find(field => field.key === key)?.value;
@@ -794,14 +799,14 @@ export function fixedCostAssumptionsFromFields(fields: Array<{ key: string; valu
   if (price == null || unitCost == null || coachAmount(get("cost")) != null || !(price > 0)) return null;
   const contribution = realUnitMargin(price, unitCost);
   if (contribution <= 0) return null;
-  const capacity = monthlyVolumeFromCapacity(get("capacity"));
-  return { unit: capacity?.unit || "건", daily: /하루/.test(get("capacity") ?? ""), unitPrice: price, vat: vatInPrice(price), contribution, rows: ASSUMED_FIXED_COSTS.map(fixed => ({ fixed, breakEven: Math.ceil(fixed / contribution) })) };
+  const days = monthDaysFromFields(fields), capacity = monthlyVolumeFromCapacity(get("capacity"), days);
+  return { unit: capacity?.unit || "건", daily: /하루/.test(get("capacity") ?? ""), days, unitPrice: price, vat: vatInPrice(price), contribution, rows: ASSUMED_FIXED_COSTS.map(fixed => ({ fixed, breakEven: Math.ceil(fixed / contribution) })) };
 }
 
 export function fixedCostAssumptionReference(result: FixedCostAssumptions): string {
   return [
     `월 고정비를 아직 몰라 본전 판매량을 세 가지 고정비 가정으로 계산했습니다(가정 — 실제 월세·관리비·고정 인건비를 알면 그 값으로 바꿉니다). 한 건에 실제 남는 돈은 판매가 ${won(result.unitPrice)}에서 부가세 ${won(result.vat)}(${VAT_BASIS}, 과세 유형 확인 필요)와 한 건당 비용을 뺀 ${won(result.contribution)}입니다.`,
-    ...result.rows.map(row => `- 월 고정비 ${won(row.fixed)}(가정)이면 본전 ${periods(result.daily, row.breakEven, result.unit)}`),
+    ...result.rows.map(row => `- 월 고정비 ${won(row.fixed)}(가정)이면 본전 ${periods(result, row.breakEven, result.unit)}`),
     "- 이 세 금액은 가정이므로 본문에서 실제 고정비처럼 쓰지 않고, 고정비 견적을 받는 일을 확인할 일로 둡니다.",
   ].join("\n");
 }
@@ -814,7 +819,7 @@ export function fixedCostAssumptionMarkdown(result: FixedCostAssumptions): strin
     "",
     "| 월 고정비(가정) | 본전 판매량 |",
     "| ---: | --- |",
-    ...result.rows.map(row => `| ${won(row.fixed)} | ${periods(result.daily, row.breakEven, result.unit)} |`),
+    ...result.rows.map(row => `| ${won(row.fixed)} | ${periods(result, row.breakEven, result.unit)} |`),
     "",
     "- 실제 월세·관리비·고정 인건비 견적을 받으면 이 표 대신 세 가지 경우의 통장 흐름이 계산됩니다.",
   ].join("\n");
@@ -823,5 +828,5 @@ export function fixedCostAssumptionMarkdown(result: FixedCostAssumptions): strin
 /** 대화에서 모은 값(가격·변동비·고정비 + 처리량·목표·예산·초기 지출)으로 세 경우를 만든다. 저장된 대표 생활비(livingCost)는 쓰지 않는다 */
 export function cashflowFromFields(fields: Array<{ key: string; value: string }>, money: { unitPrice: number; unitVariableCost: number; monthlyFixedCost: number; online?: boolean; shape?: CashflowShape }): CashflowScenarios | null {
   const get = (key: string) => fields.find(field => field.key === key)?.value;
-  return buildCashflowScenarios({ unitPrice: money.unitPrice, unitVariableCost: money.unitVariableCost, monthlyFixedCost: money.monthlyFixedCost, capacity: get("capacity"), goal: get("goal"), budget: get("budget"), setupCost: get("setupCost"), offer: get("offer"), online: money.online, shape: money.shape });
+  return buildCashflowScenarios({ unitPrice: money.unitPrice, unitVariableCost: money.unitVariableCost, monthlyFixedCost: money.monthlyFixedCost, capacity: get("capacity"), monthDays: monthDaysFromFields(fields), goal: get("goal"), budget: get("budget"), setupCost: get("setupCost"), offer: get("offer"), online: money.online, shape: money.shape });
 }
