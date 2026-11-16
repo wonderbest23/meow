@@ -1,5 +1,6 @@
 import { freeReflectsLeft } from "./free-reflect";
 import { monthDaysFromFields, operatingDaysValue } from "./operating-days";
+import { intakeReaderEnabled } from "./intake-reader-flag";
 import { chaptersForType, sectionKey } from "./blueprint";
 import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, cashflowShapeFor, type CashflowShape, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
@@ -295,6 +296,7 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
     candidateIdeas: resources.ideas,
     resourceAssessment: resources.assessment,
     pendingExtraction: intake.notes.some(note => ["queued", "processing"].includes(note.status)) || intake.candidates.some(candidate => candidate.status === "pending"),
+    ...(intakeReaderEnabled() ? { reader: true } : {}),
   };
 }
 

@@ -1,4 +1,5 @@
 "use client";
+import { displayIntakeValue } from "../../../../lib/plan-builder/intake-core";
 import { ResourceFitDetails, resourceFitLine } from "./ResourcePanel";
 import { INTAKE_JOB_TIMING } from "../../../../lib/plan-builder/intake-timing";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
@@ -684,6 +685,14 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
        * "돈은 별로 없어 한 삼백"이라고 적으면 '300만원'과 적은 말이 두 개로 올라갔다. 적은 말 하나만 보이고, 읽은 값은 그 아래 작은 글로 남긴다.
        */
       if (message.role === "user" && message.id.endsWith(":context") && snapshot.coach.messages.some(other => other.role === "user" && `${other.id}:context` === message.id)) return null;
+      const readId = `${message.id}:read`;
+      const readAs = message.role !== "user" ? [] : [
+        ...Object.entries(snapshot.intake.answers).filter(([, answer]) => answer.messageId === readId && answer.status === "answered").map(([id, answer]) => {
+          const asked = snapshot.questions.find(item => item.id === id) ?? getIntakeQuestion(snapshot.intake.mode, snapshot.intake.sector, id, snapshot.structure?.values);
+          return asked ? `${asked.label} ${bubbleAnswerText(asked, displayIntakeValue(answer.value))}` : "";
+        }),
+        ...((snapshot.coach as { fields?: Array<{ key: string; value: string; messageId: string }> }).fields ?? []).filter(field => field.key === "operatingDays" && field.messageId === readId).map(field => `${field.value} 영업`),
+      ].filter(Boolean);
       const typed = message.role === "user" ? snapshot.coach.messages.find(other => other.role === "user" && other.id === `${message.id}:context`)?.text : undefined;
       const answerEntry = Object.entries(snapshot.intake.answers).find(([, answer]) => answer.messageId === message.id);
       const notes = snapshot.intake.notes.filter(note => note.id.startsWith(`${message.id}:`) && /^\d+$/.test(note.id.slice(message.id.length + 1)));
@@ -713,13 +722,15 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} aria-hidden="true" /></button>}
         </div>}
         {message.role === "assistant" && <MessageMeta text={text} at={message.at} />}
+        {/* AI 읽기(read)로 넣은 값 — 적은 말 아래에 무엇으로 읽었는지 한 줄(틀리게 읽었으면 여기서 바로 보인다) */}
+        {readAs.length > 0 && <p className={styles.messageStatus} data-read-as>{withRo(readAs.join(" · "))} 적었어요</p>}
         {typed && labelled && answerEntry?.[1].status !== "unknown" && <p className={styles.messageStatus} data-read-as>{withRo(bubbleAnswerText(labelled, text))} 적었어요</p>}
         {receipt && message.id === lastUserId && !notes.length ? <p className={styles.messageStatus} data-receipt>{receipt}</p>
           : message.id === industryAnswerId && replacedIndustry.size > 0 ? <p className={styles.messageStatus}>업종을 바꿨어요</p>
           : changedAnswerIds.has(message.id) && <p className={styles.messageStatus}>답을 바꿨어요</p>}
         {/* 질문으로 남긴 글은 아래 'AI 답변 받기'가 따로 안내한다 — 질문 말풍선에 '입력은 저장됨'을 붙이지 않는다 */}
         {margin?.anchor === message.id && <WorkLog card items={[margin]} unit="" />}
-        {notes.length > 0 && !notes.every(note => note.intent === "question") && <p className={styles.messageStatus}>{notes.some(note => note.status === "failed") ? "입력은 저장됨 · 자동 정리는 미완료" : notes.some(note => note.status === "queued" || note.status === "processing") ? "입력은 저장됨 · 자동 정리 중" : notes.some(note => note.status === "review") ? "입력은 저장됨 · 정리한 내용 확인 필요" : "입력은 저장됨"}</p>}
+        {notes.length > 0 && !readAs.length && !notes.every(note => note.intent === "question") && <p className={styles.messageStatus}>{notes.some(note => note.status === "failed") ? "입력은 저장됨 · 자동 정리는 미완료" : notes.some(note => note.status === "queued" || note.status === "processing") ? "입력은 저장됨 · 자동 정리 중" : notes.some(note => note.status === "review") ? "입력은 저장됨 · 정리한 내용 확인 필요" : "입력은 저장됨"}</p>}
       </div>;
     })()))}
     {!logPlaced && log!.node}
