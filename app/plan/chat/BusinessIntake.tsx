@@ -1826,9 +1826,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    * '이렇게 알아들었어요' · '말하지 않은 것은 이렇게 채웠어요' — 처음 보일 때는 펼쳐 두고, 대화가 다음 질문으로 넘어가면 한 줄로 접는다(대표 결정 2026-11-14).
    * 접힌 줄을 누르면 다시 펼친다(손으로 고른 것은 그대로 둔다). 다시 불러온 대화처럼 처음부터 있던 상자는 접힌 채로 시작한다.
    */
+  /* 대화가 불러와진 뒤(브라우저에서만) 그려지는 상자라 여기서 화면 폭을 읽어도 서버 그림과 어긋나지 않는다 */
+  const narrowScreen = typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches;
   const understoodBox = (key: "said" | "filled", title: string, items: typeof saidAnswers, summary: string) => {
     if (!items.length) return null;
-    const open = chipsOpen[key] ?? chipsFresh;
+    /* 휴대폰에서는 처음부터 접힌 채로(2026-11-15 사장님) — 펼쳐 두면 화면을 다 차지해 질문이 아래로 밀렸다 */
+    const open = chipsOpen[key] ?? (chipsFresh && !narrowScreen);
     return <>
       <h3><button type="button" aria-expanded={open} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><b>{title}</b>{open ? <small>다르면 눌러서 바꾸세요</small> : <span>{summary}</span>}<em data-open={open || undefined} aria-hidden="true"><ChevronDown size={16} /></em></button></h3>
       {open && <div data-said={key === "said" ? "" : undefined}>{items.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div>}
@@ -1899,7 +1902,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
             {job && <section className={styles.job} aria-label="AI 작업 상태">{aiBusy && (!showCompletion || job.kind === "help") && job.kind !== "design" && job.kind !== "edit" && <JobProgress snapshot={plan} announce variant="chat" />}{job.status === "failed" && <div className={styles.error} role="alert"><p>{job.error || "AI 작업을 완료하지 못했어요."}</p><p>저장한 답변과 메모는 그대로 남아 있습니다.</p><AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => void send(job.kind === "extract" ? { action: "extract" } : job.kind === "design" ? { action: "design" } : job.kind === "ideas" ? { action: "ideas", message: job.request || "지금 조건으로 다른 사업을 제안해 주세요" } : { action: "help", message: job.request || draft.help })}><RefreshCw size={16} aria-hidden="true" />다시 요청</AppButton></div>}{/* 사업 방향(design) 결과는 아래 카드 한 곳에서만 보인다 — 예전엔 같은 내용이 대화 글로도 한 번 더 나왔다 */}{job.status === "complete" && job.reply && job.kind !== "design" && !plan.coach.messages.some(message => message.id === `${job.id}:reply`) && <div className={styles.aiReply}><h3>{job.kind === "help" ? "AI 답변" : "메모 정리 결과"}</h3><ConversationText key={job.id} text={job.reply} /></div>}</section>}
             {showReview ? <><ExtractionReview key={plan.planId} snapshot={plan} disabled={blocked} onCommand={command => void send(command)} /><AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => setDeferredReview(reviewKey)}>나중에 확인하고 대화 이어가기</AppButton></> : reviewCandidates.length > 0 && <AppButton type="button" variant="text" className={styles.textButton} disabled={blocked || hasLocalInput(draft)} onClick={() => { follow.current = true; setDeferredReview(""); }}>메모에서 찾은 내용 {reviewCandidates.length}개 확인</AppButton>}
             {!locked && questionNote && !questionHandled && <section className={styles.noteReceipt} aria-label="저장한 질문"><p>질문을 저장했어요</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "help", message: lastMessage!.text })}><MessageCircle size={16} aria-hidden="true" />AI 답변 받기</AppButton></section>}
-            {!locked && memoPending && <AppButton type="button" variant="text" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</AppButton>}
+            {/* 일반 모드에서는 보이지 않는다(2026-11-15 사장님) — 이름만 봐서는 무엇인지 알기 어려웠다. 메모는 그대로 저장된다 */}
+            {!locked && memoPending && depthNow !== "easy" && <AppButton type="button" variant="text" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</AppButton>}
             {understanding && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요" note="말하지 않은 것은 같은 업종 기준값으로 먼저 채우고 있어요." /></div>}
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview || understanding}>
               {/* 쓰는 동안 받아 둔 요청을 보내 채팅 수정 화면이 되어도 마무리 말(계획서 보기 · 홈페이지 만들기)을 먼저 남기고 그 아래에 제안 카드 */}
