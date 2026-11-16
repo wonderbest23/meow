@@ -1,5 +1,5 @@
 import { freeReflectsLeft } from "./free-reflect";
-import { monthDaysFromFields } from "./operating-days";
+import { monthDaysFromFields, operatingDaysValue } from "./operating-days";
 import { chaptersForType, sectionKey } from "./blueprint";
 import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, cashflowShapeFor, type CashflowShape, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
@@ -940,6 +940,41 @@ export function applyUnderstood(coach: CoachState, intake: IntakeState, items: N
       if (question.fieldKey) setField(coach, question.fieldKey, `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, messageId, displayIntakeValue(item.value), "user");
       applied += 1;
     } catch { /* 형식이 안 맞으면 버린다 — 기준값이 그대로 남는다 */ }
+  }
+  return applied;
+}
+
+/*
+ * 대화 중 적은 말에서 AI가 읽은 것을 넣는다(intake-reader, 2026-11-16). applyUnderstood(첫 문장)와 달리 사용자가 방금 한 말이므로
+ * 직접 답한 칸도 새 값으로 바꾼다("아니 아까 말한 건 취소, 예산 천만원"). 형식이 안 맞는 값은 버린다 — 지금 값이 그대로 남는다.
+ *  - 주당 영업일은 질문이 없는 칸이라 사업 정보 표에 바로 적는다(계산표가 읽는다 — operating-days.ts)
+ *  - 모른다고 한 질문은 아직 답이 없거나 기준값일 때만 '모름'으로 넘긴다(직접 답한 것을 지우지 않는다)
+ * 넣은 칸 수를 돌려준다.
+ */
+export const READ_SUFFIX = ":read";
+export function applyRead(coach: CoachState, intake: IntakeState, items: NonNullable<IntakeCommand["read"]>, requestId: string, at: string): number {
+  const messageId = `${requestId}${READ_SUFFIX}`, questions = intakeQuestions(intake, coach);
+  let applied = 0;
+  for (const item of items.answers) {
+    const question = questions.find(candidate => candidate.id === item.questionId);
+    if (!question || question.id === "industry") continue;
+    try {
+      const value = validatedAnswer(question, item.value);
+      intake.answers[question.id] = { status: "answered", value, messageId, at, quote: item.quote };
+      if (question.fieldKey) setField(coach, question.fieldKey, `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, messageId, item.quote, "user");
+      applied += 1;
+    } catch { /* 형식이 안 맞으면 버린다 */ }
+  }
+  if (items.operatingDays && Number.isInteger(items.operatingDays.days) && items.operatingDays.days >= 1 && items.operatingDays.days <= 7) {
+    setField(coach, "operatingDays", operatingDaysValue(items.operatingDays.days), messageId, items.operatingDays.quote, "user");
+    applied += 1;
+  }
+  for (const id of items.unknown) {
+    const question = questions.find(candidate => candidate.id === id), now = intake.answers[id];
+    if (!question || question.id === "business" || question.id === "industry" || now && now.status === "answered" && !now.messageId.endsWith(ESTIMATE_SUFFIX)) continue;
+    if (now?.status === "answered") continue; // 기준값이 채워져 있으면 그대로 쓴다('알아서 해줘' = 기준값대로)
+    intake.answers[id] = { status: "unknown", value: null, messageId, at };
+    applied += 1;
   }
   return applied;
 }

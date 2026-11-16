@@ -59,12 +59,14 @@ export type IntakeState = {
   /** 일반 모드에서 사업 문장을 AI로 한 번 읽었다(읽은 것이 없어도 켠다 — 사업마다 한 번만 부른다) */
   understood?: boolean;
 };
-export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss", "sector-keep", "depth", "understand"] as const;
+export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss", "sector-keep", "depth", "understand", "read"] as const;
 export type IntakeCommand = {
   action: (typeof INTAKE_ACTIONS)[number];
   planId?: string; revision: number; requestId: string;
   /** action "understand": 사용자가 적은 문장에서 읽은 답(서버가 AI로 읽어 넣는다 — 화면이 보내지 않는다) */
   understood?: Array<{ questionId: string; value: IntakeValue }>;
+  /** action "read": 대화 중 적은 말에서 AI가 읽은 것(intake-reader) — 질문의 답 · 주당 영업일 · 모른다고 한 질문. 서버가 읽어 넣는다(INTAKE_AI_READER) */
+  read?: { answers: Array<{ questionId: string; value: IntakeValue; quote: string }>; operatingDays?: { days: number; quote: string }; unknown: string[] };
   /** action "start"(새 대화) · "depth"(진행 중 바꾸기): 대화 방식 */
   depth?: "easy" | "expert";
   mode?: IntakeMode; questionId?: string; value?: IntakeValue; unknown?: boolean;
