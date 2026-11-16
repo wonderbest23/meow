@@ -21,7 +21,7 @@ import { EDITABLE_FACT_IDS } from "./fact-highlight";
 import { getServerSupabase } from "../persistence";
 import { notifyOwnerBySms } from "../notify/owner-sms";
 import { rateLimit } from "../rate-limit";
-import { confirmedIntakeContext } from "./intake-context";
+import { confirmedIntakeContext, ownerNotesContext } from "./intake-context";
 
 import { intakeCommandSchema } from "./intake-command";
 import { applyIntakeResources } from "./intake-resource-update";
@@ -436,7 +436,7 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
       const stepOrder = guide ? `\n${JSON.stringify({ industryStepOrder: { name: guide.name, steps: playbookStepOrder(guide) } })}` : "";
       for (let designAttempt = 0; designAttempt < 2 && !raw; designAttempt++) {
         let designFailure: string | undefined;
-        raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}${stepOrder}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => normalizeGeneratedDesign(value) !== null, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false , onFailure: event => { designFailure = event.code; } });
+        raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}${stepOrder}${ownerNotesContext(claimed.intake.notes)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => normalizeGeneratedDesign(value) !== null, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false , onFailure: event => { designFailure = event.code; } });
         if (!raw && designFailure !== "invalid_json" && designFailure !== "invalid_response") break;
       }
       const normalized = normalizeGeneratedDesign(raw);
