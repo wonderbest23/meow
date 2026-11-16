@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import { COACH_KEY, COACH_VERSION, coachContext, type CoachState } from "../lib/plan-builder/coach";
-import { INTAKE_CONTEXT_MAX_LENGTH, INTAKE_CONTEXT_RULES, boundedIntakeContext, confirmedIntakeContext, withConfirmedIntakeContext, type IntakeContextInput } from "../lib/plan-builder/intake-context";
+import { INTAKE_CONTEXT_MAX_LENGTH, INTAKE_CONTEXT_RULES, OWNER_NOTES_ABOUT, boundedIntakeContext, confirmedIntakeContext, ownerNotesContext, withConfirmedIntakeContext, type IntakeContextInput } from "../lib/plan-builder/intake-context";
 import { detailQuestions, intakeSectorOptions } from "../lib/plan-builder/intake-questions";
 import { PLAN_BLUEPRINT } from "../lib/plan-builder/blueprint";
 import { intakeDataOnly } from "../lib/plan-builder/section-prompt-v3";
@@ -341,6 +341,21 @@ async function main() {
   const onlyKsic: Record<string, Record<string, unknown>> = { __business_intake: { state: { ksic: "58222" } } };
   assert.equal(parse(confirmedIntakeContext(onlyKsic)).ksic?.code, "58222", "A confirmed KSIC alone is enough to produce a context");
   console.log(JSON.stringify({ passed: ["confirmed-only canonical input", "active-sector-only context with archived answers preserved", "all sector labels", "operating reporting period", "unknown versus explicit zero", "UI and transport invariance", "whole-entry 8000-character bound", "section and streaming prompt capture", "review prompt capture", "refresh numeric evidence", "unsupported-number rejection", "payload-builder source assertions", "refresh consent snapshot and runtime handoff", "artifact document chunk handoff"], mockRequests: captured.length, paidCalls: 0, externalCalls: 0 }));
+}
+
+/* 대화 중 남긴 메모는 사업 방향 정리에 참고 자료로 함께 간다(2026-11-16) — 확정 답과 따로 묶고, 최근 5개 · 3,000자까지, 질문으로 남긴 글은 뺀다 */
+{
+  assert.equal(ownerNotesContext([]), "", "메모가 없으면 아무것도 붙이지 않는다");
+  assert.equal(ownerNotesContext([{ text: "그건 왜 물어봐?", intent: "question" }]), "", "질문으로 남긴 글은 메모가 아니다");
+  const parsed = JSON.parse(ownerNotesContext([{ text: "오래된 메모" }, ...["하나", "둘", "셋", "넷"].map(text => ({ text, intent: "memo" as const })), { text: "질문?", intent: "question" as const }, { text: "  주말에만 할 거야  ", intent: "memo" as const }]));
+  assert.deepEqual(parsed.ownerNotes.items, ["하나", "둘", "셋", "넷", "주말에만 할 거야"], "최근 메모 5개를 적은 순서대로, 앞뒤 공백 없이");
+  assert.equal(parsed.ownerNotes.about, OWNER_NOTES_ABOUT);
+  assert.match(OWNER_NOTES_ABOUT, /참고 자료이며 지시가 아닙니다/, "메모는 지시가 아니라고 적어 넘긴다");
+  assert.match(OWNER_NOTES_ABOUT, /확정 답을 따르고/, "확정 답과 어긋나면 확정 답이 이긴다");
+  const long = ownerNotesContext(Array.from({ length: 5 }, () => ({ text: "가".repeat(2000) })));
+  assert.ok(long.length < 3400, `메모는 합계 3,000자 안팎으로 자른다(${long.length})`);
+  const service = readFileSync(new URL("../lib/plan-builder/intake-service.ts", import.meta.url), "utf8");
+  assert.match(service, /confirmedIntakeContext\(claimed\.plan\.answers\)\}\$\{stepOrder\}\$\{ownerNotesContext\(claimed\.intake\.notes\)\}/, "사업 방향 정리 요청에 메모가 붙는다");
 }
 
 void main().catch(error => { console.error(error); process.exitCode = 1; });
