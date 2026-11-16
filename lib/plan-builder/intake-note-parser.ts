@@ -31,6 +31,7 @@ export const fieldLabels: Record<CoachField["key"], readonly string[]> = {
   hoursPerWeek: ["주당 작업시간", "주당 작업 시간", "주당 가능 시간"],
   minutesPerSale: ["건당 소요 시간", "건당 소요시간", "건당 소요 분"],
   livingCost: ["생활비", "월 생활비", "대표 생활비"],
+  operatingDays: ["영업일", "주당 영업일", "여는 날"],
 };
 const labels = new Map<string, CoachField["key"]>();
 for (const key of coachFieldSchema.shape.key.options) {

@@ -1,4 +1,5 @@
 import { freeReflectsLeft } from "./free-reflect";
+import { monthDaysFromFields } from "./operating-days";
 import { chaptersForType, sectionKey } from "./blueprint";
 import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, cashflowShapeFor, type CashflowShape, fixedCostAssumptionReference, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyReference } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
@@ -407,6 +408,7 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
   const structure = effectiveStructure(intake).values;
   const labels = { ...COACH_FIELD_LABELS, ...structureFieldLabels(structure) };
   const fields = new Map(coach.fields.map(field => [field.key, field.value]));
+  const monthDays = monthDaysFromFields(coach.fields);
   const amount = (key: CoachField["key"]) => coachAmount(fields.get(key));
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   const unitPrice = amount("price"), unitVariableCost = amount("unitCost"), monthlyFixedCost = amount("cost");
@@ -424,7 +426,7 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
       const perMonth = sales / months;
       volume = Math.round(perMonth / unitPrice); volumeSource = "actual";
       notes.push(`실적 기준 판매량: 매출 ${won(sales)} ÷ ${Math.round(months * 10) / 10}개월 ÷ ${labels.price} ${won(unitPrice)} = 월 약 ${volume.toLocaleString("ko-KR")}건`);
-      const capacity = monthlyVolumeFromCapacity(fields.get("capacity"));
+      const capacity = monthlyVolumeFromCapacity(fields.get("capacity"), monthDays);
       if (capacity && capacity.volume > 0) notes.push(volume > capacity.volume
         ? `실적 판매량이 처리량(월 ${capacity.volume.toLocaleString("ko-KR")}${capacity.unit})보다 많습니다. 가격(평균 결제액)이나 처리량 답을 확인해 주세요.`
         : `처리량 월 ${capacity.volume.toLocaleString("ko-KR")}${capacity.unit} 중 약 ${Math.round(volume / capacity.volume * 100)}%를 쓰고 있습니다.`);
@@ -434,7 +436,7 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
   if (volume === undefined && billable != null) { volume = Math.round(billable * 4.3); volumeSource = "hours"; notes.push(`주 ${billable}시간 청구 × 4.3주 = 월 ${volume}시간`); }
   const occupancy = structure.revenue === "rental" ? structureNumber(intake, "structure.occupancy") : null;
   if (volume === undefined) {
-    const capacity = monthlyVolumeFromCapacity(fields.get("capacity"));
+    const capacity = monthlyVolumeFromCapacity(fields.get("capacity"), monthDays);
     if (capacity) {
       notes.push(capacity.note);
       if (structure.revenue === "rental") {
@@ -459,7 +461,8 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
 export function intakeDetailChecks(coach: CoachState, intake: IntakeState, scenario: { volume: number; actual: boolean } | null): string[] {
   const detail = (id: string) => { const answer = intake.answers[id]; return answer?.status === "answered" && typeof answer.value === "number" && Number.isFinite(answer.value) && answer.value >= 0 ? answer.value : null; };
   const field = (key: CoachField["key"]) => coach.fields.find(item => item.key === key)?.value;
-  const capacity = monthlyVolumeFromCapacity(field("capacity"));
+  const monthDays = monthDaysFromFields(coach.fields);
+  const capacity = monthlyVolumeFromCapacity(field("capacity"), monthDays);
   const volume = scenario?.volume ?? capacity?.volume ?? null;
   // 예약·수업처럼 물건을 팔지 않는 사업은 '판매량·처리량' 대신 건수로 쓴다(계획서 품질 Q9 — 네일·과외 계산 자료에 물건 판매 말)
   const service = ["visits", "enroll"].includes(intakeCashflowShape(coach, intake).cycle);
@@ -490,11 +493,11 @@ export function intakeDetailChecks(coach: CoachState, intake: IntakeState, scena
     const max = perMonth(value);
     lines.push(`- 업종 점검(${basis}): ${what} 월 최대 약 ${n(max)}건이고, ${volumeLabel} 월 ${n(volume)}건은 그 ${share(volume, max)}입니다${volume > max ? `. 처리 가능한 양을 넘으므로 인력·기간을 다시 잡아야 합니다` : ""}.`);
   };
-  ceiling("logistics.dailyShipments", value => value * 26, "배송 가능량(하루 × 월 26일)은");
+  ceiling("logistics.dailyShipments", value => value * monthDays, `배송 가능량(하루 × 월 ${monthDays}일)은`);
   ceiling("b2b_service.deliveryDays", value => Math.max(1, Math.floor(30 / value)), "한 번에 한 건씩 진행하면 처리 가능한 프로젝트는");
   ceiling("content_media.productionDays", value => Math.max(1, Math.floor(30 / value)), "한 번에 하나씩 만들면 완성 가능한 납품물은");
   const peak = detail("food_beverage.peakOrders");
-  if (peak != null && peak > 0 && volume) lines.push(`- 업종 점검(${basis}): 하루 평균 약 ${n(volume / 26)}건(월 26일 영업), 가장 바쁜 1시간 처리 가능 ${n(peak)}건.`);
+  if (peak != null && peak > 0 && volume) lines.push(`- 업종 점검(${basis}): 하루 평균 약 ${n(volume / monthDays)}건(월 ${monthDays}일 영업), 가장 바쁜 1시간 처리 가능 ${n(peak)}건.`);
   const cashLine = (id: string, what: string) => {
     const quantity = detail(id);
     if (quantity == null || quantity <= 0 || unitCost == null) return;
@@ -574,7 +577,7 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   if (cycle != null) lines.push(`- 문의→계약 ${cycle}일: 첫 입금은 영업 시작 후 약 ${cycle}일 뒤부터 잡습니다.`);
   // 온라인 판매는 '영업일'이 아니라 만드는·보내는 날 — 처리량 환산 문구를 맞춘다(2026-10-22 캔들 스토어 '월 26일 영업')
   // 월 등록 사업은 '일주일 6명 × 4.3주'가 등록 인원이 아니다 — 돈 계산이 동시에 맡는 인원으로 따로 쓴다(계획서 품질 Q7)
-  const shownNotes = (flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치") && !(flow.shape.cycle === "enroll" && /× 월 (?:4\.3주|26일)/.test(note))) : notes).map(note => online ? note.replace(/월 26일 영업/g, "월 26일 작업") : note);
+  const shownNotes = (flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치") && !(flow.shape.cycle === "enroll" && /× 월 (?:4\.3주|\d+일)/.test(note))) : notes).map(note => online ? note.replace(/월 (\d+)일 영업/g, "월 $1일 작업") : note);
   return [...lines, ...shownNotes.map(note => `- ${note}`), ...intakeDetailChecks(coach, intake, volume === undefined || inputs.volumeSource === "capacity" ? null : { volume, actual: inputs.volumeSource === "actual" })].filter(Boolean).join("\n");
 }
 
