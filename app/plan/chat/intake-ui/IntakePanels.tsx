@@ -679,6 +679,12 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
       // 사업 방향 요약 글(businessDesignReply)은 대화에 쌓지 않는다 — 앞 답을 고칠 때마다 한 벌씩 늘었다. 최신 방향은 아래 카드 한 곳에만 보인다.
       if (message.role === "assistant" && isDesignReplyText(message.text)) return null;
       if (replacedIndustry.has(message.id) || replacedAnswers.has(message.id)) return null;
+      /*
+       * 답과 함께 적은 말(서버가 '<답 번호>:context' 메모로 같이 저장한다)은 말풍선을 따로 만들지 않는다(2026-11-15 사장님) —
+       * "돈은 별로 없어 한 삼백"이라고 적으면 '300만원'과 적은 말이 두 개로 올라갔다. 적은 말 하나만 보이고, 읽은 값은 그 아래 작은 글로 남긴다.
+       */
+      if (message.role === "user" && message.id.endsWith(":context") && snapshot.coach.messages.some(other => other.role === "user" && `${other.id}:context` === message.id)) return null;
+      const typed = message.role === "user" ? snapshot.coach.messages.find(other => other.role === "user" && other.id === `${message.id}:context`)?.text : undefined;
       const answerEntry = Object.entries(snapshot.intake.answers).find(([, answer]) => answer.messageId === message.id);
       const notes = snapshot.intake.notes.filter(note => note.id.startsWith(`${message.id}:`) && /^\d+$/.test(note.id.slice(message.id.length + 1)));
       // Older message labels are display-only; edits always use the current stable question ID.
@@ -700,13 +706,14 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
         {sectionEdit?.tag && <p className={styles.bubbleTag}><StatusBadge tone="neutral">{sectionEdit.tag}</StatusBadge></p>}
         {/* 내 말풍선 — 누르면(휴대폰) 또는 마우스를 올리면(PC) 아래에 작은 아이콘 줄(복사 · 고치기)이 나타난다(lovable 6단계). 평소엔 숨긴다 */}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role} tabIndex={message.role === "user" ? 0 : undefined}>
-          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={questionPromptText(text.replace(/(?:아래 )?"계획서 (?:다시 작성하기|에 반영하기)"/, "\"계획서에 반영하기\""))} /></> : attachmentName(text) ? <p data-attachment><Paperclip size={14} aria-hidden="true" /> {attachmentName(text)}</p> : <p>{sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)}</p>}
+          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={questionPromptText(text.replace(/(?:아래 )?"계획서 (?:다시 작성하기|에 반영하기)"/, "\"계획서에 반영하기\""))} /></> : attachmentName(text) ? <p data-attachment><Paperclip size={14} aria-hidden="true" /> {attachmentName(text)}</p> : <p>{sectionEdit ? sectionEdit.body : typed ?? bubbleAnswerText(labelled, text)}</p>}
         </article>
         {message.role === "user" && <div className={styles.userActions} data-user-actions>
           <CopyButton text={sectionEdit ? sectionEdit.body : bubbleAnswerText(labelled, text)} />
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} aria-hidden="true" /></button>}
         </div>}
         {message.role === "assistant" && <MessageMeta text={text} at={message.at} />}
+        {typed && labelled && answerEntry?.[1].status !== "unknown" && <p className={styles.messageStatus} data-read-as>{withRo(bubbleAnswerText(labelled, text))} 적었어요</p>}
         {receipt && message.id === lastUserId && !notes.length ? <p className={styles.messageStatus} data-receipt>{receipt}</p>
           : message.id === industryAnswerId && replacedIndustry.size > 0 ? <p className={styles.messageStatus}>업종을 바꿨어요</p>
           : changedAnswerIds.has(message.id) && <p className={styles.messageStatus}>답을 바꿨어요</p>}
@@ -823,6 +830,13 @@ export function DesignProgress({ snapshot, announce = false }: { snapshot: Intak
 }
 
 /** 기다리는 동안의 한 줄 — 돌아가는 표시 + 지금 하는 일, 아래 회색 설명(가는 세로선 옆) */
+/** '300만원' → '300만원으로' · '20시간' → '20시간으로' · '카페' → '카페로'(받침이 없거나 ㄹ이면 '로') */
+function withRo(word: string): string {
+  const code = word.trim().charCodeAt(word.trim().length - 1) - 0xac00;
+  if (code < 0 || code > 11171) return `${word}(으)로`;
+  return `${word}${code % 28 === 0 || code % 28 === 8 ? "로" : "으로"}`;
+}
+
 export function ThinkingLine({ title, note }: { title: string; note: string }) {
   return <div className={styles.thinking} data-thinking>
     <p className={styles.thinkingHead}><LoaderCircle size={16} className={styles.spinner} aria-hidden="true" /><span>{title}</span></p>
