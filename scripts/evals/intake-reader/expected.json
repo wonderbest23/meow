@@ -1,0 +1,822 @@
+[
+{
+"id": 1,
+"must": {
+"budget": 3000000
+},
+"mustNot": []
+},
+{
+"id": 2,
+"must": {
+"budget": 20000000
+},
+"mustNot": []
+},
+{
+"id": 3,
+"must": {
+"budget": 50000000
+},
+"mustNot": []
+},
+{
+"id": 4,
+"must": {
+"budget": 30000000
+},
+"mustNot": []
+},
+{
+"id": 5,
+"must": {},
+"unknown": [
+"budget"
+],
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 6,
+"must": {},
+"unknown": [
+"hoursPerWeek"
+],
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 7,
+"must": {},
+"unknown": [
+"hoursPerWeek"
+],
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 8,
+"must": {
+"customer": "직장인"
+},
+"notUnknown": [
+"customer"
+],
+"mustNot": []
+},
+{
+"id": 9,
+"must": {
+"customer": "대학생"
+},
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 10,
+"must": {
+"operatingDays": 2
+},
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 11,
+"must": {
+"customer": "대학생"
+},
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 12,
+"must": {
+"hoursPerWeek": 20
+},
+"mustNot": []
+},
+{
+"id": 13,
+"must": {},
+"mustNot": [
+"hoursPerWeek"
+],
+"ask": [
+"hoursPerWeek"
+]
+},
+{
+"id": 14,
+"must": {
+"operatingDays": 2
+},
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 15,
+"must": {
+"budget": 20000000
+},
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 16,
+"must": {},
+"intent": "question",
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 17,
+"must": {},
+"intent": "none",
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 18,
+"must": {},
+"mustNot": [
+"customer",
+"price",
+"budget",
+"offer"
+]
+},
+{
+"id": 19,
+"must": {
+"business": "네일"
+},
+"mustNot": [
+"price",
+"customer"
+]
+},
+{
+"id": 20,
+"must": {
+"price": 15000
+},
+"mustNot": []
+},
+{
+"id": 21,
+"must": {
+"capacityPerDay": 10
+},
+"mustNot": []
+},
+{
+"id": 22,
+"must": {
+"operatingDays": 5,
+"capacityPerDay": 50
+},
+"mustNot": []
+},
+{
+"id": 23,
+"must": {
+"channel": "온라인"
+},
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 24,
+"must": {
+"cost": 1500000
+},
+"mustNot": []
+},
+{
+"id": 25,
+"must": {
+"budget": 8000000
+},
+"mustNot": []
+},
+{
+"id": 26,
+"must": {
+"budget": 10000000
+},
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 27,
+"must": {
+"business": "반찬",
+"customer": "직장인",
+"price": 15000
+},
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 28,
+"must": {},
+"unknown": [
+"price"
+],
+"mustNot": [
+"price"
+]
+},
+{
+"id": 29,
+"must": {},
+"mustNot": [
+"business",
+"customer",
+"offer",
+"channel",
+"price",
+"unitCost",
+"cost",
+"budget",
+"hoursPerWeek",
+"operatingDays",
+"capacityPerDay"
+]
+},
+{
+"id": 30,
+"must": {
+"operatingDays": 3
+},
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 31,
+"must": {
+"price": 20000
+},
+"mustNot": []
+},
+{
+"id": 32,
+"must": {
+"budget": 20000000
+},
+"mustNot": []
+},
+{
+"id": 33,
+"must": {
+"customer": "예비부부"
+},
+"mustNot": []
+},
+{
+"id": 34,
+"must": {
+"operatingDays": 5
+},
+"ask": [
+"hoursPerWeek"
+],
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 35,
+"must": {},
+"ask": [
+"hoursPerWeek"
+],
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 36,
+"must": {},
+"ask": [
+"budget"
+],
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 37,
+"must": {},
+"ask": [
+"price"
+],
+"mustNot": [
+"price"
+]
+},
+{
+"id": 38,
+"must": {
+"capacityPerDay": 20
+},
+"mustNot": []
+},
+{
+"id": 39,
+"must": {
+"cost": 2300000
+},
+"mustNot": []
+},
+{
+"id": 40,
+"must": {
+"budget": 5000000
+},
+"mustNot": []
+},
+{
+"id": 41,
+"must": {
+"budget": 1000000
+},
+"mustNot": []
+},
+{
+"id": 42,
+"must": {
+"customer": "20대"
+},
+"mustNot": []
+},
+{
+"id": 43,
+"must": {
+"channel": "배민"
+},
+"mustNot": []
+},
+{
+"id": 44,
+"must": {
+"price": 3500
+},
+"mustNot": []
+},
+{
+"id": 45,
+"must": {
+"budget": 120000000
+},
+"mustNot": []
+},
+{
+"id": 46,
+"must": {
+"unitCost": 5000
+},
+"mustNot": []
+},
+{
+"id": 47,
+"must": {
+"operatingDays": 7
+},
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 48,
+"must": {
+"channel": "인스타"
+},
+"mustNot": []
+},
+{
+"id": 49,
+"must": {
+"budget": 8000000
+},
+"mustNot": []
+},
+{
+"id": 50,
+"must": {},
+"mustNot": [
+"price"
+]
+},
+{
+"id": 51,
+"must": {
+"customer": "남녀노소"
+},
+"mustNot": []
+},
+{
+"id": 52,
+"must": {},
+"mustNot": [
+"budget",
+"price",
+"capacityPerDay",
+"hoursPerWeek"
+]
+},
+{
+"id": 53,
+"must": {
+"hoursPerWeek": 40,
+"operatingDays": 5
+},
+"mustNot": []
+},
+{
+"id": 54,
+"must": {
+"capacityPerDay": 15
+},
+"mustNot": []
+},
+{
+"id": 55,
+"must": {
+"budget": 5000000
+},
+"mustNot": [
+"customer",
+"channel",
+"offer"
+]
+},
+{
+"id": 56,
+"must": {
+"business|offer": "가죽"
+},
+"mustNot": [
+"price",
+"budget"
+]
+},
+{
+"id": 57,
+"must": {},
+"unknown": [
+"cost"
+],
+"mustNot": [
+"cost"
+]
+},
+{
+"id": 58,
+"must": {
+"price": 300000
+},
+"mustNot": []
+},
+{
+"id": 59,
+"must": {},
+"mustNot": [
+"customer"
+]
+},
+{
+"id": 60,
+"must": {
+"business": "꽃집",
+"budget": 20000000
+},
+"mustNot": [
+"operatingDays"
+]
+},
+{
+"id": 61,
+"must": {
+"budget": 5000000
+},
+"mustNot": []
+},
+{
+"id": 62,
+"must": {
+"budget": 15000000
+},
+"mustNot": []
+},
+{
+"id": 63,
+"must": {
+"budget": 0
+},
+"mustNot": []
+},
+{
+"id": 64,
+"must": {
+"price": 4000
+},
+"mustNot": []
+},
+{
+"id": 65,
+"must": {
+"price": 60000
+},
+"mustNot": []
+},
+{
+"id": 66,
+"must": {
+"price": 25000
+},
+"mustNot": []
+},
+{
+"id": 67,
+"must": {
+"cost": 800000
+},
+"mustNot": []
+},
+{
+"id": 68,
+"must": {
+"cost": 2000000
+},
+"mustNot": []
+},
+{
+"id": 69,
+"must": {
+"hoursPerWeek": 20,
+"operatingDays": 2
+},
+"mustNot": []
+},
+{
+"id": 70,
+"must": {
+"hoursPerWeek": 24,
+"operatingDays": 6
+},
+"mustNot": []
+},
+{
+"id": 71,
+"must": {},
+"ask": [
+"hoursPerWeek"
+],
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 72,
+"must": {
+"customer": "학부모"
+},
+"mustNot": []
+},
+{
+"id": 73,
+"must": {},
+"unknown": [
+"customer"
+],
+"mustNot": [
+"customer"
+]
+},
+{
+"id": 74,
+"must": {
+"channel": "스마트스토어"
+},
+"mustNot": []
+},
+{
+"id": 75,
+"must": {
+"offer": "원데이"
+},
+"mustNot": []
+},
+{
+"id": 76,
+"must": {
+"business": "치킨",
+"budget": 30000000,
+"channel": "배달",
+"price": 20000
+},
+"mustNot": []
+},
+{
+"id": 77,
+"must": {},
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 78,
+"must": {
+"budget": [
+20000000,
+50000000
+]
+},
+"mustNot": []
+},
+{
+"id": 79,
+"must": {},
+"mustNot": [
+"price"
+]
+},
+{
+"id": 80,
+"must": {
+"capacityPerDay": 6
+},
+"mustNot": []
+},
+{
+"id": 81,
+"must": {
+"capacityPerDay": 8
+},
+"mustNot": []
+},
+{
+"id": 82,
+"must": {
+"budget": 7000000
+},
+"mustNot": []
+},
+{
+"id": 83,
+"must": {
+"hoursPerWeek": 4,
+"operatingDays": 2
+},
+"mustNot": []
+},
+{
+"id": 84,
+"must": {
+"operatingDays": 7
+},
+"mustNot": [
+"hoursPerWeek"
+]
+},
+{
+"id": 85,
+"must": {
+"budget": 10000000
+},
+"mustNot": []
+},
+{
+"id": 86,
+"must": {
+"price": 10000
+},
+"mustNot": []
+},
+{
+"id": 87,
+"must": {
+"budget": 10000000
+},
+"mustNot": []
+},
+{
+"id": 88,
+"must": {
+"price": 4500
+},
+"mustNot": []
+},
+{
+"id": 89,
+"must": {
+"cost": 4000000
+},
+"mustNot": []
+},
+{
+"id": 90,
+"must": {
+"customer": "주부"
+},
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 91,
+"must": {},
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 92,
+"must": {
+"budget": 20000000
+},
+"mustNot": [
+"customer",
+"offer",
+"channel"
+]
+},
+{
+"id": 93,
+"must": {},
+"intent": "none",
+"mustNot": [
+"budget"
+]
+},
+{
+"id": 94,
+"must": {},
+"intent": "question",
+"mustNot": [
+"price"
+]
+},
+{
+"id": 95,
+"must": {
+"hoursPerWeek": 84,
+"operatingDays": 7
+},
+"mustNot": []
+},
+{
+"id": 96,
+"must": {
+"business|offer": "비누",
+"channel": "플리마켓"
+},
+"mustNot": []
+},
+{
+"id": 97,
+"must": {
+"budget": 3000000
+},
+"mustNot": []
+},
+{
+"id": 98,
+"must": {
+"capacityPerDay": [
+30,
+60
+]
+},
+"mustNot": []
+},
+{
+"id": 99,
+"must": {
+"budget": 2000000
+},
+"mustNot": []
+},
+{
+"id": 100,
+"must": {
+"hoursPerWeek": 40
+},
+"mustNot": []
+}
+]
