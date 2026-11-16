@@ -1414,3 +1414,10 @@ button.workLogRow { min-height: 32px; }
 .page.page.page[data-embedded] .userMessage { padding: 9px 16px; border-radius: 22px; background: var(--app-fill); box-shadow: none; color: var(--app-text); font-size: 1rem; line-height: 1.625; }
 /* 대화 칸에 남은 작은 글씨도 보조 14 로(2026-11-15) — 채운 값 요약 · 채운 값 이름표 · 일반/전문가 전환 */
 .page.page[data-embedded] .understood h3 > button > span, .page.page[data-embedded] .understood h3 small, .page.page[data-embedded] .understood button small, .page.page.page[data-embedded] .depthPick button, .page.page[data-embedded] .depthPick span { font-size: .875rem; }
+/* 휴대폰에서 누르기 작던 두 곳(2026-11-15 휴대폰 점검) — 채운 값 카드 펼치기(높이 21) · 답 복사/고치기(28×28). 보이는 크기는 그대로 두고 누르는 자리만 44 로 넓힌다 */
+@media (pointer: coarse) {
+  .understood h3 > button, .messageMeta .messageEdit, .userActions .messageEdit, .metaButton { position: relative; }
+  .metaButton::before { content: ""; position: absolute; inset: -8px; }
+  .understood h3 > button::before { content: ""; position: absolute; inset: -12px 0; }
+  .messageMeta .messageEdit::before, .userActions .messageEdit::before { content: ""; position: absolute; inset: -8px; }
+}
