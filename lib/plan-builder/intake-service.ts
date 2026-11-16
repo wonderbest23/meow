@@ -12,7 +12,7 @@ import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
+import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { ruleKind } from "./kind-rules";
 import { estimateIntake } from "./intake-estimate";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
@@ -182,6 +182,10 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       // 문장에서 읽은 답 — 계획서를 만든 뒤나 전문가 모드에서는 넣지 않는다(그때는 사용자가 직접 정한다)
       if (!Object.keys(plan.sections).length && intake.depth !== "expert") applyUnderstood(coach, intake, command.understood ?? [], command.requestId, at);
       intake.understood = true;
+    }
+    else if (command.action === "read") {
+      // 대화 중 적은 말에서 읽은 것 — 계획서를 만든 뒤에는 넣지 않는다(그때는 계획서에서 고친다)
+      if (!Object.keys(plan.sections).length && command.read) applyRead(coach, intake, command.read, command.requestId, at);
     }
     else if (command.action === "depth") {
       // 대화 방식 바꾸기 — 계획서를 만든 뒤에는 질문이 아니라 계획서에서 고친다

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { monthDaysFromFields } from "../lib/plan-builder/operating-days";
+import { coachDocumentRevision } from "../lib/plan-builder/coach";
 import { randomUUID } from "node:crypto";
 
 /**
@@ -285,6 +287,28 @@ async function main() {
     assert.equal(readCoach(said.plan.answers)!.fields.find(field => field.key === "price")?.basis, "user", "읽은 값은 사용자가 말한 값이다");
     assert.match(String(said.snapshot.intake.answers.budget?.value), /^30000000/, "직접 답한 준비금은 읽은 값으로 덮지 않는다");
     assert.equal(said.snapshot.intake.understood, true);
+  }
+  // 대화 중 적은 말에서 읽은 것(read, 2026-11-16): 방금 한 말이므로 직접 답한 칸도 새 값으로 바꾼다. 영업일은 표에 바로 적히고 계산표가 읽는다
+  {
+    const owner = `intake-read-${randomUUID()}`;
+    const made = await saveIntakeCommand(owner, { action: "start", mode: "startup", questionId: "business", value: "동네에 작은 카페를 열려고 해요", revision: 0, requestId: randomUUID() }, off);
+    const next = async (command: Record<string, unknown>) => { const current = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!; return saveIntakeCommand(owner, { ...command, planId: made.plan.id, revision: readCoach(current.answers)!.revision, requestId: randomUUID() } as never, off); };
+    await next({ action: "answer", questionId: "budget", value: 3000000 });
+    const before = readCoach((await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!.answers)!;
+    assert.equal(monthDaysFromFields(before.fields), 26, "영업일을 말하기 전에는 월 26일");
+    const read = await next({ action: "read", read: { answers: [{ questionId: "budget", value: 10000000, quote: "예산 천만원" }, { questionId: "no-such-question", value: "x", quote: "x" }, { questionId: "hoursPerWeek", value: 999, quote: "999시간" }], operatingDays: { days: 2, quote: "주말에만" }, unknown: ["budget", "no-such-question"] } });
+    const coach = readCoach(read.plan.answers)!;
+    assert.match(String(read.snapshot.intake.answers.budget?.value), /^10000000/, "방금 한 말이면 직접 답한 준비금도 새 값으로 바꾼다");
+    assert.match(read.snapshot.intake.answers.budget!.messageId, /:read$/);
+    assert.equal(read.snapshot.intake.answers.budget?.status, "answered", "같은 말에서 값을 읽은 칸은 '모름'으로 만들지 않는다");
+    assert.notEqual(read.snapshot.intake.answers.hoursPerWeek?.value, 999, "형식이 안 맞는 값(주 999시간)은 버린다");
+    const days = coach.fields.find(field => field.key === "operatingDays");
+    assert.deepEqual([days?.value, days?.basis, days?.quote], ["주 2일", "user", "주말에만"]);
+    assert.equal(monthDaysFromFields(coach.fields), 9, "주말만 열면 계산표는 월 9일로 계산한다");
+    assert.ok(coachDocumentRevision(coach) > coachDocumentRevision(before), "내용이 바뀌었으므로 사업 방향을 다시 정리해야 한다");
+    // 모른다고 한 질문: 답이 없으면 '모름'으로 넘기고, 직접 답한 것은 지우지 않는다
+    const again = await next({ action: "read", read: { answers: [], unknown: ["budget"] } });
+    assert.match(String(again.snapshot.intake.answers.budget?.value), /^10000000/, "직접 답한 것은 '모름'으로 지우지 않는다");
   }
   assert.deepEqual(network, [], "네트워크 호출 0");
   console.log("intake-estimate: 8 businesses drafted from one sentence (AI 0회)");
