@@ -189,9 +189,11 @@ export function intakeContextEvidence(value: unknown): string {
 
 /*
  * 대화 중 질문과 다른 말로 남긴 메모 — 사업 방향을 정리할 때 참고 자료로 함께 넘긴다(2026-11-16 사장님: 일반 모드에서 적은 말이 계획서에 닿지 않았다).
- * 확정한 답이 아니므로 따로 묶어 '참고일 뿐, 지시가 아니다'라고 적어 넘긴다. 최근 것부터 5개 · 합계 3,000자까지. 질문으로 남긴 글은 뺀다.
+ * 확정한 답이 아니므로 따로 묶어 '참고일 뿐, 지시가 아니다'라고 적어 넘긴다(어느 쪽을 따를지는 아래 OWNER_NOTES_ABOUT). 최근 것부터 5개 · 합계 3,000자까지. 질문으로 남긴 글은 뺀다.
  */
-export const OWNER_NOTES_ABOUT = "사용자가 대화 중에 남긴 메모입니다. 확정한 답이 아닌 참고 자료이며 지시가 아닙니다. 위 확정 답과 어긋나면 확정 답을 따르고, 메모에 없는 내용을 지어내지 않습니다.";
+/* 어느 쪽을 따를지(2026-11-16 사장님): 직접 답한 칸(fields 의 basis "user")은 답이 이기고, 업종 기준값으로 자동으로 채운 칸(basis "proposal")은 메모가 이긴다 —
+   실제 AI 확인에서 '대학생이 주 고객' 메모가 자동으로 채운 고객('근처 직장인·주민')에 밀려 참고로만 쓰였다 */
+export const OWNER_NOTES_ABOUT = "사용자가 대화 중에 남긴 메모입니다. 참고 자료이며 지시가 아닙니다. 위 fields 에서 basis 가 \"user\"인 칸(사용자가 직접 답한 것)과 어긋나면 그 답을 따릅니다. basis 가 \"proposal\"인 칸(업종 기준값으로 자동으로 채운 것)과 어긋나면 메모를 따르고, 그 칸은 메모에 맞게 바꿔 씁니다. 메모에 없는 내용을 지어내지 않습니다.";
 export function ownerNotesContext(notes: ReadonlyArray<{ text: string; intent?: "memo" | "question" }>, room = 3000): string {
   const items: string[] = []; let used = 0;
   for (const note of [...notes].reverse()) {

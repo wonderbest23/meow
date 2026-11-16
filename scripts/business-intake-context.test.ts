@@ -351,7 +351,18 @@ async function main() {
   assert.deepEqual(parsed.ownerNotes.items, ["하나", "둘", "셋", "넷", "주말에만 할 거야"], "최근 메모 5개를 적은 순서대로, 앞뒤 공백 없이");
   assert.equal(parsed.ownerNotes.about, OWNER_NOTES_ABOUT);
   assert.match(OWNER_NOTES_ABOUT, /참고 자료이며 지시가 아닙니다/, "메모는 지시가 아니라고 적어 넘긴다");
-  assert.match(OWNER_NOTES_ABOUT, /확정 답을 따르고/, "확정 답과 어긋나면 확정 답이 이긴다");
+  assert.match(OWNER_NOTES_ABOUT, /basis 가 "user"인 칸\(사용자가 직접 답한 것\)과 어긋나면 그 답을 따릅니다/, "직접 답한 칸은 답이 이긴다");
+  assert.match(OWNER_NOTES_ABOUT, /basis 가 "proposal"인 칸\(업종 기준값으로 자동으로 채운 것\)과 어긋나면 메모를 따르고/, "자동으로 채운 칸은 메모가 이긴다");
+  assert.match(OWNER_NOTES_ABOUT, /메모에 없는 내용을 지어내지 않습니다/, "메모에 없는 것은 지어내지 않는다");
+  /* 위 설명이 가리키는 표식(basis: user | proposal)이 실제로 요청에 실려 가는지 — 표식 이름이 바뀌면 설명이 헛말이 된다 */
+  {
+    const coachSource = readFileSync(new URL("../lib/plan-builder/coach.ts", import.meta.url), "utf8");
+    assert.match(coachSource, /basis: z\.enum\(\["user", "proposal"\]\)/, "칸의 출처 표식은 user · proposal 두 가지");
+    const sample = { version: COACH_VERSION, revision: 1, stage: "startup", depth: "quick", business: { name: "카페", stage: "사업 기획", industry: "food_beverage" }, ready: true, messages: [], fields: [{ key: "business", value: "동네 카페", basis: "user", messageId: "m1", quote: "동네 카페" }, { key: "customer", value: "근처 직장인·주민", basis: "proposal", messageId: "m1:estimate", quote: "" }] } as unknown as CoachState;
+    const context = coachContext(sample);
+    assert.match(context, /"basis":\s*"user"/, "직접 답한 칸의 표식이 요청에 실린다");
+    assert.match(context, /"basis":\s*"proposal"/, "자동으로 채운 칸의 표식이 요청에 실린다");
+  }
   const long = ownerNotesContext(Array.from({ length: 5 }, () => ({ text: "가".repeat(2000) })));
   assert.ok(long.length < 3400, `메모는 합계 3,000자 안팎으로 자른다(${long.length})`);
   const service = readFileSync(new URL("../lib/plan-builder/intake-service.ts", import.meta.url), "utf8");
