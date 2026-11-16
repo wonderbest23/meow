@@ -730,9 +730,12 @@ async function main() {
   assert.ok(pricedPrepare.includes("첫 항목 먼저 보기 · 전체 49,000원"), "the plan button shows the price before payment");
   const minimalPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal onDesign={noop} onPrepare={noop} />);
   assert.ok(minimalPrepare.includes("사업계획서 만들기</button>") && minimalPrepare.includes("몇 분 걸려요.") && !minimalPrepare.includes("진행 단계"), "the result screen ends with one plan button");
-  // 사업 방향 정리 중: 마지막 답을 보낸 순간부터 지금 하는 일 한 줄이 보인다(작업 접수 전에도). 네 단계를 한꺼번에 늘어놓지 않는다(2026-11-15 — 메타 AI 방식)
+  // 사업 방향 정리 중: 마지막 답을 보낸 순간부터 지금 하는 일 목록이 보인다(작업 접수 전에도). 경과 시간으로 돌리던 고정 네 단계 이름은 없다(2026-11-17 — 실제 신호만)
   const starting = renderToStaticMarkup(<DesignProgress snapshot={nextSnapshot({}, { design: undefined })} />);
-  assert.ok(starting.includes('role="progressbar"') && starting.includes("data-thinking") && starting.includes("답변 모으기") && !starting.includes("시작 범위 제안하기") && starting.includes("보통 30~40초"), "design progress shows one current-step line before the job is accepted");
+  assert.ok(starting.includes('role="progressbar"') && starting.includes("data-work-narration") && starting.includes("요청을 받았어요") && !starting.includes("답변 모으기") && !starting.includes("시작 범위 제안하기") && starting.includes("보통 30~40초"), "design progress shows the narration list before the job is accepted");
+  // 실행 중: 서버가 붙인 사실(업종 가이드 · 직접 답한 숫자로 계산한 값)이 ✓ 줄로 쌓이고, 맨 아래는 AI가 하는 일
+  const narrated = renderToStaticMarkup(<DesignProgress snapshot={{ ...summarized, intake: { ...summarized.intake, job: { id: "job-n", runId: "intake-job-n", kind: "design", status: "running", noteIds: [], baseValues: {}, baseDocumentRevision: 1, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() } }, jobClock: { elapsedMs: 30_000, expectedMs: 35_000, limitMs: 60_000 }, narration: { guide: "반찬·도시락 가게", money: { unit: "가구", perUnit: 18_000, vat: false, breakEven: 46, reach: 60, reachWord: "생각한 판매량" } } }} />);
+  for (const text of ["‘반찬·도시락 가게’ 업종 기준을 찾았어요", "한 가구에 18,000원 남아요", "본전은 한 달 46가구", "생각한 판매량(60가구) 안에 들어오는 숫자예요", "고객·문제·돈 버는 구조를 한 장으로 묶고 있어요"]) assert.ok(narrated.includes(text), `${text} in ${narrated}`);
   assert.equal(renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ coreComplete: false }, {})} prepared={false} disabled={false} aiBusy={false} onDesign={noop} onPrepare={noop} />), "");
   // 일반 모드: 모른다 · 맡긴다는 말만 있으면 '모르겠어요'로 넘어간다. 다른 내용이 섞이면 아니다(2026-11-15)
   for (const text of ["몰라 알아서 해줘", "아직 생각 안 해봤어", "글쎄 상관없어", "음 모르겠는데", "아무거나"]) assert.equal(looseUnknownReply(text), true, text);

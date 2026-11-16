@@ -139,6 +139,7 @@ const borrowers: [string, string, string][] = [
   ["app/plan/chat/intake.module.css", ".spinner", "../PlanLoading.module.css"],
   ["app/plan/proposal/proposal.module.css", ".spin", "../PlanLoading.module.css"],
   ["app/plan/GenerationProgress.module.css", ".spin", "./PlanLoading.module.css"],
+  ["app/plan/WorkNarration.module.css", ".spin", "./PlanLoading.module.css"],
   ["components/app-button.module.css", ".spinner", "../app/plan/PlanLoading.module.css"],
 ];
 for (const [path, selector, from] of borrowers) {
@@ -152,7 +153,9 @@ for (const path of modules) {
     assert.ok(path === "app/plan/PlanLoading.module.css" && name === "loadingSpin", `${path}: 따로 정한 도는 애니메이션 '${name}'`);
   }
 }
-assert.match(read("app/plan/GenerationProgress.tsx"), /<i className=\{styles\.spin\} aria-hidden="true" \/>사업계획서 만드는 중/, "생성 진행 카드의 도는 표시");
+// 생성 진행 카드의 도는 표시 — 2026-11-17부터 '지금 하는 일' 목록(WorkNarration)의 지금 줄이 공통 도는 규칙으로 돈다
+assert.match(read("app/plan/GenerationProgress.tsx"), /사업계획서 만드는 중<span className=\{styles\.cardCount\}>[\s\S]*?<WorkNarration narration=\{narration\}/, "생성 진행 카드의 도는 표시");
+assert.match(read("app/plan/WorkNarration.tsx"), /<LoaderCircle size=\{15\} className=\{styles\.spin\} \/>/, "지금 하는 일 줄의 도는 표시");
 // '불러오는 중' 글만 있던 자리 — PlanLoading 의 Spinner 를 함께 둔다
 const loadingTexts: [string, RegExp][] = [
   ["app/plan/document/FactEdit.tsx", /<p role="status"><Spinner \/> 사업 정보를 불러오고 있어요…<\/p>/],

@@ -28,6 +28,8 @@ import { chatTextPreview, questionPromptText, unitCostRanges } from "./model";
 import type { QuestionSuggestions } from "./AnswerSuggestions";
 import { editExamples } from "../../../../lib/plan-builder/edit-examples";
 import { MessageMeta, WorkLog } from "./WorkLog";
+import { WorkNarration } from "../../WorkNarration";
+import { designNarration } from "../../../../lib/plan-builder/work-narration";
 import { editFoundItem, marginLogItem } from "./work-log";
 import { splitSectionEditMessage } from "../../../../lib/plan-builder/studio-plan-edit";
 
@@ -803,7 +805,6 @@ const monotonicNow = () => typeof performance !== "undefined" ? performance.now(
  * 나타나 멈춘 것처럼 보였다(소유자 피드백 2026-10-09). 마지막 답을 보낸 순간부터 막대와 단계 표시를 보여 준다.
  * 막대는 서버 기준 경과 시간으로 추정한 값이라 95%에서 멈추고, 끝나면 결과 화면으로 바뀐다. 오래 걸리면 그렇다고 말한다.
  */
-const DESIGN_STEPS = ["답변 모으기", "고객과 문제 연결하기", "돈 버는 구조 점검하기", "시작 범위 제안하기"];
 export function DesignProgress({ snapshot, announce = false }: { snapshot: IntakeSnapshot; announce?: boolean }) {
   const job = snapshot.intake.job?.kind === "design" ? snapshot.intake.job : null;
   const active = !!job && (job.status === "queued" || job.status === "running");
@@ -817,15 +818,20 @@ export function DesignProgress({ snapshot, announce = false }: { snapshot: Intak
     return () => window.clearInterval(timer);
   }, []);
   const timing = snapshot.jobClock ?? INTAKE_JOB_TIMING.design;
-  // 서버가 작업을 받기 전(마지막 답 저장 중)에도 첫 단계부터 움직이게 시작한다
-  const view = active && job ? jobProgress(job.status, sync.base + (monotonicNow() - sync.at), timing.expectedMs, timing.limitMs) : { percent: 3, elapsedSeconds: 0, slow: false };
-  const current = Math.min(DESIGN_STEPS.length - 1, Math.floor(view.percent / (100 / DESIGN_STEPS.length)));
-  /* 기다리는 동안 — 지금 하는 일 한 줄(2026-11-15 사장님, 메타 AI 방식): 돌아가는 표시 + 지금 단계 이름, 그 아래 가는 세로선 옆 회색 설명 한 줄.
-     단계가 넘어가면 같은 자리에서 글만 바뀐다. 끝나면 이 줄은 사라지고 결과와 작업 기록 한 줄이 남는다. 예전엔 막대 + 네 단계 목록 카드였다 */
+  const elapsed = active && job ? sync.base + (monotonicNow() - sync.at) : 0;
+  // 서버가 작업을 받기 전(마지막 답 저장 중)에도 첫 줄부터 보여 준다
+  const view = active && job ? jobProgress(job.status, elapsed, timing.expectedMs, timing.limitMs) : { percent: 3, elapsedSeconds: 0, slow: false };
+  /*
+   * 기다리는 동안 — 지금 하는 일 목록(대표 결정 2026-11-17: 실제 신호만 · 쌓이는 목록). 예전엔 경과 시간으로 고정 네 단계 이름을 돌렸다(실제 단계와 무관).
+   * 이제는 이 작업이 실제로 쓰는 사실(답 수 · 업종 가이드 · 직접 답한 숫자로 코드가 계산한 남는 돈과 본전)을 ✓ 줄로 쌓고,
+   * 맨 아래에 AI가 하는 일 한 줄을 둔다. 끝나면 목록은 사라지고 결과와 작업 기록 한 줄이 남는다.
+   */
+  const narration = designNarration({ status: active && job ? job.status : null, elapsedMs: elapsed, answered: snapshot.coreAnswered, facts: snapshot.narration, slow: view.slow ? { seconds: view.elapsedSeconds } : null });
+  const current = narration.lines.at(-1)?.text ?? "사업 방향 정리 중";
   return <div className={styles.jobChat} data-kind="design" data-design-progress>
-    <ThinkingLine title={DESIGN_STEPS[current]} note={view.slow ? `평소보다 오래 걸리고 있어요 · ${view.elapsedSeconds}초. 답변은 저장돼 있어요.` : "답변을 바탕으로 사업 방향을 한 장으로 정리하고 있어요. 보통 30~40초 걸려요."} />
+    <WorkNarration narration={narration} />
     <span className={styles.srOnly} role="progressbar" aria-label="사업 방향 정리" aria-valuemin={0} aria-valuemax={100} aria-valuenow={view.percent} />
-    {announce && <span className={styles.srOnly} role="status" aria-live="polite">사업 방향 정리 중 · {DESIGN_STEPS[current]}</span>}
+    {announce && <span className={styles.srOnly} role="status" aria-live="polite">사업 방향 정리 중 · {current}</span>}
   </div>;
 }
 
