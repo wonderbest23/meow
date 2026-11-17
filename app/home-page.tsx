@@ -11,7 +11,8 @@ import { HomePromptHero } from "../components/home-prompt-hero";
 import { HomePromptSections } from "../components/home-prompt-sections";
 import { HomeCopyChrome } from "../components/home-copy-chrome";
 import homeLanding from "../components/home-landing.module.css";
-import { LEGAL_PENDING_TEXT, mailOrderStatusLabels, type MailOrderStatus } from "../lib/platform-legal/domain";
+import { formatRoadAddress, LEGAL_PENDING_TEXT, mailOrderStatusLabels } from "../lib/platform-legal/domain";
+import { ftcBusinessCheckUrl, type HomeFooterBusiness } from "../lib/platform-legal/footer";
 import { SITE_COPY_FIELDS } from "../lib/site-copy/domain";
 import { fetchWithTransientRetry } from "../lib/client/fetch-with-retry";
 import dynamic from "next/dynamic";
@@ -47,27 +48,17 @@ const Logo = SiteLogo;
 
 function Home({
   onStart,
+  business,
 }: {
   onStart: () => void;
+  business: HomeFooterBusiness | null;
 }) {
   /*
-   * 바닥글 사업자 정보 — 불러오지 못한 것(failed)과 아직 비어 있는 값을 나눈다. 빈 값은 /business-info 와 같은 말(LEGAL_PENDING_TEXT)로
-   * 적는다 — 예전엔 값이 비어 있어도 '불러오지 못했어요'로 보였다(점검 2026-10-23).
+   * 바닥글 사업자 정보 — 서버(app/page.tsx)가 읽어 첫 HTML 에 바로 그린다. 예전엔 화면이 뜬 뒤 운영 상태 API 를 따로 불러
+   * 처음엔 안내 한 줄만 보였다(점검 2026-11-16). null 은 서버가 읽지 못한 것 — 사업자 정보 화면 링크를 보인다.
+   * 빈 값은 /business-info 와 같은 말(LEGAL_PENDING_TEXT)로 적는다.
    */
-  const [businessInfo, setBusinessInfo] = useState<{
-    operatorName: string; representativeName: string; businessRegistrationNumber: string; mailOrderSalesNumber: string;
-    mailOrderStatus: MailOrderStatus; internetDomainName: string;
-    businessAddress: string; supportEmail: string; supportPhone: string; hostingProvider: string;
-  } | "loading" | "failed">("loading");
-  useEffect(() => {
-    void fetch("/api/platform/readiness", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((data) => {
-        setBusinessInfo(data?.business && typeof data.business === "object" ? data.business : "failed");
-      })
-      .catch(() => setBusinessInfo("failed"));
-  }, []);
-  const business = typeof businessInfo === "object" ? businessInfo : null;
+  const ftcUrl = business ? ftcBusinessCheckUrl(business.businessRegistrationNumber) : null;
   /** 빈 값은 사업자 정보 화면과 같은 말로 */
   const legalValue = (value: string | null | undefined) => value?.trim() || LEGAL_PENDING_TEXT;
   /* 로그인했으면 첫 화면의 '로그인해도 이어져요'·'로그인·계정 복구'를 빼고, 머리말은 '내 사업'을 보인다 */
@@ -153,9 +144,9 @@ function Home({
 
       {/*
         푸터 — 가는 선으로 나눈 세 구획.
-        ① 로고와 안내 링크 ② 접이식 상세(사업자 정보 항목표 · 이용 안내 · 디자인 출처) ③ 저작권 줄.
-        상세는 기본으로 접어 두어 화면 아래를 길게 차지하지 않는다. 사업자 법정 표기와
-        AI 고지는 한 번 눌러 펼치는 자리에 두되, 디자인이 어떻게 바뀌어도 지우지 않는다.
+        ① 로고와 안내 링크 ② 상세(사업자 정보 항목표 · 이용 안내 · 디자인 출처) ③ 저작권 줄.
+        상세는 처음부터 펼쳐 둔다 — 사업자 법정 표기(전자상거래법 제10조)는 눌러야 보이는 자리에 두지 않는다(점검 2026-11-16).
+        디자인이 어떻게 바뀌어도 지우지 않는다.
       */}
       <footer className="home-footer">
         <div className="home-footer-head">
@@ -169,7 +160,7 @@ function Home({
             {signedIn === true ? null : <a href="/account">로그인·계정 복구</a>}
           </nav>
         </div>
-        <details className="home-footer-details">
+        <details className="home-footer-details" open>
           <summary>
             <span>사업자 정보 · 이용 안내</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -181,19 +172,17 @@ function Home({
                 <dl className="home-footer-info">
                   <dt>상호</dt><dd>{legalValue(business.operatorName)}</dd>
                   <dt>대표</dt><dd>{legalValue(business.representativeName)}</dd>
-                  <dt>사업자등록번호</dt><dd>{legalValue(business.businessRegistrationNumber)}</dd>
+                  <dt>사업자등록번호</dt><dd>{legalValue(business.businessRegistrationNumber)}{ftcUrl ? <> · <a href={ftcUrl} target="_blank" rel="noopener noreferrer">사업자정보 확인</a></> : null}</dd>
                   {/* 상태 문구가 '통신판매업 신고 완료'처럼 항목명을 되풀이하므로 값에서는 뗀다 */}
                   <dt>통신판매업</dt><dd>{(mailOrderStatusLabels[business.mailOrderStatus] ?? mailOrderStatusLabels.preparing).replace(/^통신판매업\s*/, "")}{business.mailOrderSalesNumber ? ` · ${business.mailOrderSalesNumber}` : ""}</dd>
-                  <dt>주소</dt><dd>{legalValue(business.businessAddress)}</dd>
+                  <dt>주소</dt><dd>{legalValue(formatRoadAddress(business.businessAddress))}</dd>
                   {business.supportPhone && <><dt>전화</dt><dd><a href={`tel:${business.supportPhone.replace(/[^\d+]/g, "")}`}>{business.supportPhone}</a></dd></>}
                   {business.supportEmail && <><dt>이메일</dt><dd><a href={`mailto:${business.supportEmail}`}>{business.supportEmail}</a></dd></>}
                   <dt>사이트</dt><dd>{legalValue(business.internetDomainName)}</dd>
                   <dt>호스팅</dt><dd>{legalValue(business.hostingProvider)}</dd>
                 </dl>
-              ) : businessInfo === "failed" ? (
-                <p className="home-footer-empty">사업자 정보를 불러오지 못했어요. <a href="/business-info">사업자 정보 보기</a></p>
               ) : (
-                <p className="home-footer-empty">사업자 정보를 불러오고 있어요.</p>
+                <p className="home-footer-empty">사업자 정보를 불러오지 못했어요. <a href="/business-info">사업자 정보 보기</a></p>
               )}
             </div>
             <div aria-labelledby="footer-notes-heading">
@@ -218,7 +207,7 @@ function Home({
   );
 }
 
-export default function HomePage() {
+export default function HomePage({ business = null }: { business?: HomeFooterBusiness | null }) {
   const router = useRouter();
   const [screen, setScreen] = useState<Screen>("home");
   const [selectedProject, setSelectedProject] = useState<RankedOpportunity | null>(null);
@@ -290,5 +279,5 @@ export default function HomePage() {
     return <div role="status">예전 결과물을 불러오고 있어요.</div>;
   }
   // 새 기획은 대화로 시작하고, 이미 작성한 예전 결과물 경로(?view=project)는 유지한다.
-  return <Home onStart={() => router.push("/plan/chat?new=1")} />;
+  return <Home business={business} onStart={() => router.push("/plan/chat?new=1")} />;
 }

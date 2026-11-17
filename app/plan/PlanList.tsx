@@ -29,7 +29,7 @@ import { askConfirm } from "../../components/confirm-dialog";
 import { useHomepageStatus } from "./use-homepage";
 import { readOperatingState } from "../../lib/plan-builder/operating-records";
 import { AppButton } from "../../components/app-button";
-import { TextArea, TextField } from "../../components/app-field";
+import { FieldError, TextArea, TextField } from "../../components/app-field";
 import { loadAuthSession } from "../../lib/client/auth-session";
 import { PLAN_VIEW_ALL } from "./MobileTabBar";
 
@@ -78,6 +78,8 @@ export default function PlanList() {
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  /* 이름 바꾸기 칸의 오류 — 목록 맨 아래가 아니라 그 칸 바로 아래에 보인다(점검 2026-11-16: 이름을 비우면 오류가 화면 맨 아래에 떴다) */
+  const [renameError, setRenameError] = useState("");
   /* 삭제처럼 화면에서 사라지는 일을 짧게 알린다(role=status) */
   const [notice, setNotice] = useState("");
   const retry = useRef<() => void>(() => {});
@@ -128,10 +130,10 @@ export default function PlanList() {
   function focusMenu(id: string) {
     window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-plan-menu="${CSS.escape(id)}"]`)?.focus());
   }
-  function cancelRename(id: string) { setEditing(null); setError(""); focusMenu(id); }
+  function cancelRename(id: string) { setEditing(null); setRenameError(""); focusMenu(id); }
   function rename(id: string) {
-    if (!name.trim()) { setError("사업 이름을 입력해 주세요."); return; }
-    renamePlan(id, name.trim()); setState(loadState()); setEditing(null); setError(""); focusMenu(id);
+    if (!name.trim()) { setRenameError("사업 이름을 입력해 주세요."); return; }
+    renamePlan(id, name.trim()); setState(loadState()); setEditing(null); setRenameError(""); focusMenu(id);
   }
   async function remove(id: string, title: string) {
     if (!await askConfirm({ title: `‘${title}’ 사업을 삭제할까요?`, message: "대화·사업계획서와 이 사업의 홈페이지(공개 중인 사이트·받은 문의 포함)도 함께 삭제되고 되돌릴 수 없어요.", confirmLabel: "삭제", danger: true })) { focusMenu(id); return; }
@@ -167,8 +169,9 @@ export default function PlanList() {
         </span>
       </span>
     </Link>
-    {editing===p.id && <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><TextField aria-label="사업 이름" aria-describedby={`rename-hint-${p.id}`} value={name} maxLength={100} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><AppButton type="submit" variant="primary" className={styles.primary}>저장</AppButton><AppButton variant="text" onClick={()=>cancelRename(p.id)}>취소</AppButton>
+    {editing===p.id && <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><TextField aria-label="사업 이름" aria-describedby={renameError ? `rename-error-${p.id} rename-hint-${p.id}` : `rename-hint-${p.id}`} aria-invalid={renameError ? true : undefined} value={name} maxLength={100} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>{setName(e.target.value);if(renameError)setRenameError("");}} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><AppButton type="submit" variant="primary" className={styles.primary}>저장</AppButton><AppButton variant="text" onClick={()=>cancelRename(p.id)}>취소</AppButton>
       {/* 열면 기존 이름을 골라 둔다(바로 새로 쓰게). 100자에 닿으면 더 써지지 않는 이유를 알린다. 홈페이지 이름은 따로 바뀐다 */}
+      {renameError && <FieldError id={`rename-error-${p.id}`} role="alert" className={mine.renameError}>{renameError}</FieldError>}
       <p id={`rename-hint-${p.id}`} className={mine.renameHint} aria-live="polite">{name.length >= 100 ? "이름은 100자까지 쓸 수 있어요. " : ""}홈페이지 이름은 홈페이지 화면에서 따로 바꿔요.</p></form>}
     {/* 한 번에 하나만 — 다른 행 ⋯을 누르거나 바깥을 누르면 열린 메뉴를 닫는다(네 개가 같이 열렸다, 2026-11-05 사장님) */}
     {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onToggle={event => { if (event.currentTarget.open) closeOtherRowMenus(event.currentTarget); }} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
@@ -176,7 +179,7 @@ export default function PlanList() {
       const menu = event.currentTarget as HTMLDetailsElement;
       if (event.key !== "Escape" || !menu.open) return;
       event.preventDefault(); menu.open = false; menu.querySelector("summary")?.focus();
-    }}><summary aria-label={`${display} 관리`} data-plan-menu={p.id}><MoreHorizontal size={20} /></summary><div><button onClick={() => {setEditing(p.id);setName(isUnnamedBusiness(p.title) ? "" : p.title);setNotice("");}}>이름 변경</button><button onClick={() => remove(p.id,display)}>삭제</button></div></details>}
+    }}><summary aria-label={`${display} 관리`} data-plan-menu={p.id}><MoreHorizontal size={20} /></summary><div><button onClick={() => {setEditing(p.id);setName(isUnnamedBusiness(p.title) ? "" : p.title);setNotice("");setRenameError("");}}>이름 변경</button><button onClick={() => remove(p.id,display)}>삭제</button></div></details>}
   </article>; };
 
   /* 목록 로딩은 목록 카드 안에서 — 화면 한가운데 떠 있으면 인사말·입력칸 위에 겹쳐 무엇이 로딩 중인지 알 수 없었다(2026-11-02 사장님) */
@@ -226,7 +229,7 @@ export default function PlanList() {
         {list}
       </section>}
       {/* 휴대폰 '내 사업' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
-      {listOnly && <Link href="/plan" className={home.newFloat}><Plus size={20} aria-hidden="true" />새 사업</Link>}
+      {listOnly && <Link href="/plan" className={home.newFloat}><Plus size={20} aria-hidden="true" />새 대화</Link>}
     </div>
   </BusinessAppChrome></main>;
 }

@@ -1,4 +1,4 @@
-import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT } from "../payments/domain";
+import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT } from "../payments/domain";
 import { PPT_GENERATION_VERIFIED } from "../plan-builder/deck-availability";
 import { journeyStepsText } from "../plan-builder/journey-steps";
 
@@ -73,11 +73,11 @@ export const supportFaqCategories: SupportFaqCategory[] = [
     label: "가격·결제",
     description: "상품별 가격과 결제 방식",
     items: [
-      { id: "pay-price", question: "가격은 얼마인가요?", answer: `사업계획서는 사업 하나당 ${won(PACKAGE_AMOUNT)}(${LAUNCH_PRICE_LABEL}), 사업계획서와 그 계획서로 만든 홈페이지(고치기·공개)를 함께 열면 ${won(BUNDLE_PRODUCT_AMOUNT)}, 사업계획서를 먼저 결제했다면 홈페이지만 ${won(HOMEPAGE_PRODUCT_AMOUNT)}이에요. 계획서 다시 생성 ${REGEN_PACK_COUNT}회 추가는 ${won(REGEN_PACK_AMOUNT)}, 내 도메인 연결(1년)은 ${won(DOMAIN_PRODUCT_AMOUNT)}이에요. 모두 1회 결제이며 구독이 아니에요.`, keywords: ["가격", "얼마", "비용", "요금"] },
+      { id: "pay-price", question: "가격은 얼마인가요?", answer: `사업계획서는 사업 하나당 ${won(PACKAGE_AMOUNT)}, 사업계획서와 그 계획서로 만든 홈페이지(고치기·공개)를 함께 열면 ${won(BUNDLE_PRODUCT_AMOUNT)}, 사업계획서를 먼저 결제했다면 홈페이지만 ${won(HOMEPAGE_PRODUCT_AMOUNT)}이에요. 계획서 다시 생성 ${REGEN_PACK_COUNT}회 추가는 ${won(REGEN_PACK_AMOUNT)}, 내 도메인 연결(1년)은 ${won(DOMAIN_PRODUCT_AMOUNT)}, 도메인 구매까지 맡기면 ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}(첫해 등록비 포함)이에요. 모두 1회 결제이며 구독이 아니에요.`, keywords: ["가격", "얼마", "비용", "요금"] },
       { id: "pay-scope", question: "결제하면 무엇이 열리나요?", answer: `사업계획서를 결제하면 그 사업의 계획서 전체 항목 작성과 ${FILES} 내려받기가 열려요. ${PPT_NOTE} 홈페이지 편집·공개는 사업계획서 + 홈페이지 묶음으로 함께 열거나, 계획서를 결제한 뒤 홈페이지 상품으로 열어요.`, keywords: ["결제하면", "뭐가 열려", "포함", "범위"] },
       { id: "pay-method", question: "결제 수단은 무엇인가요?", answer: "신용·체크카드로 결제할 수 있으며 나이스페이 결제창에서 안전하게 진행돼요. 결제가 승인되면 바로 열려요.", appAnswer: APP_PAY_METHOD, keywords: ["결제 수단", "카드", "계좌이체", "카카오페이", "토스"] },
       { id: "pay-multi", question: "한 계정으로 여러 사업을 결제할 수 있나요?", answer: "네. 사업마다 따로 결제하는 방식이라 한 계정에서 여러 사업을 각각 결제할 수 있어요. 결제 내역은 메뉴의 ‘내 계정’에서 확인해요.", keywords: ["여러 번", "여러 사업", "여러 문서", "추가 결제", "또 결제"], link: { href: "/plan/me", label: "마이페이지 열기" } },
-      { id: "pay-refund", question: "환불은 어떻게 되나요?", answer: "인공지능 작성이 시작되기 전에는 전액 환불을 요청할 수 있어요. 결제 후 유료 항목 작성이 시작되면 작성 비용이 발생해 단순 변심 환불이 제한되며, 결과물 미제공이나 중대한 하자 등 법정 예외는 재제작·환급을 요청할 수 있어요. 아이폰 앱 안에서 결제했다면 Apple 문제 신고 페이지(reportaproblem.apple.com)에서, 안드로이드 앱이면 Google Play 주문 내역에서 환불을 신청해요. 도메인·토큰 등 상품별 기준은 취소·환불 안내에서 확인하세요.", appAnswer: APP_REFUND, keywords: ["환불", "취소", "환급", "변심"], link: { href: "/plan/info?doc=refund", label: "취소·환불 기준 보기" } },
+      { id: "pay-refund", question: "환불은 어떻게 되나요?", answer: "사업계획서 만들기 버튼을 누르기 전에는 전액 환불돼요. 누른 뒤에는 AI 작성 비용이 들어 환불되지 않아요(단순 변심 환불이 제한돼요). 다만 결과물 미제공이나 중대한 하자 등 법정 예외는 재제작·환급을 요청할 수 있어요. 아이폰 앱 안에서 결제했다면 Apple 문제 신고 페이지(reportaproblem.apple.com)에서, 안드로이드 앱이면 Google Play 주문 내역에서 환불을 신청해요. 도메인·토큰 등 상품별 기준은 취소·환불 안내에서 확인하세요.", appAnswer: APP_REFUND, keywords: ["환불", "취소", "환급", "변심"], link: { href: "/plan/info?doc=refund", label: "취소·환불 기준 보기" } },
     ],
   },
   {
@@ -133,7 +133,7 @@ export const supportFaqCategories: SupportFaqCategory[] = [
 const WEB_PAY_FACT = "결제 수단은 신용·체크카드이며 나이스페이 결제창에서 진행돼요. 결제가 승인되면 바로 열려요.";
 const WEB_ACCOUNT_FACT_HEAD = "메뉴의 ‘내 계정’(/plan/me)에서 계정 정보, 내 사업 목록, 결제 내역을 확인하고 카드 결제 환불을 요청해요.";
 const WEB_ACCOUNT_FACT = `${WEB_ACCOUNT_FACT_HEAD} 앱 안 결제(App Store·Google Play)의 환불은 결제한 스토어에 신청해요(아이폰: reportaproblem.apple.com). 회원 탈퇴는 ‘내 계정’ 맨 아래에서 하고, 계정과 작성한 사업·문서가 모두 삭제되며 결제·환불 기록만 법령상 보존 의무로 사람과 연결되지 않는 형태로 남아요. 비밀번호를 잊었으면 로그인 화면의 ‘비밀번호 재설정’에서 가입 이메일로 다시 정해요.`;
-const WEB_REFUND_FACT = "환불: 인공지능 작성이 시작되기 전에는 전액 환불을 요청할 수 있어요. 결제 후 유료 항목 작성이 시작되면 단순 변심 환불이 제한돼요. 결과물 미제공, 계약 불일치, 중대한 하자 등 법정 예외는 재제작이나 환급을 요청할 수 있으며, 도메인·토큰 등 상품별 기준은 취소·환불 안내(/plan/info?doc=refund)를 우선해요.";
+const WEB_REFUND_FACT = "환불: 사업계획서 만들기 버튼을 누르기 전에는 전액 환불돼요. 누른 뒤에는 AI 작성 비용이 들어 환불되지 않아요(단순 변심 환불이 제한돼요). 결과물 미제공, 계약 불일치, 중대한 하자 등 법정 예외는 재제작이나 환급을 요청할 수 있으며, 도메인·토큰 등 상품별 기준은 취소·환불 안내(/plan/info?doc=refund)를 우선해요.";
 /*
  * 앱 안에서 묻는 사람에게는 카드·웹 결제를 근거로 주지 않는다(App Store 3.1.1) — 같은 자리를 앱용 사실로 바꾼다.
  * 도메인·AI 수정 토큰은 앱에서 팔지 않지만, 어디서 사라고 안내하지 않는다.
@@ -146,7 +146,7 @@ const APP_FACT_SWAPS = new Map<string, string>([
 
 export const supportPlatformFacts = [
   "오늘창업은 대화로 사업안을 정리하고(‘새 대화’, /plan/chat?new=1), 그 내용으로 사업계획서를 만들고(/plan/document), 계획서로 홈페이지를 만들고(/plan/homepage), 공개 후 유지보수(홈페이지 고치기·실적 관리)까지 한 사업 안에서 이어가는 서비스예요. 만든 사업은 왼쪽 메뉴 ‘내 사업’(/plan)에, 홈페이지로 들어온 손님 문의는 모든 사업 것이 왼쪽 메뉴 ‘손님 문의’(/plan/inquiries, 예전 이름 ‘내 문의’)에 모여요. 문서 유형을 고르는 화면이나 섹션마다 누르는 ‘이 섹션 만들기’ 버튼은 없어요.",
-  `가격: 사업계획서 사업 하나당 ${won(PACKAGE_AMOUNT)}(${LAUNCH_PRICE_LABEL}), 계획서+홈페이지 묶음 ${won(BUNDLE_PRODUCT_AMOUNT)}, 계획서를 결제한 사업의 홈페이지 편집·공개 ${won(HOMEPAGE_PRODUCT_AMOUNT)}(계획서 없이 홈페이지만은 살 수 없음), 내 도메인 연결 1년 ${won(DOMAIN_PRODUCT_AMOUNT)}, 이미 산 도메인의 갱신 ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}, 계획서 다시 생성 ${REGEN_PACK_COUNT}회 추가 ${won(REGEN_PACK_AMOUNT)}. 모두 1회 결제이며 구독이 아니에요.`,
+  `가격: 사업계획서 사업 하나당 ${won(PACKAGE_AMOUNT)}, 계획서+홈페이지 묶음 ${won(BUNDLE_PRODUCT_AMOUNT)}, 계획서를 결제한 사업의 홈페이지 편집·공개 ${won(HOMEPAGE_PRODUCT_AMOUNT)}(계획서 없이 홈페이지만은 살 수 없음), 내 도메인 연결 1년 ${won(DOMAIN_PRODUCT_AMOUNT)}, 이미 산 도메인의 갱신 ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}, 계획서 다시 생성 ${REGEN_PACK_COUNT}회 추가 ${won(REGEN_PACK_AMOUNT)}. 모두 1회 결제이며 구독이 아니에요.`,
   WEB_PAY_FACT,
   `무료 범위: 대화, 무료 창업 상담, 사업 방향 정리는 무료예요. ${FREE_RULE}.`,
   `사업계획서를 결제하면 그 사업의 전체 항목 작성과 ${FILES} 내려받기가 열려요. ${PPT_NOTE}`,

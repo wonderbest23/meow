@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { ALLOWANCE_TERMS_FROM, BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, HOMEPAGE_PRODUCT_AMOUNT, isCurrentAllowanceTerms, LEGACY_REGEN_INCLUDED, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, TERMS_VERSION } from "../lib/payments/domain";
+import { readFileSync } from "node:fs";
+import * as paymentDomain from "../lib/payments/domain";
+import { ALLOWANCE_TERMS_FROM, BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, isCurrentAllowanceTerms, LEGACY_REGEN_INCLUDED, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, TERMS_VERSION } from "../lib/payments/domain";
 import { planPrice, PLAN_TYPE_PRICING, productAmount, productName } from "../lib/payments/plan-orders";
 import { createLegalDocument, defaultPlatformLegalSettings } from "../lib/platform-legal/domain";
 
@@ -31,4 +33,22 @@ for (const text of ["49,000원", "19,000원", "사업계획서 + 홈페이지: 5
 for (const stale of ["69,000원", "99,000원", "4,900원", "무료 체험은 사업자등록", "무료로 써 보는 체험은 제공하지 않습니다"]) assert.ok(!terms.includes(stale), stale);
 assert.ok(!terms.includes("149,000원"));
 
-console.log(JSON.stringify({ passed: 31 }));
+// 홈페이지 주소(도메인) 비용 — 약관에만 있고 첫 화면 요금표·자주 묻는 질문에 없었다(점검 2026-11-16). 값은 결제 상수 그대로
+assert.equal(DOMAIN_PRODUCT_AMOUNT, 59_000);
+assert.equal(DOMAIN_PURCHASE_PRODUCT_AMOUNT, 79_000);
+for (const text of ["내 도메인 연결 + 호스팅 1년: 59,000원", "도메인 구매 + 연결·호스팅 1년: 79,000원"]) assert.ok(terms.includes(text), text);
+const homeSections = readFileSync("components/home-prompt-sections.tsx", "utf8");
+const priceBlock = homeSections.slice(homeSections.indexOf('id="price"'), homeSections.indexOf('id="faq"'));
+const faqBlock = homeSections.slice(homeSections.indexOf('id="faq"'));
+for (const [name, block] of [["요금표", priceBlock], ["자주 묻는 질문", faqBlock]] as const) {
+  assert.match(block, /won\(DOMAIN_PRODUCT_AMOUNT\)/, `첫 화면 ${name}에 도메인 연결 비용이 없다`);
+  assert.match(block, /won\(DOMAIN_PURCHASE_PRODUCT_AMOUNT\)/, `첫 화면 ${name}에 도메인 구매 포함 비용이 없다`);
+}
+// '출시 기념가' 표현은 모든 곳에서 뺐다(대표 결정 2026-11-17) — 가격(49,000원·59,000원)은 그대로
+assert.equal("LAUNCH_PRICE_LABEL" in paymentDomain, false, "LAUNCH_PRICE_LABEL 상수가 남았다");
+for (const path of ["components/home-prompt-sections.tsx", "app/plan/pay/PlanCheckout.tsx", "lib/support-chat/faq.ts", "lib/payments/domain.ts", "lib/platform-legal/domain.ts"]) {
+  const source = readFileSync(path, "utf8").replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+  assert.ok(!source.includes("출시 기념가") && !source.includes("LAUNCH_PRICE_LABEL"), `${path}: '출시 기념가' 표현이 남았다`);
+}
+
+console.log(JSON.stringify({ passed: 44 }));
