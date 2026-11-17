@@ -1244,13 +1244,16 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const designFailed = plan?.intake.job?.kind === "design" && plan.intake.job.status === "failed";
   // While the direction summary is being written, the coach "replies" (typing bubble + current step) instead of a heading and gauge.
   const designRunning = nextStep === "design" && aiBusy && plan?.intake.job?.kind === "design";
+  /* 계획서 전, 방향을 본 뒤 적은 말을 반영하는 중(채팅 수정 작업) — 끝나면 바로 방향을 다시 정리하므로 같은 '정리 중' 모습을 이어서 보인다 */
+  const reflecting = coach && !!plan && !plan.hasDocuments && aiBusy && plan.intake.job?.kind === "edit";
+  const directionShown = !!plan?.coach.design && (nextStep === "prepare" || nextStep === "open");
   // 코치 채팅: 마지막 답을 보낸 순간(정리 작업이 서버에 접수되기 전)부터 진행 화면을 보인다 — 자동 정리가 곧 시작되는 경우만
   const designStarting = coach && nextStep === "design" && !designFailed && !aiBusy && !loginGate && status !== "failed" && status !== "conflict";
   /*
    * 작업실: 정리 진행 카드(DesignProgress)가 보이기 시작하고 사라지는 순간 머리줄에 바로 알린다 — 머리줄은 질문 수를 15초마다 묻기만 해서
    * 카드는 '정리하고 있어요'인데 부제는 '대화 중 · 마무리', 칩은 '대화 ✓ · 계획서(지금)'로 최대 15초 어긋났다. 같은 값은 작업실이 거른다.
    */
-  const designActive = embedded && !!plan && (designRunning || designStarting);
+  const designActive = embedded && !!plan && (designRunning || designStarting || reflecting);
   useEffect(() => { studioNav?.setDesignRunning?.(designActive); }, [studioNav, designActive]);
   const studioNavRef = useRef(studioNav);
   useEffect(() => { studioNavRef.current = studioNav; }, [studioNav]);
@@ -1555,7 +1558,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const reflectStyle = chatReflectStyle(pro, studioSide);
   const studioPlaceholder = studioRoute === "queue" ? "다 쓰면 반영할 내용"
     : studioRoute === "homepage" ? "바꿀 글 (예: 제목 짧게)"
-    : studioRoute === "chat" ? plan?.hasDocuments && planSide ? "바꿀 내용이나 궁금한 점" : "궁금한 점을 적어 주세요"
+    : studioRoute === "chat" ? plan?.hasDocuments ? planSide ? "바꿀 내용이나 궁금한 점" : "궁금한 점을 적어 주세요" : directionShown && COACH_EDIT_CHAT ? "바꿀 내용이나 궁금한 점" : "궁금한 점을 적어 주세요"
     : sectionByChat ? "예: 가격을 9,000원으로"
     : editTarget ? "바꿀 내용을 적어 주세요" : "";
   const studioNote = inputHint || composerLimitNote(studioText.length, 1200);
@@ -1699,6 +1702,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
       dispatchEdit({ type: "note", turn: { id: crypto.randomUUID(), target: "plan-section", label: "계획서", instruction: text, at: Date.now() } });
       return;
     }
+    /*
+     * 계획서 전이라도 사업 방향을 정리했으면 고칠 말로 보낸다 — 서버가 바꿀 값을 바로 넣고(묻지 않음) 적은 말도 메모로 남긴 뒤
+     * 방향을 옛 기준으로 표시하고, 화면은 사업 방향을 다시 정리한다(2026-11-17 사장님: 방향을 본 뒤 적은 말이 메모로만 남고 아무 대답이 없었다).
+     */
+    if (COACH_EDIT_CHAT && directionShown) { void send({ action: "edit", message: text }); return; }
     void send({ action: "note", message: text, noteIntent: "memo" });
   };
   const submitStudio = () => {
@@ -2016,7 +2024,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}
             {updateNotice && !coach && <section className={styles.updateNotice} aria-label="변경 내용 반영 상태"><strong>저장된 결과 확인</strong><p>{updateNotice}</p><small>새로 만들기를 선택하기 전까지 기존 결과는 유지돼요.</small></section>}
-            {job && <section className={styles.job} aria-label="AI 작업 상태">{aiBusy && (!showCompletion || job.kind === "help") && job.kind !== "design" && job.kind !== "edit" && <JobProgress snapshot={plan} announce variant="chat" />}{job.status === "failed" && <div className={styles.error} role="alert"><p>{job.error || "AI 작업을 완료하지 못했어요."}</p><p>저장한 답변과 메모는 그대로 남아 있습니다.</p><AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => void send(job.kind === "extract" ? { action: "extract" } : job.kind === "design" ? { action: "design" } : job.kind === "ideas" ? { action: "ideas", message: job.request || "지금 조건으로 다른 사업을 제안해 주세요" } : { action: "help", message: job.request || draft.help })}><RefreshCw size={16} aria-hidden="true" />다시 요청</AppButton></div>}{/* 사업 방향(design) 결과는 아래 카드 한 곳에서만 보인다 — 예전엔 같은 내용이 대화 글로도 한 번 더 나왔다 */}{job.status === "complete" && job.reply && job.kind !== "design" && !plan.coach.messages.some(message => message.id === `${job.id}:reply`) && <div className={styles.aiReply}><h3>{job.kind === "help" ? "AI 답변" : "메모 정리 결과"}</h3><ConversationText key={job.id} text={job.reply} /></div>}</section>}
+            {job && <section className={styles.job} aria-label="AI 작업 상태">{aiBusy && (!showCompletion || job.kind === "help") && job.kind !== "design" && job.kind !== "edit" && <JobProgress snapshot={plan} announce variant="chat" />}{job.status === "failed" && <div className={styles.error} role="alert"><p>{job.error || "AI 작업을 완료하지 못했어요."}</p><p>저장한 답변과 메모는 그대로 남아 있습니다.</p><AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => void send(job.kind === "extract" ? { action: "extract" } : job.kind === "design" ? { action: "design" } : job.kind === "ideas" ? { action: "ideas", message: job.request || "지금 조건으로 다른 사업을 제안해 주세요" } : job.kind === "edit" ? { action: "edit", message: job.request ?? "" } : { action: "help", message: job.request || draft.help })}><RefreshCw size={16} aria-hidden="true" />다시 요청</AppButton></div>}{/* 사업 방향(design) 결과는 아래 카드 한 곳에서만 보인다 — 예전엔 같은 내용이 대화 글로도 한 번 더 나왔다 */}{job.status === "complete" && job.reply && job.kind !== "design" && !plan.coach.messages.some(message => message.id === `${job.id}:reply`) && <div className={styles.aiReply}><h3>{job.kind === "help" ? "AI 답변" : "메모 정리 결과"}</h3><ConversationText key={job.id} text={job.reply} /></div>}</section>}
             {showReview ? <><ExtractionReview key={plan.planId} snapshot={plan} disabled={blocked} onCommand={command => void send(command)} /><AppButton type="button" variant="text" className={styles.textButton} disabled={blocked} onClick={() => setDeferredReview(reviewKey)}>나중에 확인하고 대화 이어가기</AppButton></> : reviewCandidates.length > 0 && <AppButton type="button" variant="text" className={styles.textButton} disabled={blocked || hasLocalInput(draft)} onClick={() => { follow.current = true; setDeferredReview(""); }}>메모에서 찾은 내용 {reviewCandidates.length}개 확인</AppButton>}
             {!locked && questionNote && !questionHandled && <section className={styles.noteReceipt} aria-label="저장한 질문"><p>질문을 저장했어요</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "help", message: lastMessage!.text })}><MessageCircle size={16} aria-hidden="true" />AI 답변 받기</AppButton></section>}
             {/* 일반 모드에서는 보이지 않는다(2026-11-15 사장님) — 이름만 봐서는 무엇인지 알기 어려웠다. 메모는 그대로 저장된다 */}
@@ -2029,7 +2037,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview || understanding}>
               {/* 쓰는 동안 받아 둔 요청을 보내 채팅 수정 화면이 되어도 마무리 말(계획서 보기 · 홈페이지 만들기)을 먼저 남기고 그 아래에 제안 카드 */}
               {editTurn && !replyTurn ? <>{studioTurn}<EditChatTurn pro={pro} chapters={editChapters} snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} loginNote={prepareLoginNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : locked && !replyTurn ? <>{studioTurn ?? <DocumentLockedTurn pro={pro} planId={plan.planId} chatEdit={COACH_EDIT_CHAT} onChatEdit={embedded ? () => { follow.current = true; focusComposer(); } : undefined} />}{nextStep === "prepare" && !studioRun && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} loginNote={prepareLoginNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || amountConfirmation || sectorConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat cardLabel={questionCardLabel} cardFoot={questionCardFoot} question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={answerBlocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onCarry={carryDraft} onComposer={focusComposer} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</AppButton></section> : <section className={styles.complete}>
-                {designRunning || designStarting ? <DesignProgress snapshot={plan} announce /> : <>
+                {designRunning || designStarting || reflecting ? <DesignProgress snapshot={plan} announce /> : <>
                 {pro && (nextStep === "prepare" || nextStep === "open") && <WorkLog items={[designLogItem(plan)]} />}
                 <ChatSpeaker />
                 {(nextStep === "prepare" || nextStep === "open") && currentIdentity(plan) ? coach ? <DesignResult snapshot={plan} disabled={blocked} onName={name => void send({ action: "name", value: name })} /> : <BusinessIdentityHero snapshot={plan} disabled={blocked} onName={name => void send({ action: "name", value: name })} /> : <>

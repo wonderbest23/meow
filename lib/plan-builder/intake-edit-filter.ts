@@ -27,5 +27,24 @@ export const EDIT_REPLIES: Record<Exclude<EditRoute, "in_scope">, string> = {
   off_topic: "이 대화에서는 계획서 내용 수정만 도와드려요. 예: 주 고객을 1인 가구로, 판매 채널에 인스타그램 추가",
 };
 
+/**
+ * 계획서 전(사업 방향만 정리한 상태)에 같은 요청이 왔을 때 — '계획서' 대신 '사업 방향' 말로(2026-11-17).
+ * 이때 바꿀 내용은 묻지 않고 바로 넣고 방향을 다시 정리하므로 "바로 넣을게요"라고 알린다.
+ */
+export const EDIT_REPLIES_BEFORE_DOCUMENT: Record<Exclude<EditRoute, "in_scope">, string> = {
+  empty: "바꾸고 싶은 내용을 적어 주세요. 예: 주 고객을 대학생으로, 가격을 2만원으로",
+  new_business: "지금 대화는 이 사업 기준이에요. 다른 사업은 왼쪽 위 \"새 대화\"에서 따로 시작할 수 있어요.",
+  style: "말투나 문체는 바꾸지 않아요. 가격·고객·상품처럼 바꾸고 싶은 내용을 말씀해 주시면 사업 방향에 바로 넣을게요.",
+  off_topic: "가격·고객·상품처럼 바꾸고 싶은 내용이 있으면 말씀해 주세요. 사업 방향에 바로 넣을게요.",
+};
+
+/** 목적격 조사 — 받침이 있으면 '을', 없으면 '를'(한글이 아닌 끝 글자는 '을') */
+export function objectParticle(word: string): "을" | "를" {
+  const last = word.trim().at(-1) ?? "";
+  const code = last.charCodeAt(0) - 0xac00;
+  if (code < 0 || code > 11171) return "을";
+  return code % 28 ? "을" : "를";
+}
+
 /** Requests to change the plan's facts per plan per day, on top of the account-wide AI limit. */
 export const EDIT_DAILY_LIMIT = 20;
