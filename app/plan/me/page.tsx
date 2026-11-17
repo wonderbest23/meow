@@ -251,7 +251,7 @@ export default function PlanMePage() {
                   {recheckMessage[item.orderId] ? <p className={styles.rowNotice} role="status">{recheckMessage[item.orderId]}</p> : null}
                 </SettingsRow>
                 {refundFor === item.orderId && (
-                  <SettingsRow stack title="환불 사유" description="5자 이상 적어 주세요. 사업계획서 만들기 버튼을 누른 뒤에는 AI 작성 비용이 들어 단순 변심 환불은 되지 않아요.">
+                  <SettingsRow stack title="환불 사유" description="5자 이상 적어 주세요. 사업계획서 작성이 시작된 뒤에는 AI 작성 비용이 들어 단순 변심 환불은 되지 않아요.">
                     <div className={styles.refundForm}>
                       <TextArea
                         aria-label="환불 사유"

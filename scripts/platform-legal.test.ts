@@ -81,11 +81,11 @@ assert.equal(upgradedPolicy.policyEffectiveDate, "2026-11-17");
 assert.match(upgradedPolicy.serviceSupplyTiming, /NicePay/);
 assert.match(upgradedPolicy.refundAfterSupply, /단순 변심/);
 
-// 환불 기준은 '사업계획서 만들기 버튼을 누르기 전/후' 하나(대표 결정 2026-11-17) — 예전 '결제 승인 즉시 제공'·'생성이 시작되지 않았으면'이 함께 있어 모호했다
-const ONE_RULE_BEFORE = "사업계획서 만들기 버튼을 누르기 전에는 전액 환불됩니다";
-const ONE_RULE_AFTER = "누른 뒤에는 AI 작성 비용이 들어 환불되지 않습니다";
+// 환불 기준은 '작성이 시작되기 전(시작 못 함·실패)/시작된 뒤' 하나(대표 결정 2026-11-17, 결제하면 바로 작성 시작) — 예전 '결제 승인 즉시 제공'·'생성이 시작되지 않았으면'이 함께 있어 모호했다
+const ONE_RULE_BEFORE = "작성이 시작되지 못했거나 작성이 실패하면 전액 환불됩니다";
+const ONE_RULE_AFTER = "작성이 시작된 뒤에는 AI 작성 비용이 들어 환불되지 않습니다";
 assert.ok(refundText.includes(ONE_RULE_BEFORE) && refundText.includes(ONE_RULE_AFTER), "refund page states the one rule");
-assert.ok(terms.includes(ONE_RULE_AFTER) && terms.includes("사업계획서 만들기 버튼을 누른 때가"), "terms use the same moment");
+assert.ok(terms.includes(ONE_RULE_AFTER) && terms.includes("결제 후 사업계획서 작성이 시작된 때가"), "terms use the same moment");
 assert.ok(businessText.includes(ONE_RULE_BEFORE), "business-info refund check uses the same rule");
 for (const text of [refundText, terms, businessText]) {
   assert.ok(!text.includes("생성이 실제로 시작되지 않았다면"), "the old 'generation not started' rule is gone");
@@ -93,10 +93,10 @@ for (const text of [refundText, terms, businessText]) {
   assert.ok(text.includes("제17조 제2항") || text === businessText, "the e-commerce act withdrawal limit stays");
 }
 const appRefund = JSON.stringify(createLegalDocument("refund", complete, { inApp: true }));
-assert.ok(appRefund.includes("사업계획서 만들기 버튼을 누르기 전이라면 전액 환불 대상") && appRefund.includes("App Store"), "app refund page keeps the store path with the same rule");
+assert.ok(appRefund.includes("작성이 시작되지 못했거나 실패했다면 전액 환불 대상") && appRefund.includes("App Store"), "app refund page keeps the store path with the same rule");
 for (const path of ["app/plan/pay/PlanCheckout.tsx", "lib/support-chat/faq.ts"]) {
   const source = readFileSync(path, "utf8");
-  assert.ok(source.includes("사업계획서 만들기 버튼을 누르기 전에는 전액 환불"), `${path}: 결제 화면·자주 묻는 질문도 같은 기준`);
+  assert.ok(source.includes("작성이 시작되지 못했거나 실패하면 전액 환불"), `${path}: 결제 화면·자주 묻는 질문도 같은 기준`);
   assert.ok(!source.includes("인공지능 작성이 시작되기 전에는") && !source.includes("결제가 승인되면 바로 내 사업에 맞춘"), `${path}: 예전 환불 기준 문구가 남았다`);
 }
 

@@ -54,7 +54,7 @@ async function main() {
   assert.equal(findSupportFaqKeywordMatches("휴대폰 PC 같은 문서를 볼 수 있나요?", 1)[0]?.id, "account-device");
   assert.match(supportKnowledgeText("가격이 얼마인가요?"), /사업 하나당 49,000원/);
   assert.doesNotMatch(supportKnowledgeText("가격이 얼마인가요?"), /출시 기념가/, "'출시 기념가' 표현은 뺐다(2026-11-17 대표 결정)");
-  assert.match(supportKnowledgeText("환불은 어떻게 되나요?"), /사업계획서 만들기 버튼을 누르기 전에는 전액 환불/);
+  assert.match(supportKnowledgeText("환불은 어떻게 되나요?"), /작성이 시작되지 못했거나 실패하면 전액 환불/);
   assert.match(supportKnowledgeText("카드로 결제할 수 있나요?"), /나이스페이 결제창/);
   assert.match(supportKnowledgeText("제작 후 단순 변심 환불이 되나요?"), /단순 변심 환불이 제한/);
   assert.match(supportKnowledgeText("샘플 볼 수 있나요?"), /완성 예시/);

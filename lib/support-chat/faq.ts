@@ -77,7 +77,7 @@ export const supportFaqCategories: SupportFaqCategory[] = [
       { id: "pay-scope", question: "결제하면 무엇이 열리나요?", answer: `사업계획서를 결제하면 그 사업의 계획서 전체 항목 작성과 ${FILES} 내려받기가 열려요. ${PPT_NOTE} 홈페이지 편집·공개는 사업계획서 + 홈페이지 묶음으로 함께 열거나, 계획서를 결제한 뒤 홈페이지 상품으로 열어요.`, keywords: ["결제하면", "뭐가 열려", "포함", "범위"] },
       { id: "pay-method", question: "결제 수단은 무엇인가요?", answer: "신용·체크카드로 결제할 수 있으며 나이스페이 결제창에서 안전하게 진행돼요. 결제가 승인되면 바로 열려요.", appAnswer: APP_PAY_METHOD, keywords: ["결제 수단", "카드", "계좌이체", "카카오페이", "토스"] },
       { id: "pay-multi", question: "한 계정으로 여러 사업을 결제할 수 있나요?", answer: "네. 사업마다 따로 결제하는 방식이라 한 계정에서 여러 사업을 각각 결제할 수 있어요. 결제 내역은 메뉴의 ‘내 계정’에서 확인해요.", keywords: ["여러 번", "여러 사업", "여러 문서", "추가 결제", "또 결제"], link: { href: "/plan/me", label: "마이페이지 열기" } },
-      { id: "pay-refund", question: "환불은 어떻게 되나요?", answer: "사업계획서 만들기 버튼을 누르기 전에는 전액 환불돼요. 누른 뒤에는 AI 작성 비용이 들어 환불되지 않아요(단순 변심 환불이 제한돼요). 다만 결과물 미제공이나 중대한 하자 등 법정 예외는 재제작·환급을 요청할 수 있어요. 아이폰 앱 안에서 결제했다면 Apple 문제 신고 페이지(reportaproblem.apple.com)에서, 안드로이드 앱이면 Google Play 주문 내역에서 환불을 신청해요. 도메인·토큰 등 상품별 기준은 취소·환불 안내에서 확인하세요.", appAnswer: APP_REFUND, keywords: ["환불", "취소", "환급", "변심"], link: { href: "/plan/info?doc=refund", label: "취소·환불 기준 보기" } },
+      { id: "pay-refund", question: "환불은 어떻게 되나요?", answer: "결제가 끝나면 사업계획서 작성이 바로 시작돼요. 작성이 시작되지 못했거나 실패하면 전액 환불돼요. 작성이 시작된 뒤에는 AI 작성 비용이 들어 환불되지 않아요(단순 변심 환불이 제한돼요). 다만 결과물 미제공이나 중대한 하자 등 법정 예외는 재제작·환급을 요청할 수 있어요. 아이폰 앱 안에서 결제했다면 Apple 문제 신고 페이지(reportaproblem.apple.com)에서, 안드로이드 앱이면 Google Play 주문 내역에서 환불을 신청해요. 도메인·토큰 등 상품별 기준은 취소·환불 안내에서 확인하세요.", appAnswer: APP_REFUND, keywords: ["환불", "취소", "환급", "변심"], link: { href: "/plan/info?doc=refund", label: "취소·환불 기준 보기" } },
     ],
   },
   {
@@ -133,7 +133,7 @@ export const supportFaqCategories: SupportFaqCategory[] = [
 const WEB_PAY_FACT = "결제 수단은 신용·체크카드이며 나이스페이 결제창에서 진행돼요. 결제가 승인되면 바로 열려요.";
 const WEB_ACCOUNT_FACT_HEAD = "메뉴의 ‘내 계정’(/plan/me)에서 계정 정보, 내 사업 목록, 결제 내역을 확인하고 카드 결제 환불을 요청해요.";
 const WEB_ACCOUNT_FACT = `${WEB_ACCOUNT_FACT_HEAD} 앱 안 결제(App Store·Google Play)의 환불은 결제한 스토어에 신청해요(아이폰: reportaproblem.apple.com). 회원 탈퇴는 ‘내 계정’ 맨 아래에서 하고, 계정과 작성한 사업·문서가 모두 삭제되며 결제·환불 기록만 법령상 보존 의무로 사람과 연결되지 않는 형태로 남아요. 비밀번호를 잊었으면 로그인 화면의 ‘비밀번호 재설정’에서 가입 이메일로 다시 정해요.`;
-const WEB_REFUND_FACT = "환불: 사업계획서 만들기 버튼을 누르기 전에는 전액 환불돼요. 누른 뒤에는 AI 작성 비용이 들어 환불되지 않아요(단순 변심 환불이 제한돼요). 결과물 미제공, 계약 불일치, 중대한 하자 등 법정 예외는 재제작이나 환급을 요청할 수 있으며, 도메인·토큰 등 상품별 기준은 취소·환불 안내(/plan/info?doc=refund)를 우선해요.";
+const WEB_REFUND_FACT = "환불: 결제가 끝나면 사업계획서 작성이 바로 시작돼요. 작성이 시작되지 못했거나 실패하면 전액 환불돼요. 작성이 시작된 뒤에는 AI 작성 비용이 들어 환불되지 않아요(단순 변심 환불이 제한돼요). 결과물 미제공, 계약 불일치, 중대한 하자 등 법정 예외는 재제작이나 환급을 요청할 수 있으며, 도메인·토큰 등 상품별 기준은 취소·환불 안내(/plan/info?doc=refund)를 우선해요.";
 /*
  * 앱 안에서 묻는 사람에게는 카드·웹 결제를 근거로 주지 않는다(App Store 3.1.1) — 같은 자리를 앱용 사실로 바꾼다.
  * 도메인·AI 수정 토큰은 앱에서 팔지 않지만, 어디서 사라고 안내하지 않는다.
