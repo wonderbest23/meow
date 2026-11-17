@@ -442,6 +442,28 @@ export function shouldAcceptSnapshot(current: IntakeSnapshot | null, incoming: I
   return incoming.updatedAt >= current.updatedAt;
 }
 
+/**
+ * 답 저장이 '다른 화면에서 수정됐어요'(409 revision_conflict)로 막혔을 때, 같은 답을 한 번 자동으로 다시 보낼 판(revision). 보내지 않으면 null.
+ * 서버의 최신 상태에서도 그 질문이 아직 '지금 질문'이면 판을 올린 것은 사용자가 아니라 배경 작업이다
+ * (적은 글 읽기 understand · 업종 기준값 채우기 · AI 작업 완료) — 그때만 최신 판으로 다시 보낸다(사용자에게 오류를 보이지 않는다).
+ * 질문이 바뀌었으면(다른 화면에서 답했거나, 읽은 값이 그 칸을 채웠거나) 덮어쓰지 않고 지금처럼 사용자에게 맡긴다.
+ * 2026-11-17 운영: 첫 메시지 뒤 서버가 판을 1→2로 올렸는데 화면은 1로 답을 보내 손님이 두 번째 질문에서 막혔다.
+ */
+export function answerConflictRetry(command: IntakeCommand, latest: IntakeSnapshot | null | undefined): number | null {
+  if (command.action !== "answer" || !command.questionId || !latest || latest.planId !== command.planId) return null;
+  if (latest.coach.revision <= command.revision) return null;
+  return latest.nextQuestion?.id === command.questionId ? latest.coach.revision : null;
+}
+
+/**
+ * '최신 내용 불러오기'로 충돌을 정리한 입력 — 보관한 요청(pending)과 답변 수정 모드(editingId · refiningId)를 지워 서버의 지금 질문을 보이게 한다.
+ * 질문마다 적어 둔 글(answers) · 메모 · 질문 글은 그대로 둔다(입력칸에 남긴 글은 지우지 않는다).
+ * 예전엔 충돌 때 켠 답변 수정 모드가 남아, 다시 보내 저장된 뒤에도 '답변 수정 · 현재 질문으로'로 지난 질문을 계속 보였다.
+ */
+export function clearConflictDraft(draft: IntakeDraft): IntakeDraft {
+  return { ...draft, pending: null, editingId: null, refiningId: null };
+}
+
 export function isIntakePayload(value: unknown): value is IntakePayload {
   if (!value || typeof value !== "object") return false;
   const data = value as IntakePayload;

@@ -1,6 +1,7 @@
 import { completeJson, type LLMConfig, type LLMFailure } from "../llm/complete";
 import { coachAmount } from "./coach-feasibility";
 import { bareBudgetManwon } from "./answer-number";
+import { UNDERSTAND_AI_MIN_MS } from "./intake-timing";
 import type { IntakeQuestion } from "./intake-questions";
 import type { IntakeValue } from "./intake-types";
 
@@ -66,14 +67,19 @@ export function cleanUnderstood(raw: Record<string, unknown> | null, text: strin
 }
 
 export type UnderstandResult = { understood: Understood; model: string; totalMs: number; failure?: LLMFailure["code"] };
-export async function understandIdea(config: LLMConfig, text: string, signal?: AbortSignal): Promise<UnderstandResult> {
+/**
+ * timeoutMs: AI에 줄 시간 — 부르는 쪽(understand 경로)이 요청을 받은 때부터 잰 남은 시간을 준다(intake-timing understandAiBudget).
+ * UNDERSTAND_AI_MIN_MS 보다 적으면 AI를 부르지 않고 시간 초과로 끝낸다.
+ */
+export async function understandIdea(config: LLMConfig, text: string, signal?: AbortSignal, timeoutMs = 7_000): Promise<UnderstandResult> {
   const started = Date.now(), input = text.slice(0, UNDERSTAND_MAX_INPUT);
+  if (!(timeoutMs >= UNDERSTAND_AI_MIN_MS)) return { understood: {}, model: config.model, totalMs: 0, failure: "timeout" };
   let failure: LLMFailure["code"] | undefined;
   const raw = await completeJson(config, {
     kind: "intake-understand", system: RULES, user: JSON.stringify({ text: input }),
     jsonSchema: { name: "understood_idea", schema }, anthropicJsonSchema: true, effort: "low",
-    // 화면은 8초까지만 기다린다 — 서버가 그보다 먼저 포기해야 뒤늦게 저장해 사용자의 다음 답과 부딪히지 않는다
-    maxOutputTokens: 500, timeoutMs: 7_000, allowFallback: false, signal,
+    // 화면은 8초까지만 기다린다 — 서버가 그보다 먼저 포기해야 뒤늦게 저장해 사용자의 다음 답과 부딪히지 않는다(최대 7초, 보통은 남은 시간만큼)
+    maxOutputTokens: 500, timeoutMs: Math.min(7_000, timeoutMs), allowFallback: false, signal,
     onFailure: event => { failure = event.code; },
   });
   return { understood: cleanUnderstood(raw, input), model: config.model, totalMs: Date.now() - started, ...(failure ? { failure } : {}) };
