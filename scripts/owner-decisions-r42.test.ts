@@ -33,8 +33,10 @@ assert.match(panels, /variant=\{reflect === "link" \? "text" : "primary"\}/, "PC
 
 // 반영 실패 안내 · [다시 시도]는 NextStepAction 밖 대화 칸 알림에 있다 — 링크를 숨겨도 그대로 보인다
 assert.match(intake, /setPreparing\(true\); setChatSent\(true\);/, "반영하기를 누른 것도 방금 보낸 요청(점검 r42)");
-assert.match(intake, /\{error && !ideaError && !staleFailure && <div className=\{styles\.notice\} role="alert">/);
-const notice = intake.indexOf("{error && !ideaError && !staleFailure && <div className={styles.notice}");
+// 같은 요청을 다시 보낼 수 있는 작성 시작 실패는 맨 위 줄(작성을 시작하지 못했어요 · 다시 시도)이 대신한다(점검 2026-11-16)
+assert.match(intake, /\{error && !ideaError && !staleFailure && !prepareNoticeOnTop && <div className=\{styles\.notice\} role="alert">/);
+const notice = intake.indexOf("{error && !ideaError && !staleFailure && !prepareNoticeOnTop && <div className={styles.notice}");
+assert.ok(notice > 0);
 assert.ok(!intake.slice(notice, notice + 1200).includes("NextStepAction"), "실패 알림은 반영 단추와 따로 그린다");
 
 // 계획서 칸의 파란 단추와 그 실패 안내 — 단추가 남아 있어 다시 누를 수 있다

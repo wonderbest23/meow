@@ -14,6 +14,7 @@ import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-sto
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
 import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { ruleKind } from "./kind-rules";
+import { adoptRenamedTitle } from "./business-name";
 import { estimateIntake } from "./intake-estimate";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
@@ -94,6 +95,8 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     if (!plan && state.plans.filter(item => readCoach(item.answers)).length >= PLAN_LIMIT) throw new IntakeError("plan_limit", `사업은 최대 ${PLAN_LIMIT}개까지 만들 수 있어요. 내 사업에서 쓰지 않는 사업을 정리하거나 기존 사업에서 이어가 주세요`, 429);
     const oldAt = plan?.updatedAt ?? null, at = nextTimestamp(oldAt ?? undefined);
     const coach = structuredClone(previous ?? emptyCoach());
+    // 머리줄에서 바꾼 사업 이름(제목)을 확정 이름으로 받는다 — 아래에서 제목을 대화 속 이름으로 덮어써도 사라지지 않게
+    if (plan && previous && savedIntake) adoptRenamedTitle(plan, coach);
     if (!plan) {
       plan = { id: `plan_${command.requestId}`, title: "새 사업", planType: COACH_TYPES.startup, createdAt: at, updatedAt: at, answers: {}, sections: {} };
       state.plans.push(plan);
@@ -454,6 +457,7 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         coach.documentRevision = coachDocumentRevision(coach) + 1; coach.revision += 1;
         coach.design = { ...design, status: "proposal", sourceRevision: coach.documentRevision };
         /* 상호를 아직 정하지 않았으면 첫 답 문장('그냥 치킨집이요. 질문 좀 그만…') 대신 짧은 이름표로 목록에 보인다 — 실제 AI 시험 2026-10-21 */
+        adoptRenamedTitle(_plan, coach);
         if (!coach.business.nameConfirmed && design.identity?.label) { coach.business.name = design.identity.label; _plan.title = design.identity.label; }
         current.reply = businessDesignReply(design); current.status = "complete";
       });

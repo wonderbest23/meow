@@ -227,3 +227,11 @@
 .metaStage.metaStage { display:none; }
 @media (max-width:900px) { .listCard[data-list-only] .metaStage.metaStage { display:inline-flex; } }
 .thumbBadge.thumbBadge[data-tone="neutral"] { background:var(--app-panel); box-shadow:0 0 0 1px var(--app-line); }
+/* 로그인 전에 하던 사업 '이어서 하기' — 인사말과 입력칸 사이 */
+.resume { display:flex; flex-direction:column; align-items:center; gap:6px; width:min(720px, 100%); margin-top:24px; }
+.resumeLink { display:inline-flex; align-items:center; gap:8px; max-width:100%; min-height:44px; padding:8px 16px; border:1px solid var(--app-line); border-radius:999px; background:var(--app-surface); color:var(--app-text); font-size:.9375rem; text-decoration:none; }
+.resumeLink span { color:var(--app-muted); white-space:nowrap; }
+.resumeLink strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600; }
+.resumeLink:hover { border-color:var(--app-line-strong); }
+.resumeNote { margin:0; color:var(--app-muted); font-size:.8125rem; }
+.resumeNote button { min-height:32px; padding:0 2px; border:0; background:none; color:var(--app-text); font:inherit; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
