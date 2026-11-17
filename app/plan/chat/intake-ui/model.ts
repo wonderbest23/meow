@@ -734,7 +734,9 @@ export const isExclusiveOption = (label: string) => {
 export const hasExclusiveOptions = (question: Pick<IntakeQuestion, "options">) => !!question.options?.some(option => isExclusiveOption(option.label));
 
 /** Toggle one chip inside its step, applying exclusivity and the per-step limit (limit 1 replaces). */
-export function toggleChip(question: ChipQuestion, selected: string[], value: string, limit = question.kind === "multi" ? Number.POSITIVE_INFINITY : chipLimit(question.id)): string[] {
+/** 여러 개 고르는(multi) 질문 중 개수 한도가 질문 글에 적힌 것 — '시작 조건 (최대 4개)'인데 5개까지 골라졌다(점검 2026-11-16) */
+const MULTI_PICK_LIMITS: Record<string, number> = { conditions: 4 };
+export function toggleChip(question: ChipQuestion, selected: string[], value: string, limit = question.kind === "multi" ? MULTI_PICK_LIMITS[question.id] ?? Number.POSITIVE_INFINITY : chipLimit(question.id)): string[] {
   const options = question.options ?? [];
   const option = options.find(item => item.value === value);
   if (!option) return selected;

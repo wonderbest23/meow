@@ -196,12 +196,14 @@ export default function PlanMePage() {
         aside={(myPlans.length > 0 || plansStale) && <AppButton href={`/plan?view=${PLAN_VIEW_ALL}`} variant="secondary" size="compact" className={styles.cardAction}>전체 보기<ChevronRight size={14} aria-hidden="true" /></AppButton>}>
         <SettingsCard>
           {myPlans.length ? myPlans.slice(0, 5).map((plan) => {
-            const complete = businessHubState(plan).complete;
+            /* 상태 이름은 내 사업 목록과 같은 말로(점검 2026-11-16: 여기만 '진행 중', 목록은 '대화 중') */
+            const hub = businessHubState(plan);
+            const complete = hub.complete;
             const name = planDisplayName(plan);
             return <SettingsRow key={plan.id} leading={<SettingsAvatar tone="soft">{name.trim().charAt(0) || "사"}</SettingsAvatar>}
-              title={planDisplayName(plan)} description={`${complete ? "계획서 완성" : "진행 중"} · ${new Date(plan.updatedAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 수정`}
+              title={planDisplayName(plan)} description={`${hub.status} · ${new Date(plan.updatedAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 수정`}
               control={<>
-                <StatusBadge tone={complete ? "success" : "info"} done={complete}>{complete ? "계획서 완성" : "진행 중"}</StatusBadge>
+                <StatusBadge tone={hub.statusTone} done={complete}>{hub.status}</StatusBadge>
                 <AppButton href={businessEntryHref(plan)} variant="soft" size="compact" className={styles.open} aria-label={`${name} 열기`}>열기</AppButton>
               </>} />;
           }) : (
@@ -249,14 +251,14 @@ export default function PlanMePage() {
                   {recheckMessage[item.orderId] ? <p className={styles.rowNotice} role="status">{recheckMessage[item.orderId]}</p> : null}
                 </SettingsRow>
                 {refundFor === item.orderId && (
-                  <SettingsRow stack title="환불 사유" description="5자 이상 적어 주세요. 문서 작성이 시작된 뒤에는 단순 변심 환불이 제한될 수 있어요.">
+                  <SettingsRow stack title="환불 사유" description="5자 이상 적어 주세요. 사업계획서 만들기 버튼을 누른 뒤에는 AI 작성 비용이 들어 단순 변심 환불은 되지 않아요.">
                     <div className={styles.refundForm}>
                       <TextArea
                         aria-label="환불 사유"
                         rows={3}
                         value={refundReason}
                         onChange={(event) => setRefundReason(event.target.value)}
-                        placeholder="환불 사유를 적어 주세요(5자 이상). 문서 작성이 시작된 뒤에는 단순 변심 환불이 제한될 수 있어요."
+                        placeholder="환불 사유를 적어 주세요(5자 이상)."
                         maxLength={1000}
                       />
                       <div className={styles.refundActions}>

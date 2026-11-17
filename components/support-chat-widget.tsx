@@ -132,6 +132,8 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
   const [assistantThinking, setAssistantThinking] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  /* 고객센터에 직접 보낸 문의의 접수 확인 한 줄 — 고객센터 화면(/account/support)처럼 보낸 뒤 '접수했어요'를 알린다(점검 2026-11-16) */
+  const [receipt, setReceipt] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
@@ -374,6 +376,7 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
   };
 
   const startOperatorInquiry = (faq?: SupportFaqItem, context?: string) => {
+    setReceipt("");
     setShowQuickMenu(false);
     setOperatorMode(true);
     setMessage(
@@ -632,6 +635,7 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
     setOperatorMode(true);
     setSending(true);
     setError("");
+    setReceipt("");
     chatRequest.current += 1;
     try {
       const response = await fetch("/api/support/chat", {
@@ -644,6 +648,7 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
       setChat(payload.chat);
       setMessage("");
       setShowAllHistory(true);
+      setReceipt("문의를 접수했어요. 답변이 오면 이 창에서 알려 드릴게요.");
       textareaRef.current?.focus();
     } catch (sendError) {
       setError(userErrorMessage(sendError, "메시지를 보내지 못했어요. 잠시 후 다시 시도해 주세요."));
@@ -661,6 +666,7 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
   };
 
   const openQuestionMenu = () => {
+    setReceipt("");
     setShowQuickMenu(true);
     setSelectedCategoryId(null);
     setOperatorMode(false);
@@ -1056,6 +1062,7 @@ export function SupportChatWidget({ initialOpen = false, initialChat, initialBad
                   </div> : <span>상담사에게 이야기하기</span>}
                 </div>}
                 {error && <p className="support-chat-error">{error}</p>}
+                {!error && receipt && mode === "support" && <p className="support-chat-receipt" role="status">{receipt}</p>}
                 {/* 2,000자 한도의 90%부터 남은 글자 수를 알려 준다 — 조용히 잘리면 뒤쪽이 사라진 줄 모른다 */}
                 {composerLimitNote(message.length, 2000) && <p className="support-chat-limit" aria-live="polite">{composerLimitNote(message.length, 2000)}</p>}
                 <div className="support-chat-input-row">

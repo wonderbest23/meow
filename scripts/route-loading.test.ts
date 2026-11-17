@@ -48,4 +48,8 @@ for (const old of ["/plan/chat?planId=p", "/plan/chat?new=1", "/plan/document?pl
 /* 3) 로그인한 사람의 첫 화면(/)도 서버에서 바로 내 사업으로 — 화면에서 보내면 소개 화면이 잠깐 보인다 */
 assert.match(middleware, /pathname === "\/" && request\.cookies\.has\("venture_refresh"\)/, "로그인한 사람은 서버가 / → /plan 으로 보내야 한다");
 
+/* 4) 작업실 예시 화면 아래 단추 — 로그인 상태를 알기 전에는 자리만 잡는다. 예전엔 손님에게도 처음 몇 초 '홈페이지 만들기 (다음 단계)'가 보였다가 로그인 단추로 바뀌었다(점검 2026-11-16) */
+const studio = readFileSync("app/plan/studio/Studio.tsx", "utf8");
+assert.match(studio, /<div className=\{styles\.sampleFoot\}>\{account == null\s*\? <div className=\{styles\.sampleFootPending\} aria-hidden="true" \/>/, "로그인 상태를 모를 때 예시 화면 아래 단추를 그리면 안 된다");
+
 console.log("route-loading: ok");
