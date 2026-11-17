@@ -7,17 +7,17 @@ import { resolveIntakeLLMConfig, intakeBetaSafetyRequired } from "../llm/intake-
 import { intakeJobExpired } from "./intake-timing";
 import { COACH_KEY, COACH_TYPES, coachContext, coachDocumentRevision, readCoach, type CoachState } from "./coach";
 import { emptyCoach } from "./coach-job";
-import { BUSINESS_DESIGN_RULES, businessDesignReply, generatedBusinessDesignSchema, normalizeGeneratedDesign } from "./coach-design";
+import { BUSINESS_DESIGN_RULES, businessDesignReply, designValidationIssues, generatedBusinessDesignSchema, normalizeGeneratedDesign } from "./coach-design";
 import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyGuessed, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
+import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyGuessed, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote, intakeQuestions, displayIntakeValue, READ_SUFFIX } from "./intake-core";
 import { ruleKind } from "./kind-rules";
 import { adoptRenamedTitle } from "./business-name";
 import { estimateIntake } from "./intake-estimate";
-import { COACH_FIELD_LABELS } from "./coach-presentation";
-import { editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
+import { COACH_FIELD_LABELS, coachFieldDisplay } from "./coach-presentation";
+import { chatIntake, editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
 import { EDITABLE_FACT_IDS } from "./fact-highlight";
 import { getServerSupabase } from "../persistence";
 import { notifyOwnerBySms } from "../notify/owner-sms";
@@ -165,7 +165,10 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       if (beforeDocument && !coach.design) throw new IntakeError("edit_requires_document", "사업 방향을 정리한 뒤에 채팅으로 고칠 수 있어요", 409);
       const text = command.message?.trim() ?? "";
       if (text.length > 1200) throw new IntakeError("edit_too_long", "바꿀 내용을 1,200자 이내로 적어 주세요");
-      const route = options.editRoute ?? classifyEditRequest(text);
+      const classified = options.editRoute ?? classifyEditRequest(text);
+      // 계획서 전에는 고칠 문장이 없다 — 말투 · 새 사업처럼 보이는 말("친근하게 다가가는 동네 가게로 하고 싶어요")도 사업 이야기로 AI가 읽는다.
+      // 정말 다른 사업이면 AI가 '새 대화'로 안내한다(chatIntake). 빈 말 · 인사만 정해진 답으로 끝난다.
+      const route = beforeDocument && (classified === "style" || classified === "new_business") ? "in_scope" : classified;
       if (text) coach.messages.push({ id: command.requestId, role: "user", text, at });
       if (route !== "in_scope") coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: (beforeDocument ? EDIT_REPLIES_BEFORE_DOCUMENT : EDIT_REPLIES)[route], at });
       else {
@@ -209,7 +212,24 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     }
     else if (command.action === "read") {
       // 대화 중 적은 말에서 읽은 것 — 계획서를 만든 뒤에는 넣지 않는다(그때는 계획서에서 고친다)
-      if (!Object.keys(plan.sections).length && command.read) applyRead(coach, intake, command.read, command.requestId, at);
+      if (!Object.keys(plan.sections).length && command.read) {
+        applyRead(coach, intake, command.read, command.requestId, at);
+        /*
+         * 화면이 질문 답으로 적은 글을 함께 보냈으면(규칙이 못 읽은 '하루8시간 주6일 48시간' 등) 대화에 그대로 남기고 메모로도 둔다 — 칸에 없는 말도
+         * 사업 방향이 읽는다(ownerNotesContext). 그리고 무엇으로 넣었는지 한 줄로 알린다(AI가 잘못 읽었으면 손님이 바로 보고 고친다).
+         */
+        if (command.message?.trim()) {
+          storeDeferredNote(coach, intake, { ...command, message: command.message.trim(), noteIntent: "memo" }, at);
+          const readId = `${command.requestId}${READ_SUFFIX}`;
+          const shown = intakeQuestions(intake, coach).flatMap(question => {
+            const answer = intake.answers[question.id];
+            if (answer?.messageId !== readId || answer.status !== "answered") return [];
+            const value = displayIntakeValue(answer.value);
+            return [`${question.label} ${coachFieldDisplay(question.kind === "number" && /^\d+$/.test(value) ? `${value}${question.unit ?? ""}` : value)}`];
+          });
+          if (shown.length) coach.messages.push({ id: `${command.requestId}:read-reply`, role: "assistant", text: `이렇게 넣었어요: ${shown.join(" · ")}. 다르면 눌러서 고칠 수 있어요.`, at });
+        }
+      }
     }
     else if (command.action === "depth") {
       // 대화 방식 바꾸기 — 계획서를 만든 뒤에는 질문이 아니라 계획서에서 고친다
@@ -405,8 +425,33 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         const labels = question.options?.length ? question.options.map(option => option.label).slice(0, 24) : null;
         return { questionId: question.id, label: question.label, current: shown(claimed.intake.answers[question.id]?.value), ...(labels ? ["single", "multi"].includes(question.kind) ? { choices: labels } : { examples: labels } : {}) };
       });
-      const result = await editIntake(config, facts, job.request ?? "");
-      if (!result.ok) throw new IntakeError(result.reason, "바꿀 내용을 정리하지 못했어요. 바꿀 항목과 값을 함께 적어 다시 보내 주세요");
+      /*
+       * 계획서 전(사업 방향만 본 상태)에는 AI 한 번이 답할 말 · 바꿀 칸 · 방향을 다시 정리할지를 함께 정한다(chatIntake) — 묻는 말에는 답하고,
+       * 바꿀 말이면 넣고 다시 정리한다. 계획서 뒤에는 예전처럼 바꿀 칸만 찾아 확인 카드로 묻는다(editIntake).
+       */
+      const beforeDocument = !Object.keys(claimed.plan.sections).length;
+      const design = claimed.coach.design;
+      /*
+       * 손님이 보고 있는 것을 그대로 넘긴다 — 방향 카드 전체(대안 · 가정 · 다음 할 일 …)와 카드가 쓴 계산 숫자(financial), 각 값을 누가 정했는지(by).
+       * 예전엔 제목 · 한 줄 소개만 넘겨 "아래 두 후보는 제가 볼 수 없어요"라고 답하거나, 본전을 따로 계산해 카드와 다른 숫자를 말했다(AI 손님 점검 2026-11-17).
+       */
+      const chatContext = beforeDocument ? JSON.stringify({
+        business: claimed.coach.business.name,
+        fields: claimed.coach.fields.map(field => ({ key: field.key, value: field.value.slice(0, 180), by: field.basis === "user" ? "founder" : "service" })),
+        direction: design ? JSON.stringify(design).slice(0, 7000) : null,
+        financial: planFinancialReference(claimed.coach, claimed.plan.answers).slice(0, 2500),
+        ownerNotes: claimed.intake.notes.slice(-4).map(note => note.text.slice(0, 600)),
+      }).slice(0, 13000) : "";
+      let chat: { answer: string; rethink: boolean } | null = null, changes: Array<{ questionId: string; value: string }> = [];
+      if (beforeDocument) {
+        const result = await chatIntake(config, facts, chatContext, job.request ?? "");
+        if (!result.ok) throw new IntakeError(result.reason, "답을 정리하지 못했어요. 적은 말은 그대로 두었으니 다시 보내 주세요");
+        chat = { answer: result.answer, rethink: result.rethink }; changes = result.changes;
+      } else {
+        const result = await editIntake(config, facts, job.request ?? "");
+        if (!result.ok) throw new IntakeError(result.reason, "바꿀 내용을 정리하지 못했어요. 바꿀 항목과 값을 함께 적어 다시 보내 주세요");
+        changes = result.changes;
+      }
       const toValue = (questionId: string, text: string) => {
         const question = questions.find(item => item.id === questionId)!;
         if (!["single", "multi"].includes(question.kind)) return text;
@@ -416,7 +461,7 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         return picks.every((pick): pick is string => !!pick) ? picks : undefined;
       };
       const proposal: Array<{ questionId: string; value: string | string[] }> = [];
-      for (const change of result.changes) {
+      for (const change of changes) {
         if (proposal.some(item => item.questionId === change.questionId)) continue;
         const value = toValue(change.questionId, change.value.trim());
         if (value === undefined) continue;
@@ -434,14 +479,23 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
          * 화면이 사업 방향을 다시 정리하게 한다(intakeNextStep → design · 화면의 자동 시작).
          */
         if (!Object.keys(_plan.sections).length && !coach.messages.some(message => message.id === id)) {
-          const at = new Date().toISOString(), before = intakeBusinessFingerprint(coach, _plan.answers, _intake);
+          const at = new Date().toISOString();
+          if (chat?.answer) current.reply = chat.answer;
+          // 묻는 말 · 걱정 · 인사뿐이면 답만 한다 — 방향은 그대로 둔다(예전엔 무엇을 적든 방향을 통째로 다시 만들었다)
+          if (chat && !proposal.length && !chat.rethink) {
+            coach.messages.push({ id, role: "assistant", text: chat.answer, at });
+            coach.revision += 1;
+            return;
+          }
+          const before = intakeBusinessFingerprint(coach, _plan.answers, _intake);
           proposal.forEach((change, index) => applyIntakeAnswer(_plan, coach, _intake, { action: "answer", revision: 0, requestId: `${current.id}:apply:${index}`, questionId: change.questionId, value: change.value, unknown: false }, at));
           if (proposal.length) current.proposalStatus = "applied";
           const said = (job.request ?? "").trim().slice(0, 4000);
           if (said && _intake.notes.length < 64 && _intake.notes.reduce((total, note) => total + note.text.length, 0) + said.length <= 100_000) _intake.notes.push({ id: `${current.id}:memo`, text: said, at, status: "stored", intent: "memo" });
           if (!finishIntakeMutation(coach, before, _plan.answers, _intake)) coach.documentRevision = coachDocumentRevision(coach) + 1;
           const labels = proposal.map(change => questions.find(question => question.id === change.questionId)?.label).filter((label): label is string => !!label);
-          coach.messages.push({ id, role: "assistant", text: labels.length ? `말씀하신 대로 ${labels.join(", ")}${objectParticle(labels.at(-1)!)} 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.` : "말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.", at });
+          const done = labels.length ? `말씀하신 대로 ${labels.join(", ")}${objectParticle(labels.at(-1)!)} 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.` : "말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.";
+          coach.messages.push({ id, role: "assistant", text: chat?.answer ? `${chat.answer}\n\n${done}` : done, at });
           return;
         }
         if (!coach.messages.some(message => message.id === id)) {
@@ -486,7 +540,7 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
       const stepOrder = guide ? `\n${JSON.stringify({ industryStepOrder: { name: guide.name, steps: playbookStepOrder(guide) } })}` : "";
       for (let designAttempt = 0; designAttempt < 2 && !raw; designAttempt++) {
         let designFailure: string | undefined;
-        raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}${stepOrder}${ownerNotesContext(claimed.intake.notes)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => normalizeGeneratedDesign(value) !== null, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false , onFailure: event => { designFailure = event.code; } });
+        raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}${stepOrder}${ownerNotesContext(claimed.intake.notes)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => { const ok = normalizeGeneratedDesign(value) !== null; if (!ok) console.warn("[business-intake-job]", JSON.stringify({ event: "design-invalid", jobId: job.id, issues: designValidationIssues(value) })); return ok; }, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false , onFailure: event => { designFailure = event.code; } });
         if (!raw && designFailure !== "invalid_json" && designFailure !== "invalid_response") break;
       }
       const normalized = normalizeGeneratedDesign(raw);

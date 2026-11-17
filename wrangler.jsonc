@@ -62,6 +62,8 @@
     "INTAKE_ANSWER_SUGGESTIONS": "1",
     // 한 문장 → 바로 초안(시험 기능): 사업 문장 뒤 나머지 질문을 업종 기준표로 채워 묻지 않는다. 끄려면 "0".
     "INTAKE_ESTIMATE": "1",
+    // 질문에 적은 글을 화면 규칙이 못 읽으면('하루8시간 주6일 48시간' 등) 작은 AI(Haiku, 한 번 약 0.6원)가 읽어 칸에 넣는다(lib/plan-builder/intake-reader.ts · 2026-11-17 AI 손님 점검). 끄려면 "0".
+    "INTAKE_AI_READER": "1",
     // 손님(로그인 전)도 사업 정보 대화를 무료로 끝까지(사장님 결정 2026-11-17 "한도 걸고 열어줘"). 사업계획서 작성 · 결제는 여전히 로그인 + 결제.
     // 로그인 때 손님 사업을 계정으로 옮기는 스위치(PLAN_ACCOUNT_LINKING_ENABLED=true)가 함께 켜져야 실제로 열린다(lib/plan-builder/intake-login.ts guestIntakeOpen).
     "INTAKE_GUEST_ALLOWED": "1",

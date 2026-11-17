@@ -67,7 +67,7 @@ function normalizeIdentity(input: unknown): BusinessIdentity | undefined {
  * 사업안 전체가 실패했다(운영 2026-09-29). 긴 글은 한도에서 자르고, 첫 화면 문구가 쓸 수 없으면
  * 그 부분만 빼고 사업안은 살린다. 핵심 칸이 비었거나 형식이 다르면 여전히 실패로 본다.
  */
-export function normalizeGeneratedDesign(raw: unknown): BusinessDesign | null {
+function designCandidate(raw: unknown): Record<string, unknown> | null {
   if (!raw || typeof raw !== "object") return null;
   const value = raw as Record<string, unknown>;
   const plan = (value.startingPlan ?? {}) as Record<string, unknown>;
@@ -88,8 +88,20 @@ export function normalizeGeneratedDesign(raw: unknown): BusinessDesign | null {
     nextAction: { ...action, action: clip(action.action, 600), doneWhen: clip(action.doneWhen, 600), usableText: clip(action.usableText, 1200) },
   };
   if (candidate.identity === undefined) delete (candidate as Record<string, unknown>).identity;
+  return candidate;
+}
+export function normalizeGeneratedDesign(raw: unknown): BusinessDesign | null {
+  const candidate = designCandidate(raw);
+  if (!candidate) return null;
   const parsed = businessDesignSchema.safeParse(candidate);
   return parsed.success ? parsed.data : null;
+}
+/** 설계 답이 검사에 막힌 까닭(칸 경로 · 종류) — 운영 기록용. 예전엔 "invalid_json"만 남아 어느 칸 때문인지 몰랐다(AI 손님 점검 2026-11-17: 한 손님이 5번 연속 막힘) */
+export function designValidationIssues(raw: unknown): string[] {
+  const candidate = designCandidate(raw);
+  if (!candidate) return ["not_object"];
+  const check = businessDesignSchema.safeParse(candidate);
+  return check.success ? [] : check.error.issues.slice(0, 8).map(issue => `${issue.path.join(".")}:${issue.code}${"maximum" in issue ? `<=${issue.maximum}` : ""}${"minimum" in issue ? `>=${issue.minimum}` : ""}`);
 }
 export type BusinessDesign = z.infer<typeof businessDesignSchema>;
 export type SavedBusinessDesign = BusinessDesign & { sourceRevision: number; status: "proposal" };
