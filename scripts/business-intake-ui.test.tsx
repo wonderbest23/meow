@@ -1051,7 +1051,10 @@ async function main() {
     const money = (cost: number | string): IntakeSnapshot => ({ ...base0, coach: { ...base0.coach, messages: [{ id: "m-price", role: "user", text: "판매 가격: 9000", at }, { id: "m-cost", role: "user", text: "비용: 3000", at }] }, intake: { ...base0.intake, answers: { ...base0.intake.answers, price: { status: "answered", value: 9000, messageId: "m-price", at }, "structure.unitCost": { status: "answered", value: cost, messageId: "m-cost", at } } } });
     const margin = workLog.marginLogItem(money("3,000원"));
     assert.equal(margin?.anchor, "m-cost", "둘 중 나중에 답한 메시지 뒤에 붙인다");
-    assert.match(margin!.sub!, /6,000원$/);
+    // 계획서 돈 장과 같은 기준(부가세를 뺀 남는 돈)을 한 줄 붙인다: 9,000 − 818(1/11) − 3,000 = 5,182원(2026-11-16)
+    assert.match(margin!.sub!, /6,000원 · 부가세를 빼면 5,182원$/);
+    assert.ok(margin!.detail!.some(line => /부가세\(일반과세자 가정, 판매 가격의 1\/11\) 818원 — 계획서는 이 값을 뺀 5,182원으로 계산해요/.test(line)));
+    assert.doesNotMatch(workLog.marginLogItem({ ...money(3000), intake: { ...money(3000).intake, sector: "education" } })!.sub!, /부가세/, "교육은 면세일 수 있어 빼지 않는다");
     assert.match(workLog.marginLogItem(money(12000))!.sub!, /3,000원 손해$/);
     assert.equal(workLog.marginLogItem(base0), null);
     const logMarkup = renderToStaticMarkup(<WorkLog items={[planItem, workLog.editFoundItem(2), null]} />);

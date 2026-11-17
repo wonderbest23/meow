@@ -72,7 +72,14 @@ export function marginLogItem(plan: IntakeSnapshot): (WorkLogItem & { anchor: st
   const asked = plan.questions.find(question => question.id === "structure.unitCost" || question.fieldKey === "unitCost");
   const unit = asked?.period ?? getIntakeQuestion(plan.intake.mode, plan.intake.sector, "structure.unitCost", plan.structure?.values)?.period ?? "하나";
   const margin = priceWon - costWon;
-  return { id: "margin", anchor, text: "남는 돈을 계산했어요", sub: margin >= 0 ? `${unit}에 ${formatWon(margin)}` : `${unit}에 ${formatWon(-margin)} 손해`, detail: [`판매 가격 ${formatWon(priceWon)}`, `드는 비용 ${formatWon(costWon)}`] };
+  /*
+   * 계획서 돈 장은 판매가에서 부가세(일반과세자 가정, 판매가의 1/11)까지 뺀 '실제 남는 돈'으로 계산한다(cashflow-scenarios.ts realUnitMargin).
+   * 대화에는 빼기 전 값만 보여 '남는 돈'이 두 숫자로 달라 보였다(2026-11-16) — 같은 기준의 값을 한 줄 붙인다. 교육(면세일 수 있음)은 빼지 않는다.
+   */
+  const vat = plan.intake.sector === "education" ? 0 : Math.round(priceWon / 11);
+  const afterVat = margin - vat;
+  const vatNote = vat > 0 && afterVat > 0 ? ` · 부가세를 빼면 ${formatWon(afterVat)}` : "";
+  return { id: "margin", anchor, text: "남는 돈을 계산했어요", sub: margin >= 0 ? `${unit}에 ${formatWon(margin)}${vatNote}` : `${unit}에 ${formatWon(-margin)} 손해`, detail: [`판매 가격 ${formatWon(priceWon)}`, `드는 비용 ${formatWon(costWon)}`, ...(vatNote ? [`부가세(일반과세자 가정, 판매 가격의 1/11) ${formatWon(vat)} — 계획서는 이 값을 뺀 ${formatWon(afterVat)}으로 계산해요`] : [])] };
 }
 
 /** 고치기 제안 — 바꿀 곳이 몇 군데인지 */

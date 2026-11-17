@@ -459,6 +459,16 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
 }
 
 /**
+ * 돈 장 계산(cashflow-scenarios.ts)에 넘길 값 — 운영 중인 사업이면 지금 실적의 한 달 판매량을 함께 넘긴다(2026-11-16: 운영 중 사업도 새 돈 흐름 표).
+ * 실적 판매량은 '실적 매출 ÷ 기간 ÷ 가격'(actual)이나 직접 적은 월 판매량(volume)일 때만 — 처리량(최대치)은 실적이 아니다.
+ */
+export function intakeCashflowMoney(intake: Pick<IntakeState, "mode">, inputs: IntakeScenarioInputs) {
+  const { unitPrice, unitVariableCost, monthlyFixedCost, online, shape } = inputs;
+  const actual = inputs.volumeSource === "actual" || inputs.volumeSource === "volume" ? inputs.volume : undefined;
+  return { unitPrice, unitVariableCost, monthlyFixedCost, online, shape, ...(intake.mode === "operating" ? { operating: { actualVolume: actual } } : {}) };
+}
+
+/**
  * 업종 상세 질문의 숫자를 계산에 쓴다(예전엔 AI 프롬프트에 글로만 전달됐다). 필요한 값이 모두 있을 때만 한 줄씩 만들고, 추정치는 만들지 않는다.
  * 판매량은 손익 계산의 판매량(실적·처리량 기준)을 쓰고, 없으면 처리량(감당 가능한 최대치)으로만 계산한다.
  */
@@ -553,8 +563,8 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   // 돈 입력이 실제 금액으로 보기 어려우면 그 금액으로 만든 숫자(본전·통장 흐름·업종 점검의 예산 비율)를 넘기지 않는다 — 돈 장의 빈 틀과 같은 판정
   const implausible = implausibleMoneyFromFields(coach.fields);
   if (implausible.length) return implausibleMoneyReference(implausible, { unitPrice, unitVariableCost });
-  // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
-  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, online, shape }) : null;
+  // 돈 장(cashflow-scenarios.ts): 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다 — 운영 중인 사업은 지금 실적에서 시작한다(2026-11-16)
+  const flow = cashflowScenariosEnabled() ? cashflowFromFields(coach.fields, intakeCashflowMoney(intake, inputs)) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
   const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준` })] : [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
