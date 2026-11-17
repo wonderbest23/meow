@@ -1015,6 +1015,68 @@ async function main() {
         assert.deepEqual(await loadPlanState(ownerHash), beforeCompletion);
       } finally { release.resolve(); await running; }
     });
+
+    await check("first answer after a background revision bump retries once at the latest revision and moves on (2026-11-17 guest 409)", async () => {
+      // 운영 재현: 일반 모드 첫 문장 → 화면은 판 1 · 준비 예산 질문. 적은 글 읽기(understand)가 화면이 8초에 끊은 뒤에도 끝까지 돌아 판 2로 저장.
+      // 화면은 판 1로 첫 답(예산 칩)을 보내 409 → 예산이 저장되지 않고 두 번째 질문에서 막혔다.
+      const { answerConflictRetry } = await import("../app/plan/chat/intake-ui/model");
+      const { intakeSnapshot } = await import("../lib/plan-builder/intake-core");
+      const previousEstimate = process.env.INTAKE_ESTIMATE;
+      process.env.INTAKE_ESTIMATE = "1";
+      try {
+        const sentence = "동네 골목에 작은 반찬가게를 열려고 해요";
+        const opened = async () => {
+          const ownerHash = `intake-background-revision-${randomUUID()}`;
+          const made = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: sentence, revision: 0, requestId: randomUUID() });
+          return { session: { ownerHash, planId: made.plan.id }, screen: made.snapshot };
+        };
+        const latestOf = async (session: Session) => { const current = await load(session); return intakeSnapshot(current.plan, current.coach, current.intake); };
+
+        const { session, screen } = await opened();
+        assert.equal(screen.coach.revision, 1);
+        assert.equal(screen.nextQuestion?.id, "budget", "일반 모드 첫 질문은 준비 예산");
+        // 화면 몰래 올라간 판 — 읽은 것이 없어도 저장하면 판이 오른다
+        await saveIntakeCommand(session.ownerHash, { action: "understand", planId: session.planId, revision: 1, requestId: randomUUID(), understood: [] });
+        const answer: IntakeCommand = { action: "answer", planId: session.planId, revision: screen.coach.revision, requestId: randomUUID(), questionId: "budget", value: 30_000_000 };
+        await assert.rejects(() => saveIntakeCommand(session.ownerHash, answer), assertIntakeError("revision_conflict", 409));
+        const stale = await latestOf(session);
+        assert.equal(stale.coach.revision, 2);
+        assert.equal(stale.intake.answers.budget, undefined, "막힌 답은 저장되지 않는다(운영: nextQuestion=budget, revision=2)");
+        // 화면: 최신 상태에서도 그 질문이 지금 질문이면 같은 답(같은 요청 번호)을 최신 판으로 한 번 다시 보낸다
+        const revision = answerConflictRetry(answer, stale);
+        assert.equal(revision, 2);
+        const retried = await saveIntakeCommand(session.ownerHash, { ...answer, revision: revision! });
+        assert.equal(retried.duplicate, false);
+        assert.equal(retried.snapshot.coach.revision, 3);
+        assert.equal(retried.snapshot.nextQuestion?.id, "hoursPerWeek", "저장되고 다음 질문(주당 시간)으로 넘어간다");
+        assert.match(String(retried.snapshot.intake.answers.budget?.value), /^30000000/);
+        // 응답을 잃어 '다시 시도'로 같은 요청을 또 보내도 한 번만 저장된다
+        const replay = await saveIntakeCommand(session.ownerHash, { ...answer, revision: revision! });
+        assert.equal(replay.duplicate, true);
+        assert.equal((await latestOf(session)).coach.revision, 3);
+
+        // 읽은 값이 바로 그 칸을 채웠으면(문장에 예산이 있었다) 질문이 바뀌었으므로 덮어쓰지 않는다 — 자동 재시도 없이 사용자에게 맡긴다
+        const said = await opened();
+        await saveIntakeCommand(said.session.ownerHash, { action: "understand", planId: said.session.planId, revision: 1, requestId: randomUUID(), understood: [{ questionId: "budget", value: 10_000_000 }] });
+        const saidAnswer: IntakeCommand = { ...answer, planId: said.session.planId, requestId: randomUUID() };
+        await assert.rejects(() => saveIntakeCommand(said.session.ownerHash, saidAnswer), assertIntakeError("revision_conflict", 409));
+        const saidLatest = await latestOf(said.session);
+        assert.notEqual(saidLatest.nextQuestion?.id, "budget");
+        assert.equal(answerConflictRetry(saidAnswer, saidLatest), null, "읽은 예산을 화면의 옛 답으로 덮지 않는다");
+        assert.match(String(saidLatest.intake.answers.budget?.value), /^10000000/);
+
+        // 다른 화면에서 같은 질문에 먼저 답했으면 그 답을 지킨다
+        const elsewhere = await opened();
+        await saveIntakeCommand(elsewhere.session.ownerHash, { action: "answer", planId: elsewhere.session.planId, revision: 1, requestId: randomUUID(), questionId: "budget", value: 50_000_000 });
+        const elsewhereAnswer: IntakeCommand = { ...answer, planId: elsewhere.session.planId, requestId: randomUUID() };
+        await assert.rejects(() => saveIntakeCommand(elsewhere.session.ownerHash, elsewhereAnswer), assertIntakeError("revision_conflict", 409));
+        assert.equal(answerConflictRetry(elsewhereAnswer, await latestOf(elsewhere.session)), null);
+        assert.match(String((await latestOf(elsewhere.session)).intake.answers.budget?.value), /^50000000/);
+        assert.equal(calls.length, 0);
+      } finally {
+        if (previousEstimate === undefined) delete process.env.INTAKE_ESTIMATE; else process.env.INTAKE_ESTIMATE = previousEstimate;
+      }
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { cleanUnderstood, understoodAnswers } from "../lib/plan-builder/idea-understanding";
+import { readFileSync } from "node:fs";
+import { cleanUnderstood, understandIdea, understoodAnswers } from "../lib/plan-builder/idea-understanding";
+import { UNDERSTAND_AI_MIN_MS, UNDERSTAND_SAVE_BY_MS, UNDERSTAND_WAIT_MS, understandAiBudget, understandSaveOnTime } from "../lib/plan-builder/intake-timing";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { capacityDaysDisplay, coachFieldDisplay } from "../lib/plan-builder/coach-presentation";
 
@@ -49,3 +51,45 @@ assert.deepEqual(understoodAnswers({ channel: "인스타", channel2: "플리마�
 // ux-firstmsg(2026-11-16): AI가 읽은 예산이 단위 없는 작은 수('300')면 300원이 아니라 300만원
 assert.deepEqual(understoodAnswers({ budget: "300" }, questions), [{ questionId: "budget", value: 3_000_000 }]);
 assert.deepEqual(understoodAnswers({ budget: "3천만원" }, questions), [{ questionId: "budget", value: 30_000_000 }]);
+
+// 읽기 시간은 요청을 받은 때부터 잰다(2026-11-17 운영, 로그인 안 한 손님) — 화면은 8초에 요청을 끊고 질문을 보이지만 서버는 멈추지 않는다.
+// 예전엔 AI 시간(7초)만 재서, AI 앞의 일(손님 AI 한도 세기 등)이 1초 넘게 걸리면 화면이 끊은 뒤에 저장해 판(revision)이 화면 몰래 올랐다.
+{
+  assert.ok(UNDERSTAND_SAVE_BY_MS + 1_000 <= UNDERSTAND_WAIT_MS, "저장 시한은 화면이 기다리는 시간보다 넉넉히(저장 · 응답 몫) 앞선다");
+  assert.equal(understandAiBudget(0, 0), UNDERSTAND_SAVE_BY_MS);
+  // 운영 그대로: AI 앞의 일 1.2초 + 예전 AI 시간 7초 = 8.2초 > 화면 8초 → 늦은 저장. 이제는 AI 시간이 남은 시간으로 줄어 시한 안에 끝난다
+  const beforeAi = 1_200;
+  assert.ok(beforeAi + 7_000 > UNDERSTAND_WAIT_MS, "예전 계산은 화면이 끊은 뒤에 끝날 수 있었다");
+  const budget = understandAiBudget(0, beforeAi);
+  assert.equal(budget, UNDERSTAND_SAVE_BY_MS - beforeAi, "AI 앞에 쓴 시간만큼 AI 시간이 준다");
+  assert.ok(beforeAi + budget <= UNDERSTAND_SAVE_BY_MS);
+  assert.equal(understandAiBudget(0, UNDERSTAND_SAVE_BY_MS - UNDERSTAND_AI_MIN_MS), UNDERSTAND_AI_MIN_MS);
+  assert.equal(understandAiBudget(0, UNDERSTAND_SAVE_BY_MS - UNDERSTAND_AI_MIN_MS + 1), 0, "남은 시간이 모자라면 AI를 부르지 않는다(손님 한도도 쓰지 않는다)");
+  // 늦게 도착한 읽기(가짜 AI 지연)는 저장하지 않는다 — 시한 안이면 저장
+  assert.equal(understandSaveOnTime(0, beforeAi + 4_000), true);
+  assert.equal(understandSaveOnTime(0, UNDERSTAND_SAVE_BY_MS), true);
+  assert.equal(understandSaveOnTime(0, beforeAi + 6_900), false, "화면이 끊었을 시각의 결과는 버린다");
+  assert.equal(understandSaveOnTime(0, UNDERSTAND_WAIT_MS + 17_000), false);
+
+  // 경로 배선 — 받은 때부터 재고, 한도 세기 전에 남은 시간을 보고, 다시 읽은 상태가 이미 읽었으면 · 늦었으면 저장하지 않는다
+  const route = readFileSync(new URL("../app/api/plan/chat/understand/route.ts", import.meta.url), "utf8");
+  assert.match(route, /export async function POST\(request: Request\) \{\n  const startedAt = Date\.now\(\);\n/, "요청을 받자마자 시각을 잰다");
+  assert.match(route, /if \(!understandAiBudget\(startedAt, Date\.now\(\)\)\) return nothing\(\);\n.*\n  if \(!\(await chargeGuestAi\(identity, GUEST_AI_UNITS\.assist, "understand"\)\)\) return nothing\(\);\n  const result = await understandIdea\(config, business, request\.signal, understandAiBudget\(startedAt, Date\.now\(\)\)\);/);
+  assert.match(route, /if \(!now \|\| now\.intake\.understood\) return nothing\(\);/, "다른 요청이 먼저 저장했으면 판을 또 올리지 않는다");
+  assert.match(route, /const late = !understandSaveOnTime\(startedAt, Date\.now\(\)\);[\s\S]*if \(result\.failure \|\| late\) return nothing\(\);\n  try \{\n    await saveIntakeCommand\(/, "늦은 읽기는 저장 앞에서 버린다");
+}
+
+void (async () => {
+  // 남은 시간이 모자라면 AI(네트워크)를 아예 부르지 않고 시간 초과로 끝난다
+  const original = globalThis.fetch;
+  let called = 0;
+  globalThis.fetch = (async () => { called++; throw new Error("AI must not be called"); }) as typeof fetch;
+  try {
+    const short = await understandIdea({ provider: "anthropic", apiKey: "fixture-not-a-key", model: "fixture" }, text, undefined, UNDERSTAND_AI_MIN_MS - 1);
+    assert.deepEqual(short, { understood: {}, model: "fixture", totalMs: 0, failure: "timeout" });
+    const none = await understandIdea({ provider: "anthropic", apiKey: "fixture-not-a-key", model: "fixture" }, text, undefined, 0);
+    assert.equal(none.failure, "timeout");
+    assert.equal(called, 0, "AI를 부르지 않는다");
+  } finally { globalThis.fetch = original; }
+  console.log("idea understanding timing: passed");
+})().catch(error => { console.error(error); process.exitCode = 1; });

@@ -18,9 +18,10 @@ import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
 import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
 import { useAnswerSuggestions } from "./intake-ui/AnswerSuggestions";
-import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, readIntakePayload, routeComposerInput, easyNumberRetryHint, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber, looseUnknownReply } from "./intake-ui/model";
+import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, answerConflictRetry, clearConflictDraft, readIntakePayload, routeComposerInput, easyNumberRetryHint, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber, looseUnknownReply } from "./intake-ui/model";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import { sectorCheckPrompt } from "../../../lib/plan-builder/intake-core";
+import { UNDERSTAND_WAIT_MS } from "../../../lib/plan-builder/intake-timing";
 import styles from "./intake.module.css";
 import chatUi from "../../../components/coach-chat-ui.module.css";
 import ChatLoading from "./loading";
@@ -576,7 +577,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
       if (!data.plan && !newEntry && id) {
         setLoaded(true); setLoadFailed(false); setError("지금 계정에서는 이 사업을 찾지 못했어요. 이전 계정에서 입력한 내용은 따로 보관돼 있어요."); return;
       }
-      if (conflictRef.current) { writeDraft({ ...draftRef.current, pending: null }); conflictRef.current = false; }
+      /* 충돌을 정리한다 — 보관한 요청과 답변 수정 모드를 지워 서버의 지금 질문을 보인다(입력칸에 남긴 글은 그대로, clearConflictDraft) */
+      if (conflictRef.current) { writeDraft(clearConflictDraft(draftRef.current)); conflictRef.current = false; setIntentPrompt(null); setAmountCheck(null); }
       if (!newEntry && data.plan) { installPlan(data.plan, true); updateUrl(data.plan.planId); }
       setStatus(draftRef.current.pending ? "failed" : hasLocalInput(draftRef.current) ? "draft" : "saved");
       setError(draftRef.current.pending ? "방금 보낸 내용이 저장됐는지 확인하지 못했어요. '다시 시도'를 눌러 주세요." : ""); setConnectionError(false); setLoadFailed(false); setLoaded(true);
@@ -586,6 +588,25 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
       setError(!controller.signal.aborted && friendlyError(caught) || "사업 정보를 불러오지 못했어요. 입력은 그대로 남아 있어요.");
     }
     finally { window.clearTimeout(timeout); controllers.current.delete(controller); if (epoch === routeEpoch.current) { busyRef.current = false; setBusy(false); } }
+  };
+
+  /*
+   * 서버가 화면 몰래 판(revision)을 올렸을 수 있을 때(적은 글 읽기가 끝났거나 끊김) 저장본을 한 번 다시 받아, 더 새 판이면 깐다.
+   * 보내는 중인 명령이 있으면 끝나기를 잠깐(3초까지) 기다린다 — 그 명령의 응답이나 409 뒤 자동 재시도가 최신 판을 가져오고,
+   * 충돌 안내 중이거나 보관한 요청이 남아 있으면 깔지 않는다(사용자가 '최신 내용 불러오기'로 정리한다). 실패해도 조용히 넘어간다.
+   */
+  const catchUpSnapshot = async (planId: string) => {
+    const epoch = routeEpoch.current;
+    const controller = new AbortController(); controllers.current.add(controller);
+    const timer = window.setTimeout(() => controller.abort(), 3000);
+    try {
+      const data = await getSnapshot(planId, controller.signal);
+      for (let waited = 0; busyRef.current && waited < 3000 && epoch === routeEpoch.current; waited += 250) await new Promise(resolve => window.setTimeout(resolve, 250));
+      if (epoch !== routeEpoch.current || data.ownerScope !== ownerScope.current || !data.plan || data.plan.planId !== planRef.current?.planId) return;
+      if (busyRef.current || draftRef.current.pending || conflictRef.current) return;
+      installPlan(data.plan);
+    } catch { /* 다음 저장 응답 · 409 뒤 자동 재시도가 맞춘다 */ }
+    finally { window.clearTimeout(timer); controllers.current.delete(controller); }
   };
 
   /*
@@ -620,7 +641,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     const existing = draftRef.current.pending;
     if (!input && !existing) return;
     if (input?.action !== "start" && !existing && !planRef.current) return;
-    const pending: PendingRequest = existing ?? { command: { ...input!, ...(input!.action === "start" && !planRef.current && startDepthRef.current === "expert" ? { depth: "expert" as const } : {}), requestId: crypto.randomUUID(), revision: planRef.current?.coach.revision ?? 0, ...(planRef.current ? { planId: planRef.current.planId } : {}) }, ...captured };
+    let pending: PendingRequest = existing ?? { command: { ...input!, ...(input!.action === "start" && !planRef.current && startDepthRef.current === "expert" ? { depth: "expert" as const } : {}), requestId: crypto.randomUUID(), revision: planRef.current?.coach.revision ?? 0, ...(planRef.current ? { planId: planRef.current.planId } : {}) }, ...captured };
     let optimistic: IntakeSnapshot | null = null;
     try { if (planRef.current) optimistic = previewIntakeAnswer(planRef.current, pending.command); }
     catch (caught) {
@@ -650,14 +671,46 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     const controller = new AbortController(); controllers.current.add(controller);
     const timeout = window.setTimeout(() => controller.abort(), 25000);
     try {
-      const identity = await getSnapshot(pending.command.planId, controller.signal);
+      let identity = await getSnapshot(pending.command.planId, controller.signal);
       if (epoch !== routeEpoch.current) return;
       if (identity.ownerScope !== ownerScope.current) { freezeForOwnerChange(); return; }
-      const response = await fetch("/api/plan/chat", { method: "POST", headers: { ...HEADERS, "Content-Type": "application/json", "x-business-intake-owner": ownerScope.current! }, body: JSON.stringify(pending.command), signal: controller.signal });
+      const post = () => fetch("/api/plan/chat", { method: "POST", headers: { ...HEADERS, "Content-Type": "application/json", "x-business-intake-owner": ownerScope.current! }, body: JSON.stringify(pending.command), signal: controller.signal });
+      let response = await post();
       let data: IntakePayload | null = null;
       try { data = readIntakePayload(await readChatResponse(response)); } catch { /* A lost response must retain its original idempotency key. */ }
       if (epoch !== routeEpoch.current) return;
       if (data?.code === "owner_changed" || data?.ownerScope && data.ownerScope !== ownerScope.current) { freezeForOwnerChange(); return; }
+      /*
+       * 답이 '다른 화면에서 수정됐어요'(409)로 막혔는데 서버의 최신 상태에서도 그 질문이 아직 지금 질문이면, 판(revision)을 올린 것은
+       * 배경 작업(적은 글 읽기 · 기준값 채우기 · AI 작업 완료)이다 — 최신 상태를 깔고 같은 답을 최신 판으로 한 번만 다시 보낸다(오류를 보이지 않는다).
+       * 같은 요청 번호를 쓴다(막힌 요청은 서버에 아무것도 남기지 않았다). 질문이 바뀌었거나 두 번째도 막히면 아래 안내(최신 내용 불러오기)로 간다.
+       * 2026-11-17 운영: 손님의 첫 답(준비 예산)이 409로 막혀 두 번째 질문으로 넘어가지 못했다.
+       */
+      if (response.status === 409 && data?.code === "revision_conflict") {
+        const latest = await getSnapshot(pending.command.planId, controller.signal).catch(() => null);
+        if (epoch !== routeEpoch.current) return;
+        if (latest && latest.ownerScope !== ownerScope.current) { freezeForOwnerChange(); return; }
+        const revision = latest ? answerConflictRetry(pending.command, latest.plan) : null;
+        if (latest?.plan && revision !== null) {
+          identity = latest;
+          pending = { ...pending, command: { ...pending.command, revision } };
+          writeDraft({ ...draftRef.current, pending });
+          installPlan(latest.plan);
+          // 최신 상태 위에 보낼 답(과 기다리는 답)을 다시 얹어 그린다 — 다음 질문이 보이던 화면이 지난 질문으로 돌아가지 않게
+          let redrawn: IntakeSnapshot | null = null;
+          try { redrawn = previewIntakeAnswer(latest.plan, pending.command); } catch { redrawn = null; }
+          for (const item of queuedAnswers.current) {
+            if (!redrawn) break;
+            try { redrawn = previewIntakeAnswer(redrawn, { ...item.input, requestId: "queued", revision: redrawn.coach.revision, planId: redrawn.planId }) ?? redrawn; } catch { break; }
+          }
+          if (redrawn) { previewRef.current = redrawn; setPreview(redrawn); }
+          response = await post();
+          data = null;
+          try { data = readIntakePayload(await readChatResponse(response)); } catch { /* A lost response must retain its original idempotency key. */ }
+          if (epoch !== routeEpoch.current) return;
+          if (data?.code === "owner_changed" || data?.ownerScope && data.ownerScope !== ownerScope.current) { freezeForOwnerChange(); return; }
+        }
+      }
       if (response.status === 409) {
         conflictRef.current = true; writeDraft({ ...draftRef.current, pending: { ...pending, conflict: true }, ...(pending.command.questionId ? { editingId: customCandidateDraftKey(pending.command.questionId, pending.answer?.custom) } : {}) });
         setStatus("conflict"); setError(data?.message || "다른 곳에서 이 사업의 내용이 바뀌었어요. 최신 내용을 불러온 뒤 답변을 다시 확인해 주세요."); return;
@@ -1742,7 +1795,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const understandId = plan && !plan.hasDocuments && plan.intake.mode === "startup" && plan.intake.depth !== "expert" && !plan.intake.understood && plan.intake.answers.business?.status === "answered" ? plan.planId : "";
   /*
    * 읽는 동안에는 다음 질문을 보이지 않는다 — 준비금 질문을 먼저 띄웠더니 읽은 값(문장 속 준비금)이 도착하며 질문이 바뀌고,
-   * 그 순간 적은 답이 저장되지 않았다(실제 AI 점검 2026-11-14). 읽기가 끝나거나 8초가 지나면 진행한다(늦으면 요청을 끊어 서버도 저장하지 않는다).
+   * 그 순간 적은 답이 저장되지 않았다(실제 AI 점검 2026-11-14). 읽기가 끝나거나 8초가 지나면 진행한다.
+   * 화면이 요청을 끊어도 서버는 멈추지 않는다 — 서버는 요청을 받은 때부터 재서 시한(intake-timing UNDERSTAND_SAVE_BY_MS)이 지나면 저장하지 않고,
+   * 화면은 읽기가 어떻게 끝나든(읽음 · 읽을 것 없음 · 끊김 · 실패) 저장본을 한 번 다시 받아 더 새 판(revision)이면 깐다(catchUpSnapshot).
+   * 예전엔 200을 받았을 때만 다시 불러와, 끊긴 뒤 서버가 저장하면 화면은 옛 판으로 답을 보내 409로 막혔다(2026-11-17 운영, 로그인 안 한 손님).
    */
   const [understandDone, setUnderstandDone] = useState("");
   const understanding = !!understandId && understandDone !== understandId;
@@ -1750,11 +1806,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   useEffect(() => {
     if (!understandId || understandAsked.current.has(understandId)) return;
     understandAsked.current.add(understandId);
-    const controller = new AbortController(), timer = window.setTimeout(() => controller.abort(), 8000);
+    const controller = new AbortController(), timer = window.setTimeout(() => controller.abort(), UNDERSTAND_WAIT_MS);
     fetch("/api/plan/chat/understand", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ planId: understandId }), signal: controller.signal })
-      .then(async response => { if (response.status === 200) for (let attempt = 0; attempt < 4; attempt++) { if (!busyRef.current) { await reload(); return; } await new Promise(resolve => setTimeout(resolve, 500)); } })
-      .catch(() => { /* 못 읽어도 기준값으로 진행된다 */ })
-      .finally(() => { window.clearTimeout(timer); setUnderstandDone(understandId); });
+      .then(() => undefined, () => undefined /* 못 읽어도 기준값으로 진행된다 */)
+      .then(() => { window.clearTimeout(timer); return catchUpSnapshot(understandId); })
+      .finally(() => setUnderstandDone(understandId));
   }, [understandId]); // eslint-disable-line react-hooks/exhaustive-deps
   /* 상자가 처음 보인 질문 — 빈 상태를 본 뒤 생겼으면 그 질문 동안 펼쳐 둔다. 글을 읽는 중에는 질문이 바뀔 수 있어 읽기가 끝난 뒤에 적는다(그리는 중에 맞춘다) */
   const chipCount = saidAnswers.length + filledAnswers.length;

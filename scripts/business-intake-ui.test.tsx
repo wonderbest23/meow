@@ -18,6 +18,7 @@ import { readChatResponse } from "../lib/http/read-chat-response";
 import { generationEta } from "../lib/plan-builder/generation-progress";
 import { coachAmount } from "../lib/plan-builder/coach-feasibility";
 import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption, attachmentMessage, attachmentName, bulkCandidateIds } from "../app/plan/chat/intake-ui/model";
+import { answerConflictRetry, clearConflictDraft } from "../app/plan/chat/intake-ui/model";
 
 const scope = "test-owner-guest";
 const id = "plan_ui-fixture";
@@ -1279,6 +1280,55 @@ async function main() {
     const intakeSource = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
     assert.doesNotMatch(intakeSource, /guestSaveNote|이 브라우저에만 저장돼요/);
     assert.ok(!css.includes(".guestSaveNote"));
+  }
+  // 배경 작업이 판(revision)만 올린 뒤의 답(2026-11-17 운영, 로그인 안 한 손님 · 휴대폰): 첫 답이 409로 막혀 두 번째 질문으로 넘어가지 못했다.
+  // 서버의 적은 글 읽기(understand)가 화면이 8초에 끊은 뒤에도 끝까지 돌아 판을 올렸고, 화면은 옛 판으로 답을 보냈다.
+  {
+    const screen = fixture();
+    const first = screen.nextQuestion!;
+    // 보기에서 고르는 첫 질문(칩) — 운영에서는 준비 예산 금액 범위 칩이었다
+    const chip = first.options?.find(option => option.value === "food_beverage")?.value ?? first.options?.[0]?.value;
+    assert.ok(chip, `${first.id}: 칩으로 답하는 질문`);
+    const firstAnswer = command({ questionId: first.id, value: chip, revision: screen.coach.revision });
+    assert.ok(previewIntakeAnswer(screen, firstAnswer)?.nextQuestion?.id !== first.id, "화면은 답하자마자 다음 질문을 먼저 그린다");
+    // 서버: 읽은 것이 없어도 읽기 저장이 판만 올린다(지금 질문은 그대로)
+    const latest: IntakeSnapshot = { ...screen, coach: { ...screen.coach, revision: screen.coach.revision + 1 }, updatedAt: "2026-09-16T03:00:09.000Z" };
+    assert.equal(previewIntakeAnswer(latest, firstAnswer), null, "옛 판의 답은 새 판 위에 그릴 수 없다 — 예전엔 여기서 지난 질문으로 돌아갔다");
+    const revision = answerConflictRetry(firstAnswer, latest);
+    assert.equal(revision, latest.coach.revision, "질문이 아직 지금 질문이면 최신 판으로 한 번 다시 보낸다");
+    const retried = previewIntakeAnswer(latest, { ...firstAnswer, revision: revision! });
+    assert.ok(retried && retried.nextQuestion?.id !== first.id, "다시 보낸 답은 최신 상태 위에서 다음 질문으로 넘어간다");
+    // 다시 보내지 않는 때 — 사용자에게 맡긴다(지금처럼 '최신 내용 불러오기')
+    const moved = { ...latest, nextQuestion: latest.questions.find(question => question.id !== first.id)! };
+    assert.equal(answerConflictRetry(firstAnswer, moved), null, "다른 화면에서 답했거나 읽은 값이 그 칸을 채워 질문이 바뀌었으면 덮어쓰지 않는다");
+    assert.equal(answerConflictRetry(firstAnswer, screen), null, "서버 판이 더 새롭지 않으면(다른 이유의 충돌) 다시 보내지 않는다");
+    assert.equal(answerConflictRetry({ ...firstAnswer, action: "note", message: "메모" }, latest), null, "답 저장만 자동으로 다시 보낸다");
+    assert.equal(answerConflictRetry({ ...firstAnswer, planId: "plan_other" }, latest), null, "다른 사업의 상태로는 다시 보내지 않는다");
+    assert.equal(answerConflictRetry(firstAnswer, null), null, "최신 상태를 못 받으면 다시 보내지 않는다");
+    assert.equal(answerConflictRetry(firstAnswer, { ...latest, nextQuestion: null }), null);
+
+    // '최신 내용 불러오기' — 충돌 상태와 답변 수정 모드를 지우고 서버의 지금 질문을 보인다. 입력칸에 남긴 글은 그대로
+    const conflicted = { ...emptyDraft(), ownerScope: scope, mode: "answer" as const, editingId: first.id, refiningId: first.id, memo: "남긴 메모", answers: { [first.id]: { ...emptyAnswer(), text: "300만원쯤" } }, pending: { command: firstAnswer, conflict: true } };
+    const cleared = clearConflictDraft(conflicted);
+    assert.equal(cleared.pending, null);
+    assert.equal(cleared.editingId, null, "'답변 수정 · 현재 질문으로' 상태로 지난 질문을 계속 보이지 않는다");
+    assert.equal(cleared.refiningId, null);
+    assert.equal(cleared.answers[first.id]?.text, "300만원쯤", "질문에 적어 둔 글은 지우지 않는다");
+    assert.equal(cleared.memo, "남긴 메모");
+    assert.equal(cleared.ownerScope, scope);
+
+    // 화면 배선 — 409 뒤 자동 재시도는 한 번뿐, 불러오기는 충돌을 정리, 적은 글 읽기는 어떻게 끝나든 저장본을 다시 받는다
+    const intakeSource = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
+    assert.match(intakeSource, /if \(response\.status === 409 && data\?\.code === "revision_conflict"\) \{\n\s*const latest = await getSnapshot\(pending\.command\.planId, controller\.signal\)\.catch\(\(\) => null\);/);
+    assert.match(intakeSource, /const revision = latest \? answerConflictRetry\(pending\.command, latest\.plan\) : null;/);
+    assert.match(intakeSource, /pending = \{ \.\.\.pending, command: \{ \.\.\.pending\.command, revision \} \};\n\s*writeDraft\(\{ \.\.\.draftRef\.current, pending \}\);\n\s*installPlan\(latest\.plan\);/, "다시 보낼 요청을 먼저 보관하고 최신 상태를 깐다(응답을 잃어도 '다시 시도'가 같은 요청을 보낸다)");
+    assert.equal((intakeSource.match(/response = await post\(\);/g) ?? []).length, 2, "처음 한 번 + 자동 재시도 한 번 — 두 번째도 막히면 안내");
+    assert.match(intakeSource, /if \(response\.status === 409\) \{\n\s*conflictRef\.current = true;/, "두 번째도 막히면 지금처럼 '최신 내용 불러오기' 안내");
+    assert.match(intakeSource, /if \(conflictRef\.current\) \{ writeDraft\(clearConflictDraft\(draftRef\.current\)\); conflictRef\.current = false;/);
+    assert.match(intakeSource, /timer = window\.setTimeout\(\(\) => controller\.abort\(\), UNDERSTAND_WAIT_MS\);/);
+    assert.match(intakeSource, /\.then\(\(\) => undefined, \(\) => undefined[^\n]*\)\n\s*\.then\(\(\) => \{ window\.clearTimeout\(timer\); return catchUpSnapshot\(understandId\); \}\)\n\s*\.finally\(\(\) => setUnderstandDone\(understandId\)\);/, "읽음 · 끊김 · 실패 모두 저장본을 다시 받은 뒤 질문을 보인다");
+    assert.doesNotMatch(intakeSource, /response\.status === 200\) for \(let attempt = 0; attempt < 4;/, "200을 받았을 때만 다시 불러오던 길은 없앴다");
+    assert.match(intakeSource, /if \(busyRef\.current \|\| draftRef\.current\.pending \|\| conflictRef\.current\) return;\n\s*installPlan\(data\.plan\);/, "보내는 중인 명령이 없을 때만 더 새 판을 깐다");
   }
   console.log(`business-intake-ui: ownership, pending retries, optimistic rollback inputs, choice composer, hybrid chips, number stepper, amount ladder, period presets, seeds, extraction consent, source summary, artifact links passed; local next-question p95 ${p95.toFixed(2)}ms`);
 }
