@@ -1133,6 +1133,16 @@ async function main() {
     // 다른 칸을 보면 대상 칩을 거둔다(적던 글이 있으면 둔다)
     assert.match(intake, /if \(sideChanged \|\| before\.pane && !paneActive\) leaveEditTarget\(\);/);
     assert.equal(studioEditError(new Error("아직 준비 중이에요. 조금만 기다려 주세요."), "기본"), "아직 준비 중이에요. 조금만 기다려 주세요.", "홈페이지 칸의 준비 중 문장은 그대로");
+    // 계획서 작성 시작 실패(예: 503) — 답은 저장돼 있으니 맨 위에 '저장하지 못했어요' 대신 '작성을 시작하지 못했어요 · 다시 시도'(점검 2026-11-16)
+    assert.match(intake, /if \(!response\.ok \|\| data\?\.login\) \{\n\s*setLogin\([^\n]*\n\s*if \(pending\.command\.action === "prepare"\) setPrepareFailed\(true\);/);
+    assert.match(intake, /setStatus\("saving"\); setError\(""\); setLogin\(false\); setResume\(""\); setPrepareFailed\(false\);/, "다시 보내면 실패 표시를 거둔다");
+    assert.match(intake, /const prepareFailedTop = prepareFailed && status === "failed" && !staleFailure;/);
+    assert.match(intake, /\{prepareFailedTop \? <><AlertCircle size=\{15\} aria-hidden="true" \/><span>작성을 시작하지 못했어요<\/span>\{login \? <Link href=\{loginHref\}[^>]*>로그인하고 이어가기<\/Link> : <button [^>]*onClick=\{retryPrepare\}>[\s\S]*?다시 시도<\/button>\}<\/> :/);
+    assert.match(intake, /\{prepareFailedTop \? null : loaded \? status === "failed" && staleFailure \? "" : saveLabel : "불러오는 중"\}/, "'저장하지 못했어요'를 같이 띄우지 않는다");
+    // 같은 요청을 다시 보낼 수 있으면 아래 알림(어긋나는 두 번째 안내)은 띄우지 않는다
+    assert.match(intake, /const prepareNoticeOnTop = prepareFailedTop && !!draft\.pending && !login;/);
+    assert.match(intake, /\{error && !ideaError && !staleFailure && !prepareNoticeOnTop && <div className=\{styles\.notice\} role="alert">/);
+    assert.ok(css.includes(".statusAction"), "맨 위 줄의 다시 시도 단추");
   }
   console.log(`business-intake-ui: ownership, pending retries, optimistic rollback inputs, choice composer, hybrid chips, number stepper, amount ladder, period presets, seeds, extraction consent, source summary, artifact links passed; local next-question p95 ${p95.toFixed(2)}ms`);
 }

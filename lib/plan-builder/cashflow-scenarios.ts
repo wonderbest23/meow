@@ -508,9 +508,10 @@ function scenarioBasis(result: CashflowScenarios, s: Scenario): string {
  */
 function unknownCostRows(result: CashflowScenarios): Array<{ item: string; note: string }> {
   const notIncluded = `위 한 ${result.unit}당 비용에 들어 있지 않다면`;
+  // 음식(반찬·도시락 등)은 '건'으로 세어도 용기·폐기가 생긴다 — 동네 직접 배달을 스토어로 보지 않게 바꾼 뒤(2026-11-17) 이 칸이 '이동비·소모품'으로만 남지 않게
   const rows = result.online
     ? [{ item: "포장·택배", note: notIncluded }]
-    : result.goods
+    : result.goods || result.shape.trade === "food"
       ? [{ item: "포장·용기", note: notIncluded }, { item: "팔지 못해 버리는 몫(폐기)", note: "만든 양 가운데 버리는 비율을 재서 반영" }]
       : [{ item: `그 밖에 한 ${result.unit}마다 드는 돈(${result.shape.service ? "문자·알림 발송비, 서버 사용료 등" : result.shape.premises ? "소모품 등" : result.shape.cycle === "enroll" ? "교재·이동비 등" : "이동비·소모품 등"})`, note: notIncluded }];
   // 결제 방법(Q7): 매장은 카드 단말기, 온라인은 스토어 수수료, 매장 없는 서비스는 계좌이체면 수수료가 없다
@@ -523,6 +524,12 @@ function unknownCostRows(result: CashflowScenarios): Array<{ item: string; note:
 }
 
 const VAT_BASIS = "판매가에 부가세가 들어 있고 일반과세자일 때 판매가의 1/11, 법정 세율 10%";
+/*
+ * 아직 모르는 칸의 이름(2026-11-17 실제 AI 계획서 9개 점검: '확인 필요'가 계획서마다 9~23번, 이 표에서만 5~6번) — 문장만 바꾼다. 금액은 여전히 넣지 않는다.
+ * 과세 유형은 아래 안내 문장이 설명하므로 칸에는 어디서 정하는지만 쓴다.
+ */
+const UNKNOWN_CELL = "알아본 뒤 채움";
+const VAT_TYPE_NOTE = "과세 유형은 세무서 확인";
 /* 과세 유형 안내를 다른 장에서 다시 풀지 않게 가리키는 한 줄 — 안내 본문은 돈 장의 표 아래(unitMarginMarkdown) 한 곳에만 */
 const VAT_POINTER = "과세 유형(일반·간이·면세)에 따라 부가세가 달라진다는 안내는 돈 숫자를 맡은 장의 계산 표 아래에만 있어 본문에서 다시 풀어 쓰지 않습니다.";
 /*
@@ -590,7 +597,7 @@ const openingLine = (result: CashflowScenarios) => (result.prep.openWeek == null
 
 /** 본전이 '대표 수입 0원'이라는 것과 본전을 넘긴 뒤 대표 몫 — 입력 없이 계산되는 한 줄 */
 const ownerShareLine = (result: CashflowScenarios) =>
-  `본전은 사업 비용만 메우는 ${ira(result.terms.volume)}, 본전에서 대표님이 가져가는 돈은 0원입니다. 본전을 넘겨 1${result.unit} 더 ${result.terms.verb} 때마다 약 ${won(result.contribution)}이 대표님 몫으로 남습니다(소득세와 '확인 필요' 칸을 빼기 전).`;
+  `본전은 사업 비용만 메우는 ${ira(result.terms.volume)}, 본전에서 대표님이 가져가는 돈은 0원입니다. 본전을 넘겨 1${result.unit} 더 ${result.terms.verb} 때마다 약 ${won(result.contribution)}이 대표님 몫으로 남습니다(소득세와 '${UNKNOWN_CELL}' 칸을 빼기 전).`;
 
 /** 통장 흐름을 바로 읽히는 문장으로 — 표 아래 주석과 다른 장의 참고값에 같이 쓴다 */
 function cashflowFindings(result: CashflowScenarios, options: { reference?: boolean } = {}): string[] {
@@ -834,12 +841,12 @@ function unitMarginMarkdown(result: CashflowScenarios): string[] {
     `| 항목 | 한 ${unit}당 | 근거 |`,
     "| --- | ---: | --- |",
     `| ${result.shape.service === "connect" ? "한 건 수수료" : "판매가"} | ${won(result.unitPrice)} | 대표님이 정한 값${subscriptionBasis(result)} |`,
-    result.shape.vat === "exempt" ? "| 부가세 | 0원 | 면세일 수 있음(교육용역). 면세 여부는 관할 세무서 확인 |" : `| 부가세 | -${won(result.vat)} | ${result.shape.service === "connect" ? VAT_BASIS.replace(/판매가/g, "수수료") : VAT_BASIS}. 과세 유형 확인 필요 |`,
+    result.shape.vat === "exempt" ? "| 부가세 | 0원 | 면세일 수 있음(교육용역). 면세 여부는 관할 세무서 확인 |" : `| 부가세 | -${won(result.vat)} | ${result.shape.service === "connect" ? VAT_BASIS.replace(/판매가/g, "수수료") : VAT_BASIS}. ${VAT_TYPE_NOTE} |`,
     `| 한 ${unit}당 비용 | -${won(unitCostOf(result))} | 대표님이 정한 값 |`,
-    ...unknownCostRows(result).map(row => `| ${row.item} | 확인 필요 | ${row.note} |`),
-    `| **한 ${unit}에 실제 남는 돈** | **${won(result.contribution)}** | 확인 필요 칸을 빼기 전 값 |`,
+    ...unknownCostRows(result).map(row => `| ${row.item} | ${UNKNOWN_CELL} | ${row.note} |`),
+    `| **한 ${unit}에 실제 남는 돈** | **${won(result.contribution)}** | '${UNKNOWN_CELL}' 칸을 빼기 전 값 |`,
     "",
-    `- ${breakEvenWord(result)} 이 ${won(result.contribution)}으로 계산했습니다. '확인 필요' 칸이 채워지면 남는 돈이 줄고 ${breakEvenWord(result)} 늘어나므로, 아래 숫자는 낙관적인 쪽입니다.`,
+    `- ${breakEvenWord(result)} 이 ${won(result.contribution)}으로 계산했습니다. '${UNKNOWN_CELL}' 칸이 채워지면 남는 돈이 줄고 ${breakEvenWord(result)} 늘어나므로, 아래 숫자는 낙관적인 쪽입니다.`,
     `- ${result.shape.vat === "exempt" ? vatExemptLine(result) : `${vatOther(result)}.`}`,
     `- ${ownerShareLine(result)}`,
   ];
@@ -910,10 +917,10 @@ export function cashflowReference(result: CashflowScenarios, options: { basis?: 
   const unknown = unknownCostRows(result).map(row => row.item).join("·");
   return [
     `${result.operating ? "운영 중인 사업의 계획 시나리오 계산(지금 실적에서 시작, 앞으로의 숫자는 실적 아님)" : "계획 시나리오 계산(실적 아님)"}. ${options.basis ? `${options.basis}으로 ` : ""}${eul(result.terms.volume)} 하나로 정하지 않고 ${kinds(result)} 경우로 계산했습니다(${result.terms.capacity} 최대치를 넘지 않음).`,
-    `- 판매가 ${won(result.unitPrice)}${subscriptionBasis(result)} / 변동비(한 ${result.unit}당 비용) ${won(unitCostOf(result))} / 부가세 ${result.shape.vat === "exempt" ? `0원(면세로 봄 — 교육용역은 면세일 수 있어 관할 세무서 확인 필요${result.taxableBreakEven != null ? `, 과세면 본전 월 ${count(result.taxableBreakEven, result.unit)}` : ""})` : `${won(result.vat)}(일반과세자 가정 — 판매가의 1/11, 과세 유형 확인 필요)`} / 한 ${result.unit}에 실제 남는 돈 ${won(result.contribution)}`,
+    `- 판매가 ${won(result.unitPrice)}${subscriptionBasis(result)} / 변동비(한 ${result.unit}당 비용) ${won(unitCostOf(result))} / 부가세 ${result.shape.vat === "exempt" ? `0원(면세로 봄 — 교육용역은 면세일 수 있어 관할 세무서 확인 필요${result.taxableBreakEven != null ? `, 과세면 본전 월 ${count(result.taxableBreakEven, result.unit)}` : ""})` : `${won(result.vat)}(일반과세자 가정 — 판매가의 1/11, ${VAT_TYPE_NOTE})`} / 한 ${result.unit}에 실제 남는 돈 ${won(result.contribution)}`,
     `- 손익분기: 월 ${count(result.breakEven, result.unit)} (매출 ${won(result.breakEven * result.unitPrice)}) — 본전은 사업 비용(월 고정비)만 메우는 ${result.terms.volume} 하나로 씁니다.`,
     // 과세 유형 안내(VAT_OTHER)는 돈 장의 표 아래에만 싣는다 — 이 참고 문장은 모든 장에 들어가 같은 안내가 두 장에 거의 그대로 나왔다(계획서 품질 Q5)
-    `- 한 ${result.unit}에 실제 남는 돈에서 ${unknown}는 아직 빼지 않았습니다(확인 필요). 그래서 ${breakEvenWord(result)} 낙관적인 쪽이고, 이 값을 지어서 채우지 않습니다. ${VAT_POINTER}`,
+    `- 한 ${result.unit}에 실제 남는 돈에서 ${unknown}는 아직 빼지 않았습니다(${UNKNOWN_CELL}). 그래서 ${breakEvenWord(result)} 낙관적인 쪽이고, 이 값을 지어서 채우지 않습니다. ${VAT_POINTER}`,
     `- ${ownerShareLine(result)}`,
     // 하루 환산(월 26일 영업 — 처리량 환산과 같은 가정): 실행 장이 '하루 몇 개면 바꾼다' 같은 판단 기준을 숫자를 지어내지 않고 세우게 한다
     perDay(result, result.breakEven, result.unit, text => `- 하루 환산(월 ${result.days}일 ${result.words.day} 가정): 본전 ${text}`),
@@ -950,7 +957,7 @@ export function fixedCostAssumptionsFromFields(fields: Array<{ key: string; valu
 
 export function fixedCostAssumptionReference(result: FixedCostAssumptions): string {
   return [
-    `월 고정비를 아직 몰라 본전 판매량을 세 가지 고정비 가정으로 계산했습니다(가정 — 실제 월세·관리비·고정 인건비를 알면 그 값으로 바꿉니다). 한 건에 실제 남는 돈은 판매가 ${won(result.unitPrice)}에서 부가세 ${won(result.vat)}(${VAT_BASIS}, 과세 유형 확인 필요)와 한 건당 비용을 뺀 ${won(result.contribution)}입니다.`,
+    `월 고정비를 아직 몰라 본전 판매량을 세 가지 고정비 가정으로 계산했습니다(가정 — 실제 월세·관리비·고정 인건비를 알면 그 값으로 바꿉니다). 한 건에 실제 남는 돈은 판매가 ${won(result.unitPrice)}에서 부가세 ${won(result.vat)}(${VAT_BASIS}, ${VAT_TYPE_NOTE})와 한 건당 비용을 뺀 ${won(result.contribution)}입니다.`,
     ...result.rows.map(row => `- 월 고정비 ${won(row.fixed)}(가정)이면 본전 ${periods(result, row.breakEven, result.unit)}`),
     "- 이 세 금액은 가정이므로 본문에서 실제 고정비처럼 쓰지 않고, 고정비 견적을 받는 일을 확인할 일로 둡니다.",
   ].join("\n");
@@ -960,7 +967,7 @@ export function fixedCostAssumptionMarkdown(result: FixedCostAssumptions): strin
   return [
     "### 월 고정비를 모를 때 본전 판매량(가정)",
     "",
-    `한 ${result.unit}에 실제 남는 돈 ${won(result.contribution)}(판매가 ${won(result.unitPrice)} − 부가세 ${won(result.vat)} − 한 ${result.unit}당 비용, 포장·수수료 등은 확인 필요)으로 계산했습니다. 고정비 세 금액은 가정입니다.`,
+    `한 ${result.unit}에 실제 남는 돈 ${won(result.contribution)}(판매가 ${won(result.unitPrice)} − 부가세 ${won(result.vat)} − 한 ${result.unit}당 비용, 포장·수수료 등은 ${UNKNOWN_CELL})으로 계산했습니다. 고정비 세 금액은 가정입니다.`,
     "",
     "| 월 고정비(가정) | 본전 판매량 |",
     "| ---: | --- |",

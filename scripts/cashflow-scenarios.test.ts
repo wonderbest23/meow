@@ -43,10 +43,13 @@ assert.deepEqual([withLiving.breakEven, withLiving.scenarios[0].net[0], withLivi
 const md = cashflowMarkdown(plain);
 // 한 개에 실제 남는 돈 표: 법정 부가세만 계산, 포장·폐기·카드 수수료는 '확인 필요' 칸(금액을 지어내지 않는다)
 assert.match(md, /### 한 개에 실제 남는 돈/);
-assert.match(md, /\| 부가세 \| -409원 \| 판매가에 부가세가 들어 있고 일반과세자일 때 판매가의 1\/11, 법정 세율 10%\. 과세 유형 확인 필요 \|/);
-for (const row of ["포장·용기", "팔지 못해 버리는 몫\\(폐기\\)", "카드·결제 수수료"]) assert.match(md, new RegExp(`\\| ${row} \\| 확인 필요 \\|`));
+assert.match(md, /\| 부가세 \| -409원 \| 판매가에 부가세가 들어 있고 일반과세자일 때 판매가의 1\/11, 법정 세율 10%\. 과세 유형은 세무서 확인 \|/);
+for (const row of ["포장·용기", "팔지 못해 버리는 몫\\(폐기\\)", "카드·결제 수수료"]) assert.match(md, new RegExp(`\\| ${row} \\| 알아본 뒤 채움 \\|`));
 assert.match(md, /\| \*\*한 개에 실제 남는 돈\*\* \| \*\*2,491원\*\* \|/);
 assert.match(md, /아래 숫자는 낙관적인 쪽입니다/);
+// 2026-11-17 점검: '확인 필요'가 계획서마다 9~23번, 이 표에서만 5~6번 — 표는 '알아본 뒤 채움'으로 부르고 '확인 필요'를 쓰지 않는다(금액은 여전히 넣지 않음)
+assert.doesNotMatch(md, /확인 필요/);
+assert.match(md, /'알아본 뒤 채움' 칸이 채워지면 남는 돈이 줄고/);
 assert.match(md, /간이과세자는 업종에 따라 매출의 약 1\.5~4%/);
 assert.match(md, /본전에서 대표님이 가져가는 돈은 0원입니다\. 본전을 넘겨 1개 더 팔 때마다 약 2,491원이 대표님 몫으로 남습니다/);
 assert.match(md, /### 세 가지 경우로 본 한 달/);
@@ -60,15 +63,15 @@ assert.doesNotMatch(md, /12개월 손익 추정|흑자 전환/, "the old max-cap
 assert.equal((md.match(/```plan-chart/g) ?? []).length, 1, "one chart");
 // 서비스(단위 '건')는 포장·폐기 대신 그 밖의 건당 비용, 온라인은 포장·택배와 스토어 수수료
 const service = cashflowMarkdown(buildCashflowScenarios({ unitPrice: 150_000, unitVariableCost: 20_000, monthlyFixedCost: 600_000, capacity: "대표자 혼자 / 일주일 8건", shape: { premises: false, cycle: "visits", vat: "general" } })!);
-assert.match(service, /\| 그 밖에 한 건마다 드는 돈\(이동비·소모품 등\) \| 확인 필요 \|/);
+assert.match(service, /\| 그 밖에 한 건마다 드는 돈\(이동비·소모품 등\) \| 알아본 뒤 채움 \|/);
 assert.doesNotMatch(service, /폐기|포장/);
-assert.match(cashflowMarkdown(buildCashflowScenarios({ ...bakery, online: true })!), /\| 포장·택배 \| 확인 필요 \|[\s\S]*\| 스토어 판매·결제 수수료 \| 확인 필요 \|/);
+assert.match(cashflowMarkdown(buildCashflowScenarios({ ...bakery, online: true })!), /\| 포장·택배 \| 알아본 뒤 채움 \|[\s\S]*\| 스토어 판매·결제 수수료 \| 알아본 뒤 채움 \|/);
 
 const ref = cashflowReference(plain, { basis: "건당 결제 기준" });
 assert.match(ref, /건당 결제 기준으로 판매량을 하나로 정하지 않고/);
-assert.match(ref, /- 판매가 4,500원 \/ 변동비\(한 개당 비용\) 1,600원 \/ 부가세 409원\(.*과세 유형 확인 필요\) \/ 한 개에 실제 남는 돈 2,491원/);
+assert.match(ref, /- 판매가 4,500원 \/ 변동비\(한 개당 비용\) 1,600원 \/ 부가세 409원\(.*과세 유형은 세무서 확인\) \/ 한 개에 실제 남는 돈 2,491원/);
 assert.match(ref, /- 손익분기: 월 1,526개 \(매출 6,867,000원\) — 본전은 사업 비용\(월 고정비\)만 메우는 판매량 하나로 씁니다/);
-assert.match(ref, /포장·용기·팔지 못해 버리는 몫\(폐기\)·카드·결제 수수료는 아직 빼지 않았습니다\(확인 필요\)\. 그래서 본전 판매량은 낙관적인 쪽/);
+assert.match(ref, /포장·용기·팔지 못해 버리는 몫\(폐기\)·카드·결제 수수료는 아직 빼지 않았습니다\(알아본 뒤 채움\)\. 그래서 본전 판매량은 낙관적인 쪽/);
 assert.match(ref, /대표님 몫으로 남습니다/);
 assert.match(ref, /판단 기준\('12주 할 일과 매달 볼 숫자' 장에서 씀\): 본전 판매량\(하루 약 59개 \/ 일주일 약 355개 \/ 한 달 1,526개\) 이상이면 계획대로/);
 assert.match(ref, /규모\(공간·장비·상품 수\)를 줄여서, 본전의 절반 이하면 시작안을 바꿉니다. 판단은 계약처럼 큰돈을 쓰기 전\(출시 전\)에 한 번, 문을 연 뒤에 다시 합니다/);
@@ -187,7 +190,7 @@ assert.match(cashflowReference(buildCashflowScenarios({ unitPrice: 3000, unitVar
   assert.equal(fashion.scenarios[0].net[0], 769 * 18_455 - 4_000_000);
   const fashionMd = cashflowMarkdown(fashion);
   assert.doesNotMatch(fashionMd, /155,016,000/);
-  assert.match(fashionMd, /\| 광고비\(주문 1건당\) \| 확인 필요 \|/);
+  assert.match(fashionMd, /\| 광고비\(주문 1건당\) \| 알아본 뒤 채움 \|/);
   assert.match(fashionMd, /지금보다 한 달 약 46건 더 늘려야 합니다\(10,000,000원 ÷ 12개월 ÷ 한 건에 실제 남는 돈 18,455원\)/);
   // 실적이 본전보다 적은 운영 중 사업은 모자라는 돈을 숨기지 않는다
   const thin = buildCashflowScenarios({ unitPrice: 10_000, unitVariableCost: 4000, monthlyFixedCost: 1_000_000, operating: { actualVolume: 150 } })!;

@@ -99,6 +99,50 @@ export async function recordRegen(planId: string, ownerHash: string, sectionKey:
   }
 }
 
+/*
+ * 첫 생성 표시.
+ *
+ * '다시 생성'인지는 서버에 저장된 본문이 있는지로 가른다. 그런데 예전 방식 생성(app/api/plan/generate 의 일반 경로)은
+ * 결과를 서버에 저장하지 않고 화면에 돌려주기만 해서, 화면이 저장하지 않으면 같은 섹션을 몇 번이든 '첫 생성'으로
+ * 부를 수 있었다(결제한 문서면 Opus 비용이 계속 나갔다).
+ * 그래서 첫 생성이 실제로 AI 로 나갔으면 그 사실을 같은 표(plan_regenerations)에 남긴다. 다음에 같은 섹션을
+ * 또 만들면 저장된 본문이 없어도 '다시 생성'으로 센다.
+ *
+ * 표시 행은 ok=false, section_key='first:<섹션>' 이다. 남은 횟수(resolveRegenQuota)와 환불 계산(refund-effects)은
+ * ok=true 행만 세므로, 첫 생성은 예전처럼 문서값에 포함되고 남은 횟수를 깎지 않는다. 새 열·새 표가 필요 없어 DB 적용 없이 동작한다.
+ */
+export const FIRST_GENERATION_PREFIX = "first:";
+
+/** 이 섹션의 첫 생성이 이미 AI 로 나갔는지. 확인하지 못하면 null — 호출한 쪽이 막는다. 로컬 데모(DB 없음)는 false */
+export async function firstGenerationRecorded(planId: string, sectionKey: string): Promise<boolean | null> {
+  try {
+    const supabase = getServerSupabase();
+    if (!supabase) return false;
+    const { data, error } = await supabase
+      .from("plan_regenerations")
+      .select("id")
+      .eq("plan_id", planId)
+      .eq("section_key", `${FIRST_GENERATION_PREFIX}${sectionKey}`)
+      .limit(1);
+    if (error || !Array.isArray(data)) return null;
+    return data.length > 0;
+  } catch {
+    return null;
+  }
+}
+
+/** 첫 생성이 AI 로 나갔음을 남긴다(남은 횟수는 깎지 않는다) */
+export async function recordFirstGeneration(planId: string, ownerHash: string, sectionKey: string): Promise<void> {
+  try {
+    const supabase = getServerSupabase();
+    if (!supabase) return;
+    const { error } = await supabase.from("plan_regenerations").insert({ plan_id: planId, owner_hash: ownerHash, section_key: `${FIRST_GENERATION_PREFIX}${sectionKey}`, ok: false });
+    if (error) console.error("[regen-quota]", JSON.stringify({ event: "first_record_failed", planId, sectionKey, code: error.code ?? null }));
+  } catch (error) {
+    console.error("[regen-quota]", JSON.stringify({ event: "first_record_failed", planId, sectionKey, message: error instanceof Error ? error.message.slice(0, 120) : "UNKNOWN" }));
+  }
+}
+
 /** 추가로 산 묶음을 반영한다. 같은 주문이 두 번 들어와도 한 번만 늘어난다. */
 export async function grantRegenPack(planId: string, ownerHash: string, orderId: string, amount: number): Promise<boolean> {
   const supabase = getServerSupabase();

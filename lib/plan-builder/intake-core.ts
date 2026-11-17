@@ -10,7 +10,7 @@ import { acceptsFreeChoice, FREE_CHOICE_MAX_CHARS, amountCheckPrompt, coreQuesti
 import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
 import { estimateIntake, type KindRules } from "./intake-estimate";
-import { playbookForKsic, playbookForText } from "./industry-playbooks";
+import { playbookForKsic, playbookForText, salesRoute } from "./industry-playbooks";
 import { businessTypeFor } from "./business-types";
 import { KSIC_SYNONYMS, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
 import { ksicSectorLabel } from "./ksic-hints";
@@ -376,10 +376,14 @@ export type IntakeScenarioInputs = {
 /**
  * 온라인으로 파는 사업인지(택배 판매·앱·중개). business-launch.ts의 businessProfile과 같은 규칙:
  * 업종 코드 또는 사업 설명으로 업종 가이드를 찾고, 직접 고른 구조 → 설명 → 가이드 → 기본 구조 순으로 사업 유형을 정한다.
+ * 만들어 보내는 형(ship)은 판매 채널을 답했으면 온라인 스토어·택배로 팔 때만 온라인으로 본다(2026-11-17: 맘카페·당근마켓으로 주문받아
+ * 동네에 직접 배달하는 반찬 정기배송에 '스토어 공개'·'스토어 판매·결제 수수료'가 나왔다). 채널을 답하지 않았으면 예전처럼 온라인으로 본다.
  */
 export function intakeSellsOnline(coach: Pick<CoachState, "business" | "fields">, intake: Pick<IntakeState, "ksic" | "sector" | "structure">): boolean {
-  const typeId = intakeBusinessType(coach, intake).typeId;
-  return !!typeId && ["ship", "app", "platform"].includes(typeId);
+  const { typeId, described } = intakeBusinessType(coach, intake);
+  if (typeId !== "ship") return !!typeId && ["app", "platform"].includes(typeId);
+  const route = salesRoute({ channel: coach.fields.find(field => field.key === "channel")?.value, description: described });
+  return route === "online-store" || route === "unknown";
 }
 
 /** 사업 유형(business-types.ts)과 그 판정에 쓴 사업 설명 — 온라인 여부와 돈 장의 사업 모양이 같은 판정을 쓴다 */

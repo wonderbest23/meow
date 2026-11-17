@@ -242,6 +242,22 @@ export function subscribePlanTitle(fn: (notice: PlanTitleNotice) => void): () =>
   return () => void titleListeners.delete(fn);
 }
 
+/*
+ * 머리줄 '이름 바꾸기' → 열린 대화 화면에 넘긴다(같은 탭 안). 대화가 있는 사업은 이름이 대화(서버)에 있어서,
+ * 이 기기 저장본 제목만 바꾸면 다음 답 저장·사업 방향 정리 때 AI가 지은 이름으로 돌아갔다(점검 2026-11-16).
+ * 대화 화면이 받아 '이름 정하기'로 저장하면 true — 받는 화면이 없으면 false(제목만 바꾸고 서버가 확정 이름으로 받는다).
+ */
+type PlanRenameHandler = (planId: string, title: string) => boolean;
+const renameHandlers = new Set<PlanRenameHandler>();
+export function requestPlanRename(planId: string, title: string): boolean {
+  for (const fn of renameHandlers) { try { if (fn(planId, title)) return true; } catch { /* 다른 화면 오류로 이름 바꾸기를 막지 않는다 */ } }
+  return false;
+}
+export function handlePlanRename(fn: PlanRenameHandler): () => void {
+  renameHandlers.add(fn);
+  return () => void renameHandlers.delete(fn);
+}
+
 /** Cache an acknowledged server version without launching another whole-state autosave. */
 export function cacheDocumentSection(planId: string, key: string, section: StoredSection, updatedAt: string) {
   const state = loadState();

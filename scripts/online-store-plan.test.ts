@@ -210,8 +210,8 @@ async function main() {
     // 11. 온라인 말: 스토어 공개 전/후, 월 26일 작업, 포장·택배와 스토어 수수료는 '확인 필요' 칸
     assert.ok(!/문 열기 전|문을 연 뒤|문 연 뒤|26일 영업/.test(md), md);
     assert.ok(md.includes("스토어 공개 뒤") && md.includes("월 26일 작업"));
-    assert.match(md, /\| 포장·택배 \| 확인 필요 \|/);
-    assert.match(md, /\| 스토어 판매·결제 수수료 \| 확인 필요 \|/);
+    assert.match(md, /\| 포장·택배 \| 알아본 뒤 채움 \|/);
+    assert.match(md, /\| 스토어 판매·결제 수수료 \| 알아본 뒤 채움 \|/);
     const ref = cashflowReference(flow);
     assert.ok(ref.includes("스토어를 공개한 뒤: 실제 판매 수") && ref.includes("매출이 없어도 중단선까지 버티는 기간((준비 예산 − 초기 지출 − 스토어 공개 전 고정비 − 중단선) ÷ 월 고정비, 잔액 0원까지는 최대 3개월 더): 초기 지출 1,000,000원이면 약 9개월"), ref);
     const roomy = buildCashflowScenarios({ unitPrice: 25000, unitVariableCost: 8000, monthlyFixedCost: 300000, budget: "50,000,000원" })!;
@@ -285,7 +285,48 @@ async function main() {
   for (const text of ["수제 소이 캔들 선물샵", "핸드메이드 도자기", "향초 공방", "기업 서비스 수제 소이 캔들 선물샵"]) assert.equal(themeForSector(text), "warm", text);
   assert.equal(themeForSector("수제 강아지 간식"), "vivid", "only gift-goods words, not every '수제'");
 
-  console.log("online-store-plan: first month from cashflow (not capacity), sector re-ask, kit phrase fixes, store-only homepage, survival = budget ÷ fixed cost, step order, online sales guide, platform payment, mobile tables, warm theme passed; no paid calls");
+  // ── 12. 판매 경로(2026-11-17 실제 AI 계획서 9개 점검) — '배송'이라는 말만으로 온라인 스토어로 보지 않는다 ──
+  {
+    const { salesRoute } = await import("../lib/plan-builder/industry-playbooks");
+    assert.equal(salesRoute({ channel: "맘카페, 당근마켓", description: "맞벌이 가정에 주 2회 반찬을 정기배송하는 반찬 가게" }), "other");
+    assert.equal(salesRoute({ channel: "지인 소개", description: "혼자 지내는 어르신을 서로 소개해 주는 소개팅 서비스" }), "offline-only");
+    assert.equal(salesRoute({ channel: "학교 앞 전단, 입소문" }), "offline-only");
+    assert.equal(salesRoute({ channel: "스마트스토어, 인스타그램" }), "online-store");
+    assert.equal(salesRoute({ channel: "인스타그램", description: "수제 캔들을 택배로 전국에 보냅니다" }), "online-store");
+    assert.equal(salesRoute({ channel: "배달앱(쿠팡이츠)" }), "other", "a food delivery app is not an online store");
+    assert.equal(salesRoute({ description: "정기배송 반찬" }), "unknown", "no channel answer → not judged");
+    const make = (id: string, industry: string, business: string, fields: Array<[CoachField["key"], string]>) => {
+      const coach: CoachState = emptyCoach();
+      coach.stage = "startup"; coach.business.stage = "사업 기획";
+      const intake: IntakeState = createIntake(coach, "startup", AT);
+      const plan: ServerPlan = { id, title: business, planType: COACH_TYPES.startup, createdAt: AT, updatedAt: AT, sections: {}, answers: { [COACH_KEY]: { state: coach }, [INTAKE_KEY]: { state: intake } } };
+      for (const [questionId, value] of [["industry", industry], ["business", business]] as Array<[string, IntakeValue]>) {
+        applyIntakeAnswer(plan, coach, intake, { action: "answer", revision: coach.revision, requestId: `00000000-0000-4000-8000-${String(++serial).padStart(12, "0")}`, questionId, value }, AT);
+      }
+      coach.fields.push(...fields.map(([key, value]) => field(key, value)));
+      return { plan, coach, intake };
+    };
+    // 맘카페·당근마켓으로 주문받아 동네에 직접 배달하는 반찬 정기배송: 스토어 말·스토어 수수료·택배비 주의가 나오지 않는다
+    const sidedish = make("plan-sidedish", "food_beverage", "맞벌이 가정에 주 2회 반찬을 정기배송하는 반찬 가게", [["customer", "서울 마포구 맞벌이 30대 부부"], ["offer", "반찬 4종 주 2회 정기배송"], ["channel", "맘카페, 당근마켓"], ["price", "59,000원"], ["unitCost", "26,000원"], ["cost", "2,500,000원"], ["budget", "20,000,000원"]]);
+    assert.equal(intakeSellsOnline(sidedish.coach, sidedish.intake), false);
+    const table = intakeFinancialTable(sidedish.plan, sidedish.coach, financialTableOwner(sidedish.plan.planType)!)!;
+    assert.ok(table && !/스토어/.test(table), table);
+    assert.match(table, /\| 결제 수수료\(카드·간편결제로 받을 때\) \| 알아본 뒤 채움 \| 계좌이체로 받으면 없음/);
+    assert.match(table, /\| 포장·용기 \| 알아본 뒤 채움 \|/, "food still gets the container row");
+    assert.doesNotMatch(table, /확인 필요/);
+    const sideContext = JSON.parse(confirmedIntakeContext(sidedish.plan.answers)) as { industryGuide?: { steps: string[]; pitfalls: string[] } };
+    assert.ok(!JSON.stringify(sideContext.industryGuide ?? {}).includes("스마트스토어는 결제 수단"), "no store fee pitfall for local delivery");
+    // 같은 사업이라도 스마트스토어로 팔면 예전처럼 온라인
+    const shipped = make("plan-sidedish-store", "food_beverage", "맞벌이 가정에 주 2회 반찬을 정기배송하는 반찬 가게", [["channel", "스마트스토어"], ["price", "59,000원"], ["unitCost", "26,000원"], ["cost", "2,500,000원"]]);
+    assert.equal(intakeSellsOnline(shipped.coach, shipped.intake), true);
+    // 지인 소개로만 만나는 어르신 소개팅: 업종 가이드에 통신판매업 단계가 없다
+    const senior = make("plan-senior", "local_service", "혼자 지내는 어르신을 서로 소개해 주는 소개팅 서비스", [["customer", "혼자 지내는 60~70대 어르신"], ["channel", "지인 소개"], ["price", "50,000원"]]);
+    const seniorContext = JSON.parse(confirmedIntakeContext(senior.plan.answers)) as { industryGuide?: { steps: string[] } };
+    assert.ok(!(seniorContext.industryGuide?.steps ?? []).some(step => step.includes("통신판매업")), JSON.stringify(seniorContext.industryGuide?.steps));
+    // 캔들 스마트스토어는 그대로 통신판매업 단계가 있다(위 8번)
+  }
+
+  console.log("online-store-plan: first month from cashflow (not capacity), sector re-ask, kit phrase fixes, store-only homepage, survival = budget ÷ fixed cost, step order, online sales guide, platform payment, mobile tables, warm theme, sales route (local delivery · referral only) passed; no paid calls");
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

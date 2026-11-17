@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { LANDING_IDEA_KEY, LANDING_IDEA_MAX, LANDING_IDEA_TTL_MS, clearLandingIdea, normalizeLandingIdea, readLandingIdea, stashLandingIdea, withoutLandingIdea } from "../lib/plan-builder/landing-idea";
+import { LANDING_DRAFT_KEY, LANDING_DRAFT_TTL_MS, LANDING_IDEA_KEY, LANDING_IDEA_MAX, LANDING_IDEA_TTL_MS, clearLandingDraft, clearLandingIdea, normalizeLandingIdea, readLandingDraft, readLandingIdea, saveLandingDraft, stashLandingIdea, withoutLandingIdea } from "../lib/plan-builder/landing-idea";
 
 /*
  * 랜딩 → 새 대화 아이디어 넘겨받기.
@@ -110,6 +110,31 @@ check("대화 화면은 같은 보내기 길로 한 번만 보내고, 넘겨받�
   assert.match(ui, /const queryString = withoutLandingIdea\(searchParams\);/);
   // HTML로 그리지 않는다
   assert.doesNotMatch(ui, /dangerouslySetInnerHTML/);
+});
+
+check("보내지 않은 첫 화면 글을 잠깐 맡겼다가 다시 채운다(로그인하고 돌아와도 남게)", () => {
+  const box = storage();
+  saveLandingDraft(box, "  강아지 수제 간식 \u0007", NOW);
+  assert.equal(readLandingDraft(box, NOW + 60_000), "강아지 수제 간식");
+  assert.equal(readLandingDraft(box, NOW + LANDING_DRAFT_TTL_MS + 1), "", "30분이 지나면 버린다");
+  saveLandingDraft(box, "   ", NOW);
+  assert.equal(box.values.has(LANDING_DRAFT_KEY), false, "다 지우면 보관본도 지운다");
+  saveLandingDraft(box, "반찬가게", NOW);
+  clearLandingDraft(box);
+  assert.equal(readLandingDraft(box, NOW), "");
+  assert.equal(readLandingDraft(storage({ [LANDING_DRAFT_KEY]: "{깨짐" }), NOW), "", "깨진 보관본은 무시한다");
+  assert.equal(readLandingDraft(null, NOW), "");
+});
+
+check("보낸 뒤 로그인 창으로 첫 화면에 돌아오면 보낼 때 맡긴 글로 다시 채운다(첫 화면 코드가 이 보관본도 읽는다)", () => {
+  const box = storage();
+  saveLandingDraft(box, "퇴근 후 쿠키", NOW);
+  stashLandingIdea(box, "퇴근 후 쿠키", NOW);
+  clearLandingDraft(box);
+  assert.equal(readLandingDraft(box, NOW + 1000), "", "보내면 초안은 지워진다");
+  assert.equal(readLandingIdea("", box, NOW + 1000)?.text, "퇴근 후 쿠키", "보관본은 5분 남는다");
+  const planList = readFileSync(new URL("../app/plan/PlanList.tsx", import.meta.url), "utf8");
+  assert.match(planList, /readLandingDraft\(storage, now\) \|\| readLandingIdea\("", storage, now\)\?\.text/);
 });
 
 console.log(JSON.stringify({ passed }));

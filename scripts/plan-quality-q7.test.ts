@@ -62,14 +62,14 @@ async function main() {
     // ── (1) 매장 문장은 매장을 빌리는 사업에만 ──
     for (const { table } of [nail, lunch]) {
       assert.match(table, /보증금도 계약 기간 동안은 통장에 없는 돈이라 초기 지출 한도 안에 함께 셉니다/);
-      assert.match(table, /\| 카드·결제 수수료 \| 확인 필요 \|/);
+      assert.match(table, /\| 카드·결제 수수료 \| 알아본 뒤 채움 \|/);
     }
     for (const { table, reference } of [candle, tutor]) {
       for (const text of [table, reference]) assert.doesNotMatch(text, /보증금도|권리금처럼|간판처럼|카드·결제 수수료|문 열기 전|문을 연 뒤|문 연 뒤|계약·개업 전 판단|이미 신고된 공간|단지 세대/, "no store sentences for a business without premises");
       assert.match(table, /매장을 빌리지 않으므로 보증금·권리금·인테리어·간판은 이 계산에 없습니다/);
     }
-    assert.match(candle.table, /\| 포장·택배 \| 확인 필요 \|[\s\S]*\| 스토어 판매·결제 수수료 \| 확인 필요 \|/);
-    assert.match(tutor.table, /\| 결제 수수료\(카드·간편결제로 받을 때\) \| 확인 필요 \| 계좌이체로 받으면 없음/);
+    assert.match(candle.table, /\| 포장·택배 \| 알아본 뒤 채움 \|[\s\S]*\| 스토어 판매·결제 수수료 \| 알아본 뒤 채움 \|/);
+    assert.match(tutor.table, /\| 결제 수수료\(카드·간편결제로 받을 때\) \| 알아본 뒤 채움 \| 계좌이체로 받으면 없음/);
     assert.match(tutor.reference, /영업을 시작한 뒤: 실제 등록 학생 수/, "Q9: 수업은 등록 학생 수로 센다");
 
     // ── (2) 구매 주기 가정과 세는 말 ──
