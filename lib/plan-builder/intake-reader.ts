@@ -136,5 +136,4 @@ export function readerItems(result: ReaderResult, questions: IntakeQuestion[], c
   return out;
 }
 
-/** 스위치 — 기본은 꺼짐. INTAKE_AI_READER=1 일 때만 읽는다(INTAKE_BETA_SAFETY=1 이면 늘 꺼짐) */
-export const intakeReaderEnabled = (env: Record<string, string | undefined> = process.env) => env.INTAKE_AI_READER === "1" && env.INTAKE_BETA_SAFETY !== "1";
+export { intakeReaderEnabled } from "./intake-reader-flag";

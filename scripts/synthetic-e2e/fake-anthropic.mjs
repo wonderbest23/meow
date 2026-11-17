@@ -49,6 +49,16 @@ globalThis.fetch = async (input, init) => {
   const url = typeof input === "string" ? input : input?.url ?? String(input);
   if (!url.startsWith("https://api.anthropic.com/")) return real(input, init);
   let body = {}; try { body = JSON.parse(init?.body ?? "{}"); } catch {}
+  /*
+   * 일반 모드 'AI 읽기'(intake-reader.ts)만 실제 AI로 보낸다 — SYNTHETIC_REAL_READER_KEY_FILE 을 준 개발 서버에서만(한 번 약 0.5원).
+   * 읽기는 사용자가 적은 말을 이해하는 일이라 가짜 답으로는 확인할 수 없다. 나머지 호출(사업 방향 · 계획서 등)은 그대로 가짜다.
+   */
+  if (process.env.SYNTHETIC_REAL_READER_KEY_FILE && /"facts_update"|사업 정보 표/.test(JSON.stringify([body.output_config ?? null, body.system ?? ""]))) {
+    const fs = await import("node:fs");
+    const line = fs.readFileSync(process.env.SYNTHETIC_REAL_READER_KEY_FILE, "utf8").split("\n").find(item => item.startsWith("ANTHROPIC_API_KEY="));
+    const key = line ? line.slice("ANTHROPIC_API_KEY=".length).trim().replace(/^["']|["']$/g, "") : "";
+    if (key) { const headers = new Headers(init?.headers ?? {}); headers.set("x-api-key", key); return real(input, { ...init, headers }); }
+  }
   let schema = body.output_config?.format?.schema;
   const system = Array.isArray(body.system) ? body.system.map(b => b.text).join("\n") : String(body.system ?? "");
   if (!schema) { const m = system.match(/출력 스키마: (\{[\s\S]*\})\s*$/); if (m) { try { schema = JSON.parse(m[1]); } catch {} } }

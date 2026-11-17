@@ -52,9 +52,9 @@ export async function POST(request: Request) {
   const count = items.answers.length + (items.operatingDays ? 1 : 0) + items.unknown.length;
   console.log(`[intake-read] ${JSON.stringify({ model: outcome.model, totalMs: outcome.totalMs, intent: outcome.result.intent, items: count, ask: outcome.result.ask.length, failure: outcome.failure })}`);
   if (outcome.failure) return nothing();
-  if (count) {
-    try { await saveIntakeCommand(identity.hash, { action: "read", planId: now.plan.id, revision: now.coach.revision, requestId: randomUUID(), read: items }); }
-    catch { return nothing(); }
-  }
-  return NextResponse.json({ intent: outcome.result.intent, applied: count, ask: outcome.result.ask }, { headers: noStore });
+  // 질문("그건 왜 물어봐?")은 저장하지 않는다 — 화면이 지금의 질문 길(AI에게 질문)로 처리한다
+  if (outcome.result.intent === "question") return NextResponse.json({ intent: "question", saved: false, applied: 0, ask: [] }, { headers: noStore });
+  try { await saveIntakeCommand(identity.hash, { action: "read", planId: now.plan.id, revision: now.coach.revision, requestId: randomUUID(), read: items, message: parsed.data.message }); }
+  catch { return nothing(); }
+  return NextResponse.json({ intent: outcome.result.intent, saved: true, applied: count, ask: outcome.result.ask }, { headers: noStore });
 }

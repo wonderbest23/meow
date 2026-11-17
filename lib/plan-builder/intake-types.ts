@@ -92,6 +92,8 @@ export type IntakeSnapshot = {
   /** 진행 중인 AI 작업의 서버 기준 경과 시간과 예상·최대 시간. 응답을 보낼 때 HTTP 층이 붙인다(기기 시계 오차와 무관). */
   jobClock?: { elapsedMs: number; expectedMs: number; limitMs: number } | null;
   financialSummary: string; financialWarning?: { message: string; fields: Array<"price" | "unitCost" | "cost"> } | null; hasDocuments: boolean; pendingExtraction: boolean;
+  /** AI 읽기가 켜져 있다(INTAKE_AI_READER) — 일반 모드에서 적어 보낸 말을 /api/plan/chat/read 로 먼저 보낸다 */
+  reader?: boolean;
   documentStatus?: "none" | "current" | "stale" | "unverified";
   /** 지금 계획서에 반영하면 AI 가 다시 쓰는 항목 수(다시 쓰기 횟수 차감량) */
   rewriteCount?: number;

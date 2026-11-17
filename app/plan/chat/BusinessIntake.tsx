@@ -302,6 +302,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const planRef = useRef<IntakeSnapshot | null>(null);
   const ownerScope = useRef<string | null>(null);
   const [ownerChanged, setOwnerChanged] = useState(false);
+  /* AI 읽기를 기다리는 중 — 그동안은 다시 보내지 못한다. readerSkip: 읽지 못해 규칙으로 넘어갈 때 다시 AI를 부르지 않게 */
+  const [reading, setReading] = useState(false);
+  const readerSkip = useRef(false);
   const [intentPrompt, setIntentPrompt] = useState<{ text: string; questionId: string | null; revision: number; canAnswer: boolean; suggested?: SuggestedNumber } | null>(null);
   // 판매 가격 0원 확인 — 보낼 답을 들고 있다가 [맞아요]면 그대로 저장한다(입력을 고치면 사라진다)
   /* 금액 확인(판매 가격 0원 · 현실 범위 밖 금액) — 같은 질문을 한 번 더 묻는다. text가 없으면 서버가 멈춰 세운 답이다(입력창과 맞추지 않는다) */
@@ -896,7 +899,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     void send({ action: "answer", questionId, value, ...(unknown ? { unknown: true } : {}), ...(extra?.ksic ? { ksic: extra.ksic } : {}) }, { answer: draftRef.current.answers[question.id] ?? emptyAnswer() });
   };
   const submitComposer = () => {
-    if (answerBlocked || !loaded || unfinishedText || understandingRef.current) return;
+    if (answerBlocked || !loaded || unfinishedText || understandingRef.current || reading) return;
     if (!plan) {
       const text = entryMessage(draftRef.current);
       if (text.length > 1200) { setError("처음 사업 설명은 1,200자 이내로 나눠 보내 주세요. 입력한 내용은 그대로 보관했어요."); return; }
@@ -927,6 +930,29 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     if (editTurn) { if (isConsultationText(composerVisible)) { if (!aiBusy) void send({ action: "help", message: composerVisible }, { composer: captureComposer() }); } else void send({ action: "edit", message: composerVisible }, { composer: captureComposer() }); return; }
     // In coach chat the composer is the industry search box on the industry turn; results appear as chips to tap.
     // 보내기를 눌러도 아무 일이 없던 문제(2026-10-22) — 찾은 업종을 누르라고 한 줄로 알려 준다
+    /*
+     * AI 읽기(2026-11-16, 스위치 INTAKE_AI_READER 가 켜져 있을 때만 — 서버가 plan.reader 로 알려 준다):
+     * 일반 모드에서 적어 보낸 말은 먼저 작은 AI가 읽어 사업 정보 표를 고친다(/api/plan/chat/read). 7초 안에 저장했다는 답이 오면 다시 불러오고 끝.
+     * 못 읽었거나(연결 · 시간 초과 · 꺼짐) 질문이면 아래의 지금 규칙으로 그대로 처리한다 — 사용자는 차이를 모른다.
+     */
+    if (plan.reader && coach && depthNow === "easy" && !askingAI && !readerSkip.current) {
+      const text = composerVisible, controller = new AbortController(), timer = window.setTimeout(() => controller.abort(), 7000);
+      setReading(true); follow.current = true;
+      void fetch("/api/plan/chat/read", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ planId: plan.planId, message: text, asking: question?.fieldKey ?? question?.id ?? null }), signal: controller.signal })
+        .then(response => response.status === 200 ? response.json() : null, () => null)
+        .then(async data => {
+          window.clearTimeout(timer);
+          if (data?.saved) {
+            editDraft({ ...draftRef.current, memo: "", ...(question ? { answers: { ...draftRef.current.answers, [question.id]: emptyAnswer() } } : {}) });
+            await reload();
+            return;
+          }
+          readerSkip.current = true;
+          try { submitComposer(); } finally { readerSkip.current = false; }
+        })
+        .finally(() => setReading(false));
+      return;
+    }
     /*
      * 일반 모드는 업종도 그냥 적어 보내면 된다(2026-11-15 사장님: 자유롭게 적는 대화인데 '찾은 업종을 눌러 주세요'에서 막혔다) —
      * 적은 말로 업종을 찾아 가장 가까운 것을 고르고, 못 찾으면 '새로운 사업 · 기타 업종'으로 넘어간다. 틀리면 '앞 질문 고치기'로 바꾼다.
@@ -1925,6 +1951,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
             {/* 일반 모드에서는 보이지 않는다(2026-11-15 사장님) — 이름만 봐서는 무엇인지 알기 어려웠다. 메모는 그대로 저장된다 */}
             {!locked && memoPending && depthNow !== "easy" && <AppButton type="button" variant="text" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</AppButton>}
             {understanding && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요" note="말하지 않은 것은 같은 업종 기준값으로 먼저 채우고 있어요." /></div>}
+            {reading && !understanding && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요" note="말씀하신 내용을 사업 정보에 옮기고 있어요." /></div>}
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview || understanding}>
               {/* 쓰는 동안 받아 둔 요청을 보내 채팅 수정 화면이 되어도 마무리 말(계획서 보기 · 홈페이지 만들기)을 먼저 남기고 그 아래에 제안 카드 */}
               {editTurn && !replyTurn ? <>{studioTurn}<EditChatTurn pro={pro} chapters={editChapters} snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : locked && !replyTurn ? <>{studioTurn ?? <DocumentLockedTurn pro={pro} planId={plan.planId} chatEdit={COACH_EDIT_CHAT} onChatEdit={embedded ? () => { follow.current = true; focusComposer(); } : undefined} />}{nextStep === "prepare" && !studioRun && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || amountConfirmation || sectorConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat cardLabel={questionCardLabel} cardFoot={questionCardFoot} question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={answerBlocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onCarry={carryDraft} onComposer={focusComposer} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</AppButton></section> : <section className={styles.complete}>

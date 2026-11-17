@@ -12,7 +12,7 @@ import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
+import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyRead, storeIntakeNote, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { ruleKind } from "./kind-rules";
 import { adoptRenamedTitle } from "./business-name";
 import { estimateIntake } from "./intake-estimate";
@@ -189,6 +189,8 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     else if (command.action === "read") {
       // 대화 중 적은 말에서 읽은 것 — 계획서를 만든 뒤에는 넣지 않는다(그때는 계획서에서 고친다)
       if (!Object.keys(plan.sections).length && command.read) applyRead(coach, intake, command.read, command.requestId, at);
+      // 적은 말은 대화에 말풍선으로 남고 메모로도 저장된다(같은 저장 안에서) — 읽은 값은 그 아래 '○○로 적었어요'로 보인다
+      if (command.message?.trim()) storeIntakeNote(coach, intake, { ...command, noteIntent: "memo" }, at);
     }
     else if (command.action === "depth") {
       // 대화 방식 바꾸기 — 계획서를 만든 뒤에는 질문이 아니라 계획서에서 고친다
