@@ -24,6 +24,7 @@ npx tsx scripts/synthetic-e2e/drive.mts "$(cat scripts/synthetic-e2e/origin.txt)
 - `customer-sweep-report.mts <결과 폴더>` — 심사 결과를 같은 원인끼리 묶어 심각한 순서로(`_groups.json`).
 - `customer-sweep-compare.mts <전 폴더> <후 폴더>` — 두 번을 나란히(같은 질문 되묻기 · 되묻기 안내 · 방향 뒤 답 · AI 읽기 실패 · 점수). AI 0원.
 - `reader-check.mts` — 질문에 적은 말을 작은 AI(Haiku)가 바르게 읽는지 실제 손님 말 30개로(한 번 약 20원).
+- `chat-check.mts` — 사업 방향을 본 뒤 대화(chatIntake)가 바꿀 값 · 답 · 못 바꾸는 항목을 바르게 정하는지 실패했던 말 6개로(두 번씩, 약 250원).
 - `guess-check.mts` — 첫 문장에서 말하지 않은 칸의 짐작 값과 시간.
 
 서버는 실제 AI 미리보기(`scripts/preview/start-real.sh`, 손님 허용 `INTAKE_GUEST_ALLOWED=1 PLAN_ACCOUNT_LINKING_ENABLED=true`)로 띄운다. 도구가 쓰는 AI는 `llm-usage-logger.mjs`로 따로 재고 상한(`LLM_MAX_KRW`)을 둔다. 결과를 믿기 전에 도구가 실제 화면과 같이 움직였는지 대화 기록을 직접 읽어 본다(확인 카드 · 여러 개 고르는 칩 · 긴 글 자르기 같은 도구 한계가 있었다).

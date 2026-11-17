@@ -1077,6 +1077,9 @@ export function applyRead(coach: CoachState, intake: IntakeState, items: NonNull
     if (!question || question.id === "industry") continue;
     try {
       const value = validatedAnswer(question, item.value);
+      // 서비스가 먼저 채운 값과 같은 값이면 넣지 않는다 — "하루 50건은 좀 많은 것 같아요"처럼 거절한 기본값을 손님이 말한 답으로 바꿔 버렸다(AI 손님 점검 2026-11-17)
+      const now = intake.answers[question.id];
+      if (now?.status === "answered" && now.messageId.endsWith(ESTIMATE_SUFFIX) && JSON.stringify(now.value) === JSON.stringify(value)) continue;
       intake.answers[question.id] = { status: "answered", value, messageId, at, quote: item.quote };
       if (question.fieldKey) setField(coach, question.fieldKey, `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, messageId, item.quote, "user");
       applied += 1;

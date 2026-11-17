@@ -996,6 +996,12 @@ async function main() {
         assert.deepEqual(await executeIntakeJob(jobRequest(session, style)), { ok: true });
         assert.equal(calls.length, quietStyle + 1);
       }
+
+      // 대화로 못 바꾸는 항목(업종)은 AI가 표시만 하고, 바꾸는 방법은 서비스가 정해진 말로 붙인다
+      respond = () => completion({ answer: "공연 일이시군요, 좋은 방향이에요.", changes: [], rethink: false, cannotChange: ["업종"] });
+      const industry = await send(session, { action: "edit", message: "업종이 제조로 돼 있는데 공연 서비스예요" }, true);
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, industry)), { ok: true });
+      assert.equal((await load(session)).coach.messages.at(-1)?.text, "공연 일이시군요, 좋은 방향이에요.\n\n업종은 대화에 있는 그 항목을 눌러 바꿀 수 있어요.");
     });
 
     await check("a typed answer the screen rules could not read is read by AI: the words stay in the chat and the filled value is said back", async () => {
@@ -1014,6 +1020,19 @@ async function main() {
       const quiet = await load(session);
       await saveIntakeCommand(session.ownerHash, { action: "read", planId: session.planId, revision: quiet.coach.revision, requestId: randomUUID(), read: { answers: [{ questionId: "budget", value: 3000000, quote: "300" }], unknown: [] } }, { aiAvailable: false, aiAllowed: false });
       assert.equal((await load(session)).coach.messages.length, quiet.coach.messages.length, "a background read without the typed words adds no chat lines");
+
+      // 서비스가 먼저 채운 값과 같은 값은 손님 답으로 바꾸지 않는다("하루 50건은 좀 많은 것 같아요" — 거절한 기본값을 확정해 버렸다)
+      const priorEstimate = process.env.INTAKE_ESTIMATE; process.env.INTAKE_ESTIMATE = "1";
+      try {
+        const owner = `intake-read-estimate-${randomUUID()}`;
+        const made = await saveIntakeCommand(owner, { action: "start", mode: "startup", questionId: "business", value: "동네 반찬 정기배송", revision: 0, requestId: randomUUID() }, { aiAvailable: false, aiAllowed: false });
+        const estimated = Object.entries(made.snapshot.intake.answers).find(([, answer]) => answer.status === "answered" && answer.messageId.endsWith(":estimate") && typeof answer.value === "number");
+        assert.ok(estimated, "an estimated number to repeat");
+        const [questionId, answer] = estimated!;
+        await saveIntakeCommand(owner, { action: "read", planId: made.plan.id, revision: made.snapshot.coach.revision, requestId: randomUUID(), read: { answers: [{ questionId, value: answer.value, quote: "x" }], unknown: [] } }, { aiAvailable: false, aiAllowed: false });
+        const kept = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!;
+        assert.ok(String(readIntake(kept.answers)?.answers[questionId]?.messageId).endsWith(":estimate"), "repeating the service's own value does not turn it into the founder's answer");
+      } finally { if (priorEstimate === undefined) delete process.env.INTAKE_ESTIMATE; else process.env.INTAKE_ESTIMATE = priorEstimate; }
     });
 
     await check("plan edit chat proposes only valid fact changes; apply marks the document stale, dismiss leaves it", async () => {

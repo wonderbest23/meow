@@ -1,6 +1,6 @@
 import { patchDocumentAmounts } from "./fact-patch";
 import { createHash } from "node:crypto";
-import { classifyEditRequest, EDIT_REPLIES, EDIT_REPLIES_BEFORE_DOCUMENT, objectParticle, type EditRoute } from "./intake-edit-filter";
+import { classifyEditRequest, EDIT_REPLIES, EDIT_REPLIES_BEFORE_DOCUMENT, objectParticle, topicParticle, type EditRoute } from "./intake-edit-filter";
 import { z } from "zod";
 import { completeJson } from "../llm/complete";
 import { resolveIntakeLLMConfig, intakeBetaSafetyRequired } from "../llm/intake-policy";
@@ -442,11 +442,11 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         financial: planFinancialReference(claimed.coach, claimed.plan.answers).slice(0, 2500),
         ownerNotes: claimed.intake.notes.slice(-4).map(note => note.text.slice(0, 600)),
       }).slice(0, 13000) : "";
-      let chat: { answer: string; rethink: boolean } | null = null, changes: Array<{ questionId: string; value: string }> = [];
+      let chat: { answer: string; rethink: boolean; cannotChange: string[] } | null = null, changes: Array<{ questionId: string; value: string }> = [];
       if (beforeDocument) {
         const result = await chatIntake(config, facts, chatContext, job.request ?? "");
         if (!result.ok) throw new IntakeError(result.reason, "답을 정리하지 못했어요. 적은 말은 그대로 두었으니 다시 보내 주세요");
-        chat = { answer: result.answer, rethink: result.rethink }; changes = result.changes;
+        chat = { answer: result.answer, rethink: result.rethink, cannotChange: result.cannotChange }; changes = result.changes;
       } else {
         const result = await editIntake(config, facts, job.request ?? "");
         if (!result.ok) throw new IntakeError(result.reason, "바꿀 내용을 정리하지 못했어요. 바꿀 항목과 값을 함께 적어 다시 보내 주세요");
@@ -480,10 +480,13 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
          */
         if (!Object.keys(_plan.sections).length && !coach.messages.some(message => message.id === id)) {
           const at = new Date().toISOString();
+          // 대화로 못 바꾸는 항목(업종 등)의 바꾸는 방법은 AI 글이 아니라 정해진 말로 붙인다 — AI가 바꿀 수 있는 값까지 "눌러서 고치세요"로 넘기던 것을 막는다
+          const howTo = (chat?.cannotChange ?? []).map(name => name.trim()).filter(Boolean).slice(0, 3);
+          const guide = howTo.length ? `\n\n${howTo.join(", ")}${topicParticle(howTo.at(-1)!)} 대화에 있는 그 항목을 눌러 바꿀 수 있어요.` : "";
           if (chat?.answer) current.reply = chat.answer;
           // 묻는 말 · 걱정 · 인사뿐이면 답만 한다 — 방향은 그대로 둔다(예전엔 무엇을 적든 방향을 통째로 다시 만들었다)
           if (chat && !proposal.length && !chat.rethink) {
-            coach.messages.push({ id, role: "assistant", text: chat.answer, at });
+            coach.messages.push({ id, role: "assistant", text: `${chat.answer}${guide}`, at });
             coach.revision += 1;
             return;
           }
@@ -495,7 +498,7 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
           if (!finishIntakeMutation(coach, before, _plan.answers, _intake)) coach.documentRevision = coachDocumentRevision(coach) + 1;
           const labels = proposal.map(change => questions.find(question => question.id === change.questionId)?.label).filter((label): label is string => !!label);
           const done = labels.length ? `말씀하신 대로 ${labels.join(", ")}${objectParticle(labels.at(-1)!)} 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.` : "말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.";
-          coach.messages.push({ id, role: "assistant", text: chat?.answer ? `${chat.answer}\n\n${done}` : done, at });
+          coach.messages.push({ id, role: "assistant", text: `${chat?.answer ? `${chat.answer}\n\n${done}` : done}${guide}`, at });
           return;
         }
         if (!coach.messages.some(message => message.id === id)) {

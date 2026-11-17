@@ -41,6 +41,8 @@ const CASES: Case[] = [
   { asking: "hoursPerWeek", message: "주 50시간이요. 수업 주 25타임 정도 직접 하고 근데 업종 제조로 나오는거 진짜 안 고쳐져요?", want: { hoursPerWeek: 50 }, asks: true },
   { asking: "sales", message: "45000000원이요 월 1500씩 3개월이라 대충 그정도에요", want: { sales: 45000000, budget: null } },
   { asking: "price", message: "평균 45000원 정도요 근데 요즘은 할인을 많이 해서 실제론 3만원대에 나가요", want: { price: 30000 } },
+  { asking: "sales", message: "한달에 1800정도니까 10달이면 1억8천쯤이요. 초반엔 좀 더 나왔으니 1억8500 잡으면 될거같아요", want: { sales: 185000000 } },
+  { asking: "budget", message: "500만원이요. 저는 처음엔 혼자 소소하게 시작하려고 하는 거라 직원 두고 하루 50건은 좀 많은 것 같아요^^;", table: { capacity: "직원·아르바이트 1~2명 / 하루 50건" }, want: { budget: 5000000, capacityPerDay: null } },
 ];
 const near = (got: unknown, want: number | string | null) => want === null ? got === undefined : typeof want === "number" ? typeof got === "number" && Math.abs(got - want) <= Math.max(1, want * 0.001) : got === want;
 const started = Date.now();
