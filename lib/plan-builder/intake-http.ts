@@ -21,9 +21,15 @@ import { PLAN_FREE_AI_CAP_MESSAGE, planFreeAiCapReached } from "../llm/plan-cost
 import { ksicPath, searchKsic, sectorForKsic } from "./ksic";
 import { intakeJobExpired } from "./intake-timing";
 import { classifyEditRequest, EDIT_DAILY_LIMIT } from "./intake-edit-filter";
+import { narrationFacts } from "./work-narration-facts";
 
 // 진행 중인 AI 작업이 있으면 서버 시각 기준 경과 시간을 함께 보낸다. 화면은 이 값으로 게이지를 이어 그린다.
-const json = (body: Partial<IntakePayload>, status = 200) => Response.json({ flowVersion: 2, enabled: intakeFeatureEnabled(), ...body, ...(body.plan ? { plan: { ...body.plan, jobClock: intakeJobClock(body.plan.intake.job, Date.now()) } } : {}) }, { status, headers: { "Cache-Control": "private, no-store" } });
+// 기본 질문을 다 마쳤으면 사업 방향 정리 대기 문구에 쓸 사실(코드 계산, AI 0회)도 붙인다 — 못 만들면 문구에서 빠질 뿐 응답은 그대로다.
+function withNarration(plan: NonNullable<IntakePayload["plan"]>) {
+  if (!plan.coreComplete) return null;
+  try { return narrationFacts(plan.coach, plan.intake); } catch { return null; }
+}
+const json = (body: Partial<IntakePayload>, status = 200) => Response.json({ flowVersion: 2, enabled: intakeFeatureEnabled(), ...body, ...(body.plan ? { plan: { ...body.plan, jobClock: intakeJobClock(body.plan.intake.job, Date.now()), narration: withNarration(body.plan) } } : {}) }, { status, headers: { "Cache-Control": "private, no-store" } });
 const ownerScope = (hash: string) => createHash("sha256").update(`intake-draft:${hash}`).digest("hex").slice(0, 32);
 async function workflowBinding() { try { return (await getCloudflareContext({ async: true })).env.PLAN_SECTIONS_WORKFLOW ?? null; } catch { return null; } }
 

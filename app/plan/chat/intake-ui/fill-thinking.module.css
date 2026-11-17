@@ -1,0 +1,33 @@
+/*
+ * 채움 상자 '생각하며 채우기'(FillThinking) — 알아들은 내용 상자(intake.module.css .understood) 안에 그려진다.
+ * 상자 규칙(.understood > div 의 알약 줄, h3 여백)을 걷어 내려고 .root.root 로 한 단계 높인다.
+ * 크기·움직임은 AI 작업 목록(WorkNarration)과 맞춘다: 14px 글, 아래에서 4px 올라오며 0.32초.
+ */
+.root.root { position: relative; display: block; }
+/* 앞 상자('이렇게 알아들었어요')와의 간격 — 다 합쳐진 뒤의 제목 줄과 같게(.understood h3 + h3 · div + h3) */
+h3 + .root.root { margin-top: 10px; }
+div + .root.root { margin-top: 16px; }
+.root.root h3 { margin-bottom: 0; animation: fill-head-in .24s ease both; }
+
+/* 머리줄 — 옅은 글자에 빛이 지나간다(대화 칸 '생각 중…'과 같은 색) */
+.head { margin: 0; font-size: .875rem; font-weight: 600; line-height: 1.5; }
+.head span { color: transparent; background: linear-gradient(90deg, color-mix(in srgb, var(--app-bg) 40%, var(--app-body)) 0 35%, color-mix(in srgb, var(--app-bg) 5%, var(--app-text)) 50%, color-mix(in srgb, var(--app-bg) 40%, var(--app-body)) 65% 100%) 0 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; animation: fill-shimmer 1.6s ease infinite; }
+
+/* 채운 줄 — 칸 이름(옅게) + 값. 다 나오면 높이가 줄며 접힌다(grid 1fr → 0fr) */
+.list { display: grid; grid-template-rows: 1fr; transition: grid-template-rows var(--fill-merge) cubic-bezier(.2, .8, .2, 1), opacity var(--fill-merge) ease; }
+.root[data-phase="merge"] .list { grid-template-rows: 0fr; opacity: 0; }
+.list ul { display: grid; gap: 6px; min-height: 0; margin: 0; padding: 10px 0 0; overflow: hidden; list-style: none; }
+.list li { display: flex; align-items: baseline; gap: 10px; min-width: 0; color: var(--app-text); font-size: .875rem; line-height: 1.5; animation: fill-line-in var(--fill-line) ease both; }
+.list small { flex: none; min-width: 5.5em; color: var(--app-muted); font-size: .8125rem; }
+.list span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+@keyframes fill-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+@keyframes fill-line-in { from { opacity: 0; transform: translateY(4px); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes fill-head-in { from { opacity: 0; } }
+/* 움직임 줄이기 — 부르는 쪽이 재생하지 않지만, 혹시 그려져도 움직이지 않는다 */
+@media (prefers-reduced-motion: reduce) {
+  .head span, .list li, .root.root h3 { animation: none; }
+  .list { transition: none; }
+}

@@ -622,8 +622,6 @@ div.nextStepHint { display: grid; justify-items: start; gap: 6px; padding-top: 1
 .stepper li[data-state="current"] span { background: var(--intake-blue); border-color: var(--intake-blue); color: var(--app-surface); }
 .stepper li[data-state="done"] { color: var(--intake-green); }
 .stepper li[data-state="done"] svg { background: color-mix(in srgb, var(--intake-green) 14%, transparent); padding: 3px; box-sizing: border-box; }
-.guestSaveNote { margin: 12px 0 0; font-size: .8125rem; line-height: 1.6; color: var(--intake-muted); }
-.guestSaveNote a { color: var(--intake-blue); font-weight: 700; }
 .empty > p { max-width: 400px; margin: 0; color: var(--intake-muted); line-height: 1.7; word-break: keep-all; }
 
 /* 계획서를 만들기 전 숫자 점검 — 팔수록 손해이거나 다 팔아도 본전이 안 될 때 */
