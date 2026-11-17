@@ -8,6 +8,7 @@ import { listArtifactUpdates, loadArtifactContext, readArtifactUpdate, writeArti
 import { ARTIFACT_DOCUMENT_CHUNK, ARTIFACT_SLIDE_CHUNK, ARTIFACT_SOURCE_KEY, artifactCommandSchema, type ArtifactChunk, type ArtifactCommand, type ArtifactJobRequest, type ArtifactPreview, type ArtifactRuntime, type ArtifactUpdate } from "./artifact-updates";
 import { ProposalError, PROPOSAL_KEY, proposalHistory, readSavedProposal } from "./proposal-editor";
 import { renderPlanMarkdown } from "./markdown";
+import { guardSectionQuotes } from "./quote-guard";
 import { renderableProposal, type ProposalSource } from "./proposal-revision";
 import type { RewritePayload, RewritePreview } from "./proposal-rewrite";
 import { deckFingerprint, deckSource } from "./deck-job";
@@ -155,7 +156,8 @@ export async function executeArtifactChunk(owner: string, planId: string, id: st
         const result = await runtime.document.generate(documentPayload(job, chunk), event => usage.push(event));
         const parsed = documentRefreshResultSchema.parse(result);
         if (parsed.sections.length !== chunk.keys.length || new Set(parsed.sections.map(section => section.key)).size !== chunk.keys.length || parsed.sections.some(section => !chunk.keys.includes(section.key))) throw new Error("invalid_response");
-        documents = await Promise.all(parsed.sections.map(async section => ({ ...section, html: await renderPlanMarkdown(section.markdown) })));
+        // AI가 다시 쓴 본문도 저장 전에 가짜 명언을 거른다(quote-guard.ts)
+        documents = await Promise.all(parsed.sections.map(async section => { const markdown = guardSectionQuotes(section.markdown, { where: "artifact-update", section: section.key, keepFrom: job.snapshot.sections[section.key]?.markdown }); return { ...section, markdown, html: await renderPlanMarkdown(markdown) }; }));
       } else {
         const data = pptPayload(job, chunk), generated = await runtime.ppt.generate(data.payload);
         usage.push(...generated.usage ?? []); slides = validateRewriteResult(generated.result, readSavedProposal(job.snapshot.answers)!, data.preview);

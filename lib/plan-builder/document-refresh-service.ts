@@ -3,6 +3,7 @@ import { intakeFinancialReference, readIntake } from "./intake-core";
 import { chaptersForType } from "./blueprint";
 import { coachDocumentRevision, coachFinancialReference, readCoach } from "./coach";
 import { renderPlanMarkdown } from "./markdown";
+import { guardSectionQuotes } from "./quote-guard";
 import { loadPlanState, type ServerPlan } from "./plan-server-store";
 import { ProposalError, readSavedProposal, type SavedProposal } from "./proposal-editor";
 import { updateSavedProposal } from "./proposal-editor-service";
@@ -99,7 +100,8 @@ export async function executeDocumentRefresh(ownerHash: string, planId: string, 
     const parsed = documentRefreshResultSchema.safeParse(result), keys = started.documentRefresh!.preview.sections.map(section => section.key);
     if (!parsed.success || parsed.data.sections.length !== keys.length || new Set(parsed.data.sections.map(section => section.key)).size !== keys.length || parsed.data.sections.some(section => !keys.includes(section.key))) throw new Error("invalid_response");
     drafts = [];
-    for (const section of parsed.data.sections) drafts.push({ ...section, html: await renderPlanMarkdown(section.markdown) });
+    // AI가 다시 쓴 본문도 저장 전에 가짜 명언을 거른다(quote-guard.ts — 목록에 있고 출처가 맞는 인용은 그대로)
+    for (const section of parsed.data.sections) { const markdown = guardSectionQuotes(section.markdown, { where: "document-refresh", section: section.key, keepFrom: started.documentRefresh!.preview.payload.sections.find(entry => entry.key === section.key)?.markdown }); drafts.push({ ...section, markdown, html: await renderPlanMarkdown(markdown) }); }
   } catch (caught) { const code = caught instanceof Error ? caught.message : "invalid_response"; error = ["timeout", "quota_exhausted", "rate_limited", "output_limit", "review_failed", "unavailable"].includes(code) ? code : "invalid_response"; }
   finally { clearTimeout(timer); }
   return updateSavedProposal(ownerHash, planId, (saved, _state, plan) => {
