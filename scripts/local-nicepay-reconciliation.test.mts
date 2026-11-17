@@ -51,6 +51,25 @@ try {
   const one = await seed("same-plan-one", "plan", `${run}-same`), two = await seed("same-plan-two", "plan", `${run}-same`);
   const duplicate = await Promise.all([claim(one), claim(two)]);
   assert.equal(duplicate.filter(result => result.data === true).length, 1); assert.equal(duplicate.filter(result => result.error).length, 1); checks.push("duplicate orders cannot both start approval");
+  // 묶음(20261117103100_nicepay_bundle_overlap.sql): 두 탭 동시 승인 · 묶음 뒤 계획서/홈페이지 · 계획서 뒤 묶음을 막는다
+  const bundleA = await seed("bundle-a", "bundle", `${run}-bundle`), bundleB = await seed("bundle-b", "bundle", `${run}-bundle`);
+  const bundles = await Promise.all([claim(bundleA), claim(bundleB)]);
+  assert.equal(bundles.filter(result => result.data === true).length, 1); assert.equal(bundles.filter(result => result.error).length, 1);
+  const bundleWinner = bundles[0].data === true ? bundleA : bundleB;
+  assert.equal((await settle(bundleWinner)).data, "done");
+  const bundleLoser = bundleWinner === bundleA ? bundleB : bundleA;
+  assert((await claim(bundleLoser)).error); checks.push("bundle cannot be approved twice from two tabs");
+  assert((await claim(await seed("plan-after-bundle", "plan", `${run}-bundle`))).error);
+  assert((await claim(await seed("home-after-bundle", "homepage", `${run}-bundle`))).error); checks.push("paid bundle blocks plan and homepage approval");
+  const planFirst = await seed("plan-first", "plan", `${run}-overlap`); assert.ifError((await claim(planFirst)).error); assert.equal((await settle(planFirst)).data, "done");
+  assert((await claim(await seed("bundle-after-plan", "bundle", `${run}-overlap`))).error); checks.push("paid plan blocks bundle approval");
+  const homeAfterPlan = await claim(await seed("home-after-plan", "homepage", `${run}-overlap`));
+  assert.ifError(homeAfterPlan.error); assert.equal(homeAfterPlan.data, true); checks.push("homepage after plan still approves");
+  const refunded = await seed("bundle-refunded", "bundle", `${run}-refund`); assert.ifError((await claim(refunded)).error); assert.equal((await settle(refunded)).data, "done");
+  assert.ifError((await db.from("payment_orders").update({ opportunity: { planId: `${run}-refund`, product: "bundle", homepageRefunded: true } }).eq("order_id", refunded)).error);
+  const homeAfterRefund = await claim(await seed("home-after-refund", "homepage", `${run}-refund`));
+  assert.ifError(homeAfterRefund.error); assert.equal(homeAfterRefund.data, true);
+  assert((await claim(await seed("plan-after-refund", "plan", `${run}-refund`))).error); checks.push("homepage-refunded bundle allows homepage only");
   const anon = createClient(credentials.apiUrl, credentials.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
   assert((await anon.rpc("claim_nicepay_plan_order", { p_order_id: id, p_tid: id, p_environment: "sandbox" })).error);
   assert((await anon.rpc("settle_nicepay_plan_order", { p_order_id: id, p_tid: id, p_environment: "sandbox", p_raw: {} })).error); checks.push("public RPC execution denied");

@@ -10,7 +10,7 @@ import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { resolvePlanAccess, checkSectionAccess, freePlanLimitReached } from "../../../../lib/plan-builder/access";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
-import { resolveRegenQuota, recordRegen } from "../../../../lib/plan-builder/regen-quota";
+import { resolveRegenQuota, recordRegen, firstGenerationRecorded, recordFirstGeneration } from "../../../../lib/plan-builder/regen-quota";
 import { REGEN_PACK_AMOUNT, REGEN_PACK_COUNT } from "../../../../lib/payments/domain";
 import { loadPlanEvidence, evidenceForSection, toPromptEvidence, sectionUsesEvidence } from "../../../../lib/plan-builder/market-research";
 import { buildPlanBusinessContext } from "../../../../lib/plan-builder/context/build";
@@ -146,6 +146,18 @@ export async function POST(req: Request) {
   const savedState = await loadPlanState(identity.hash);
 
   /*
+   * 서버에 저장된 내 문서(내 소유 · 지우지 않은 문서)가 있어야 만든다.
+   *
+   * 예전엔 결제 기록만 보고 통과시켜, 지운 문서 번호나 문서 번호 없이도 생성이 나갔다. 그 경우 저장된 본문이
+   * 없으니 '다시 생성' 횟수도 세지 않았다 — 결제한 사람이 Opus 비용을 끝없이 부를 수 있는 길이었다.
+   */
+  const savedPlan = body.planId ? savedState.plans.find((p) => p.id === body.planId) : undefined;
+  if (!body.planId || !savedPlan) {
+    return NextResponse.json({ error: "plan_not_found", message: "이 문서를 찾을 수 없어요. 내 사업 목록에서 문서를 다시 열어 주세요." }, { status: 404 });
+  }
+  const coach = readCoach(savedPlan.answers ?? {});
+
+  /*
    * 무료로 본문을 써 본 문서 수 제한.
    *
    * 무료 2개 섹션이 문서마다 열리는데 문서 개수에는 제한이 없었다. 문서를
@@ -174,11 +186,23 @@ export async function POST(req: Request) {
    * 그래야 요청을 손으로 만들어 우회할 수 없다.
    */
   let regenPlanId = "";
-  if (body.planId) {
-    const plan = savedState.plans.find((p) => p.id === body.planId);
-    const existing = plan?.sections?.[sectionKey];
-    if (existing?.markdown) {
-      const quota = await resolveRegenQuota(body.planId);
+  {
+    const existing = savedPlan.sections?.[sectionKey];
+    /*
+     * 저장된 본문이 없어도, 이 섹션의 첫 생성이 이미 AI 로 나갔으면 '다시 생성'으로 센다(regen-quota.ts 의 첫 생성 표시).
+     * 예전 방식 경로는 결과를 서버에 저장하지 않아서, 화면이 저장하지 않으면 같은 섹션을 무제한 '첫 생성'으로 부를 수 있었다.
+     * 대화형(coach) 문서는 서버가 생성과 저장을 함께 하므로(generateAndSaveSection) 저장된 본문으로 충분하다.
+     */
+    let firstServed = false;
+    if (!existing?.markdown && !coach) {
+      const recorded = await firstGenerationRecorded(savedPlan.id, sectionKey);
+      if (recorded === null) {
+        return NextResponse.json({ error: "quota_unavailable", message: "다시 생성 횟수를 확인하지 못했어요. 기존 문서는 그대로 있어요. 잠시 후 다시 시도해 주세요." }, { status: 503 });
+      }
+      firstServed = recorded;
+    }
+    if (existing?.markdown || firstServed) {
+      const quota = await resolveRegenQuota(savedPlan.id);
       // 횟수를 확인하지 못한 것을 '다 썼으니 사세요'로 안내하지 않는다
       if (quota.unavailable) {
         return NextResponse.json({ error: "quota_unavailable", message: "다시 생성 횟수를 확인하지 못했어요. 기존 문서는 그대로 있어요. 잠시 후 다시 시도해 주세요." }, { status: 503 });
@@ -193,9 +217,14 @@ export async function POST(req: Request) {
           { status: 402 },
         );
       }
-      regenPlanId = body.planId;
+      regenPlanId = savedPlan.id;
     }
   }
+  /* 첫 생성이 AI 로 나갔으면 남긴다 — 다음 생성부터 '다시 생성'으로 센다(남은 횟수는 깎지 않는다) */
+  const markFirstGeneration = async () => {
+    if (regenPlanId || coach) return;
+    await recordFirstGeneration(savedPlan.id, identity.hash, sectionKey);
+  };
 
   /*
    * 공식 시장 근거 — 서버에 저장된 것만 읽는다(화면이 보낸 값은 쓰지 않는다).
@@ -206,9 +235,7 @@ export async function POST(req: Request) {
     ? toPromptEvidence(evidenceForSection(sectionKey, await loadPlanEvidence(body.planId, identity.hash)))
     : [];
 
-  const coach = body.planId ? readCoach(savedState.plans.find(p => p.id === body.planId)?.answers ?? {}) : null;
   if (coach && body.planId) {
-    const savedPlan = savedState.plans.find(p => p.id === body.planId)!;
     const actualAccess = await resolvePlanAccess(savedPlan.planType, savedPlan.id);
     if (checkSectionAccess(actualAccess, sectionKey) !== "ok") return NextResponse.json({ message: "사업계획서 작성은 결제한 뒤에 시작해요. 결제를 마치면 바로 이어서 쓸 수 있어요." }, { status: 402 });
     try {
@@ -303,6 +330,8 @@ export async function POST(req: Request) {
             /* 여기도 같다 — AI 가 쓴 글(ai)일 때만 깎는다 */
             await record(source === "ai");
             quota = await resolveRegenQuota(regenPlanId);
+          } else if (source === "ai") {
+            await markFirstGeneration();
           }
           send({ t: "done", markdown, html, source, ...(quota ? { quota } : {}) });
         } catch {
@@ -364,6 +393,8 @@ export async function POST(req: Request) {
     await recordRegen(regenPlanId, identity.hash, sectionKey, source === "ai");
     /* 방금 깎인 값을 다시 읽어 화면이 '남은 N회'를 바로 보여줄 수 있게 한다 */
     quota = await resolveRegenQuota(regenPlanId);
+  } else if (source === "ai") {
+    await markFirstGeneration();
   }
 
   let html = "";

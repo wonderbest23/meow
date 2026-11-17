@@ -3,6 +3,8 @@ import { getServerSupabase } from "../persistence";
 import { REGEN_PACK_COUNT, TERMS_VERSION } from "./domain";
 import type { IapProduct } from "./iap-products";
 import { productAmount, productName } from "./plan-orders";
+import { isProductionPaymentRuntime } from "./production-runtime";
+import { isEditorPreviewAccount } from "../landing/editor-preview";
 
 /*
  * 스토어(애플·구글)가 확인해 준 결제를 우리 결제 기록(payment_orders)에 남긴다.
@@ -35,9 +37,36 @@ export function iapOrderId(platform: "ios" | "android", storeTransactionId: stri
   return `IAP-${platform === "ios" ? "A" : "G"}-${storeTransactionId.replace(/[^A-Za-z0-9.-]/g, "").slice(0, 52)}`;
 }
 
+/*
+ * 운영에서 애플 시험 결제(Sandbox·TestFlight)로 이용 권한을 받아도 되는 계정.
+ *
+ * 시험 결제는 돈이 오가지 않는다. 예전엔 운영에서도 '완료'로 저장돼, TestFlight 앱만 있으면 돈 없이 유료 기능이 열렸다.
+ * 앱 심사(App Review)는 시험 결제로 구매 흐름을 확인하므로, 심사용 데모 계정 이메일을
+ * IAP_SANDBOX_ALLOWED_EMAILS(쉼표 구분)에 넣어 두어야 심사 중 결제가 열린다.
+ * 운영자 테스트 계정(HOMEPAGE_EDITOR_PREVIEW_EMAILS 또는 기본 목록, lib/landing/editor-preview.ts)도 허용한다.
+ * 스테이징·프리런치·로컬 개발에서는 막지 않는다(isProductionPaymentRuntime).
+ */
+export function sandboxPurchaseAllowed(email: string | null | undefined, env: { IAP_SANDBOX_ALLOWED_EMAILS?: string } = { IAP_SANDBOX_ALLOWED_EMAILS: process.env.IAP_SANDBOX_ALLOWED_EMAILS }): boolean {
+  const normalized = email?.trim().toLowerCase();
+  if (!normalized) return false;
+  const list = (env.IAP_SANDBOX_ALLOWED_EMAILS ?? "").split(",").map((item) => item.trim().toLowerCase()).filter(Boolean);
+  return list.includes(normalized) || isEditorPreviewAccount(normalized);
+}
+
+/** 이 결제를 운영에서 받아도 되는지 — 애플 시험 결제는 허용 목록 계정만. 구글 시험 결제(라이선스 테스터)는 예전 그대로 */
+export function iapEnvironmentAllowed(input: Pick<IapRecordInput, "platform" | "environment" | "email">, production = isProductionPaymentRuntime()): boolean {
+  if (!production || input.platform !== "ios") return true;
+  if (input.environment === "Production") return true;
+  return sandboxPurchaseAllowed(input.email);
+}
+
 /** 결제를 기록한다. 이미 같은 계정으로 기록된 거래면 그대로 성공으로 본다(재시도 안전) */
 export async function recordIapPurchase(input: IapRecordInput): Promise<{ orderId: string; firstCompletion: boolean }> {
   const orderId = iapOrderId(input.platform, input.storeTransactionId);
+  if (!iapEnvironmentAllowed(input)) {
+    console.error("[iap-orders]", JSON.stringify({ event: "sandbox_rejected", platform: input.platform, environment: input.environment, product: input.product }));
+    throw new IapOrderError("IAP_SANDBOX_NOT_ALLOWED", "시험(샌드박스) 결제라 이용 권한을 열 수 없어요. 실제 결제는 App Store 정식 앱에서 해 주세요.", 403);
+  }
   const supabase = getServerSupabase();
   if (!supabase) throw new IapOrderError("IAP_STORE_UNAVAILABLE", "결제 기록 저장소에 연결하지 못했습니다.", 503);
   const now = new Date().toISOString();
