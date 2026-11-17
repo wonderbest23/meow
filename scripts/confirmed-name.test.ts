@@ -35,7 +35,7 @@ for (const placeholder of ["새 사업", "새 사업 구상", "새 플랜", "", 
 }
 const service = readFileSync(new URL("../lib/plan-builder/intake-service.ts", import.meta.url), "utf8");
 assert.match(service, /if \(plan && previous && savedIntake\) adoptRenamedTitle\(plan, coach\);[\s\S]*plan\.title = coach\.business\.name;/, "대화 저장은 제목을 덮어쓰기 전에 직접 바꾼 이름을 받는다");
-assert.match(service, /adoptRenamedTitle\(_plan, coach\);\n\s*if \(!coach\.business\.nameConfirmed && design\.identity\?\.label\)/, "사업 방향 정리도 직접 바꾼 이름을 지킨다");
+assert.match(service, /adoptRenamedTitle\(_plan, coach\);\n\s*if \(!coach\.business\.nameConfirmed && design\.identity\?\.label(?: && _intake\.mode !== "operating")?\)/, "사업 방향 정리도 직접 바꾼 이름을 지킨다");
 // 머리줄 '이름 바꾸기'는 열린 대화에 '이름 정하기'로 넘긴다
 assert.match(readFileSync(new URL("../app/plan/studio/StudioBars.tsx", import.meta.url), "utf8"), /renamePlan\(planId, trimmed\);[\s\S]*requestPlanRename\(planId, trimmed\);/);
 assert.match(readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8"), /handlePlanRename\(\(planId, title\) => \{[\s\S]*void sendRef\.current\(\{ action: "name", value: name \}\);/);
