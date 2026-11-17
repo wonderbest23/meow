@@ -32,6 +32,12 @@ export function nextFillSeen(seen: FillSeen | null, loaded: boolean, planId: str
   return { seen: { planId, batches: [...seen.batches, ...fresh] }, fresh, refill: fresh.length > 0 && seen.batches.length > 0 };
 }
 
+/**
+ * 줄이 다 나왔는데 적은 글을 아직 읽는 중일 때(FillThinking hold) 머리줄 — 생각 표시를 채움 상자 하나로 이어 간다.
+ * 그동안 아래의 '적은 글을 읽고 있어요'(회전 아이콘) 줄은 보이지 않는다(BusinessIntake).
+ */
+export const FILL_READING_HEAD = "적은 글을 읽고 있어요…";
+
 /** 줄이 올라오는 데 걸리는 시간(WorkNarration 의 narration-in 과 같다) · 다 나온 뒤 멈춤 · 접히는 시간 */
 export const FILL_LINE_MS = 320;
 export const FILL_MERGE_MS = 360;

@@ -573,6 +573,11 @@ button.brand { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *:before, *:after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+  /*
+   * 로딩 표시(단추 안 작은 회전)만 예외 — 멈춘 그림이면 일이 진행 중인지 알 수 없다. 천천히(2.4초 한 바퀴) 돈다.
+   * 틀 규칙(.page * { animation:none !important })보다 앞서도록 .spin.spin 으로 한 단계 높인다. 원 링·Spinner 는 PlanLoading.module.css 가 같은 값으로 연다.
+   */
+  .spin.spin, .admin-support-loading svg { animation: spin 2.4s linear infinite !important; }
 }
 
 /* Dynamic discovery and manual budget mode */
@@ -3149,7 +3154,12 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .market-panel-footer span { padding: 4px 6px; border-radius: 5px; background: #dfdef1; color: #5f5c7f; font-size: 8px; }
 .market-panel-footer > button { min-height: 40px; padding: 8px 12px; border: 0; border-radius: 7px; background: var(--green); color: white; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 850; cursor: pointer; white-space: nowrap; }
 .market-panel-footer button svg { width: 14px; }
+/*
+ * 단추 안 작은 회전 표시(lucide 아이콘에 className="spin") — 홈페이지 편집기 저장·공개·고치기·사진 올리기, 도메인 연결 확인, 관리자 로딩 등.
+ * 예전엔 @keyframes spin 이 어디에도 없어 아이콘이 멈춰 있었다(움직임 조사 2026-11-17). 속도는 공통 도는 표시(PlanLoading .spin)와 같은 0.8초 한 바퀴.
+ */
 .spin { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 620px) {
   .market-plan-panel { margin-left: -4px; margin-right: -4px; border-radius: 12px; }
@@ -5329,7 +5339,10 @@ html[data-compose-covered] .support-chat-widget:not(.open) { visibility: hidden;
   .support-chat-toggle img { width: 40px; height: 40px; }
   .support-chat-toggle span { display: none; }
 }
-.support-chat-toggle:hover { background: rgb(0 0 0 / .88); box-shadow: 0 18px 42px #10131866; transform: translateY(-2px); }
+/* 들림(2px · 그림자)은 마우스 기기에서만 — 터치 기기에서는 누른 뒤에도 들린 채 남았다(움직임 조사 2026-11-17) */
+@media (hover: hover) and (pointer: fine) {
+  .support-chat-toggle:hover { background: rgb(0 0 0 / .88); box-shadow: 0 18px 42px #10131866; transform: translateY(-2px); }
+}
 .support-chat-toggle > svg { width: 23px; height: 23px; }
 .support-chat-toggle em { min-width: 20px; height: 20px; padding: 0 5px; border: 2px solid white; border-radius: 11px; background: rgb(0 0 0 / .88); color: rgb(0 0 0 / .88); display: grid; place-items: center; position: absolute; top: -4px; right: -4px; font-size: 9px; font-style: normal; font-weight: 900; }
 .support-chat-panel { width: 380px; height: min(610px, calc(100vh - 98px)); margin-bottom: 10px; border: 1px solid rgb(119 119 113 / .16); border-radius: 8px; overflow: hidden; background: #fff; color: rgb(0 0 0 / .88); box-shadow: 0 26px 70px #10131861; display: flex; flex-direction: column; }
@@ -5369,7 +5382,7 @@ html[data-compose-covered] .support-chat-widget:not(.open) { visibility: hidden;
 
 /* Private support admin */
 .admin-support-loading { min-height: 100vh; background: #f6f5ff; color: #585667; display: flex; align-items: center; justify-content: center; gap: 9px; font-size: 13px; }
-.admin-support-loading svg { width: 18px; animation: spin 1s linear infinite; }
+.admin-support-loading svg { width: 18px; animation: spin .8s linear infinite; }
 .admin-login-page { min-height: 100vh; padding: 24px; background: #f6f5ff; display: grid; place-items: center; }
 .admin-login-page form { width: min(390px, 100%); padding: 34px; border: 1px solid #cccae3; border-radius: 8px; background: white; box-shadow: 0 18px 48px #0d0a2c14; text-align: center; }
 .admin-login-page form > span { width: 46px; height: 46px; margin: auto; border-radius: 8px; background: #0d0a2c; color: #b3a8ff; display: grid; place-items: center; }
@@ -5754,7 +5767,7 @@ html[data-compose-covered] .support-chat-widget:not(.open) { visibility: hidden;
 .ai-logo-result strong { font-size: 11px; }
 .ai-logo-result p { margin: 0; color: #5f5c7f; font-size: 9px; }
 .ai-logo-message { grid-column: 1/-1; margin: 0; padding: 8px 10px; border-left: 3px solid #3272db; background: #eef6ff; color: #333d4b; font-size: 9px; }
-.spin { animation: spin 1s linear infinite; }
+/* .spin 은 위(시장 조사 패널 아래) 한 곳에서 정한다 — 같은 규칙이 1초로 한 번 더 있어 속도가 화면마다 달라 보였다 */
 
 .delivery-gift-hero { min-height: 190px; margin: -5px 0 24px; padding: 24px 26px; border: 1px solid #0d0a2c; border-radius: 8px; background: #0d0a2c; color: white; box-shadow: 0 20px 45px #0d0a2c24; display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; gap: 20px; align-items: center; position: relative; overflow: hidden; animation: gift-arrive .55s cubic-bezier(.2,.7,.2,1) both; }
 .delivery-gift-hero:after { content: ""; width: 1px; position: absolute; inset: 0 auto 0 50%; background: #ffffff0e; transform: rotate(22deg); }
@@ -7558,7 +7571,7 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .landing-block-gallery figure { min-width: 0; height: 430px; position: relative; overflow: hidden; background: #e5e8eb; }
 .landing-block-gallery figure:nth-child(2), .landing-block-gallery figure:nth-child(3) { height: 350px; align-self: end; }
 .landing-block-gallery img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .45s ease; }
-.landing-block-gallery figure:hover img { transform: scale(1.025); }
+@media (hover: hover) and (pointer: fine) { .landing-block-gallery figure:hover img { transform: scale(1.025); } }
 .landing-block-gallery figure > i { width: 100%; height: 100%; display: block; background: #e5e8eb; }
 .landing-block-gallery figcaption { position: absolute; right: 0; bottom: 0; left: 0; padding: 14px 18px; background: #101318c7; color: #fff; font-size: 13px; font-weight: 800; }
 
@@ -14420,7 +14433,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
   box-shadow: 0 10px 30px rgba(0, 0, 0, .25); transition: transform .2s ease;
 }
 .landing-block-page.kit .landing-video-play b::after { content: ""; margin-left: 5px; border-style: solid; border-width: 10px 0 10px 16px; border-color: transparent transparent transparent var(--landing-accent, #473bf0); }
-.landing-block-page.kit .landing-video-play:hover b { transform: scale(1.06); }
+@media (hover: hover) and (pointer: fine) { .landing-block-page.kit .landing-video-play:hover b { transform: scale(1.06); } }
 
 /* ── 신뢰 띠(Features 띠) — 셋 나란히, 얇은 줄 ───────────────── */
 .landing-block-page.kit .landing-block-trust { min-height: 0; padding: 40px var(--kit-pad); border-color: #e9ecf2; background: #fff; }

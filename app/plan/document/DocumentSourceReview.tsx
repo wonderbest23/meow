@@ -35,7 +35,7 @@ export default function DocumentSourceReview({ planId, sectionKey, source, disab
     <summary>이 항목은 바꾸기 전 답으로 썼어요</summary>
     <dl>{source.fields.map(field => <div key={field.key}><dt>{COACH_FIELD_LABELS[field.key]}</dt><dd>{coachFieldDisplay(field.value)}</dd></div>)}</dl>
     <label><input type="checkbox" disabled={busy || disabled} checked={checked} onChange={event => setChecked(event.target.checked)} />지금 답과 비교했고, 이 항목은 이대로 둬도 괜찮아요</label>
-    <button disabled={!checked || disabled || busy} onClick={() => void review()}>{busy ? <LoaderCircle size={15} /> : <Check size={15} />}확인했어요</button>
+    <button disabled={!checked || disabled || busy} onClick={() => void review()}>{busy ? <LoaderCircle size={15} className={styles.spin} aria-hidden="true" /> : <Check size={15} />}확인했어요</button>
     {error && <p role="alert">{error}</p>}
   </details>;
 }

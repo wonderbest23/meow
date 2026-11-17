@@ -961,7 +961,7 @@ export function RewriteConfirm({ snapshot, disabled, label = "계획서에 반�
   </>;
 }
 
-export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false, preparing = false, payNote, unpaid = false, reflect = "button" }: {
+export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false, preparing = false, payNote, loginNote = null, unpaid = false, reflect = "button" }: {
   snapshot: IntakeSnapshot; prepared: boolean; disabled: boolean; aiBusy: boolean; onDesign: () => void; onPrepare: () => void; secondary?: ReactNode; announce?: boolean;
   /**
    * 계획서가 이미 있을 때 '계획서에 반영하기'의 모양 — 작업실 PC 에서 오른쪽에 계획서 칸이 보이면 그 칸 위 파란 단추 하나만이라 두지 않고(none),
@@ -970,6 +970,8 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   reflect?: "button" | "link" | "none";
   /** '사업계획서 만들기' 아래 한 줄 — 결제 전이면 가격(웹), 이미 결제했으면 바로 작성. 없으면 기본 안내 */
   payNote?: string;
+  /** 로그인하지 않은 손님이 '사업계획서 만들기'를 누른 뒤 단추 아래 한 줄 — 로그인 창은 부르는 쪽이 바로 띄운다. 오류가 아니라 안내라 같은 옅은 글자로 */
+  loginNote?: string | null;
   /** 결제 전인 것을 확인한 사업 — 첫 항목만 받은 뒤의 단추가 '전체 받기 →'(결제 화면으로)가 된다 */
   unpaid?: boolean;
   /** '사업계획서 만들기'를 눌러 서버 확인·결제 화면 이동을 기다리는 중 — 단추가 그냥 흐려지기만 해 멈춘 줄 알았다(대표 지적 2026-10-16) */
@@ -996,7 +998,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   if (minimal && !jobActive && (step === "prepare" && !snapshot.hasDocuments || step === "open")) return <div className={styles.resultAction} data-step={step}>
     {step === "prepare" ? <AppButton type="button" variant="primary" size="large" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />사업계획서 만들기</>}</AppButton>
       : <AppButton variant="primary" className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 열기</AppButton>}
-    {step === "prepare" && <small className={styles.nextStepHint} role={preparing ? "status" : undefined}>{preparing ? "잠시만요. 곧 시작해요." : payNote ?? "몇 분 걸려요."}</small>}
+    {step === "prepare" && <small className={styles.nextStepHint} role={preparing || loginNote ? "status" : undefined}>{preparing ? "잠시만요. 곧 시작해요." : loginNote ?? payNote ?? "몇 분 걸려요."}</small>}
   </div>;
   // 계획서가 이미 있으면 단계 표시·설명·이전 계획서 링크 없이 버튼 하나만(확인창에서 안내).
   if (step === "prepare" && snapshot.hasDocuments) {
@@ -1015,7 +1017,8 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
       {secondary}
     </div>}
     {!jobActive && reapply && <RewriteCost snapshot={snapshot} />}
-    {!jobActive && <small className={styles.nextStepHint}>{reapply ? "대화는 무료예요. 계획서에 반영할 때만 다시 생성 횟수가 차감되고, 반영하기 전까지 기존 계획서는 그대로예요." : snapshot.hasDocuments ? `${hint} 대화로 내용을 더 다듬는 건 무료예요. 계획서에 반영할 때만 다시 생성 횟수가 차감돼요.` : hint}</small>}
+    {!jobActive && step === "prepare" && !snapshot.hasDocuments && loginNote ? <small className={styles.nextStepHint} role="status">{loginNote}</small>
+      : !jobActive && <small className={styles.nextStepHint}>{reapply ? "대화는 무료예요. 계획서에 반영할 때만 다시 생성 횟수가 차감되고, 반영하기 전까지 기존 계획서는 그대로예요." : snapshot.hasDocuments ? `${hint} 대화로 내용을 더 다듬는 건 무료예요. 계획서에 반영할 때만 다시 생성 횟수가 차감돼요.` : hint}</small>}
   </div>;
 }
 

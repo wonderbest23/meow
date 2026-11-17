@@ -52,7 +52,7 @@
   word-break: keep-all;
 }
 .arrow { flex: 0 0 auto; transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1); }
-.linkList a:hover .arrow { transform: translateX(4px); }
+@media (hover: hover) and (pointer: fine) { .linkList a:hover .arrow { transform: translateX(4px); } }
 
 /* 카드 */
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
@@ -73,7 +73,8 @@
 .panelLink { margin-top: auto; min-height: 44px; display: inline-flex; align-items: center; gap: 4px; color: #191f28; font-size: .9375rem; font-weight: 700; text-decoration: none; }
 a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; text-underline-offset: 3px; }
 .panelAnchor { text-decoration: none; transition: box-shadow 160ms ease, transform 160ms cubic-bezier(0.16, 1, 0.3, 1); scroll-margin-top: 96px; }
-.panelAnchor:hover { box-shadow: 0 8px 28px rgba(25, 31, 40, .08); transform: translateY(-2px); }
+/* 카드 들림은 마우스 기기에서만 — 터치(태블릿·휴대폰)에서는 누른 뒤에도 들린 채 남았다(움직임 조사 2026-11-17) */
+@media (hover: hover) and (pointer: fine) { .panelAnchor:hover { box-shadow: 0 8px 28px rgba(25, 31, 40, .08); transform: translateY(-2px); } }
 
 .chips { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .chips a {
