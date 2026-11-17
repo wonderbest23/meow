@@ -12,8 +12,10 @@
  * - '시작이 절반'·'제비 한 마리'는 철학자가 인용한 옛말(proverb) — "아리스토텔레스가 『정치학』에서 인용한 옛말처럼"으로 쓴다.
  * - 사르트르·카뮈는 저작권 보호 기간(copyright) — 한 문장, 출처 표기만.
  *
- * 장마다 그 장에 맞는 자리(slot)로 후보 3~5개를 고른다. 순서는 계획서 id로 정해져(같은 계획서는 언제나 같은 후보) 사업마다 다른 문장이 나오고,
+ * 장마다 그 장에 맞는 자리(slot)의 말 가운데 후보 2개를 고른다. 순서는 계획서 id로 정해져(같은 계획서는 언제나 같은 후보) 사업마다 다른 문장이 나오고,
  * 한 계획서 안에서는 장끼리 후보가 겹치지 않아 같은 명언이 두 번 나오지 않는다. AI 호출은 늘지 않는다(지시문에 몇 줄 더할 뿐).
+ * 현대어 개편(2026-11-17 대표 피드백 "현대어에 맞게 개편하면 좋지 않나?"): 50개 가운데 48개를 요즘 쓰는 쉬운 말로 다시 옮겼다('어진 사람은'·'꾀하고'·'감히 알려고 하라!' 등).
+ * 원문 뜻은 그대로(검증 메모·원문 대조), 결과를 약속하는 말로 바꾸지 않았다(니체 '견뎌 낸다'는 '해낸다'가 아니다). 예전 번역은 alsoAccept에 남겨 거르기가 계속 인정한다.
  * 본문에 나온 인용이 이 목록과 맞는지는 quote-guard.ts가 저장 전에 거른다.
  */
 
@@ -55,55 +57,55 @@ export interface PhilosophyQuote {
 }
 
 export const PHILOSOPHY_QUOTES: readonly PhilosophyQuote[] = [
-  { id: "nietzsche-why", author: "니체", aliases: ["니체"], works: ["우상의 황혼"], source: "니체 『우상의 황혼』", locus: "잠언과 화살 12", ko: "자기 삶의 '왜'를 가진 사람은 거의 어떤 '어떻게'도 견뎌 낸다.", slots: ["meaning", "difficulty"], short: false },
-  { id: "nietzsche-amorfati", author: "니체", aliases: ["니체"], works: ["즐거운 학문"], source: "니체 『즐거운 학문』", locus: "4권 276절 ('새해에')", ko: "사물의 필연을 아름답게 보는 법을 더 배우고 싶다. 아모르 파티, 이제부터 이것이 내 사랑이기를.", slots: ["difficulty", "meaning"], short: false, hint: "'운명을 사랑하라'로 줄이지 않는다" },
-  { id: "nietzsche-become", author: "니체", aliases: ["니체"], works: ["즐거운 학문"], source: "니체 『즐거운 학문』", locus: "3권 270절", ko: "네 양심은 무엇을 말하는가? '너는 너 자신이 되어야 한다.'", slots: ["meaning", "start"], short: false },
-  { id: "nietzsche-stronger", author: "니체", aliases: ["니체"], works: ["우상의 황혼"], source: "니체 『우상의 황혼』", locus: "잠언과 화살 8", ko: "나를 죽이지 않는 것은 나를 더 강하게 만든다.", slots: ["difficulty"], short: false, heavy: true, alsoAccept: ["삶이라는 전쟁 학교에서 — 나를 죽이지 않는 것은 나를 더 강하게 만든다."], hint: "실패를 겪은 대표에게는 쓰지 않는다" },
-  { id: "nietzsche-chaos", author: "니체", aliases: ["니체"], works: ["차라투스트라는 이렇게 말했다"], source: "니체 『차라투스트라는 이렇게 말했다』", locus: "서문(Vorrede) 5", ko: "춤추는 별을 낳으려면 자기 안에 아직 혼돈을 품고 있어야 한다.", slots: ["start"], short: false, hint: "'혼돈'은 아직 정리 안 된 생각 정도로 가볍게" },
-  { id: "hegel-passion", author: "헤겔", aliases: ["헤겔"], works: ["역사철학 강의"], source: "헤겔 『역사철학 강의』", locus: "서론 (Sibree 영역 §26, '정신이 이념을 실현하는 수단')", ko: "정열 없이 이루어진 위대한 일은 세상에 없다.", slots: ["start", "meaning"], short: true },
-  { id: "hegel-owl", author: "헤겔", aliases: ["헤겔"], works: ["법철학"], source: "헤겔 『법철학』", locus: "서문(Vorrede) 끝부분", ko: "미네르바의 부엉이는 땅거미가 질 무렵에야 날기 시작한다.", slots: ["review"], short: false, reviewOnly: true, hint: "되돌아보는 문단에만, 시작·희망 문장으로 쓰지 않는다" },
-  { id: "kant-sapere-aude", author: "칸트", aliases: ["칸트"], works: ["계몽이란 무엇인가에 대한 답변"], source: "칸트 『계몽이란 무엇인가에 대한 답변』", locus: "첫 문단 (1784, 베를린 월보 481쪽; 학술원판 8권 35쪽)", ko: "감히 알려고 하라! 너 자신의 지성을 쓸 용기를 가져라.", slots: ["start"], short: false },
-  { id: "seneca-dare", author: "세네카", aliases: ["세네카"], works: ["루킬리우스에게 보내는 편지"], source: "세네카 『루킬리우스에게 보내는 편지』", locus: "편지 104, 26절", ko: "어려워서 감히 못 하는 것이 아니라, 감히 하지 않기 때문에 어려운 것이다.", slots: ["start", "difficulty"], short: false },
-  { id: "seneca-harbor", author: "세네카", aliases: ["세네카"], works: ["루킬리우스에게 보내는 편지"], source: "세네카 『루킬리우스에게 보내는 편지』", locus: "편지 71, 3절", ko: "어느 항구로 갈지 모르는 사람에게는 어떤 바람도 순풍이 아니다.", slots: ["plan", "meaning"], short: false },
-  { id: "seneca-time", author: "세네카", aliases: ["세네카"], works: ["인생의 짧음에 관하여"], source: "세네카 『인생의 짧음에 관하여』", locus: "1장 3절", ko: "우리에게 시간이 적은 것이 아니라, 우리가 많이 허비한 것이다.", slots: ["plan", "review"], short: false },
-  { id: "epictetus-control", author: "에픽테토스", aliases: ["에픽테토스"], works: ["엥케이리디온"], source: "에픽테토스 『엥케이리디온』", locus: "1장 1절", ko: "어떤 것은 우리에게 달려 있고, 어떤 것은 우리에게 달려 있지 않다.", slots: ["limit", "plan"], short: false },
-  { id: "epictetus-fig", author: "에픽테토스", aliases: ["에픽테토스"], works: ["담화록"], source: "에픽테토스 『담화록』", locus: "1권 15장 7절", ko: "위대한 것은 무엇도 갑자기 생기지 않는다. 포도 한 송이도, 무화과 하나도 그렇다.", slots: ["persist"], short: false },
-  { id: "marcus-obstacle", author: "마르쿠스 아우렐리우스", aliases: ["마르쿠스 아우렐리우스", "아우렐리우스"], works: ["명상록"], source: "마르쿠스 아우렐리우스 『명상록』", locus: "5권 20절", ko: "행동을 가로막는 것이 행동을 나아가게 하고, 길을 막아선 것이 길잡이가 된다.", slots: ["difficulty"], short: false },
-  { id: "marcus-last-act", author: "마르쿠스 아우렐리우스", aliases: ["마르쿠스 아우렐리우스", "아우렐리우스"], works: ["명상록"], source: "마르쿠스 아우렐리우스 『명상록』", locus: "2권 5절", ko: "삶의 모든 행동을 생애 마지막 행동처럼 하면, 헛된 생각에서 벗어날 수 있다.", slots: ["meaning", "persist"], short: false, heavy: true },
-  { id: "aristotle-become-by-doing", author: "아리스토텔레스", aliases: ["아리스토텔레스"], works: ["니코마코스 윤리학"], source: "아리스토텔레스 『니코마코스 윤리학』", locus: "2권 1장 (1103a34–b2)", ko: "우리는 정의로운 일을 하면서 정의로워지고, 용감한 일을 하면서 용감해진다.", slots: ["firststep", "persist"], short: false },
-  { id: "aristotle-learn-by-doing", author: "아리스토텔레스", aliases: ["아리스토텔레스"], works: ["니코마코스 윤리학"], source: "아리스토텔레스 『니코마코스 윤리학』", locus: "2권 1장 (1103a32–33)", ko: "할 줄 알게 되기 전에 배워야 하는 것들은, 직접 해 보면서 배운다.", slots: ["firststep", "start"], short: false },
-  { id: "beginning-half", author: "아리스토텔레스", aliases: ["아리스토텔레스", "플라톤"], works: ["정치학", "법률", "니코마코스 윤리학"], source: "아리스토텔레스 『정치학』(옛말 인용)", locus: "플라톤 법률 6권 753e; 아리스토텔레스 정치학 5권 4장 1303b29", ko: "시작이 전체의 절반이다.", slots: ["start", "limit"], short: true, proverb: true, alsoAccept: ["시작이 전체의 절반이라는 옛말이 있다."] },
-  { id: "aristotle-swallow", author: "아리스토텔레스", aliases: ["아리스토텔레스"], works: ["니코마코스 윤리학"], source: "아리스토텔레스 『니코마코스 윤리학』(옛말 인용)", locus: "1권 7장 (1098a18–19)", ko: "제비 한 마리가 봄을 만들지 않고, 하루가 봄을 만들지도 않는다.", slots: ["persist", "review"], short: false, proverb: true },
-  { id: "socrates-examined-life", author: "소크라테스", aliases: ["소크라테스", "플라톤"], works: ["소크라테스의 변명"], source: "플라톤 『소크라테스의 변명』", locus: "38a", ko: "검토하지 않는 삶은 사람이 살 만한 삶이 아니다.", slots: ["review", "meaning"], short: true, heavy: true },
-  { id: "confucius-knowing", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 위정", locus: "위정(爲政) 17", ko: "아는 것을 안다 하고 모르는 것을 모른다 하는 것, 그것이 아는 것이다.", slots: ["review", "limit"], short: false },
-  { id: "confucius-learning", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 학이", locus: "학이(學而) 1", ko: "배우고 때때로 익히니, 또한 기쁘지 아니한가.", slots: ["persist"], short: true },
-  { id: "confucius-haste", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 자로", locus: "자로(子路) 17", ko: "빨리 하려 들면 이르지 못하고, 작은 이익을 보면 큰일을 이루지 못한다.", slots: ["limit", "persist"], short: false },
-  { id: "confucius-mound", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 자한", locus: "자한(子罕) 18 (주자 집주·Legge 기준; ctext 등은 19)", ko: "산을 쌓다 한 삼태기가 모자라 멈췄다면 멈춘 것은 나다. 평지에 한 삼태기를 부었어도 나아갔다면 나아간 것은 나다.", slots: ["persist", "firststep"], short: false, hint: "앞뒤 두 문장을 함께" },
-  { id: "confucius-foresight", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 위령공", locus: "위령공(衛靈公) 11 (주자 집주·Legge 기준; ctext 등은 12)", ko: "멀리 내다보는 생각이 없으면 반드시 가까운 근심이 생긴다.", slots: ["plan", "limit"], short: false },
-  { id: "mencius-great-task", author: "맹자", aliases: ["맹자"], works: ["맹자"], source: "맹자 『맹자』 고자 하", locus: "고자 하(告子下) 15", ko: "하늘이 어떤 사람에게 큰일을 맡기려 할 때는 먼저 그 마음을 괴롭히고 몸을 수고롭게 한다. 그렇게 하지 못하던 일을 해낼 힘을 더해 준다.", slots: ["difficulty"], short: false, heavy: true, hint: "두 문장을 함께, 고생을 미화하지 않는다" },
-  { id: "laozi-thousand-li", author: "노자", aliases: ["노자"], works: ["도덕경"], source: "노자 『도덕경』 64장(통행본)", locus: "64장 (왕필본)", ko: "천 리 길도 발밑에서 시작된다.", slots: ["firststep", "start"], short: true },
-  { id: "laozi-sprout", author: "노자", aliases: ["노자"], works: ["도덕경"], source: "노자 『도덕경』 64장(통행본)", locus: "64장 (왕필본)", ko: "아름드리 나무도 털끝 같은 싹에서 자라고, 구층 누대도 흙을 쌓는 데서 시작된다.", slots: ["firststep", "persist"], short: false },
-  { id: "laozi-small-first", author: "노자", aliases: ["노자"], works: ["도덕경"], source: "노자 『도덕경』 63장", locus: "63장", ko: "어려운 일은 쉬울 때 꾀하고, 큰일은 작을 때 한다. 세상의 큰일은 반드시 작은 일에서 시작된다.", slots: ["plan", "firststep"], short: false },
-  { id: "zhuangzi-useless", author: "장자", aliases: ["장자"], works: ["장자"], source: "장자 『장자』 인간세", locus: "내편 인간세(人間世) 마지막 문장", ko: "사람들은 모두 쓸모 있는 것의 쓸모는 알지만, 쓸모없는 것의 쓸모는 알지 못한다.", slots: ["value"], short: false, hint: "장자가 사업을 두고 한 말처럼 풀지 않는다" },
-  { id: "xunzi-half-steps", author: "순자", aliases: ["순자"], works: ["순자"], source: "순자 『순자』 권학", locus: "권학(勸學)", ko: "반걸음이 쌓이지 않으면 천 리에 이를 수 없고, 작은 물줄기가 모이지 않으면 강과 바다를 이룰 수 없다.", slots: ["firststep", "persist"], short: false },
-  { id: "descartes-divide", author: "데카르트", aliases: ["데카르트"], works: ["방법서설"], source: "데카르트 『방법서설』", locus: "2부, 네 규칙 중 둘째", ko: "살펴볼 어려움 하나하나를 가능한 만큼, 또 잘 풀기 위해 필요한 만큼 작은 부분으로 나눈다.", slots: ["plan"], short: false },
-  { id: "spinoza-rare", author: "스피노자", aliases: ["스피노자"], works: ["에티카"], source: "스피노자 『에티카』", locus: "5부 정리 42 주석 (책의 마지막 문장)", ko: "모든 고귀한 것은 드문 만큼 어렵다.", slots: ["difficulty"], short: true },
-  { id: "schopenhauer-target", author: "쇼펜하우어", aliases: ["쇼펜하우어"], works: ["의지와 표상으로서의 세계"], source: "쇼펜하우어 『의지와 표상으로서의 세계』", locus: "31장 '천재에 관하여'", ko: "재능은 남들이 닿지 못하는 과녁을 맞히는 사수와 같고, 천재는 남들이 보지도 못하는 과녁을 맞히는 사수와 같다.", slots: ["value"], short: false, hint: "남들이 못 보는 기회를 말할 때만" },
-  { id: "kierkegaard-backwards", author: "키르케고르", aliases: ["키르케고르", "키에르케고르"], works: ["일기"], source: "키르케고르 『일기』", locus: "1843년 일기 JJ:167 (구 Papirer IV A 164)", ko: "삶은 뒤를 돌아보며 이해된다는 철학자들의 말은 옳다. 그러나 삶은 앞을 향해 살아야 한다는 다른 말을 잊어서는 안 된다.", slots: ["review", "start"], short: false },
+  { id: "nietzsche-why", author: "니체", aliases: ["니체"], works: ["우상의 황혼"], source: "니체 『우상의 황혼』", locus: "잠언과 화살 12", ko: "왜 사는지 아는 사람은 거의 어떤 어려움도 견뎌 낸다.", slots: ["meaning", "difficulty"], short: false, alsoAccept: ["자기 삶의 '왜'를 가진 사람은 거의 어떤 '어떻게'도 견뎌 낸다."] },
+  { id: "nietzsche-amorfati", author: "니체", aliases: ["니체"], works: ["즐거운 학문"], source: "니체 『즐거운 학문』", locus: "4권 276절 ('새해에')", ko: "피할 수 없는 일도 아름답게 보는 법을 더 배우고 싶다. 아모르 파티, 운명을 사랑하는 것이 이제부터 내 사랑이기를.", slots: ["difficulty", "meaning"], short: false, alsoAccept: ["사물의 필연을 아름답게 보는 법을 더 배우고 싶다. 아모르 파티, 이제부터 이것이 내 사랑이기를."], hint: "'운명을 사랑하라'로 줄이지 않는다" },
+  { id: "nietzsche-become", author: "니체", aliases: ["니체"], works: ["즐거운 학문"], source: "니체 『즐거운 학문』", locus: "3권 270절", ko: "네 양심은 뭐라고 말하는가? '본래의 네가 되어라.'", slots: ["meaning", "start"], short: false, alsoAccept: ["네 양심은 무엇을 말하는가? '너는 너 자신이 되어야 한다.'"] },
+  { id: "nietzsche-stronger", author: "니체", aliases: ["니체"], works: ["우상의 황혼"], source: "니체 『우상의 황혼』", locus: "잠언과 화살 8", ko: "나를 죽이지 못하는 것은 나를 더 강하게 만든다.", slots: ["difficulty"], short: false, heavy: true, alsoAccept: ["삶이라는 전쟁 학교에서 — 나를 죽이지 않는 것은 나를 더 강하게 만든다.", "나를 죽이지 않는 것은 나를 더 강하게 만든다."], hint: "실패를 겪은 대표에게는 쓰지 않는다" },
+  { id: "nietzsche-chaos", author: "니체", aliases: ["니체"], works: ["차라투스트라는 이렇게 말했다"], source: "니체 『차라투스트라는 이렇게 말했다』", locus: "서문(Vorrede) 5", ko: "춤추는 별을 낳으려면 마음속에 아직 혼돈이 있어야 한다.", slots: ["start"], short: false, alsoAccept: ["춤추는 별을 낳으려면 자기 안에 아직 혼돈을 품고 있어야 한다."], hint: "'혼돈'은 아직 정리 안 된 생각 정도로 가볍게" },
+  { id: "hegel-passion", author: "헤겔", aliases: ["헤겔"], works: ["역사철학 강의"], source: "헤겔 『역사철학 강의』", locus: "서론 (Sibree 영역 §26, '정신이 이념을 실현하는 수단')", ko: "세상의 어떤 큰일도 열정 없이 이루어진 적은 없다.", slots: ["start", "meaning"], short: true, alsoAccept: ["정열 없이 이루어진 위대한 일은 세상에 없다."] },
+  { id: "hegel-owl", author: "헤겔", aliases: ["헤겔"], works: ["법철학"], source: "헤겔 『법철학』", locus: "서문(Vorrede) 끝부분", ko: "미네르바의 부엉이는 해가 질 무렵에야 날개를 편다.", slots: ["review"], short: false, reviewOnly: true, alsoAccept: ["미네르바의 부엉이는 땅거미가 질 무렵에야 날기 시작한다."], hint: "되돌아보는 문단에만, 시작·희망 문장으로 쓰지 않는다" },
+  { id: "kant-sapere-aude", author: "칸트", aliases: ["칸트"], works: ["계몽이란 무엇인가에 대한 답변"], source: "칸트 『계몽이란 무엇인가에 대한 답변』", locus: "첫 문단 (1784, 베를린 월보 481쪽; 학술원판 8권 35쪽)", ko: "과감히 알려고 하라. 네 머리로 생각할 용기를 내라.", slots: ["start"], short: false, alsoAccept: ["감히 알려고 하라! 너 자신의 지성을 쓸 용기를 가져라."] },
+  { id: "seneca-dare", author: "세네카", aliases: ["세네카"], works: ["루킬리우스에게 보내는 편지"], source: "세네카 『루킬리우스에게 보내는 편지』", locus: "편지 104, 26절", ko: "어려워서 엄두를 못 내는 게 아니라, 엄두를 내지 않아서 어려운 것이다.", slots: ["start", "difficulty"], short: false, alsoAccept: ["어려워서 감히 못 하는 것이 아니라, 감히 하지 않기 때문에 어려운 것이다."] },
+  { id: "seneca-harbor", author: "세네카", aliases: ["세네카"], works: ["루킬리우스에게 보내는 편지"], source: "세네카 『루킬리우스에게 보내는 편지』", locus: "편지 71, 3절", ko: "어느 항구로 갈지 모르면 어떤 바람도 순풍이 되지 않는다.", slots: ["plan", "meaning"], short: false, alsoAccept: ["어느 항구로 갈지 모르는 사람에게는 어떤 바람도 순풍이 아니다."] },
+  { id: "seneca-time", author: "세네카", aliases: ["세네카"], works: ["인생의 짧음에 관하여"], source: "세네카 『인생의 짧음에 관하여』", locus: "1장 3절", ko: "시간이 모자란 게 아니라, 우리가 많이 흘려보낸 것이다.", slots: ["plan", "review"], short: false, alsoAccept: ["우리에게 시간이 적은 것이 아니라, 우리가 많이 허비한 것이다."] },
+  { id: "epictetus-control", author: "에픽테토스", aliases: ["에픽테토스"], works: ["엥케이리디온"], source: "에픽테토스 『엥케이리디온』", locus: "1장 1절", ko: "세상에는 우리 손에 달린 일과 그렇지 않은 일이 있다.", slots: ["limit", "plan"], short: false, alsoAccept: ["어떤 것은 우리에게 달려 있고, 어떤 것은 우리에게 달려 있지 않다."] },
+  { id: "epictetus-fig", author: "에픽테토스", aliases: ["에픽테토스"], works: ["담화록"], source: "에픽테토스 『담화록』", locus: "1권 15장 7절", ko: "큰일은 하루아침에 생기지 않는다. 포도 한 송이, 무화과 하나도 그렇다.", slots: ["persist"], short: false, alsoAccept: ["위대한 것은 무엇도 갑자기 생기지 않는다. 포도 한 송이도, 무화과 하나도 그렇다."] },
+  { id: "marcus-obstacle", author: "마르쿠스 아우렐리우스", aliases: ["마르쿠스 아우렐리우스", "아우렐리우스"], works: ["명상록"], source: "마르쿠스 아우렐리우스 『명상록』", locus: "5권 20절", ko: "일을 막는 것이 오히려 일을 밀어 주고, 길을 막아선 것이 길이 된다.", slots: ["difficulty"], short: false, alsoAccept: ["행동을 가로막는 것이 행동을 나아가게 하고, 길을 막아선 것이 길잡이가 된다."] },
+  { id: "marcus-last-act", author: "마르쿠스 아우렐리우스", aliases: ["마르쿠스 아우렐리우스", "아우렐리우스"], works: ["명상록"], source: "마르쿠스 아우렐리우스 『명상록』", locus: "2권 5절", ko: "하는 일마다 생의 마지막 일처럼 하면, 쓸데없는 생각에서 벗어난다.", slots: ["meaning", "persist"], short: false, heavy: true, alsoAccept: ["삶의 모든 행동을 생애 마지막 행동처럼 하면, 헛된 생각에서 벗어날 수 있다."] },
+  { id: "aristotle-become-by-doing", author: "아리스토텔레스", aliases: ["아리스토텔레스"], works: ["니코마코스 윤리학"], source: "아리스토텔레스 『니코마코스 윤리학』", locus: "2권 1장 (1103a34–b2)", ko: "옳은 일을 하다 보면 옳은 사람이 되고, 용기 있는 일을 하다 보면 용기 있는 사람이 된다.", slots: ["firststep", "persist"], short: false, alsoAccept: ["우리는 정의로운 일을 하면서 정의로워지고, 용감한 일을 하면서 용감해진다."] },
+  { id: "aristotle-learn-by-doing", author: "아리스토텔레스", aliases: ["아리스토텔레스"], works: ["니코마코스 윤리학"], source: "아리스토텔레스 『니코마코스 윤리학』", locus: "2권 1장 (1103a32–33)", ko: "해 보기 전에 배워야 하는 일은, 해 보면서 배운다.", slots: ["firststep", "start"], short: false, alsoAccept: ["할 줄 알게 되기 전에 배워야 하는 것들은, 직접 해 보면서 배운다."] },
+  { id: "beginning-half", author: "아리스토텔레스", aliases: ["아리스토텔레스", "플라톤"], works: ["정치학", "법률", "니코마코스 윤리학"], source: "아리스토텔레스 『정치학』(옛말 인용)", locus: "플라톤 법률 6권 753e; 아리스토텔레스 정치학 5권 4장 1303b29", ko: "시작이 반이다.", slots: ["start", "limit"], short: true, proverb: true, alsoAccept: ["시작이 전체의 절반이라는 옛말이 있다.", "시작이 전체의 절반이다."] },
+  { id: "aristotle-swallow", author: "아리스토텔레스", aliases: ["아리스토텔레스"], works: ["니코마코스 윤리학"], source: "아리스토텔레스 『니코마코스 윤리학』(옛말 인용)", locus: "1권 7장 (1098a18–19)", ko: "제비 한 마리로 봄이 오지 않고, 하루로 봄이 되지도 않는다.", slots: ["persist", "review"], short: false, proverb: true, alsoAccept: ["제비 한 마리가 봄을 만들지 않고, 하루가 봄을 만들지도 않는다."] },
+  { id: "socrates-examined-life", author: "소크라테스", aliases: ["소크라테스", "플라톤"], works: ["소크라테스의 변명"], source: "플라톤 『소크라테스의 변명』", locus: "38a", ko: "스스로 돌아보지 않는 삶은 살 만한 삶이 아니다.", slots: ["review", "meaning"], short: true, heavy: true, alsoAccept: ["검토하지 않는 삶은 사람이 살 만한 삶이 아니다."] },
+  { id: "confucius-knowing", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 위정", locus: "위정(爲政) 17", ko: "아는 것은 안다고 하고, 모르는 것은 모른다고 하는 것. 그게 진짜 아는 것이다.", slots: ["review", "limit"], short: false, alsoAccept: ["아는 것을 안다 하고 모르는 것을 모른다 하는 것, 그것이 아는 것이다."] },
+  { id: "confucius-learning", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 학이", locus: "학이(學而) 1", ko: "배우고 때맞춰 익히면, 이 또한 기쁘지 않은가.", slots: ["persist"], short: true, alsoAccept: ["배우고 때때로 익히니, 또한 기쁘지 아니한가."] },
+  { id: "confucius-haste", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 자로", locus: "자로(子路) 17", ko: "서두르면 오히려 닿지 못하고, 눈앞의 작은 이익을 좇으면 큰일을 이루지 못한다.", slots: ["limit", "persist"], short: false, alsoAccept: ["빨리 하려 들면 이르지 못하고, 작은 이익을 보면 큰일을 이루지 못한다."] },
+  { id: "confucius-mound", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 자한", locus: "자한(子罕) 18 (주자 집주·Legge 기준; ctext 등은 19)", ko: "산을 쌓다 흙 한 바구니를 남기고 멈췄다면, 멈춘 것은 나다. 맨땅에 흙 한 바구니를 부었을 뿐이라도 나아갔다면, 나아간 것은 나다.", slots: ["persist", "firststep"], short: false, alsoAccept: ["산을 쌓다 한 삼태기가 모자라 멈췄다면 멈춘 것은 나다. 평지에 한 삼태기를 부었어도 나아갔다면 나아간 것은 나다."], hint: "앞뒤 두 문장을 함께" },
+  { id: "confucius-foresight", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 위령공", locus: "위령공(衛靈公) 11 (주자 집주·Legge 기준; ctext 등은 12)", ko: "멀리 내다보지 않으면 가까운 걱정이 꼭 생긴다.", slots: ["plan", "limit"], short: false, alsoAccept: ["멀리 내다보는 생각이 없으면 반드시 가까운 근심이 생긴다."] },
+  { id: "mencius-great-task", author: "맹자", aliases: ["맹자"], works: ["맹자"], source: "맹자 『맹자』 고자 하", locus: "고자 하(告子下) 15", ko: "하늘이 누군가에게 큰일을 맡기려 할 때는 먼저 마음을 괴롭게 하고 몸을 고단하게 한다. 그렇게 해서 못하던 일을 해낼 힘을 길러 준다.", slots: ["difficulty"], short: false, heavy: true, alsoAccept: ["하늘이 어떤 사람에게 큰일을 맡기려 할 때는 먼저 그 마음을 괴롭히고 몸을 수고롭게 한다. 그렇게 하지 못하던 일을 해낼 힘을 더해 준다."], hint: "두 문장을 함께, 고생을 미화하지 않는다" },
+  { id: "laozi-thousand-li", author: "노자", aliases: ["노자"], works: ["도덕경"], source: "노자 『도덕경』 64장(통행본)", locus: "64장 (왕필본)", ko: "천 리 길도 발밑 한 걸음에서 시작된다.", slots: ["firststep", "start"], short: true, alsoAccept: ["천 리 길도 발밑에서 시작된다."] },
+  { id: "laozi-sprout", author: "노자", aliases: ["노자"], works: ["도덕경"], source: "노자 『도덕경』 64장(통행본)", locus: "64장 (왕필본)", ko: "아름드리 나무도 털끝만 한 싹에서 자라고, 아홉 층 누각도 흙을 쌓는 데서 시작된다.", slots: ["firststep", "persist"], short: false, alsoAccept: ["아름드리 나무도 털끝 같은 싹에서 자라고, 구층 누대도 흙을 쌓는 데서 시작된다."] },
+  { id: "laozi-small-first", author: "노자", aliases: ["노자"], works: ["도덕경"], source: "노자 『도덕경』 63장", locus: "63장", ko: "어려운 일은 쉬울 때 손대고, 큰일은 작을 때 시작한다. 세상의 큰일은 늘 작은 일에서 시작된다.", slots: ["plan", "firststep"], short: false, alsoAccept: ["어려운 일은 쉬울 때 꾀하고, 큰일은 작을 때 한다. 세상의 큰일은 반드시 작은 일에서 시작된다."] },
+  { id: "zhuangzi-useless", author: "장자", aliases: ["장자"], works: ["장자"], source: "장자 『장자』 인간세", locus: "내편 인간세(人間世) 마지막 문장", ko: "사람들은 모두 쓸모 있는 것의 쓸모는 알아도, 쓸모없는 것의 쓸모는 모른다.", slots: ["value"], short: false, alsoAccept: ["사람들은 모두 쓸모 있는 것의 쓸모는 알지만, 쓸모없는 것의 쓸모는 알지 못한다."], hint: "장자가 사업을 두고 한 말처럼 풀지 않는다" },
+  { id: "xunzi-half-steps", author: "순자", aliases: ["순자"], works: ["순자"], source: "순자 『순자』 권학", locus: "권학(勸學)", ko: "반걸음씩 쌓지 않으면 천 리를 갈 수 없고, 작은 물줄기가 모이지 않으면 강도 바다도 될 수 없다.", slots: ["firststep", "persist"], short: false, alsoAccept: ["반걸음이 쌓이지 않으면 천 리에 이를 수 없고, 작은 물줄기가 모이지 않으면 강과 바다를 이룰 수 없다."] },
+  { id: "descartes-divide", author: "데카르트", aliases: ["데카르트"], works: ["방법서설"], source: "데카르트 『방법서설』", locus: "2부, 네 규칙 중 둘째", ko: "어려운 문제 하나하나를 할 수 있는 만큼, 잘 풀 수 있을 만큼 잘게 나눈다.", slots: ["plan"], short: false, alsoAccept: ["살펴볼 어려움 하나하나를 가능한 만큼, 또 잘 풀기 위해 필요한 만큼 작은 부분으로 나눈다."] },
+  { id: "spinoza-rare", author: "스피노자", aliases: ["스피노자"], works: ["에티카"], source: "스피노자 『에티카』", locus: "5부 정리 42 주석 (책의 마지막 문장)", ko: "훌륭한 것은 모두 드문 만큼 어렵다.", slots: ["difficulty"], short: true, alsoAccept: ["모든 고귀한 것은 드문 만큼 어렵다."] },
+  { id: "schopenhauer-target", author: "쇼펜하우어", aliases: ["쇼펜하우어"], works: ["의지와 표상으로서의 세계"], source: "쇼펜하우어 『의지와 표상으로서의 세계』", locus: "31장 '천재에 관하여'", ko: "재능 있는 사람은 남들이 못 맞히는 과녁을 맞히고, 천재는 남들이 보지 못하는 과녁을 맞힌다.", slots: ["value"], short: false, alsoAccept: ["재능은 남들이 닿지 못하는 과녁을 맞히는 사수와 같고, 천재는 남들이 보지도 못하는 과녁을 맞히는 사수와 같다."], hint: "남들이 못 보는 기회를 말할 때만" },
+  { id: "kierkegaard-backwards", author: "키르케고르", aliases: ["키르케고르", "키에르케고르"], works: ["일기"], source: "키르케고르 『일기』", locus: "1843년 일기 JJ:167 (구 Papirer IV A 164)", ko: "삶은 뒤돌아볼 때 이해된다는 말은 옳다. 하지만 삶은 앞을 보며 살아야 한다는 것도 잊지 말아야 한다.", slots: ["review", "start"], short: false, alsoAccept: ["삶은 뒤를 돌아보며 이해된다는 철학자들의 말은 옳다. 그러나 삶은 앞을 향해 살아야 한다는 다른 말을 잊어서는 안 된다."] },
   { id: "emerson-trust", author: "에머슨", aliases: ["에머슨"], works: ["자기 신뢰"], source: "에머슨 『자기 신뢰』", locus: "에세이 본문 (Essays, 1841)", ko: "너 자신을 믿어라.", slots: ["start", "meaning"], short: true, alsoAccept: ["너 자신을 믿어라. 모든 마음은 그 쇠줄에 맞춰 떨린다."] },
-  { id: "thoreau-dreams", author: "소로", aliases: ["소로", "소로우"], works: ["월든"], source: "소로 『월든』", locus: "맺음말(Conclusion)", ko: "꿈의 방향으로 자신 있게 나아가며 상상한 삶을 살려고 애쓰면, 평소에는 기대하지 못한 성공을 만나게 된다.", slots: ["start", "meaning"], short: false, promiseRisk: true, hint: "결과 약속이 아니라 소로의 체험담으로" },
-  { id: "james-believe", author: "윌리엄 제임스", aliases: ["윌리엄 제임스"], works: ["삶은 살 가치가 있는가"], source: "윌리엄 제임스 『삶은 살 가치가 있는가』", locus: "강연 맺음말 (1895, International Journal of Ethics 6권 1호 24쪽)", ko: "삶을 두려워하지 말라. 삶이 살 가치가 있다고 믿으라. 그 믿음이 그 사실을 만드는 데 힘을 보탤 것이다.", slots: ["meaning", "start"], short: false, promiseRisk: true, hint: "'힘을 보탠다'까지만, 매출 약속으로 잇지 않는다" },
-  { id: "sartre-makes-himself", author: "사르트르", aliases: ["사르트르"], works: ["실존주의는 휴머니즘이다"], source: "사르트르 『실존주의는 휴머니즘이다』", locus: "1945년 강연 (1946 출간), '실존주의의 제1원리' 대목", ko: "인간은 스스로 만들어 가는 것 외에 아무것도 아니다.", slots: ["meaning", "start"], short: true, copyright: true },
-  { id: "camus-sisyphus", author: "카뮈", aliases: ["카뮈", "까뮈"], works: ["시지프 신화"], source: "카뮈 『시지프 신화』", locus: "마지막 장 '시지프 신화' 끝 문장", ko: "정상을 향한 투쟁 그 자체로 사람의 마음을 채우기에 충분하다. 행복한 시지프를 떠올려야 한다.", slots: ["persist", "difficulty"], short: false, heavy: true, copyright: true },
-  { id: "montaigne-que-sais-je", author: "몽테뉴", aliases: ["몽테뉴"], works: ["수상록", "에세"], source: "몽테뉴 『수상록』", locus: "2권 12장 '레몽 스봉의 변호'", ko: "나는 무엇을 아는가?", slots: ["review"], short: true },
-  { id: "bacon-novum-organum", author: "베이컨", aliases: ["베이컨", "프랜시스 베이컨"], works: ["신기관"], source: "베이컨 『신기관』", locus: "1권 경구 3", ko: "인간의 앎과 인간의 힘은 하나로 만난다. 원인을 모르면 결과를 낼 수 없다.", slots: ["review", "plan"], short: false },
-  { id: "voltaire-garden", author: "볼테르", aliases: ["볼테르"], works: ["캉디드"], source: "볼테르 『캉디드』", locus: "30장 마지막 문장", ko: "우리는 우리 밭을 가꾸어야 한다.", slots: ["persist", "plan"], short: false, alsoAccept: ["좋은 말씀입니다. 그래도 우리는 우리 밭을 가꾸어야 합니다."] },
-  { id: "heraclitus-other-waters", author: "헤라클레이토스", aliases: ["헤라클레이토스"], works: ["단편"], source: "헤라클레이토스 단편(B12)", locus: "DK 22 B12 (아리우스 디뒤모스 경유, 에우세비오스 인용)", ko: "같은 강에 들어서는 이들에게도 늘 다른 물이 흘러온다.", slots: ["review"], short: true, hint: "'같은 강에 두 번'으로 바꾸지 않는다" },
-  { id: "zhongyong-prepare", author: "중용", aliases: ["중용"], works: ["중용"], source: "『중용』 20장", locus: "20장", ko: "모든 일은 미리 준비하면 서고, 준비하지 않으면 무너진다.", slots: ["plan", "limit"], short: false, hint: "공자의 말로 단정하지 않는다" },
-  { id: "confucius-establish-others", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 옹야", locus: "옹야(雍也) 28 (주자 집주·Legge 기준; ctext 등은 30)", ko: "어진 사람은 자기가 서고 싶으면 남을 세워 주고, 자기가 이루고 싶으면 남이 이루게 돕는다.", slots: ["customer"], short: false },
-  { id: "sunzi-know-both", author: "손자", aliases: ["손자", "손무"], works: ["손자병법"], source: "손자 『손자병법』 모공", locus: "모공(謀攻) 편 끝", ko: "상대를 알고 나를 알면 백 번 싸워도 위태롭지 않다.", slots: ["customer", "limit"], short: true, promiseRisk: true, hint: "'백전백승'으로 바꾸지 않고 고객·시장 이해로" },
-  { id: "sunzi-cannot-lose-first", author: "손자", aliases: ["손자", "손무"], works: ["손자병법"], source: "손자 『손자병법』 군형", locus: "군형(軍形) 편 첫머리", ko: "예로부터 잘 싸우는 이는 먼저 지지 않을 태세를 갖추고, 이길 수 있는 때를 기다렸다.", slots: ["limit", "plan"], short: false, hint: "경쟁자를 적으로 부르지 않는다" },
-  { id: "epictetus-write", author: "에픽테토스", aliases: ["에픽테토스"], works: ["담화록"], source: "에픽테토스 『담화록』", locus: "2권 18장 1–2절", ko: "잘 읽는 사람이 되고 싶으면 읽고, 잘 쓰는 사람이 되고 싶으면 써라.", slots: ["start", "persist"], short: false },
+  { id: "thoreau-dreams", author: "소로", aliases: ["소로", "소로우"], works: ["월든"], source: "소로 『월든』", locus: "맺음말(Conclusion)", ko: "꿈을 향해 자신 있게 나아가며 그리던 삶을 살려고 애쓰면, 뜻밖의 성공을 만나게 된다.", slots: ["start", "meaning"], short: false, promiseRisk: true, alsoAccept: ["꿈의 방향으로 자신 있게 나아가며 상상한 삶을 살려고 애쓰면, 평소에는 기대하지 못한 성공을 만나게 된다."], hint: "결과 약속이 아니라 소로의 체험담으로" },
+  { id: "james-believe", author: "윌리엄 제임스", aliases: ["윌리엄 제임스"], works: ["삶은 살 가치가 있는가"], source: "윌리엄 제임스 『삶은 살 가치가 있는가』", locus: "강연 맺음말 (1895, International Journal of Ethics 6권 1호 24쪽)", ko: "삶을 두려워하지 마라. 삶은 살 만하다고 믿어라. 그 믿음이 그 사실을 만드는 데 힘을 보탠다.", slots: ["meaning", "start"], short: false, promiseRisk: true, alsoAccept: ["삶을 두려워하지 말라. 삶이 살 가치가 있다고 믿으라. 그 믿음이 그 사실을 만드는 데 힘을 보탤 것이다."], hint: "'힘을 보탠다'까지만, 매출 약속으로 잇지 않는다" },
+  { id: "sartre-makes-himself", author: "사르트르", aliases: ["사르트르"], works: ["실존주의는 휴머니즘이다"], source: "사르트르 『실존주의는 휴머니즘이다』", locus: "1945년 강연 (1946 출간), '실존주의의 제1원리' 대목", ko: "사람은 스스로 만들어 가는 것, 그 이상도 이하도 아니다.", slots: ["meaning", "start"], short: true, copyright: true, alsoAccept: ["인간은 스스로 만들어 가는 것 외에 아무것도 아니다."] },
+  { id: "camus-sisyphus", author: "카뮈", aliases: ["카뮈", "까뮈"], works: ["시지프 신화"], source: "카뮈 『시지프 신화』", locus: "마지막 장 '시지프 신화' 끝 문장", ko: "정상을 향해 가는 그 몸부림만으로도 사람의 마음은 충분히 채워진다. 행복한 시지프를 떠올려야 한다.", slots: ["persist", "difficulty"], short: false, heavy: true, copyright: true, alsoAccept: ["정상을 향한 투쟁 그 자체로 사람의 마음을 채우기에 충분하다. 행복한 시지프를 떠올려야 한다."] },
+  { id: "montaigne-que-sais-je", author: "몽테뉴", aliases: ["몽테뉴"], works: ["수상록", "에세"], source: "몽테뉴 『수상록』", locus: "2권 12장 '레몽 스봉의 변호'", ko: "나는 무엇을 알고 있는가?", slots: ["review"], short: true, alsoAccept: ["나는 무엇을 아는가?"] },
+  { id: "bacon-novum-organum", author: "베이컨", aliases: ["베이컨", "프랜시스 베이컨"], works: ["신기관"], source: "베이컨 『신기관』", locus: "1권 경구 3", ko: "사람의 앎과 힘은 하나다. 원인을 모르면 결과를 만들어 낼 수 없기 때문이다.", slots: ["review", "plan"], short: false, alsoAccept: ["인간의 앎과 인간의 힘은 하나로 만난다. 원인을 모르면 결과를 낼 수 없다."] },
+  { id: "voltaire-garden", author: "볼테르", aliases: ["볼테르"], works: ["캉디드"], source: "볼테르 『캉디드』", locus: "30장 마지막 문장", ko: "그래도 우리는 우리 밭을 가꿔야 한다.", slots: ["persist", "plan"], short: false, alsoAccept: ["좋은 말씀입니다. 그래도 우리는 우리 밭을 가꾸어야 합니다.", "우리는 우리 밭을 가꾸어야 한다."] },
+  { id: "heraclitus-other-waters", author: "헤라클레이토스", aliases: ["헤라클레이토스"], works: ["단편"], source: "헤라클레이토스 단편(B12)", locus: "DK 22 B12 (아리우스 디뒤모스 경유, 에우세비오스 인용)", ko: "같은 강에 들어가도 흘러오는 물은 늘 다르다.", slots: ["review"], short: true, alsoAccept: ["같은 강에 들어서는 이들에게도 늘 다른 물이 흘러온다."], hint: "'같은 강에 두 번'으로 바꾸지 않는다" },
+  { id: "zhongyong-prepare", author: "중용", aliases: ["중용"], works: ["중용"], source: "『중용』 20장", locus: "20장", ko: "무슨 일이든 미리 준비하면 바로 서고, 준비하지 않으면 무너진다.", slots: ["plan", "limit"], short: false, alsoAccept: ["모든 일은 미리 준비하면 서고, 준비하지 않으면 무너진다."], hint: "공자의 말로 단정하지 않는다" },
+  { id: "confucius-establish-others", author: "공자", aliases: ["공자"], works: ["논어"], source: "공자 『논어』 옹야", locus: "옹야(雍也) 28 (주자 집주·Legge 기준; ctext 등은 30)", ko: "남을 아끼는 사람은 자기가 서고 싶으면 남도 세워 주고, 자기가 이루고 싶으면 남도 이루게 돕는다.", slots: ["customer"], short: false, alsoAccept: ["어진 사람은 자기가 서고 싶으면 남을 세워 주고, 자기가 이루고 싶으면 남이 이루게 돕는다."] },
+  { id: "sunzi-know-both", author: "손자", aliases: ["손자", "손무"], works: ["손자병법"], source: "손자 『손자병법』 모공", locus: "모공(謀攻) 편 끝", ko: "상대를 알고 나를 알면 백 번 겨뤄도 위태롭지 않다.", slots: ["customer", "limit"], short: true, promiseRisk: true, alsoAccept: ["상대를 알고 나를 알면 백 번 싸워도 위태롭지 않다."], hint: "'백전백승'으로 바꾸지 않고 고객·시장 이해로" },
+  { id: "sunzi-cannot-lose-first", author: "손자", aliases: ["손자", "손무"], works: ["손자병법"], source: "손자 『손자병법』 군형", locus: "군형(軍形) 편 첫머리", ko: "예부터 잘 싸우는 사람은 먼저 지지 않을 준비를 해 두고, 이길 수 있는 때를 기다렸다.", slots: ["limit", "plan"], short: false, alsoAccept: ["예로부터 잘 싸우는 이는 먼저 지지 않을 태세를 갖추고, 이길 수 있는 때를 기다렸다."], hint: "경쟁자를 적으로 부르지 않는다" },
+  { id: "epictetus-write", author: "에픽테토스", aliases: ["에픽테토스"], works: ["담화록"], source: "에픽테토스 『담화록』", locus: "2권 18장 1–2절", ko: "잘 읽고 싶으면 읽고, 잘 쓰고 싶으면 써라.", slots: ["start", "persist"], short: false, alsoAccept: ["잘 읽는 사람이 되고 싶으면 읽고, 잘 쓰는 사람이 되고 싶으면 써라."] },
   { id: "seneca-everywhere", author: "세네카", aliases: ["세네카"], works: ["루킬리우스에게 보내는 편지"], source: "세네카 『루킬리우스에게 보내는 편지』", locus: "편지 2, 2절", ko: "어디에나 있는 사람은 어디에도 없다.", slots: ["plan", "limit"], short: true },
 ];
 
@@ -114,8 +116,7 @@ export const philosophyQuote = (id: string) => BY_ID.get(id);
  * 장마다 어울리는 자리(앞에 둔 자리부터 하나씩 돌아가며 고른다).
  * 실행 요약·한눈에 보기 → 의미·시작·쓸모, 돈 장 → 지켜야 할 선·계획(그리고 '지켜야 할 선' 문단의 어려움), 12주 할 일 → 첫걸음·되돌아보기·계획·꾸준함,
  * 고객 장 → 손님, 위험이 나오는 장 → 어려움.
- * '쓸모'(장자 '쓸모없음의 쓸모'·쇼펜하우어 '남들이 못 보는 과녁') 말은 둘뿐이라 두 요약 장이 먼저 갖게 다른 장에서는 맨 뒤에 둔다 —
- * "가치 없어 보이는 사업에서 쓸모를 찾는다"는 대표 결정이 계획서의 첫 장·마지막 장에 오게.
+ * 후보는 장의 자리들에 맞는 말을 한데 모아 계획서 순서대로 고른다(자리 순서로 고르면 말이 둘뿐인 '손님'·'쓸모' 자리가 매번 같은 말을 냈다).
  */
 export const SECTION_QUOTE_SLOTS: Record<string, readonly QuoteSlot[]> = {
   "overview/summary": ["value", "meaning", "start"],
@@ -151,10 +152,13 @@ export const sectionQuoteSlots = (key: string) => SECTION_QUOTE_SLOTS[key] ?? DE
 const REVIEW_SECTIONS = new Set(["summary/roadmap", "overview/achievements", "market/swot", "strategy/exit"]);
 /** 무거운 말이 들어갈 수 있는 자리 */
 const HEAVY_SLOTS: readonly QuoteSlot[] = ["difficulty", "review"];
-/** 먼저 고르는 장 — 대표가 가장 먼저 읽는 두 요약 장이 '쓸모' 같은 드문 자리를 먼저 갖는다 */
+/** 한 바퀴에서 먼저 고르는 장 — 대표가 가장 먼저 읽는 요약 장, 돈 장, 12주 할 일 */
 const FIRST_SECTIONS = ["overview/summary", "summary/executive", "financials/expenses", "summary/roadmap"];
-export const QUOTE_CANDIDATES_PER_SECTION = 4;
-const MIN_BEFORE_HEAVY = 2;
+/*
+ * 장마다 후보 2개(2026-11-17 실제 AI 계획서 3개 점검: 후보가 3~4개면 AI가 좋아하는 말만 골라 요약 장 3개 중 2개가 아우렐리우스 5권 20절,
+ * 손님 장 2개가 손자 모공 편이었다). 후보를 줄여 계획서마다 정해지는 순서가 더 크게 작용하게 한다.
+ */
+export const QUOTE_CANDIDATES_PER_SECTION = 2;
 
 /* 계획서마다 정해지는 순서 — FNV-1a 해시로 씨앗을 만들고 xorshift로 섞는다(같은 씨앗이면 언제나 같은 순서) */
 function hash32(text: string): number {
@@ -173,39 +177,33 @@ function seededOrder<T>(items: readonly T[], seed: string): T[] {
 /**
  * 계획서 전체의 장별 후보. 장끼리 겹치지 않는다(같은 명언이 한 계획서에 두 번 나오지 않게).
  * 장을 동시에 써도 모든 장이 같은 씨앗·같은 장 목록으로 같은 표를 만들어 자기 몫만 쓰므로 결과가 같다.
- * 한 바퀴에 장마다 하나씩, 그 장의 자리를 돌아가며 고른다 — 앞 장이 드문 자리를 다 가져가 뒤 장이 비는 일을 줄인다.
+ * 한 바퀴에 장마다 하나씩, 그 장의 자리에 맞는 말 가운데 '계획서 + 장'으로 정해지는 순서에서 가장 앞의 것을 고른다.
+ * 장마다 순서를 따로 섞어야 앞 장이 잘 고르지 않는 말(예: 어려움 자리에만 맞는 말)이 뒤 장에 몰리지 않는다(500개 시뮬레이션으로 확인).
  */
 export function planQuoteCandidates(seed: string, sectionKeys: readonly string[]): Record<string, PhilosophyQuote[]> {
-  const order = seededOrder(PHILOSOPHY_QUOTES, `philosophy:${seed}`);
   const used = new Set<string>();
   const keys = [...new Set([...FIRST_SECTIONS.filter(key => sectionKeys.includes(key)), ...sectionKeys])];
-  const states = keys.map(key => ({ key, slots: sectionQuoteSlots(key), next: 0, picked: [] as PhilosophyQuote[] }));
-  // 결과 약속으로 읽힐 수 있는 말(소로·제임스·손자)은 한 장에 하나까지
-  const usable = (state: (typeof states)[number], quote: PhilosophyQuote, slot: QuoteSlot) => !used.has(quote.id) && quote.slots.includes(slot) && (!quote.reviewOnly || REVIEW_SECTIONS.has(state.key)) && !(quote.promiseRisk && state.picked.some(item => item.promiseRisk));
+  const states = keys.map(key => ({ key, slots: sectionQuoteSlots(key), order: seededOrder(PHILOSOPHY_QUOTES, `philosophy:${seed}:${key}`), picked: [] as PhilosophyQuote[] }));
+  // 결과 약속으로 읽힐 수 있는 말(소로·제임스·손자)은 한 장에 하나까지, 헤겔 '부엉이'는 되돌아보는 장에서만
+  const fits = (state: (typeof states)[number], quote: PhilosophyQuote, slots: readonly QuoteSlot[]) => !used.has(quote.id) && quote.slots.some(slot => slots.includes(slot))
+    && (!quote.reviewOnly || REVIEW_SECTIONS.has(state.key)) && !(quote.promiseRisk && state.picked.some(item => item.promiseRisk));
   const take = (state: (typeof states)[number], quote: PhilosophyQuote) => { state.picked.push(quote); used.add(quote.id); };
   for (let progress = true; progress;) {
     progress = false;
     for (const state of states) {
       if (state.picked.length >= QUOTE_CANDIDATES_PER_SECTION) continue;
-      for (let turn = 0; turn < state.slots.length; turn++) {
-        const slot = state.slots[(state.next + turn) % state.slots.length];
-        const quote = order.find(item => !item.heavy && usable(state, item, slot));
-        if (!quote) continue;
-        take(state, quote);
-        state.next = (state.next + turn + 1) % state.slots.length;
-        progress = true;
-        break;
-      }
+      const quote = state.order.find(item => !item.heavy && fits(state, item, state.slots));
+      if (quote) { take(state, quote); progress = true; }
     }
   }
-  // 무거운 말은 드물게 — 어려움·되돌아보기 자리의 후보가 하나 이하일 때, 계획서 전체에서 하나만
+  // 무거운 말은 드물게 — 어려움·되돌아보기 자리가 있는 장이 후보를 하나도 못 받았을 때, 계획서 전체에서 하나만
   for (const state of states) {
-    if (state.picked.length >= MIN_BEFORE_HEAVY) continue;
-    const quote = order.find(item => item.heavy && state.slots.some(slot => HEAVY_SLOTS.includes(slot) && usable(state, item, slot)));
+    if (state.picked.length) continue;
+    const quote = state.order.find(item => item.heavy && fits(state, item, state.slots.filter(slot => HEAVY_SLOTS.includes(slot))));
     if (quote) { take(state, quote); break; }
   }
-  // 보여 주는 순서도 계획서마다 섞는다 — 늘 같은 자리(예: '쓸모')가 맨 앞이면 AI가 매번 같은 말을 고르기 쉽다
-  return Object.fromEntries(states.map(state => [state.key, seededOrder(state.picked, `philosophy:${seed}:${state.key}`)]));
+  // 보여 주는 순서도 계획서마다 섞는다 — 늘 같은 종류의 말이 앞에 오면 AI가 매번 같은 말을 고르기 쉽다
+  return Object.fromEntries(states.map(state => [state.key, seededOrder(state.picked, `philosophy:${seed}:${state.key}:shown`)]));
 }
 
 /** 한 장의 후보 — 장 목록에 없는 장(한 장만 다시 쓰는 길)도 맨 뒤에 붙여 고른다 */
