@@ -1,5 +1,5 @@
 /** /api/auth/session 이 돌려주는 로그인 상태 */
-export type AuthSession = { authenticated?: boolean; email?: string | null };
+export type AuthSession = { authenticated?: boolean; email?: string | null; guestIntake?: boolean };
 
 /*
  * 같은 순간에 여러 곳(왼쪽 메뉴·머리말·마이페이지·상담 첫 화면)이 로그인 상태를 물으면 요청 하나를 나눠 쓴다 —

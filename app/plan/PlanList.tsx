@@ -115,7 +115,9 @@ export default function PlanList() {
   }, []);
   // 로그인 여부 — 모르면(null) 로딩, 아니면(false) 로그인 화면으로. 확인에 실패하면 로딩이 '늦어지고 있어요'로 바뀌고 다시 시도가 새로 불러온다
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
-  useEffect(() => { let alive = true; if (readAuthFlag()) setSignedIn(true); /* 직전에 로그인돼 있던 기기는 확인을 기다리지 않고 화면부터 그린다 — 풀렸으면 아래 확인이 로그인 화면으로 보낸다 */ loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}); return () => { alive = false; }; }, []);
+  /* 손님 대화가 열려 있으면(서버가 알려 줌) 첫 화면에서 로그인 창 대신 바로 대화로 보낸다 — 사장님 결정 2026-11-17 "한도 걸고 열어줘" */
+  const [guestIntake, setGuestIntake] = useState(false);
+  useEffect(() => { let alive = true; if (readAuthFlag()) setSignedIn(true); /* 직전에 로그인돼 있던 기기는 확인을 기다리지 않고 화면부터 그린다 — 풀렸으면 아래 확인이 로그인 화면으로 보낸다 */ loadAuthSession().then(d => { if (alive) { setSignedIn(!!d.authenticated); setGuestIntake(d.guestIntake === true); } }).catch(() => {}); return () => { alive = false; }; }, []);
   // 로그인 전에도 대화 입력 화면을 먼저 보여 준다(대표 결정 2026-11-14) — 예시 작업실로 바로 보내던 것을 바꿨다. 예시 두 개는 입력칸 아래 샘플 링크로, 보내면 로그인을 거쳐 그 문장으로 대화가 시작된다
   useEffect(() => { if (signedIn !== false) return; try { sessionStorage.setItem(GUEST_NEXT_KEY, "/plan"); } catch { /* 못 적으면 새 대화로 */ } }, [signedIn]);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
@@ -173,6 +175,8 @@ export default function PlanList() {
     <PlanLoading fill variant="compact" note="화면을 불러오고 있어요" />
   </BusinessAppChrome></main>;
   const guest = signedIn === false;
+  /* 대화를 시작하려면 로그인이 필요한가 — 손님 대화가 열려 있으면 아니다(이어서 하기·예시·'로그인하면 저장돼요' 안내는 guest 그대로) */
+  const loginToStart = guest && !guestIntake;
   /* 로그인 전에 쓰던 사업 중 가장 최근 것(예시 제외) — 첫 화면에서 '이어서 하기'로 연다 */
   const resume = guest ? allPlans[0] ?? null : null;
 
@@ -226,11 +230,11 @@ export default function PlanList() {
           <Link href={openHref(resume)} className={home.resumeLink}><span>이어서 하기</span><strong>{planDisplayName(resume)}</strong><ChevronRight size={16} aria-hidden="true" /></Link>
           <p className={home.resumeNote}>로그인하면 저장돼요. <button type="button" onClick={() => openLogin(openHref(resume))}>로그인</button></p>
         </div>}
-        <Composer guest={guest} />
+        <Composer guest={loginToStart} />
         {/* 적는 것이 기본, 다른 길 세 개는 입력칸 아래 작은 글로(2026-11-15 사장님: 새 대화도 이 화면 하나로). 일반/전문가 전환은 입력칸에서 빼고 '하나씩 자세히'로 옮겼다 */}
         <nav className={home.alt} aria-label="다른 시작">
           {([["아직 정한 사업이 없어요", newChatEntryHref("exploring")], ["이미 운영 중이에요", newChatEntryHref("operating")], ["하나씩 자세히 정할게요", `${newChatHref()}&${DEPTH_PARAM}=expert`]] as const).map(([label, href]) =>
-            <Link key={label} href={href} onClick={event => { if (guest) { event.preventDefault(); openLogin(href); } }}>{label}</Link>)}
+            <Link key={label} href={href} onClick={event => { if (loginToStart) { event.preventDefault(); openLogin(href); } }}>{label}</Link>)}
         </nav>
         {/* 휴대폰 첫 화면의 최근 사업 3개는 뺐다(2026-11-15 사장님) — 첫 화면은 입력칸만, 사업은 아래 탭 '내 사업'에서 */}
         {/* 완성 예시 두 개 — 아직 사업이 없는 사람(로그인 전 포함)만. 필요하면 눌러 본다 */}

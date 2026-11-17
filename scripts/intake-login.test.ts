@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { guestIntakeOpen, intakeLoginGate } from "../lib/plan-builder/intake-login";
 
 // 손님 대화가 닫혀 있을 때(guestAllowed=false): 비로그인 방문자는 막고 로그인한 사람은 통과
@@ -21,4 +22,12 @@ assert.equal(guestIntakeOpen({ INTAKE_GUEST_ALLOWED: "1", PLAN_ACCOUNT_LINKING_E
 assert.equal(guestIntakeOpen({ PLAN_ACCOUNT_LINKING_ENABLED: "true" }), false, "손님 열기 스위치가 없으면 닫힘");
 assert.equal(guestIntakeOpen({ INTAKE_GUEST_ALLOWED: "true", PLAN_ACCOUNT_LINKING_ENABLED: "true" }), false, "값은 정확히 1");
 
-console.log(JSON.stringify({ passed: 9 }));
+// 첫 화면도 서버의 손님 대화 여부를 따른다 — 서버만 열고 첫 화면이 로그인 창을 띄우면 손님은 여전히 막힌다(로컬 시험 2026-11-17)
+const session = readFileSync(new URL("../app/api/auth/session/route.ts", import.meta.url), "utf8");
+assert.match(session, /authenticated: false, email: null, projects: \[\], guestIntake: guestIntakeOpen\(\)/, "로그인 안 한 세션 응답이 손님 대화 여부를 알려 준다");
+const planList = readFileSync(new URL("../app/plan/PlanList.tsx", import.meta.url), "utf8");
+assert.match(planList, /const loginToStart = guest && !guestIntake;/);
+assert.match(planList, /<Composer guest=\{loginToStart\} \/>/, "첫 화면 입력칸은 손님 대화가 열려 있으면 로그인 창을 띄우지 않는다");
+assert.match(planList, /if \(loginToStart\) \{ event\.preventDefault\(\); openLogin\(href\); \}/, "다른 시작 링크도 같은 기준");
+
+console.log(JSON.stringify({ passed: 13 }));

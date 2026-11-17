@@ -4,6 +4,7 @@ import { claimGuestProjects, createServerAuthClient, currentGuestHash, getAuthen
 import { accountLinkError } from "../../../../lib/plan-builder/account-linking";
 import { isSameOriginRequest } from "../../../../lib/http/same-origin";
 import { authErrorMessage } from "../../../../lib/auth-error-message";
+import { guestIntakeOpen } from "../../../../lib/plan-builder/intake-login";
 
 function privateJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
@@ -13,7 +14,8 @@ function privateJson(body: unknown, init?: ResponseInit) {
 
 export async function GET() {
   const user = await getAuthenticatedUser();
-  if (!user) return privateJson({ authenticated: false, email: null, projects: [] });
+  /* guestIntake — 손님도 사업 정보 대화를 시작할 수 있는지(INTAKE_GUEST_ALLOWED + 계정 옮기기 스위치). 첫 화면이 이 값을 보고 로그인 창 대신 대화로 보낸다 */
+  if (!user) return privateJson({ authenticated: false, email: null, projects: [], guestIntake: guestIntakeOpen() });
   return privateJson({ authenticated: true, email: user.email ?? null, projects: await listAccountProjects(user.id) });
 }
 

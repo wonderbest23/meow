@@ -65,6 +65,9 @@
     // 손님(로그인 전)도 사업 정보 대화를 무료로 끝까지(사장님 결정 2026-11-17 "한도 걸고 열어줘"). 사업계획서 작성 · 결제는 여전히 로그인 + 결제.
     // 로그인 때 손님 사업을 계정으로 옮기는 스위치(PLAN_ACCOUNT_LINKING_ENABLED=true)가 함께 켜져야 실제로 열린다(lib/plan-builder/intake-login.ts guestIntakeOpen).
     "INTAKE_GUEST_ALLOWED": "1",
+    // 로그인할 때 손님이 쓰던 사업을 계정으로 옮긴다(저장은 commit_plan_state · 옮기기는 claim_plan_state — 운영 DB에 있음, 2026-11-17 SQL로 확인).
+    // 이 맥 시험 DB에서 손님 대화 → 로그인 → 새 로그인에서도 같은 사업·답이 보이는 것을 확인함(2026-11-17).
+    "PLAN_ACCOUNT_LINKING_ENABLED": "true",
     // 손님 AI 하루 한도(단위: 사업 방향 정리 8, 그 밖의 AI 보조 1, AI 읽기 0 · 1단위 약 15원). 전체 2,000단위(약 3만 원), 손님 1명 60단위.
     "GUEST_AI_DAILY_UNITS": "2000",
     "GUEST_AI_PER_GUEST_UNITS": "60",
