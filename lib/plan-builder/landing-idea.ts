@@ -70,3 +70,33 @@ export function stashLandingIdea(storage: WritableStorage | null | undefined, te
   if (!value) return;
   try { storage?.setItem(LANDING_IDEA_KEY, JSON.stringify({ text: value, at: now })); } catch { /* 주소의 idea만으로도 이어진다 */ }
 }
+
+/*
+ * 보내지 않은 첫 화면 입력 — 로그인 전에 적어 둔 글이 로그인하고 돌아오면 비어 있었다(점검 2026-11-16).
+ * 적는 동안 sessionStorage 에 잠깐(30분) 맡겨 두고, 첫 화면이 다시 열리면 입력칸에 되돌린다. 보내면 지운다.
+ */
+export const LANDING_DRAFT_KEY = "oneul-landing-draft";
+export const LANDING_DRAFT_TTL_MS = 30 * 60 * 1000;
+
+export function saveLandingDraft(storage: WritableStorage | null | undefined, text: string, now: number) {
+  const value = normalizeLandingIdea(text);
+  try {
+    if (value) storage?.setItem(LANDING_DRAFT_KEY, JSON.stringify({ text: value, at: now }));
+    else storage?.removeItem(LANDING_DRAFT_KEY);
+  } catch { /* 저장소가 막혀 있으면 이 화면에만 남는다 */ }
+}
+
+export function readLandingDraft(storage: ReadableStorage | null | undefined, now: number): string {
+  if (!storage) return "";
+  try {
+    const value: unknown = JSON.parse(storage.getItem(LANDING_DRAFT_KEY) ?? "null");
+    if (!value || typeof value !== "object") return "";
+    const { text, at } = value as { text?: unknown; at?: unknown };
+    if (typeof at !== "number" || !Number.isFinite(at) || now - at > LANDING_DRAFT_TTL_MS || at - now > 60_000) return "";
+    return normalizeLandingIdea(text);
+  } catch { return ""; }
+}
+
+export function clearLandingDraft(storage: WritableStorage | null | undefined) {
+  try { storage?.removeItem(LANDING_DRAFT_KEY); } catch { /* 지울 것도 없다 */ }
+}
