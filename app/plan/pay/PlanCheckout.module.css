@@ -132,8 +132,6 @@
 .disclaimer { margin: 0; font-size: .75rem; line-height: 1.6; color: var(--text-muted, var(--app-muted)); }
 .help { margin: 8px 0 0; font-size: .75rem; color: var(--text-muted, var(--app-muted)); }
 
-/* 출시 기념가 표시 — 할인율·종전가 없이 지금 가격이 실제 판매가임을 알린다 */
-.launchTag { margin: 0 0 10px; text-align: center; }
 /* 계획서 결제 화면에서 묶음으로 넘어가는 링크 */
 .upsell { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap; margin-top: 8px; font-size: .875rem; font-weight: 700; color: var(--app-primary-text); text-decoration: none; }
 .upsell small { margin-left: 4px; font-weight: 500; color: var(--app-muted); }

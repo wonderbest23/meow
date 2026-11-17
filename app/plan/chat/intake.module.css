@@ -1008,9 +1008,10 @@ button.workLogRow { min-height: 32px; }
 /* 일반 모드 첫 화면 — 적을 말의 예와, 다른 시작 길 두 개(작게) */
 /* 인사 한 줄 아래에 다른 길 두 개를 작은 글 링크로(2026-11-15) — 알약 모양이면 '적기'와 '고르기'가 같은 무게로 보였다 */
 .page.page.page[data-embedded] .greeting.greeting:has(+ .chatQuestion .entryOther) { min-height: 0; margin-bottom: 8px; }
-.entryOther { display: flex; flex-wrap: wrap; gap: 4px 16px; }
-.entryOther button { min-height: 32px; padding: 0; border: 0; background: transparent; color: var(--app-muted); font: inherit; font-size: .8125rem; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--app-line-strong); cursor: pointer; }
-.entryOther button:hover:not(:disabled) { color: var(--app-text); }
+/* 누르는 자리는 44px 단추로(점검 2026-11-16: 높이 32px 밑줄 글자라 휴대폰에서 누르기 어려웠다). 입력칸보다 가볍게 보이도록 옅은 테두리·회색 글자는 그대로 */
+.entryOther { display: flex; flex-wrap: wrap; gap: 8px; }
+.entryOther button { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 10px; background: transparent; color: var(--app-muted); font: inherit; font-size: .875rem; cursor: pointer; }
+.entryOther button:hover:not(:disabled) { border-color: var(--app-line-strong); color: var(--app-text); }
 /* 일반 모드에서 업종 기준값으로 채운 답 — 누르면 고친다 */
 .understood { margin: 4px 0 16px; padding: 14px; border: 1px solid var(--app-line); border-radius: 14px; background: var(--app-surface); animation: depthCardIn .35s both; }
 @media (prefers-reduced-motion: reduce) { .understood { animation: none; } }

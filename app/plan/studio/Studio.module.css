@@ -299,6 +299,7 @@
 .sampleFoot { flex:none; display:grid; gap:10px; padding:14px 16px calc(16px + env(safe-area-inset-bottom)); background:transparent; }
 .sampleFoot p { margin:0; font-size:.8125rem; color:var(--app-muted); text-align:center; }
 .sampleFoot > div { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.sampleFoot > .sampleFootPending { display:block; min-height:44px; }
 .chatNote, .missingNote { min-height:0; display:flex; flex-direction:column; justify-content:center; overflow-y:auto; overscroll-behavior:contain; }
 .missingNote { flex:1; }
 .chatNote > div, .missingNote > div { width:100%; padding:24px 20px; }

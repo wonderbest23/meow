@@ -56,7 +56,7 @@ const users = [
   "app/account/support/SupportCenter.tsx", "app/plan/PlanList.tsx", "app/plan/PlanRailNav.tsx", "app/plan/workspace/WorkspaceContent.tsx",
   "app/plan/workspace/LaunchWorkspace.tsx", "app/plan/document/DocumentReadContent.tsx", "app/plan/document/DocumentWorkspace.tsx",
   "app/plan/homepage/HomepageScreen.tsx", "components/homepage-kit-panel.tsx", "app/plan/inquiries/page.tsx", "app/plan/me/page.tsx",
-  "app/plan/pay/PlanCheckout.tsx", "app/plan/studio/StudioIntakeSummary.tsx", "app/plan/chat/intake-ui/IntakePanels.tsx",
+  "app/plan/studio/StudioIntakeSummary.tsx", "app/plan/chat/intake-ui/IntakePanels.tsx",
   "app/plan/chat/intake-ui/StudioEditTurns.tsx", "app/plan/chat/BusinessBrief.tsx", "components/next-services.tsx",
 ];
 for (const path of users) assert.match(read(path), /<StatusBadge tone=/, `${path}: 공통 상태 배지를 쓰지 않는다`);
@@ -65,8 +65,7 @@ const VISUAL = /(?:^|[\s;{])(?:font-size|font-weight|padding|border-radius|backg
 const placements: [string, string][] = [
   ["app/plan/workspace/LaunchWorkspace.module.css", ".decidedTag"], ["app/plan/workspace/LaunchWorkspace.module.css", ".stepList .status"],
   ["app/plan/PlanRailNav.module.css", ".sampleTag"], ["app/plan/homepage/page.module.css", ".stripBadge"],
-  ["app/plan/inquiries/page.module.css", ".handledBadge"], ["app/plan/pay/PlanCheckout.module.css", ".launchTag"],
-  ["app/plan/chat/intake.module.css", ".queueBadge"],
+  ["app/plan/inquiries/page.module.css", ".handledBadge"], ["app/plan/chat/intake.module.css", ".queueBadge"],
   ["app/plan/chat/intake.module.css", ".queueTag"], ["app/plan/chat/intake.module.css", ".bubbleTag"],
   ["components/next-services.module.css", ".ribbon"], ["components/next-services.module.css", ".historyStatus"],
 ];

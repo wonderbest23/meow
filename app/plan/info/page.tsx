@@ -30,7 +30,7 @@ const DOCS: Array<{ id: LegalDocumentType; label: string }> = [
 
 const SOURCES = [
   { href: "https://www.law.go.kr/lsLinkCommonInfo.do?lsJoLnkSeq=1022784631", label: "전자상거래법 제13조" },
-  { href: "https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joBrNo=00&joNo=0031&lsiSeq=282791&urlMode=lsScJoRltInfoR", label: "인공지능기본법 제31조" },
+  { href: "https://www.law.go.kr/법령/인공지능발전과신뢰기반조성등에관한기본법/제31조", label: "인공지능기본법 제31조" },
   { href: "https://law.go.kr/LSW/lsInfoP.do?lsiSeq=283839&viewCls=lsRvsDocInfoR", label: "개인정보보호법 제28조의8" },
   { href: "https://m.pipc.go.kr/np/cop/bbs/selectBoardArticle.do?bbsId=BS212&mCode=C040030000&nttId=11360", label: "개인정보보호위원회 안내" },
 ];

@@ -950,7 +950,10 @@ export default function Studio() {
                     </div>; })}
                   {noteGuideTurn}
                 </div>
-                <div className={styles.sampleFoot}>{account?.authenticated === false
+                {/* 로그인 상태를 알기 전(account null)에는 단추를 그리지 않고 자리만 잡는다 — 휴대폰에서 처음 몇 초 '홈페이지 만들기 (다음 단계)'가 보였다가 로그인 단추로 바뀌었다(점검 2026-11-16) */}
+                <div className={styles.sampleFoot}>{account == null
+                  ? <div className={styles.sampleFootPending} aria-hidden="true" />
+                  : account.authenticated === false
                   ? <><p>로그인하면 내 사업을 바로 시작할 수 있어요</p><div><AppButton type="button" variant="primary" onClick={() => openLogin(guestNext())}>로그인</AppButton><AppButton type="button" variant="secondary" onClick={() => openLogin(guestNext(), "register")}>회원가입</AppButton></div></>
                   /* 지금 보는 단계의 다음 할 일을 단추로(2026-11-14 사장님) — 계획서 → 홈페이지 → 운영 → 내 사업 시작. 내 사업 시작은 작은 링크로 늘 둔다 */
                   : rightTab === "plan" || rightTab === "homepage"

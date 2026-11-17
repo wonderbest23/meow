@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { applyCurrentPlatformPolicy, createLegalDocument, defaultPlatformLegalSettings, evaluatePlatformLaunchReadiness, platformLegalSettingsSchema } from "../lib/platform-legal/domain";
+import { readFileSync } from "node:fs";
+import { applyCurrentPlatformPolicy, countryNamesKo, createLegalDocument, defaultPlatformLegalSettings, evaluatePlatformLaunchReadiness, formatRoadAddress, platformLegalSettingsSchema } from "../lib/platform-legal/domain";
+import { ftcBusinessCheckUrl } from "../lib/platform-legal/footer";
 import { hashIdentityToken, userProjectToken } from "../lib/identity-tokens";
 
 const draftReadiness = evaluatePlatformLaunchReadiness(defaultPlatformLegalSettings, { authConfigured: true, paymentsConfigured: true });
@@ -75,9 +77,61 @@ assert.ok(refund.sections.some((section) => section.paragraphs?.some((paragraph)
 const refundText = JSON.stringify(refund);
 for (const expected of ["reportaproblem.apple.com", "44,250원", "5,940원", "연결을 완료한 날부터 7일 이내", "충전일부터 1년", "승인 취소", "3영업일 이내"]) assert.ok(refundText.includes(expected), expected);
 const upgradedPolicy = applyCurrentPlatformPolicy({ ...complete, policyEffectiveDate: "2026-07-19", refundAfterSupply: "이전 기준" });
-assert.equal(upgradedPolicy.policyEffectiveDate, "2026-11-10");
+assert.equal(upgradedPolicy.policyEffectiveDate, "2026-11-17");
 assert.match(upgradedPolicy.serviceSupplyTiming, /NicePay/);
 assert.match(upgradedPolicy.refundAfterSupply, /단순 변심/);
+
+// 환불 기준은 '작성이 시작되기 전(시작 못 함·실패)/시작된 뒤' 하나(대표 결정 2026-11-17, 결제하면 바로 작성 시작) — 예전 '결제 승인 즉시 제공'·'생성이 시작되지 않았으면'이 함께 있어 모호했다
+const ONE_RULE_BEFORE = "작성이 시작되지 못했거나 작성이 실패하면 전액 환불됩니다";
+const ONE_RULE_AFTER = "작성이 시작된 뒤에는 AI 작성 비용이 들어 환불되지 않습니다";
+assert.ok(refundText.includes(ONE_RULE_BEFORE) && refundText.includes(ONE_RULE_AFTER), "refund page states the one rule");
+assert.ok(terms.includes(ONE_RULE_AFTER) && terms.includes("결제 후 사업계획서 작성이 시작된 때가"), "terms use the same moment");
+assert.ok(businessText.includes(ONE_RULE_BEFORE), "business-info refund check uses the same rule");
+for (const text of [refundText, terms, businessText]) {
+  assert.ok(!text.includes("생성이 실제로 시작되지 않았다면"), "the old 'generation not started' rule is gone");
+  assert.ok(!text.includes("결제 승인(앱 안 결제는 스토어 결제 확인)이 맞춤 디지털 결과물 제공 개시 시점"), "payment approval is no longer the refund moment");
+  assert.ok(text.includes("제17조 제2항") || text === businessText, "the e-commerce act withdrawal limit stays");
+}
+const appRefund = JSON.stringify(createLegalDocument("refund", complete, { inApp: true }));
+assert.ok(appRefund.includes("작성이 시작되지 못했거나 실패했다면 전액 환불 대상") && appRefund.includes("App Store"), "app refund page keeps the store path with the same rule");
+for (const path of ["app/plan/pay/PlanCheckout.tsx", "lib/support-chat/faq.ts"]) {
+  const source = readFileSync(path, "utf8");
+  assert.ok(source.includes("작성이 시작되지 못했거나 실패하면 전액 환불"), `${path}: 결제 화면·자주 묻는 질문도 같은 기준`);
+  assert.ok(!source.includes("인공지능 작성이 시작되기 전에는") && !source.includes("결제가 승인되면 바로 내 사업에 맞춘"), `${path}: 예전 환불 기준 문구가 남았다`);
+}
+
+// 공개 문서 표기 — 처리 국가는 한국어, 도로명 주소는 건물번호 앞을 띄운다, 닫힌 기능(로고 이미지 생성)은 말하지 않는다(점검 2026-11-16)
+assert.equal(countryNamesKo("usa, singapore"), "미국, 싱가포르");
+assert.equal(countryNamesKo("싱가포르, 대한민국, 미국"), "싱가포르, 대한민국, 미국");
+assert.equal(formatRoadAddress("서울특별시 마포구 독막로6길9"), "서울특별시 마포구 독막로6길 9");
+assert.equal(formatRoadAddress("서울특별시 테스트구 테스트로 1"), "서울특별시 테스트구 테스트로 1");
+const rawSettings = { ...complete, overseasCountries: "usa, singapore", infrastructureCountries: "usa", businessAddress: "서울특별시 마포구 독막로6길9" };
+const rawAi = JSON.stringify(createLegalDocument("ai", rawSettings));
+const rawPrivacy = JSON.stringify(createLegalDocument("privacy", rawSettings));
+assert.ok(rawAi.includes("처리 국가: 미국, 싱가포르") && !/usa|singapore/i.test(rawAi), "AI notice shows Korean country names");
+assert.ok(!/국가: usa|국가 usa/i.test(rawPrivacy), "privacy policy shows Korean country names");
+assert.ok(JSON.stringify(createLegalDocument("business", rawSettings)).includes("독막로6길 9"), "business info spaces the building number");
+assert.ok(!rawAi.includes("로고 이미지 생성"), "the closed logo-image feature is not mentioned");
+assert.match(readFileSync("wrangler.jsonc", "utf8"), /"PLATFORM_BUSINESS_ADDRESS": "서울특별시 마포구 독막로6길 9"/);
+
+// 인공지능기본법 제31조 링크 — 예전 lsSideInfoP 주소가 404 였다. 법 이름 주소로(국가법령정보센터)
+for (const path of ["components/platform-legal-page.tsx", "app/plan/info/page.tsx"]) {
+  const source = readFileSync(path, "utf8");
+  assert.ok(source.includes("https://www.law.go.kr/법령/인공지능발전과신뢰기반조성등에관한기본법/제31조"), `${path}: 인공지능기본법 제31조 링크`);
+  assert.ok(!source.includes("lsiSeq=282791"), `${path}: 404 나던 예전 링크가 남았다`);
+}
+
+// 첫 화면 바닥글 — 사업자 정보는 서버가 첫 HTML 에 그리고(늦게 불러오지 않음) 처음부터 펼쳐 두며, 공정위 사업자정보 확인 링크를 붙인다
+assert.equal(ftcBusinessCheckUrl("186-17-01752"), "https://www.ftc.go.kr/bizCommPop.do?wrkr_no=1861701752");
+assert.equal(ftcBusinessCheckUrl(""), null);
+assert.equal(ftcBusinessCheckUrl("123-45"), null);
+const homePage = readFileSync("app/home-page.tsx", "utf8");
+const homeServer = readFileSync("app/page.tsx", "utf8");
+assert.match(homeServer, /export const dynamic = "force-dynamic"/, "home footer reads the live settings on the server");
+assert.match(homeServer, /<HomePage business=\{business\} \/>/, "the server passes the business info to the home page");
+assert.match(homePage, /<details className="home-footer-details" open>/, "footer details start open");
+assert.match(homePage, /ftcBusinessCheckUrl\(/, "footer links the FTC business check");
+assert.doesNotMatch(homePage, /사업자 정보를 불러오고 있어요|\/api\/platform\/readiness/, "footer no longer loads the business info late");
 
 process.env.AUTH_PROJECT_SECRET = "test-secret-that-is-long-enough-for-a-stable-hmac";
 const firstHash = hashIdentityToken(userProjectToken("user-a"));

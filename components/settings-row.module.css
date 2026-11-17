@@ -126,12 +126,15 @@ button.row { width:100%; margin:0; border:0; border-radius:0; background:transpa
 button.row .t, button.row .d { display:block; }
 button.row + .row, .row + button.row { border-top:1px solid var(--app-line); }
 
-/* 펼치는 행 — 제목 줄은 .row 와 같은 자리(위아래 20 · 1px 구분선) */
-.disclosure { padding:20px 0; }
-.disclosure:first-child { padding-top:0; }
-.disclosure:last-child { padding-bottom:0; }
+/* 펼치는 행 — 제목 줄은 .row 와 같은 자리(위아래 20 · 1px 구분선).
+ * 위아래 여백은 행(details)이 아니라 누르는 줄(summary)에 둔다 — 예전엔 글자 높이 20px 만 눌렸다(점검 2026-11-16, 고객센터 자주 묻는 질문) */
+.disclosure { padding:0; }
 .disclosure + .disclosure, .row + .disclosure, .disclosure + .row { border-top:1px solid var(--app-line); }
-.summary { display:flex; align-items:center; justify-content:space-between; gap:24px; list-style:none; cursor:pointer; }
+.summary { display:flex; align-items:center; justify-content:space-between; gap:24px; min-height:44px; padding:20px 0; list-style:none; cursor:pointer; }
+.disclosure:first-child > .summary { padding-top:0; }
+.disclosure:last-child:not([open]) > .summary, .disclosure[open] > .summary { padding-bottom:0; }
+.disclosure[open] > .panel { padding-bottom:20px; }
+.disclosure:last-child[open] > .panel { padding-bottom:0; }
 .summary::-webkit-details-marker { display:none; }
 .summary:focus-visible { outline:3px solid var(--app-focus-ring); outline-offset:4px; border-radius:8px; }
 .summary .d { display:block; }
@@ -140,10 +143,11 @@ button.row + .row, .row + button.row { border-top:1px solid var(--app-line); }
 .panel { margin-top:12px; color:var(--app-body); font-size:.875rem; line-height:1.6; overflow-wrap:anywhere; }
 .panel > :first-child { margin-top:0; }
 @media (max-width:900px) {
-  .card[data-mobile=card] .disclosure { padding:16px 0; }
-  .card[data-mobile=card] .disclosure:first-child { padding-top:0; }
-  .card[data-mobile=card] .disclosure:last-child { padding-bottom:0; }
-  .card[data-mobile=card] .summary { gap:12px; }
+  .card[data-mobile=card] .summary { gap:12px; padding:16px 0; }
+  .card[data-mobile=card] .disclosure:first-child > .summary { padding-top:0; }
+  .card[data-mobile=card] .disclosure:last-child:not([open]) > .summary, .card[data-mobile=card] .disclosure[open] > .summary { padding-bottom:0; }
+  .card[data-mobile=card] .disclosure[open] > .panel { padding-bottom:16px; }
+  .card[data-mobile=card] .disclosure:last-child[open] > .panel { padding-bottom:0; }
 }
 @media (prefers-reduced-motion:reduce) { .chevDown { transition:none; } }
 /* 휴대폰 행 카드 — 입력칸·선택칸이 오른쪽에 있는 행은 설명 아래로 내려 폭 가득(Mobile.dc 의 이름 칸) */

@@ -117,9 +117,6 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 
 /* 이용 요금 */
 .priceName { font-size: 1.1875rem !important; font-weight: 700 !important; }
-/* 출시 기념가 — 결제 화면과 같은 표시. 카드 오른쪽 위에 얹어 세 카드의 가격 줄 높이가 같게 둔다 */
-.launchTag { position: absolute; top: 24px; right: 24px; padding: 3px 10px; border-radius: 999px; background: #e8f3ff; color: var(--brand-primary-hover, #1957c2); font-size: .75rem; font-weight: 700; line-height: 1.5; }
-.panel:has(.launchTag) .priceName { padding-right: 84px; }
 .price { color: #191f28; font-size: 2.25rem; line-height: 1.2; font-weight: 900; letter-spacing: -0.02em; }
 .panel .price + p { font-size: .9375rem; }
 .featured { outline: 2px solid #191f28; outline-offset: -2px; }
@@ -183,12 +180,6 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 
 @media (max-width: 1000px) {
   .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 16px; }
-}
-
-/* 세 칸이 좁은 너비에서는 표시를 카드 윗선에 얹어, 셋째 카드 이름이 두 줄로 꺾이지 않게 한다(r40-2) */
-@media (min-width: 901px) and (max-width: 1179px) {
-  .launchTag { top: -12px; right: 16px; }
-  .panel:has(.launchTag) .priceName { padding-right: 0; }
 }
 
 @media (max-width: 900px) {

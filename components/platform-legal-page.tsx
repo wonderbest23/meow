@@ -66,7 +66,7 @@ export async function PlatformLegalPage({ type }: { type: LegalDocumentType }) {
             <strong>기준 원문</strong>
             <div>
               <a href="https://www.law.go.kr/lsLinkCommonInfo.do?lsJoLnkSeq=1022784631" target="_blank" rel="noreferrer">전자상거래법 제13조 <ExternalLink /></a>
-              <a href="https://www.law.go.kr/LSW/lsSideInfoP.do?docCls=jo&joBrNo=00&joNo=0031&lsiSeq=282791&urlMode=lsScJoRltInfoR" target="_blank" rel="noreferrer">인공지능기본법 제31조 <ExternalLink /></a>
+              <a href="https://www.law.go.kr/법령/인공지능발전과신뢰기반조성등에관한기본법/제31조" target="_blank" rel="noreferrer">인공지능기본법 제31조 <ExternalLink /></a>
               <a href="https://law.go.kr/LSW/lsInfoP.do?lsiSeq=283839&viewCls=lsRvsDocInfoR" target="_blank" rel="noreferrer">개인정보보호법 제28조의8 <ExternalLink /></a>
               <a href="https://m.pipc.go.kr/np/cop/bbs/selectBoardArticle.do?bbsId=BS212&mCode=C040030000&nttId=11360" target="_blank" rel="noreferrer">개인정보보호위원회 안내 <ExternalLink /></a>
               <a href="https://platform.openai.com/docs/models/default-usage-policies-by-endpoint" target="_blank" rel="noreferrer">OpenAI API 데이터 기준 <ExternalLink /></a>

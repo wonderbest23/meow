@@ -5364,6 +5364,7 @@ html[data-compose-covered] .support-chat-widget:not(.open) { visibility: hidden;
 .support-chat-panel form > small { margin-top: 7px; color: #636363; display: flex; align-items: center; gap: 4px; font-size: 8px; }
 .support-chat-panel form > small svg { width: 11px; }
 .support-chat-error { margin: 0 0 7px; color: #b13a47; font-size: 10px; }
+.support-chat-receipt { margin: 0 0 7px; color: #1d7a46; font-size: .8125rem; font-weight: 600; }
 .support-chat-limit { margin: 0 0 6px; color: #636363; font-size: 10px; text-align: right; }
 
 /* Private support admin */

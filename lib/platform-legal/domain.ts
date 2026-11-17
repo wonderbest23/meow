@@ -75,8 +75,9 @@ export const defaultPlatformLegalSettings: PlatformLegalSettings = {
   /* 2026-10-05: 결제 수단을 카드로 한정(계좌이체 삭제), 제공 범위에서 발표자료(PPT) 삭제
    * 2026-10-09: 가격 개편(묶음 59,000원·홈페이지는 계획서 구매자 전용 19,000원·다시 생성 10회 9,900원), 포함 다시 생성 10회, 무료 체험 없음
    * 2026-10-14: 아이폰·안드로이드 앱 — 애플 로그인, 앱 안 결제(App Store·Google Play)의 수집 항목·제공 시기·환불 신청 방법 추가
-   * 2026-11-10: 결제 전 사업계획서 첫 항목 미리 보기(회원당 문서 3개까지) — 약관 3조 */
-  policyEffectiveDate: "2026-11-10",
+   * 2026-11-10: 결제 전 사업계획서 첫 항목 미리 보기(회원당 문서 3개까지) — 약관 3조
+   * 2026-11-17: 환불 기준을 '작성이 시작되기 전(시작 못 함·실패)/시작된 뒤' 하나로 — 결제하면 작성이 바로 시작되는 지금 흐름 그대로(대표 결정) — 날짜를 올려야 저장된 예전 환불 문구가 새 기준으로 바뀐다(applyCurrentPlatformPolicy) */
+  policyEffectiveDate: "2026-11-17",
   accountRetention: "회원 탈퇴 시까지 보관하며, 법령상 보존 의무가 있는 정보는 해당 기간 동안 분리 보관합니다.",
   projectRetention: "사용자가 프로젝트를 삭제하거나 회원 탈퇴를 요청할 때까지 보관합니다.",
   infrastructureRecipients: "Supabase, Inc. 및 Cloudflare, Inc.",
@@ -89,9 +90,9 @@ export const defaultPlatformLegalSettings: PlatformLegalSettings = {
   overseasTimingAndMethod: "사용자가 인공지능 생성 기능을 실행할 때 암호화된 통신망으로 전송",
   overseasRetention: "텍스트 생성 요청은 저장 옵션을 끄고 전송합니다. 이미지 생성 등 기능별 처리 기준은 다를 수 있으며, 오남용 방지 로그는 각 인공지능 사업자의 기본 정책에 따라 최대 30일 보관될 수 있습니다. 법적 의무가 있으면 더 길어질 수 있습니다.",
   overseasRefusalImpact: "인공지능 처리를 원하지 않으면 해당 생성 기능을 사용하지 않을 수 있습니다. 이 경우 기본 계산·서식 기능은 이용할 수 있지만 맞춤 문장·이미지 생성은 제한됩니다.",
-  refundBeforeSupply: "카드 결제는 승인 전까지 주문을 취소할 수 있습니다. 이미 결제했더라도 맞춤 결과물 생성이 실제로 시작되지 않았다면 전액 환불하며, 카드 승인 취소로 돌려드립니다.",
-  refundAfterSupply: "카드 결제가 승인되어 이용자 입력에 맞춘 인공지능 호출과 디지털 결과물 제작이 시작된 뒤에는 생성 비용이 발생하고 제3자에게 재판매할 수 없는 맞춤 결과물이 만들어지므로, 단순 변심에 따른 청약철회와 환불이 제한됩니다. 다만 약정한 핵심 결과물이 제공되지 않았거나 표시·광고 또는 계약 내용과 다르게 제공된 경우, 정상 이용할 수 없는 중대한 하자가 합리적인 기간 안에 고쳐지지 않은 경우와 그 밖에 관계 법령이 보장하는 경우에는 재제공, 일부 환급 또는 전액 환급을 요청할 수 있습니다.",
-  serviceSupplyTiming: "신용·체크카드 결제는 NicePay(나이스페이먼츠) 결제 승인 즉시, 앱 안 결제(App Store·Google Play)는 스토어 결제가 확인되는 즉시 해당 상품의 제공이 시작됩니다. 제공이 시작되면 이용자 입력을 바탕으로 인공지능 호출과 사업계획서·홈페이지 제작을 진행합니다.",
+  refundBeforeSupply: "결제 후 사업계획서 작성이 시작되지 못했거나 작성이 실패하면 전액 환불됩니다. 카드 결제는 카드 승인 취소로 돌려드리며, 승인 전이라면 주문을 바로 취소할 수 있습니다.",
+  refundAfterSupply: "결제가 끝나면 이용자 입력에 맞춘 인공지능 작성이 바로 시작되며, 작성이 시작된 뒤에는 AI 작성 비용이 들어 환불되지 않습니다. 제3자에게 재판매할 수 없는 맞춤 결과물이 만들어지므로, 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회와 환불이 제한됩니다. 다만 약정한 핵심 결과물이 제공되지 않았거나 표시·광고 또는 계약 내용과 다르게 제공된 경우, 정상 이용할 수 없는 중대한 하자가 합리적인 기간 안에 고쳐지지 않은 경우와 그 밖에 관계 법령이 보장하는 경우에는 재제공, 일부 환급 또는 전액 환급을 요청할 수 있습니다.",
+  serviceSupplyTiming: "신용·체크카드 결제는 NicePay(나이스페이먼츠) 결제 승인 즉시, 앱 안 결제(App Store·Google Play)는 스토어 결제가 확인되는 즉시 해당 상품을 이용할 수 있습니다. 사업계획서의 맞춤 작성(인공지능 호출)은 이용자가 사업계획서 만들기 버튼을 누를 때 시작하며, 이 시점이 환불 기준이 됩니다.",
   legalReviewConfirmed: false,
   openAiRegionConfirmed: false,
   infrastructureRegionConfirmed: false,
@@ -272,6 +273,29 @@ function shown(value: string, fallback = LEGAL_PENDING_TEXT) {
   return value.trim() || fallback;
 }
 
+/*
+ * 처리 국가 — 운영 설정에 'usa, singapore'처럼 영어·약어로 들어가 있어도 공개 문서에는 한국어 나라 이름으로 적는다(점검 2026-11-16).
+ * 모르는 이름은 적힌 그대로 둔다.
+ */
+const COUNTRY_NAMES: Record<string, string> = {
+  usa: "미국", us: "미국", "u.s.": "미국", "u.s.a.": "미국", "united states": "미국", "united states of america": "미국", america: "미국",
+  singapore: "싱가포르", sg: "싱가포르",
+  korea: "대한민국", "south korea": "대한민국", "republic of korea": "대한민국", kr: "대한민국", kor: "대한민국", 한국: "대한민국",
+  japan: "일본", jp: "일본", germany: "독일", de: "독일", ireland: "아일랜드", ie: "아일랜드", netherlands: "네덜란드", nl: "네덜란드",
+  france: "프랑스", fr: "프랑스", "united kingdom": "영국", uk: "영국", gb: "영국", canada: "캐나다", ca: "캐나다",
+  australia: "호주", au: "호주", india: "인도", in: "인도", "hong kong": "홍콩", hk: "홍콩", taiwan: "대만", tw: "대만",
+  eu: "유럽연합", "european union": "유럽연합",
+};
+export function countryNamesKo(value: string): string {
+  const names = value.split(/\s*[,·/]\s*/).map((part) => part.trim()).filter(Boolean).map((part) => COUNTRY_NAMES[part.toLowerCase()] ?? part);
+  return [...new Set(names)].join(", ");
+}
+
+/** 도로명 주소의 건물번호 앞 띄어쓰기 — '독막로6길9' → '독막로6길 9'(도로명 주소 표기). 이미 띄어 쓴 주소는 그대로 */
+export function formatRoadAddress(value: string): string {
+  return value.replace(/([가-힣0-9])(로|길)(\d+(?:-\d+)?)(?=$|[\s,(])/g, "$1$2 $3");
+}
+
 function businessDocument(settings: PlatformLegalSettings, options: LegalDocumentOptions = {}): LegalDocument {
   const mailOrderStatus = mailOrderStatusLabels[settings.mailOrderStatus];
   const supportChannels = [settings.supportPhone, settings.supportEmail].filter((value) => value.trim()).join(" / ");
@@ -291,7 +315,7 @@ function businessDocument(settings: PlatformLegalSettings, options: LegalDocumen
           : settings.mailOrderStatus === "exempt"
             ? `신고 면제 근거: ${shown(settings.mailOrderExemptionReason)}`
             : "통신판매업 신고번호: 신고 완료 후 표시",
-        `사업장 주소: ${shown(settings.businessAddress)}`,
+        `사업장 주소: ${shown(formatRoadAddress(settings.businessAddress))}`,
         `고객 문의: ${supportChannels || "사이트 우측 하단 1:1 상담(전화·이메일은 신고 전 등록)"}`,
         `인터넷 도메인 이름: ${shown(settings.internetDomainName)}`,
         `호스팅서비스 제공자: ${shown(settings.hostingProvider)}`,
@@ -367,13 +391,13 @@ function infrastructureTransferItems(settings: PlatformLegalSettings, infraCount
 }
 
 function overseasTransferItems(settings: PlatformLegalSettings) {
-  const infraCountries = shown(settings.infrastructureCountries, "실제 Supabase 프로젝트와 Cloudflare 계약의 처리 지역 확인 후 입력");
+  const infraCountries = shown(countryNamesKo(settings.infrastructureCountries), "실제 Supabase 프로젝트와 Cloudflare 계약의 처리 지역 확인 후 입력");
   return [
     ...infrastructureTransferItems(settings, infraCountries),
     "Cloudflare, Inc.(도메인 등록, privacyquestions@cloudflare.com) / 국가: 미국 / 항목: .com 도메인 구매 시 명의자 이름·이메일·휴대폰·주소 / 시기·방법: 도메인 구매 결제 직후 암호화된 통신망으로 등록 요청 / 목적: 이용자 명의 도메인 등록·관리와 등록기관의 법정 의무 이행 / 보유: 도메인 등록 기간과 등록기관이 정한 기간",
     "Google LLC(Google Play 결제 확인) / 국가: 미국 / 항목: 안드로이드 앱에서 결제한 상품 번호와 구매 토큰 / 시기·방법: 앱 안 결제 직후 암호화된 통신망으로 결제 내역 조회와 사용 처리 요청 / 목적: 결제 확인과 상품 제공 / 보유: Google Play 결제 기록 보관 기준에 따름",
     "Resend, Inc.(support@resend.com) / 국가: 미국 / 항목: 받는 사람 이메일, 메일 본문(결제·서비스 안내, 홈페이지 문의 알림) / 시기·방법: 메일 발송 시 암호화된 통신망으로 전송 / 목적: 서비스 이메일 발송 / 보유: 발송 기록 확인에 필요한 기간",
-    `Anthropic·OpenAI(인공지능 생성): 국가 ${shown(settings.overseasCountries, "운영 중인 Anthropic·OpenAI 계정의 실제 처리 지역 확인 후 입력")} / 항목·시기·보관 기준과 연락처는 ‘인공지능 및 국외 처리 안내’에서 확인할 수 있습니다.`,
+    `Anthropic·OpenAI(인공지능 생성): 국가 ${shown(countryNamesKo(settings.overseasCountries), "운영 중인 Anthropic·OpenAI 계정의 실제 처리 지역 확인 후 입력")} / 항목·시기·보관 기준과 연락처는 ‘인공지능 및 국외 처리 안내’에서 확인할 수 있습니다.`,
     "국외 이전을 원하지 않으면 회원 탈퇴나 해당 기능 미사용으로 이전을 거부할 수 있습니다. 다만 Supabase·Cloudflare는 서비스 운영에 꼭 필요하므로 거부하면 서비스를 이용할 수 없고, 인공지능 생성을 거부하면 맞춤 문장·이미지 생성이 제한됩니다.",
   ];
 }
@@ -490,7 +514,7 @@ function aiDocument(settings: PlatformLegalSettings): LegalDocument {
     sections: [
       {
         title: "1. 인공지능 사용 사실",
-        paragraphs: ["사업 추천, 문서 초안, 문장 수정과 로고 이미지 생성에 생성형 인공지능을 사용할 수 있습니다. 생성된 화면과 파일에는 ‘인공지능 초안’ 또는 같은 의미의 표시를 제공합니다."],
+        paragraphs: ["사업 추천, 문서 초안과 문장 수정에 생성형 인공지능을 사용할 수 있습니다. 생성된 화면과 파일에는 ‘인공지능 초안’ 또는 같은 의미의 표시를 제공합니다."],
       },
       {
         title: "2. 결과 확인 원칙",
@@ -505,7 +529,7 @@ function aiDocument(settings: PlatformLegalSettings): LegalDocument {
         items: [
           `이전받는 자: ${shown(settings.overseasRecipient)}`,
           "연락처: Anthropic privacy@anthropic.com(국내대리인 Anthropic Korea, Limited, 02-734-0940, anthropic_privacy@kimchang.com) / OpenAI dsar@openai.com",
-          `처리 국가: ${shown(settings.overseasCountries, "운영 중인 Anthropic·OpenAI 계정의 실제 처리 지역 확인 후 입력")}`,
+          `처리 국가: ${shown(countryNamesKo(settings.overseasCountries), "운영 중인 Anthropic·OpenAI 계정의 실제 처리 지역 확인 후 입력")}`,
           `이전 항목: ${settings.overseasTransferredData}`,
           `목적: ${settings.overseasPurpose}`,
           `시기와 방법: ${settings.overseasTimingAndMethod}`,
@@ -529,10 +553,10 @@ function termsDocument(settings: PlatformLegalSettings, options: LegalDocumentOp
     sections: [
       { title: "1. 목적과 적용", paragraphs: ["이 약관은 운영자와 이용자 사이의 서비스 이용 조건, 권리와 책임을 정합니다. 결제 화면에 별도로 표시한 상품명, 금액, 제공 시기와 환불 조건도 계약 내용에 포함됩니다."] },
       { title: "2. 계정", items: ["이용자는 정확한 이메일로 가입하고 자신의 계정을 안전하게 관리해야 합니다.", "타인의 계정을 사용하거나 계정을 양도할 수 없습니다.", "계정 분실 시 이메일 계정 복구 절차를 이용할 수 있습니다."] },
-      { title: "3. 서비스 제공", items: [`아이디어 탐색과 사업 방향 정리는 사업자등록 여부와 관계없이 무료로 이용할 수 있습니다. 사업계획서는 로그인한 회원에게 결제 전에 첫 항목 하나를 먼저 작성해 보여 드리며(회원당 문서 ${FREE_PLAN_LIMIT}개까지), 나머지 항목 작성과 파일 내려받기는 결제한 뒤에 시작합니다.`, `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "결제 승인(앱 안 결제는 스토어 결제 확인)이 맞춤 디지털 결과물 제공 개시 시점이며, 결제 화면에서 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
+      { title: "3. 서비스 제공", items: [`아이디어 탐색과 사업 방향 정리는 사업자등록 여부와 관계없이 무료로 이용할 수 있습니다. 사업계획서는 로그인한 회원에게 결제 전에 첫 항목 하나를 먼저 작성해 보여 드리며(회원당 문서 ${FREE_PLAN_LIMIT}개까지), 나머지 항목 작성과 파일 내려받기는 결제한 뒤에 시작합니다.`, `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "결제 후 사업계획서 작성이 시작된 때가 맞춤 디지털 결과물 작성(제공) 개시 시점이며, 결제 화면에서 결제 후 바로 작성이 시작된다는 점과 환불 제한에 대해 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
       { title: "4. 상품, 가격과 결제", items: [...PRODUCT_ITEMS, TOKEN_PRICE_ITEM, options.inApp ? `결제 방법: ${APP_PAYMENT_METHODS}. 결제수단 정보는 Apple·Google이 직접 처리하며 오늘창업은 받지 않습니다.` : `결제 방법: ${PAYMENT_METHODS}. 카드 결제는 결제대행사 화면에서, 앱 안 결제는 스토어 화면에서 이뤄지며 오늘창업은 카드번호 등 결제수단 정보를 받지 않습니다.`, "도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 결제한 문서 또는 홈페이지에서만 사용할 수 있고 다른 문서·홈페이지나 다른 계정으로 옮길 수 없습니다."] },
       { title: "5. 인공지능 결과", paragraphs: ["일부 결과는 생성형 인공지능이 작성한 초안입니다. 이용자는 실제 사업에 사용하기 전에 사실관계, 수치, 권리침해 여부와 관계 법령을 확인해야 합니다. 운영자는 고의 또는 중대한 과실이 없는 한 이용자가 확인 없이 결과를 사용해 발생한 손해를 책임지지 않습니다."] },
-      { title: "6. 맞춤 제작과 환불 제한(사업계획서·홈페이지)", paragraphs: [settings.refundAfterSupply, "결제 전 완성 결과 예시와 제공 항목을 확인할 수 있습니다. 결제 화면에서는 제작 시작 시점과 단순 변심 환불 제한을 별도로 알리고 전자적 동의를 받습니다."] },
+      { title: "6. 맞춤 제작과 환불 제한(사업계획서·홈페이지)", paragraphs: [settings.refundAfterSupply, "결제 전 완성 결과 예시와 제공 항목을 확인할 수 있습니다. 결제 화면에서는 작성 시작 시점(사업계획서 만들기 버튼)과 단순 변심 환불 제한을 별도로 알리고 전자적 동의를 받습니다."] },
       {
         title: "7. 다시 생성 횟수",
         items: [
@@ -557,13 +581,13 @@ function termsDocument(settings: PlatformLegalSettings, options: LegalDocumentOp
 function refundDocument(settings: PlatformLegalSettings, options: LegalDocumentOptions = {}): LegalDocument {
   return {
     title: "취소·환불 기준",
-    summary: "사업계획서·홈페이지는 맞춤 제작 시작 전에는 전액 환불하며, 제작 시작 후에는 단순 변심 환불이 제한됩니다. 도메인 연결·AI 수정 토큰·다시 생성 추가 횟수는 남은 기간·수량만큼 환불합니다. 미제공·계약 불일치·중대한 하자 등 법정 권리는 그대로 보장합니다.",
+    summary: "사업계획서·홈페이지는 결제 후 작성이 시작되지 못했거나 실패하면 전액 환불되고, 작성이 시작된 뒤에는 AI 작성 비용이 들어 단순 변심 환불이 제한됩니다. 도메인 연결·AI 수정 토큰·다시 생성 추가 횟수는 남은 기간·수량만큼 환불합니다. 미제공·계약 불일치·중대한 하자 등 법정 권리는 그대로 보장합니다.",
     effectiveDate: settings.policyEffectiveDate,
     sections: [
       { title: "1. 서비스 제공 시기", paragraphs: [settings.serviceSupplyTiming] },
-      { title: "2. 제공 시작 전", paragraphs: [settings.refundBeforeSupply] },
-      { title: "3. 사업계획서·홈페이지: 제작 시작 후 단순 변심", paragraphs: [settings.refundAfterSupply, "아래 도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 이 제한 대신 각 항목의 기준을 따릅니다."] },
-      { title: "4. 결제 전 확인 방법", paragraphs: ["‘내 사업’ 화면의 ‘완성 예시 보기’에서 샘플 사업계획서 전체를 결제 전에 읽어볼 수 있고, 홈페이지는 결제 전에 내 사업으로 만든 초안을 미리 볼 수 있습니다. 결제 화면에서는 제작 시작 시점과 환불 제한을 별도 항목으로 확인하고 동의합니다."] },
+      { title: "2. 작성이 시작되지 못했거나 실패한 경우", paragraphs: [settings.refundBeforeSupply] },
+      { title: "3. 사업계획서·홈페이지: 작성이 시작된 뒤", paragraphs: [settings.refundAfterSupply, "아래 도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 이 제한 대신 각 항목의 기준을 따릅니다."] },
+      { title: "4. 결제 전 확인 방법", paragraphs: ["‘내 사업’ 화면의 ‘완성 예시 보기’에서 샘플 사업계획서 전체를 결제 전에 읽어볼 수 있고, 홈페이지는 결제 전에 내 사업으로 만든 초안을 미리 볼 수 있습니다. 결제 화면에서는 작성 시작 시점(사업계획서 만들기 버튼)과 환불 제한을 별도 항목으로 확인하고 동의합니다."] },
       { title: "5. 하자와 계약 불이행", paragraphs: ["약정한 핵심 결과물이 제공되지 않거나 표시·광고 또는 계약 내용과 다르게 제공된 경우, 정상적으로 이용할 수 없는 중대한 하자가 있고 합리적인 기간 안에 고쳐지지 않은 경우에는 관계 법령에 따라 재제공, 일부 환급 또는 전액 환급을 요청할 수 있습니다."] },
       {
         title: "6. 다시 생성 추가 구매",
@@ -601,8 +625,8 @@ function inAppSettings(settings: PlatformLegalSettings): PlatformLegalSettings {
   return {
     ...settings,
     serviceSupplyTiming: settings.serviceSupplyTiming.replace(/^신용·체크카드 결제는 NicePay\(나이스페이먼츠\) 결제 승인 즉시, 앱 안 결제\(App Store·Google Play\)는/, "앱 안 결제(App Store·Google Play)는"),
-    refundBeforeSupply: /^카드 결제/.test(settings.refundBeforeSupply)
-      ? "앱 안에서 결제한 주문은 결제를 처리한 스토어(App Store·Google Play)에 취소·환불을 신청합니다. 맞춤 결과물 생성이 실제로 시작되지 않았다면 전액 환불 대상입니다."
+    refundBeforeSupply: /^카드 결제/.test(settings.refundBeforeSupply) || settings.refundBeforeSupply === defaultPlatformLegalSettings.refundBeforeSupply
+      ? "앱 안에서 결제한 주문은 결제를 처리한 스토어(App Store·Google Play)에 취소·환불을 신청합니다. 사업계획서 작성이 시작되지 못했거나 실패했다면 전액 환불 대상입니다."
       : settings.refundBeforeSupply,
     refundAfterSupply: settings.refundAfterSupply.replace(/^카드 결제가 승인되어/, "결제가 확인되어"),
   };

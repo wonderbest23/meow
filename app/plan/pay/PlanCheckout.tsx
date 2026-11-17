@@ -7,13 +7,12 @@ import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
 import { finishNativePurchase, nativePlatform, nativePurchase } from "../../../lib/native-app";
 import { AlertCircle, CheckCircle2, ChevronRight, LogIn, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
-import { StatusBadge } from "../../../components/status-badge";
 import { ConsentList } from "../../../components/consent-list";
 import { documentHref } from "../../../lib/plan-builder/business-hub";
 import { homepageHref, payBackHref } from "../../../lib/plan-builder/journey";
 import { Spinner } from "../PlanLoading";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
-import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, REGEN_PACK_NAME } from "../../../lib/payments/domain";
+import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, REGEN_PACK_NAME } from "../../../lib/payments/domain";
 import { normalizePurchaseDomain, validateRegistrant } from "../../../lib/landing/domain-purchase";
 import { AddressSearchButton } from "../../../components/address-search";
 import { DocLink } from "../../../components/doc-sheet";
@@ -380,7 +379,6 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           )}
         </p>
 
-        {!notSoldInApp && (product === "plan" || product === "homepage" || product === "bundle") && <p className={styles.launchTag}><StatusBadge tone="info">{LAUNCH_PRICE_LABEL}</StatusBadge></p>}
         {notSoldInApp ? null : extra ? (
           <div className={styles.price}>
             {extra.price.toLocaleString("ko-KR")}원
@@ -444,10 +442,10 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
               { key: "privacy", label: "개인정보 수집·이용 동의", href: "/privacy" },
               { key: "aiLimitations", label: "인공지능·국외 처리 안내 확인", href: "/ai-notice" },
               { key: "refund", label: "취소·환불 기준 동의", href: "/refund" },
-              { key: "digitalSupply", label: "결제 즉시 디지털 콘텐츠 제공 시작 확인" },
+              { key: "digitalSupply", label: product === "plan" || product === "bundle" ? "‘사업계획서 만들기’를 누르면 맞춤 작성이 바로 시작됨을 확인" : "결제 즉시 디지털 콘텐츠 제공 시작 확인" },
               { key: "personalizedDigitalNoRefund", ...(native && (product === "plan" || product === "bundle" || product === "homepage") ? (
                   /* 앱 결제 — 환불은 스토어가 한다. 직접 환불을 약속하지 않는다 */
-                  { label: "제공 시작 후 단순 변심 환불 제한에 동의", note: <>결제가 확인되면 바로 내 사업에 맞춘 디지털 콘텐츠 제공이 시작되므로, 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한돼요. 앱에서 결제한 주문의 환불은 {storeName}에 신청해요.</> }
+                  { label: "결제 후 바로 작성 시작과 환불 제한에 동의", note: <>결제가 끝나면 사업계획서 작성이 바로 시작돼요. 작성이 시작되지 못했거나 실패하면 전액 환불 대상이에요. 작성이 시작된 뒤에는 AI 작성 비용이 들어 환불되지 않아요(내 사업에 맞춘 디지털 콘텐츠라 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한돼요). 앱에서 결제한 주문의 환불은 {storeName}에 신청해요.</> }
                 ) : native && product === "regen" ? (
                   { label: "추가 횟수 환불 기준에 동의", note: <>앱에서 결제한 주문의 환불은 {storeName}에 신청해요. 환불 여부는 스토어 기준에 따라요.</> }
                 ) : product === "regen" ? (
@@ -459,7 +457,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
                 ) : product === "tokens" ? (
                   { label: "AI 수정 토큰 유효기간·환불 기준에 동의", note: <>토큰은 충전일부터 1년 동안 이 홈페이지에서 사용할 수 있고, 기간이 지나면 남은 토큰은 소멸합니다. 사용하지 않았다면 7일 이내 전액 환불하고, 일부 사용했다면 유효기간 안에서 남은 토큰 비율만큼 환불합니다.</> }
                 ) : (
-                  { label: "제공 시작 후 단순 변심 환불 제한에 동의", note: <>결제가 승인되면 바로 내 사업에 맞춘 디지털 콘텐츠 제공이 시작되므로, 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한됩니다. 제공된 내용에 하자가 있거나 표시·광고와 다르게 제공된 경우에는 관계 법령에 따라 환불받을 수 있습니다.</> }
+                  { label: "결제 후 바로 작성 시작과 환불 제한에 동의", note: <>결제가 끝나면 사업계획서 작성이 바로 시작됩니다. 작성이 시작되지 못했거나 실패하면 전액 환불됩니다. 작성이 시작된 뒤에는 AI 작성 비용이 들어 환불되지 않습니다(내 사업에 맞춘 디지털 콘텐츠라 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한됩니다). 제공된 내용에 하자가 있거나 표시·광고와 다르게 제공된 경우에는 관계 법령에 따라 환불받을 수 있습니다.</> }
                 )) },
             ]} values={agreements} onChange={(next) => setAgreements({ ...NO_AGREEMENTS, ...next } as Agreements)} />
             </div>

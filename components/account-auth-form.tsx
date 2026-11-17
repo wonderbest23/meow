@@ -151,10 +151,6 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
     return true;
   };
 
-  /*
-   * 구글 버튼 그리기.
-   * remember·mode 가 바뀌면 콜백이 그 값을 새로 물도록 다시 초기화한다.
-   */
   /* 구글·애플 ID 토큰을 서버에 넘겨 로그인한다(웹의 구글 버튼과 앱의 휴대폰 로그인 창이 함께 쓴다) */
   const finishIdTokenLogin = (provider: "google" | "apple", credential: string) => {
     setBusy(true);
@@ -176,6 +172,13 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
         setBusy(false);
       });
   };
+
+  /*
+   * 구글 버튼 콜백은 늘 최신 finishIdTokenLogin(지금의 remember 값)을 부른다 — 예전엔 remember 가 바뀔 때마다
+   * (처음 열 때 기기에 저장한 선택을 되살리면서도) 버튼을 다시 그려, 앞서 그리던 버튼이 늦게 붙어 3~4초 두 개가 겹쳐 보였다(점검 2026-11-16).
+   */
+  const finishIdTokenLoginRef = useRef(finishIdTokenLogin);
+  useEffect(() => { finishIdTokenLoginRef.current = finishIdTokenLogin; });
 
   /* 앱 안: 휴대폰 로그인 창을 열고, 받은 토큰으로 위와 같이 로그인한다. 창을 닫으면 조용히 돌아온다 */
   const nativeLogin = (provider: "google" | "apple") => {
@@ -202,6 +205,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
     setGoogleReady(false); setGoogleUnavailable(false);
     const timeout = window.setTimeout(() => { if (alive) setGoogleUnavailable(true); }, 10000);
     /*
+     * 구글 버튼 그리기 — 화면(로그인·가입)마다 한 번만 그린다.
      * 스크립트 로딩·폼 마운트·세션 확인이 제각각 끝나서 한 번에 그리려 하면
      * 빈 자리로 남는 때가 있었다 — 그려질 때까지 짧게 다시 시도한다.
      */
@@ -215,10 +219,10 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
             client_id: GOOGLE_CLIENT_ID,
             callback: (response) => {
               if (!response.credential) return;
-              finishIdTokenLogin("google", response.credential);
+              finishIdTokenLoginRef.current("google", response.credential);
             },
           });
-          parent.innerHTML = "";
+          if (parent.childElementCount > 0) { setGoogleReady(true); setGoogleUnavailable(false); window.clearTimeout(timeout); return; }
           gis.renderButton(parent, {
             /* 공식 원형 아이콘 버튼 — 카카오 원형 버튼과 나란히 둔다 */
             type: "icon",
@@ -233,8 +237,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
       }
     })();
     return () => { alive = false; window.clearTimeout(timeout); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, remember, native]);
+  }, [mode, native]);
 
   // 지난번 선택과 이메일을 되살린다
   useEffect(() => {
