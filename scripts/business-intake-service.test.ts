@@ -419,6 +419,27 @@ async function main() {
       assert.equal(calls.length, 1);
     });
 
+    await check("ux-operating: an operating shop keeps its own name instead of the AI label; a new business still gets the label", async () => {
+      configureAI(true);
+      const design = (label: string) => completion({ identity: { headline: "점심 도시락을 미리 주문받는 가게", pitch: "근처 직장인에게 점심 도시락을 파는 가게", label, names: [{ name: "점심찬방", why: "이유" }, { name: "도시락공방", why: "이유" }] }, approach: "known-business", startingPlan: { scope: "점심 예약 30개로 시작", connectionToVision: "동네 점심 단골", whyThis: "재고를 줄인다", notIncluded: ["배달"] },
+        alternatives: [{ name: "저녁 반찬", scope: "저녁 반찬만", tradeoff: "점심 손님을 놓친다" }], assumptions: [{ statement: "직장인이 미리 주문한다", howToCheck: "예약 20건" }],
+        nextAction: { action: "예약 받기", doneWhen: "20건", usableText: "내일 점심 도시락 예약을 받습니다." } });
+      for (const mode of ["operating", "startup"] as const) {
+        const ownerHash = `intake-design-name-${mode}-${randomUUID()}`;
+        const started = await saveIntakeCommand(ownerHash, { action: "start", mode, questionId: "business", value: "회사 근처에서 점심 도시락 가게를 하고 있어요", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
+        const session = { ownerHash, planId: started.plan.id };
+        const before = started.snapshot.coach.business.name;
+        const queued = await send(session, { action: "design" }, true);
+        respond = () => design("직장인 점심 도시락");
+        assert.deepEqual(await executeIntakeJob(jobRequest(session, queued)), { ok: true });
+        const returned = await load(session);
+        if (mode === "operating") {
+          assert.equal(returned.coach.business.name, before, "the AI label is not put in as the shop's name");
+          assert.notEqual(returned.coach.business.nameConfirmed, true, "the result screen still asks the real shop name");
+        } else assert.equal(returned.coach.business.name, "직장인 점심 도시락", "a new business without a name still shows the short label");
+      }
+    });
+
     await check("a malformed design response is retried once and then saved", async () => {
       configureAI(true);
       const ownerHash = `intake-design-retry-${randomUUID()}`;
@@ -468,7 +489,9 @@ async function main() {
       const initial = await saveIntakeCommand(ownerHash, { action: "start", mode: "exploring", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
       const session = { ownerHash, planId: initial.plan.id };
       assert.equal(initial.snapshot.candidateIdeas.length, 3, "without any signal only the curated templates show");
-      assert.equal(initial.snapshot.coreTotal, 14, "exploring core now includes the two cost questions after price");
+      assert.equal(initial.snapshot.questions.length, 14, "exploring core now includes the two cost questions after price");
+      // 사업을 정하기 전에는 그 사업의 고객·가격·월세 질문을 뒤로 미룬다(ux-unknown 2026-11-16) — 진행 수도 사업 정하기까지만 센다
+      assert.equal(initial.snapshot.coreTotal, 6, "questions after the candidate wait until a business is chosen");
       await send(session, { action: "answer", questionId: "interest", value: ["local_service"] });
       const withExperience = await send(session, { action: "answer", questionId: "experience", value: "네일아트 자격증이 있고 손님 응대를 오래 했어요" });
       const ideas = withExperience.snapshot.candidateIdeas;
@@ -510,9 +533,15 @@ async function main() {
       assert.equal(picked.snapshot.coach.fields.find(field => field.key === "business")?.value, chosen.title);
       assert.equal(picked.snapshot.intake.sector, "software");
       assert.equal(picked.snapshot.structure?.basis.payer, "ksic", "the picked code becomes the structure basis");
+      assert.equal(picked.snapshot.coreTotal, 14, "picking a business brings the deferred questions back");
+      assert.ok(picked.snapshot.nextQuestion && ["customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "goal"].includes(picked.snapshot.nextQuestion.id), "the rest is asked after the business is chosen");
       await assert.rejects(() => send(session, { action: "answer", questionId: "candidate", value: "ksic:99999" }), assertIntakeError("invalid_option", 400));
       const unpicked = await send(session, { action: "answer", questionId: "candidate", unknown: true });
       assert.equal(unpicked.snapshot.intake.ksic, null, "clearing the candidate clears the code too");
+      // '잘 모르겠어요'로 넘기면 정해지지 않은 사업의 질문 대신 바로 '사업 하나만 정하면 시작할 수 있어요'로 간다
+      assert.equal(unpicked.snapshot.nextQuestion, null, "no questions about an undecided business");
+      assert.equal(unpicked.snapshot.coreComplete, true);
+      assert.equal(unpicked.snapshot.coach.ready, false);
       assert.equal(calls.length, 0, "the map costs no AI calls");
     });
 

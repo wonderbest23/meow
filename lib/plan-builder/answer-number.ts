@@ -33,6 +33,17 @@ export function parseWonAmount(text: string | undefined | null): number | undefi
   return Number.isSafeInteger(value) && value >= 0 ? value : undefined;
 }
 
+/**
+ * 준비 예산은 만원 단위로 말하는 일이 많다 — 단위 없이 적은 1만 미만의 정수('예산 300')는 만원으로 본다(300 → 3,000,000원).
+ * 일반 모드 입력창의 한글 숫자 규칙('한 삼백' → 300만원)과 같은 기준이다. 단위가 있거나 큰 수면 undefined — 원래 규칙으로 읽는다.
+ */
+export function bareBudgetManwon(text: string | undefined | null): number | undefined {
+  const plain = (text ?? "").replace(/\s/g, "");
+  if (!/^\d{1,3}(?:,\d{3})*$|^\d{1,4}$/.test(plain)) return undefined;
+  const number = Number(plain.replace(/,/g, ""));
+  return number > 0 && number < 10_000 ? number * 10_000 : undefined;
+}
+
 /** '20~30만원' → '20만원'(뒤쪽 단위를 앞에 붙인다). 범위가 아니면 null. 예산·시간처럼 범위로 받는 답은 적은 쪽으로 계산한다(보수적). */
 export function rangeLowerText(text: string | undefined | null): string | null {
   const match = (text ?? "").replace(/\s/g, "").match(RANGE);

@@ -46,3 +46,6 @@ assert.deepEqual(understoodAnswers({ channel: "스마트스토어", channel2: "�
 assert.deepEqual(understoodAnswers({ channel: "인스타", channel2: "인스타" }, questions), [{ questionId: "channel", value: ["인스타"] }]);
 assert.equal(cleanUnderstood({ channel: "스마트스토어", channel2: "당근" }, "스마트스토어랑 인스타에서 팔아요").channel2, undefined, "원문에 없는 두 번째 경로는 버린다");
 assert.deepEqual(understoodAnswers({ channel: "인스타", channel2: "플리마켓", channel3: "아이디어스" }, questions), [{ questionId: "channel", value: ["인스타", "플리마켓", "아이디어스"] }]);
+// ux-firstmsg(2026-11-16): AI가 읽은 예산이 단위 없는 작은 수('300')면 300원이 아니라 300만원
+assert.deepEqual(understoodAnswers({ budget: "300" }, questions), [{ questionId: "budget", value: 3_000_000 }]);
+assert.deepEqual(understoodAnswers({ budget: "3천만원" }, questions), [{ questionId: "budget", value: 30_000_000 }]);

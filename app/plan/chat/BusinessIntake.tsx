@@ -18,7 +18,7 @@ import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
 import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
 import { useAnswerSuggestions } from "./intake-ui/AnswerSuggestions";
-import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, readIntakePayload, routeComposerInput, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber, looseUnknownReply } from "./intake-ui/model";
+import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, readIntakePayload, routeComposerInput, easyNumberRetryHint, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber, looseUnknownReply } from "./intake-ui/model";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import { sectorCheckPrompt } from "../../../lib/plan-builder/intake-core";
 import styles from "./intake.module.css";
@@ -951,7 +951,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     if (route.kind === "clarify" && depthNow === "easy") {
       if (route.suggested && question) void send({ action: "answer", questionId: question.id, value: route.suggested.value, message: composerVisible }, { answer: questionDraft, composer: captureComposer() });
       else if (question && looseUnknownReply(composerText)) void send({ action: "answer", questionId: question.id, value: null, unknown: true }, { answer: questionDraft, composer: captureComposer() });
-      else storeComposerNote("memo");
+      else { storeComposerNote("memo"); setInputHint(easyNumberRetryHint(target)); }
       return;
     }
     if (route.kind === "clarify") { setIntentPrompt({ text: composerText, questionId: question?.id ?? null, revision: plan.coach.revision, canAnswer: route.canAnswer, ...(route.suggested ? { suggested: route.suggested } : {}) }); follow.current = true; return; }

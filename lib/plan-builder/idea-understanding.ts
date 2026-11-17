@@ -1,5 +1,6 @@
 import { completeJson, type LLMConfig, type LLMFailure } from "../llm/complete";
 import { coachAmount } from "./coach-feasibility";
+import { bareBudgetManwon } from "./answer-number";
 import type { IntakeQuestion } from "./intake-questions";
 import type { IntakeValue } from "./intake-types";
 
@@ -92,7 +93,8 @@ export function understoodAnswers(understood: Understood, questions: IntakeQuest
   push(byField("price"), understood.price ? coachAmount(understood.price) : undefined);
   push(byField("unitCost"), understood.unitCost ? coachAmount(understood.unitCost) : undefined);
   push(byField("cost"), understood.monthlyCost ? coachAmount(understood.monthlyCost) : undefined);
-  push(questions.find(question => question.id === "budget"), understood.budget ? coachAmount(understood.budget) ?? understood.budget : undefined);
+  // '예산 300'은 300만원이다 — 단위 없는 작은 수를 300원으로 넣지 않는다(문장 읽기 intake-sentence 와 같은 기준)
+  push(questions.find(question => question.id === "budget"), understood.budget ? bareBudgetManwon(understood.budget) ?? coachAmount(understood.budget) ?? understood.budget : undefined);
   const hours = understood.hoursPerWeek?.match(/\d+/)?.[0];
   push(questions.find(question => question.id === "hoursPerWeek"), hours ? Number(hours) : undefined);
   // 상품(offer)은 상품 · 서비스 구절일 때만 옮긴다 — 실측에서 가게 이름('네일샵', '작은 카페')이 들어와 기준값('젤네일 시술')보다 못했다. 가게 종류 낱말로 끝나면 버린다
