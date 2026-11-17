@@ -6,7 +6,7 @@ import type { ServerPlan } from "../../../../lib/plan-builder/plan-server-store"
 import { acceptsFreeChoice, FREE_CHOICE_MAX_CHARS, amountCheckPrompt, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { SECTOR_PROFILES, type ProposalSector } from "../../../../lib/plan-builder/proposal-blueprint";
 import { coachAmount } from "../../../../lib/plan-builder/coach-feasibility";
-import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS, amountRanges, periodMonths, rangeMidpoint, scaledAmountRanges, wonAnswer, type AmountRange } from "../../../../lib/plan-builder/intake-options";
+import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS, amountRanges, periodMonths, scaledAmountRanges, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
 import { descriptionSector } from "../../../../lib/plan-builder/intake-sector";
 import { applyIntakeResources } from "../../../../lib/plan-builder/intake-resource-update";
 import { RESOURCE_ANSWER_IDS, RESOURCE_KEYS, resourceLimitsSchema, resourceQuoteSchema, type ResourceKey, type ResourceContext, type ResourceQuote } from "../../../../lib/plan-builder/intake-candidate-resources";
@@ -173,11 +173,28 @@ export function numberInputHint(question: Pick<IntakeQuestion, "kind" | "unit" |
   if (question.kind !== "number") return "";
   const value = stripAnswerPeriod(text.trim(), question.period);
   if (!/\d/.test(value) || !/^[\d\s,.~～〜–+\-−억만천백십원%시간분개명건회일좌석룸]+$/.test(value)) return "";
-  if (numericAnswer(question, value) !== undefined) return "";
   const example = question.unit === "원" ? "25000, 2만5천원" : `20${question.unit ?? ""}`;
+  const number = numericAnswer(question, value);
+  /*
+   * 답 고치기 칸에 남은 금액 뒤에 이어 적으면('6500000' + '5000만원') 읽을 수는 있어도 말이 안 되는 큰 수가 된다 — 서버 한도(100조)를 넘으면
+   * 무엇이 틀렸는지 알려 준다. 예전엔 '어떻게 남길까요?'만 떠서 이유를 몰랐다(2026-11-16 점검).
+   */
+  if (number !== undefined) return question.unit === "원" && number > 1e14 ? `금액이 너무 커요. 앞에 있던 숫자를 지우고 고칠 금액 하나만 적어 주세요 (예: ${example})` : "";
   if (/^[-−]/.test(value.trim())) return `0 이상의 숫자만 적어 주세요 (예: ${example})`;
   if (/[~～〜–]/.test(value)) return `범위 대신 숫자 하나만 적어 주세요 (예: ${example})`;
+  // '650만원5000만원'처럼 금액 두 개가 붙었다
+  if (question.unit === "원" && (/원\s*\d/.test(value) || (value.match(/만/g)?.length ?? 0) > 1 || (value.match(/억/g)?.length ?? 0) > 1)) return `금액이 두 번 이어 적혔어요. 하나만 남겨 주세요 (예: ${example})`;
   return `숫자만 적어 주세요 (예: ${example})`;
+}
+
+/**
+ * 일반 모드에서 숫자를 묻는 질문에 숫자가 아닌 말을 적었을 때 — 적은 말은 메모로 남기고 같은 질문을 이어 가는데,
+ * 아무 말 없이 같은 질문만 다시 나와 고장 난 것처럼 보였다(2026-11-16 점검). 왜 다시 묻는지 입력창 위 한 줄로 알린다. 숫자 질문이 아니면 "".
+ */
+export function easyNumberRetryHint(question: Pick<IntakeQuestion, "id" | "kind" | "unit"> | null | undefined): string {
+  if (!question || question.kind !== "number" && question.id !== "budget" && question.id !== "hoursPerWeek") return "";
+  const won = question.unit === "원" || question.id === "budget";
+  return `적어 주신 말은 메모로 남겼어요. 이 질문은 ${won ? "금액으" : "숫자"}로 답해 주세요 (예: ${won ? "25000, 2만5천원" : `20${question.unit ?? ""}`}). 모르면 '잘 모르겠어요'를 눌러요.`;
 }
 
 /** '잘 몰라요', '글쎄요'처럼 모른다는 말 — '잘 모르겠어요'와 같이 미정으로 남긴다. */
@@ -258,7 +275,8 @@ export function typedAmountAnswer(snapshot: IntakeSnapshot, question: IntakeQues
   const months = question.id === "sales" ? periodMonths(answerText(snapshot.intake.answers.period?.value ?? null)) : null;
   const ladder = amountRanges(intakeChipSector(snapshot), question.id, snapshot.intake.mode);
   const range = (months && months > 1 ? scaledAmountRanges(ladder, months) : ladder).find(item => normalize(item.label) === value);
-  if (range) return range.max === 0 ? "0원" : wonAnswer(rangeMidpoint(range));
+  // 범위 이름 그대로 보낸다 — 서버가 범위 가운데 값으로 계산하고 대화에는 고른 범위가 보인다(intake-core amountRangeAnswer)
+  if (range) return range.max === 0 ? "0원" : range.label;
   const stripped = value.replace(APPROX_WORDS, "");
   if (stripped === value || !/^[\d,.억만천백십원]+$/.test(stripped)) return undefined;
   const amount = numericAnswer(question, stripped);
@@ -845,7 +863,8 @@ export function seedAnswerDraft(question: IntakeQuestion, value: IntakeValue, ca
   }
   if (question.kind === "number") {
     const number = numericAnswer(question, value);
-    return number === undefined ? { ...base, hint: answerText(value) } : { ...base, text: String(number) };
+    // 금액은 '650만원'처럼 읽기 쉽게 채운다 — '6500000'으로 채우면 뒤에 이어 적어 '65000005000만원'이 되기 쉬웠다(2026-11-16 점검)
+    return number === undefined ? { ...base, hint: answerText(value) } : { ...base, text: question.unit === "원" ? wonLabel(number) : String(number) };
   }
   const text = answerText(value);
   if (question.options?.length) {

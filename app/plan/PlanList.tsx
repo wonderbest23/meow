@@ -7,7 +7,7 @@ import { ArrowRight, ChevronRight, ArrowUp, MoreHorizontal, Plus, Search } from 
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, readAuthFlag, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
-import { normalizeLandingIdea, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
+import { clearLandingDraft, normalizeLandingIdea, readLandingDraft, readLandingIdea, saveLandingDraft, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
 import { navigateWithTransition } from "../../lib/client/view-transition";
 import { DEPTH_PARAM, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
 
@@ -45,6 +45,22 @@ type Filter = "search" | "mine" | "recent" | "samples";
 /* 최근 본 항목 알약은 뺐다(2026-11-15 사장님) — 내 사업과 같은 목록을 순서만 바꿔 보여 줬다 */
 const FILTERS: Array<[Filter, string]> = [["mine", "내 사업"], ["samples", "예시"]];
 const EXAMPLE_IDEA = "성수동에 작은 쿠키 공방을 열고 싶어요";
+
+/** 결제한 사업을 지울 때 삭제 확인 문구 앞에 붙는 경고 */
+const PAID_DELETE_WARNING = "결제한 문서예요. 지우면 다시 받을 수 없어요. ";
+
+/** 이 사업을 따로 결제했는지 — 결제 확인(/api/plan/access)을 3초까지만 기다리고, 모르면 false */
+async function paidPlan(plan: Plan): Promise<boolean> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 3000);
+  try {
+    const response = await fetch(`/api/plan/access?${new URLSearchParams({ planId: plan.id, planType: plan.planType }).toString()}`, { cache: "no-store", signal: controller.signal });
+    if (!response.ok) return false;
+    const access = await response.json() as { paid?: boolean; allAccess?: boolean };
+    return !!access.paid && !access.allAccess;
+  } catch { return false; }
+  finally { window.clearTimeout(timer); }
+}
 
 /** 수정됨 n일 전 — 30일이 넘으면 날짜 */
 function editedAgo(iso: string): string {
@@ -136,7 +152,10 @@ export default function PlanList() {
     renamePlan(id, name.trim()); setState(loadState()); setEditing(null); setRenameError(""); focusMenu(id);
   }
   async function remove(id: string, title: string) {
-    if (!await askConfirm({ title: `‘${title}’ 사업을 삭제할까요?`, message: "대화·사업계획서와 이 사업의 홈페이지(공개 중인 사이트·받은 문의 포함)도 함께 삭제되고 되돌릴 수 없어요.", confirmLabel: "삭제", danger: true })) { focusMenu(id); return; }
+    /* 이 사업만 따로 결제했으면 지우기 전에 한 번 더 알린다(전체 이용권은 다른 사업에도 남으니 빼고) — 확인을 못 하면 평소 문구 */
+    const plan = plans.find(item => item.id === id);
+    const paid = plan ? await paidPlan(plan) : false;
+    if (!await askConfirm({ title: `‘${title}’ 사업을 삭제할까요?`, message: `${paid ? PAID_DELETE_WARNING : ""}대화·사업계획서와 이 사업의 홈페이지(공개 중인 사이트·받은 문의 포함)도 함께 삭제되고 되돌릴 수 없어요.`, confirmLabel: "삭제", danger: true })) { focusMenu(id); return; }
     /* 지운 뒤 초점은 다음 사업 카드로(없으면 앞 카드, 하나도 없으면 '시작하기') — 예전엔 초점이 문서 맨 앞으로 떨어졌다 */
     const order = shown.map(plan => plan.id);
     const at = order.indexOf(id);
@@ -154,6 +173,8 @@ export default function PlanList() {
     <PlanLoading fill variant="compact" note="화면을 불러오고 있어요" />
   </BusinessAppChrome></main>;
   const guest = signedIn === false;
+  /* 로그인 전에 쓰던 사업 중 가장 최근 것(예시 제외) — 첫 화면에서 '이어서 하기'로 연다 */
+  const resume = guest ? allPlans[0] ?? null : null;
 
   const card = (p: Plan) => { const status=businessHubState(p); const display = planDisplayName(p); return <article key={p.id} className={`${mine.row} ${home.card}`}>
     {/* 썸네일 16:9 r8 — 문서 모양 자리 + 왼쪽 아래 상태 배지. 소개 글은 쓰지 않는다 — 글이 많아 번잡했고 제목·상태면 충분하다(2026-11-02 사장님) */}
@@ -200,6 +221,11 @@ export default function PlanList() {
       {!listOnly && <section className={home.hero} aria-labelledby="plan-home-greeting">
         {/* 인사말에 이름을 붙이지 않는다 — 계정에 이름이 없어 이메일 앞부분(rena35200+review님)이 그대로 보였다(운영 점검 2026-11-02). 동그라미 머리글자는 그대로 */}
         <h1 id="plan-home-greeting" className={home.greeting}>오늘은 어떤 사업을 시작해볼까요?</h1>
+        {/* 로그인 전에 하던 사업 — 대화 화면에서 X를 누르면 새로 시작 화면만 보여 다시 열 길이 뒤로 가기뿐이었다(점검 2026-11-16). 자료는 이 브라우저에 있다 */}
+        {guest && resume && <div className={home.resume} data-guest-resume>
+          <Link href={openHref(resume)} className={home.resumeLink}><span>이어서 하기</span><strong>{planDisplayName(resume)}</strong><ChevronRight size={16} aria-hidden="true" /></Link>
+          <p className={home.resumeNote}>로그인하면 저장돼요. <button type="button" onClick={() => openLogin(openHref(resume))}>로그인</button></p>
+        </div>}
         <Composer guest={guest} />
         {/* 적는 것이 기본, 다른 길 세 개는 입력칸 아래 작은 글로(2026-11-15 사장님: 새 대화도 이 화면 하나로). 일반/전문가 전환은 입력칸에서 빼고 '하나씩 자세히'로 옮겼다 */}
         <nav className={home.alt} aria-label="다른 시작">
@@ -243,6 +269,11 @@ function Composer({ guest = false }: { guest?: boolean }) {
   const [text, setText] = useState("");
   const field = useRef<HTMLTextAreaElement>(null);
   const [sending, setSending] = useState(false);
+  /* 보내지 않은 글을 잠깐 맡겨 두고(sessionStorage) 다시 열면 채운다 — 로그인하고 돌아와도 적은 글이 남게 */
+  const draftStorage = () => { try { return window.sessionStorage; } catch { return null; } };
+  /* 보낸 뒤 로그인 창이 떠서 첫 화면으로 돌아온 경우: 보낼 때 맡긴 글(5분 보관본)로도 채운다 — 미리보기 점검 2026-11-17 */
+  useEffect(() => { const storage = draftStorage(); const now = Date.now(); const saved = readLandingDraft(storage, now) || readLandingIdea("", storage, now)?.text || ""; if (saved) setText(current => current || saved); }, []);
+  const edit = (value: string) => { setText(value); saveLandingDraft(draftStorage(), value, Date.now()); };
   /* 작업실 경로를 미리 받아 둔다 — 보낼 때 코드 묶음을 그제야 받아 버벅였다 */
   useEffect(() => { router.prefetch(newChatHref()); }, [router]);
   const idea = normalizeLandingIdea(text);
@@ -252,6 +283,7 @@ function Composer({ guest = false }: { guest?: boolean }) {
     let storage: Storage | null = null;
     try { storage = window.sessionStorage; } catch { /* 저장소가 막혀 있으면 주소로만 넘어간다 */ }
     stashLandingIdea(storage, idea, Date.now());
+    clearLandingDraft(storage);
     const href = newChatHref(idea);
     /* 로그인 전 — 예시 작업실로 튕기지 않고 그 자리에서 로그인 창을 띄운다. 로그인하면 적은 문장으로 대화가 시작된다 */
     if (guest) { openLogin(href); return; }
@@ -263,7 +295,7 @@ function Composer({ guest = false }: { guest?: boolean }) {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); send(); }
   }
   return <form className={home.composer} onSubmit={send} aria-busy={sending || undefined}>
-    <TextArea ref={field} className={home.composerField} aria-label="어떤 사업을 시작할지 적어 주세요" placeholder={`예: ${EXAMPLE_IDEA}`} rows={1} maxLength={LANDING_IDEA_MAX} value={text} onChange={event => setText(event.target.value)} onKeyDown={onKey} />
+    <TextArea ref={field} className={home.composerField} aria-label="어떤 사업을 시작할지 적어 주세요" placeholder={`예: ${EXAMPLE_IDEA}`} rows={1} maxLength={LANDING_IDEA_MAX} value={text} onChange={event => edit(event.target.value)} onKeyDown={onKey} />
     <div className={home.composerBar}>
       <span className={home.spacer} />
       <button type="submit" className={`${home.circle} ${home.send}`} aria-label="보내기 — 새 대화 시작" disabled={!idea}><ArrowUp size={16} aria-hidden="true" /></button>

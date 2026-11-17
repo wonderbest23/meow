@@ -908,7 +908,7 @@ export default function Studio() {
     {rightTab === "plan" && planView && !locks.plan ? <div className={styles.viewSeg} role="group" aria-label="문서 보기 방식">
       <button type="button" aria-pressed={planView === "easy"} onClick={() => { if (planView !== "easy") sendStudioCommand("plan-summary"); }}>쉽게 보기</button>
       <button type="button" aria-pressed={planView === "work"} onClick={() => { if (planView !== "work") sendStudioCommand("plan-summary"); }}>전체 문서</button>
-    </div> : <button type="button" className={styles.primary44} disabled={!!locks[rightTab]} title={locks[rightTab]?.message} onClick={() => sendStudioCommand(primary.command)}>{primary.label}</button>}
+    </div> : <button type="button" className={styles.primary44} disabled={!!locks[rightTab] || rightTab === "plan" && !planTools} title={locks[rightTab]?.message ?? (rightTab === "plan" && !planTools ? "계획서를 쓰면 내려받을 수 있어요" : undefined)} onClick={() => sendStudioCommand(primary.command)}>{primary.label}</button>}
   </header>;
 
   /* 예시 사업 · 대화 없는 사업의 대화 칸 안내 아래 — 대화 칸(BusinessIntake)이 없어 여기서 같은 말풍선을 그린다 */

@@ -1,8 +1,30 @@
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
 import { reconcileNicepayOrder } from "../lib/payments/nicepay-reconciliation";
 import { isPaymentSameOrigin, paymentRequestOrigin } from "../lib/payments/request-origin";
 
+/*
+ * 묶음 중복 결제 — 승인 직전 DB 검사(claim_nicepay_plan_order)가 묶음과 겹치는 상품을 막는지.
+ * 실제 SQL 실행은 scripts/local-nicepay-reconciliation.test.mts(로컬 Supabase)에서 한다. 여기서는 가장 최근 정의가
+ * 겹침 규칙을 담고 있는지, 잠금 키를 세 상품이 함께 쓰는지 확인한다.
+ */
+function assertBundleOverlapMigration() {
+  const dir = new URL("../supabase/migrations/", import.meta.url);
+  const defining = readdirSync(dir).filter(name => name.endsWith(".sql")).sort()
+    .filter(name => /create or replace function public\.claim_nicepay_plan_order/.test(readFileSync(new URL(name, dir), "utf8")));
+  assert.equal(defining.at(-1), "20261117103100_nicepay_bundle_overlap.sql", "The newest claim definition is the bundle-aware one");
+  const sql = readFileSync(new URL(defining.at(-1)!, dir), "utf8").replace(/--.*$/gm, "");
+  assert.match(sql, /when 'plan' then array\['plan','bundle'\]/, "A plan claim is blocked by a paid or confirming bundle");
+  assert.match(sql, /when 'homepage' then array\['homepage','bundle'\]/, "A homepage claim is blocked by a paid or confirming bundle");
+  assert.match(sql, /when 'bundle' then array\['plan','homepage','bundle'\]/, "A bundle claim is blocked by any overlapping product");
+  assert.match(sql, /other\.status in \('confirming','done'\)/, "Completed overlapping purchases block approval");
+  assert.match(sql, /in \('plan','homepage','bundle'\) then 'document'/, "Overlapping products share one advisory lock");
+  assert.match(sql, /homepageRefunded/, "A bundle whose homepage was refunded does not block buying the homepage alone");
+  assert.match(sql, /revoke all on function public\.claim_nicepay_plan_order\(text,text,text\) from public, anon, authenticated/);
+}
+
 async function main() {
+  assertBundleOverlapMigration();
   const originalOrigin = process.env.PLATFORM_APP_ORIGIN;
   delete process.env.PLATFORM_APP_ORIGIN;
   const localRequest = new Request("http://localhost:8099/api/payments/plan/reconcile", { headers: { host: "127.0.0.1:8099", origin: "http://127.0.0.1:8099" } });
@@ -111,7 +133,7 @@ async function main() {
     assert.equal((await callback("missing-migration")).status, "pending"); assert.equal(calls.length, count);
     const { POST } = await import("../app/api/payments/plan/reconcile/route");
     assert.equal((await POST(new Request("http://localhost/api/payments/plan/reconcile", { method: "POST", headers: { origin: "https://foreign.invalid" } }))).status, 403);
-    console.log("nicepay reconciliation: lost replies, reconnect, concurrent callbacks, database failures, identity/amount/currency checks, owner isolation, terminal states and missing migration passed (mock DB/PG)");
+    console.log("nicepay reconciliation: bundle overlap claim rule, lost replies, reconnect, concurrent callbacks, database failures, identity/amount/currency checks, owner isolation, terminal states and missing migration passed (mock DB/PG)");
   } finally { globalThis.fetch = original; }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

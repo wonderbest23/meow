@@ -73,6 +73,7 @@ export const MIGRATION_CHECKS: MigrationCheck[] = [
   { file: "20261006120000_business_checks.sql", feature: "사업자등록 확인 결과 저장", tables: ["business_checks"] },
   { file: "20261115120000_account_alert_contacts.sql", feature: "진행 단계 안내 번호 · 수신 동의(없으면 알림 설정에서 번호를 등록하지 못해요)", tables: ["account_alert_contacts"] },
   { file: "20261115130000_journey_notifications.sql", feature: "진행 단계 안내 발송 기록(없으면 단계 안내 문자가 나가지 않아요)", tables: ["journey_notifications"] },
+  { file: "20261117103100_nicepay_bundle_overlap.sql", feature: "묶음(계획서+홈페이지) 중복 카드 결제 막기(없으면 묶음 결제창을 두 탭에 열면 둘 다 승인돼요)", manual: "claim_nicepay_plan_order 함수 본문만 바꾸는 파일이에요 — SQL 편집기에서 함수 본문에 'bundle' 겹침 검사가 있는지 확인" },
   { file: "20261014120000_iap_payment_methods.sql", feature: "앱 인앱결제(애플·구글) 결제 기록(없으면 앱 결제가 반영되지 않아요)", manual: "payment_orders 결제 수단 제약에 APPLE_IAP·GOOGLE_IAP 가 있는지 SQL 편집기에서 확인" },
 ];
 

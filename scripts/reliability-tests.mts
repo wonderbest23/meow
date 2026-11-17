@@ -29,6 +29,7 @@ suites.push("intake-live-comment", "intake-answer-suggestions", "local-suggestio
 suites.push("platform-legal", "token-expiry", "intake-login", "launch-pricing", "plan-cost-cap", "fact-patch", "fact-highlight", "plan-eval", "cashflow-scenarios", "section-prompt-v3", "stream-usage", "operator-account", "design-normalize", "pending-sections", "review-keep-unresolved", "confirmed-name", "brainwave-business-render", "landing-ai-fill", "landing-contact-method", "landing-share-card", "landing-photo-library", "landing-themes", "llm-cost", "operating-homepage", "domain-purchase", "weekly-report", "customer-sms", "parallel-sections", "industry-playbooks", "business-types", "big-industry-paths", "marketing-kit", "plan-section-guard", "review-cache", "intake-amount-check");
 suites.push("launch-notifications", "auth-email-confirmation");
 suites.push("apple-iap", "apple-notifications", "google-play-iap");
+suites.push("pay-guards");
 suites.push("service-requests");
 suites.push("public-data");
 suites.push("domain-registrar");

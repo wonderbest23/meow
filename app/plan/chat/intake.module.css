@@ -1422,3 +1422,6 @@ button.workLogRow { min-height: 32px; }
   .understood h3 > button::before { content: ""; position: absolute; inset: -12px 0; }
   .messageMeta .messageEdit::before, .userActions .messageEdit::before { content: ""; position: absolute; inset: -8px; }
 }
+/* 계획서 작성 시작 실패 — 맨 위 한 줄 끝의 [다시 시도] · [로그인하고 이어가기] */
+.statusAction { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin-left: auto; padding: 4px 12px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-weight: 600; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.statusAction:disabled { opacity: .5; cursor: default; }

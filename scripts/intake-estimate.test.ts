@@ -310,6 +310,37 @@ async function main() {
     const again = await next({ action: "read", read: { answers: [], unknown: ["budget"] } });
     assert.match(String(again.snapshot.intake.answers.budget?.value), /^10000000/, "직접 답한 것은 '모름'으로 지우지 않는다");
   }
+  // ux-firstmsg(2026-11-16): 첫 메시지에 적은 예산('예산 300' = 300만원)은 '이렇게 알아들었어요'(:said, 근거는 사용자)로 넣고 다시 묻지 않는다
+  {
+    const { readSentence } = await import("../lib/plan-builder/intake-sentence");
+    const cookie = "퇴근 후 동네에서 수제 쿠키 팔고 싶어요, 예산 300";
+    assert.equal(readSentence(cookie).budget, 3_000_000, "예산 뒤 단위 없는 작은 수는 만원");
+    assert.equal(readSentence("예산은 1500 정도로 카페를 하려고요").budget, 15_000_000);
+    assert.equal(readSentence("쿠키 300개를 팔고 싶어요").budget, undefined, "예산 말이 없으면 읽지 않는다");
+    assert.equal(readSentence("월세 300 상가에서 꽃집").budget, undefined, "월세는 예산이 아니다");
+    const started = await saveIntakeCommand(`intake-firstmsg-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: cookie, revision: 0, requestId: randomUUID() }, off);
+    const budget = started.snapshot.intake.answers.budget;
+    assert.equal(budget?.status, "answered");
+    assert.match(String(budget?.value), /^3000000/);
+    assert.match(budget!.messageId, /:said$/, "한 말은 '이렇게 알아들었어요'로 보인다");
+    assert.equal(readCoach(started.plan.answers)!.fields.find(field => field.key === "budget")?.basis, "user");
+    assert.notEqual(started.snapshot.nextQuestion?.id, "budget", "예산을 다시 묻지 않는다");
+  }
+  // ux-dup(2026-11-16): 업종을 바꿔 기준값을 다시 채워도 안내는 대화에 한 번만 — 처음 안내를 지금 업종에 맞게 고친다
+  {
+    const { ESTIMATE_NOTICE } = await import("../lib/plan-builder/intake-core");
+    const owner = `intake-dup-${randomUUID()}`;
+    const made = await saveIntakeCommand(owner, { action: "start", mode: "startup", questionId: "business", value: "아파트 단지 앞 수제 도시락 가게", revision: 0, requestId: randomUUID() }, off);
+    const next = async (command: Record<string, unknown>) => { const current = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!; return saveIntakeCommand(owner, { ...command, planId: made.plan.id, revision: readCoach(current.answers)!.revision, requestId: randomUUID() } as never, off); };
+    const notices = (messages: Array<{ id: string; role: string; text: string }>) => messages.filter(message => message.role === "assistant" && message.id.endsWith(":estimate"));
+    assert.deepEqual(notices(made.snapshot.coach.messages).map(message => message.text), [ESTIMATE_NOTICE]);
+    const changed = await next({ action: "answer", questionId: "industry", value: "retail_commerce" });
+    const after = notices(changed.snapshot.coach.messages);
+    assert.equal(after.length, 1, "업종을 바꿔도 안내는 하나");
+    assert.match(after[0].text, /소매·커머스|기준값으로 다시 채웠어요/, after[0].text);
+    const again = await next({ action: "answer", questionId: "industry", value: "food_beverage" });
+    assert.equal(notices(again.snapshot.coach.messages).length, 1, "두 번 바꿔도 하나");
+  }
   assert.deepEqual(network, [], "네트워크 호출 0");
   console.log("intake-estimate: 8 businesses drafted from one sentence (AI 0회)");
 }
