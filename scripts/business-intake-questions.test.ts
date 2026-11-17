@@ -17,7 +17,7 @@ async function main() {
       // 가격 뒤 변동비·고정비: 손익 계산 세 값을 기본 흐름에서 모은다(2026-09-28). 운영 중은 월 고정비를 이미 묻고, 가격이 새로 들어갔다.
       exploring: ["interest", "experience", "hoursPerWeek", "budget", "conditions", "candidate", "customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "goal"],
       startup: ["industry", "business", "customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "budget", "hoursPerWeek", "capacity", "goal"],
-      operating: ["industry", "business", "customer", "offer", "price", "structure.unitCost", "problem", "period", "sales", "cost", "capacity", "channel", "goal"],
+      operating: ["industry", "business", "customer", "offer", "price", "structure.unitCost", "problem", "period", "sales", "cost", "budget", "capacity", "channel", "goal"],
     };
     const expectedDetails = {
       b2b_service: ["decisionMaker", "deliverables", "deliveryDays", "paymentTerms"],
@@ -114,6 +114,9 @@ async function main() {
     assert.match(getIntakeQuestion("operating", null, "cost")!.prompt, /매달 꼭 나가는 돈/);
     assert.match(getIntakeQuestion("operating", null, "cost")!.prompt, /팔 때마다 드는 재료비는 빼고/);
     assert.match(getIntakeQuestion("operating", null, "sales")!.prompt, /실제 매출/);
+    // 운영 중 예산은 준비 자금이 아니라 이번 개선에 쓸 돈(돈 장이 되찾는 때를 계산한다 — cashflow-scenarios.ts)
+    assert.match(getIntakeQuestion("operating", null, "budget")!.prompt, /이번에 새로 해 볼 일.*쓸 수 있는 돈/);
+    assert.equal(getIntakeQuestion("operating", null, "budget")!.kind, "number");
     assert.equal(getIntakeQuestion("operating", null, "sales")!.period, "실적 기간 합계");
     assert.equal(getIntakeQuestion("startup", null, "price")!.period, "판매 1건");
     // 운영 중에도 가격을 묻는다: 실적 매출 ÷ 가격으로 실제 판매량을 잡고 손익분기를 계산하기 위해서다(2026-09-28).

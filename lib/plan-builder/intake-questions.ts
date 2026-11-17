@@ -65,6 +65,12 @@ const structureUnitCost = (revenue: RevenueModel): IntakeQuestion => ({
 const structureCost: IntakeQuestion = { id: "structure.cost", fieldKey: "cost", label: COACH_FIELD_LABELS.cost, prompt: "매달 꼭 나가는 돈(월세 등)은 대략 얼마인가요?", kind: "number", unit: "원", period: "월", optional: true, hint: "임차료·고정 인건비·구독 도구처럼 매출이 없어도 나가는 돈이에요." };
 const budget = fieldQuestion("budget", "준비에 쓸 수 있는 돈은 얼마인가요?", { kind: "number", unit: "원", hint: "필요한 비용 추정치가 아니라 실제로 쓸 수 있는 금액이에요." });
 const hours = fieldQuestion("hoursPerWeek", "일주일에 몇 시간 쓸 수 있나요?", { kind: "number", unit: "시간", period: "주" });
+/*
+ * 운영 중인 사업의 예산(2026-11-16 김밥집·옷가게 계획서: 묻는 질문이 없어 답을 받지 못하고 '아직 정해지지 않았다'로 나왔다).
+ * 예산은 준비 자금이 아니라 '이번 개선에 쓸 수 있는 돈' — 돈 장이 이 돈을 되찾는 때를 계산한다(cashflow-scenarios.ts).
+ * 주당 시간 질문은 기본 질문 14개 상한(business-intake-questions.test.ts) 때문에 넣지 않았다 — 넣으려면 상한을 바꾸는 결정이 필요하다.
+ */
+const operatingBudget: IntakeQuestion = { ...budget, prompt: "이번에 새로 해 볼 일(홍보·상품·도구 등)에 쓸 수 있는 돈은 얼마인가요?", hint: "매달 나가는 돈은 빼고, 이번 개선에 실제로 쓸 수 있는 금액이에요." };
 const capacity = fieldQuestion("capacity", "처음에는 누가, 얼마나 감당하나요?", { hint: "누가 일하는지 고른 뒤 하루·주·월에 몇 건까지 할 수 있는지 정해요." });
 const goal = fieldQuestion("goal", "언제까지 무엇을 이루고 싶나요?", { hint: "목표는 현재 실적과 따로 기록돼요." });
 /*
@@ -109,6 +115,7 @@ const CORE_QUESTIONS: Record<IntakeMode, IntakeQuestion[]> = {
     { id: "period", label: "실적 기간 (시작일 / 종료일)", prompt: "살펴볼 실적 기간은 언제인가요?", kind: "text", optional: true, hint: "기간을 고르거나 날짜를 직접 선택해요." },
     fieldQuestion("sales", "이 기간 실제 매출은 모두 얼마였나요?", { kind: "number", unit: "원", period: "실적 기간 합계", hint: "실제로 들어온 매출만 넣어요. 예상 매출이나 목표는 빼요." }),
     { ...fieldQuestion("cost", "매달 꼭 나가는 돈(월세·고정 인건비 등)은 대략 얼마인가요? 팔 때마다 드는 재료비는 빼고 적어 주세요.", { kind: "number", unit: "원", period: "월", hint: "임차료·고정 인건비처럼 매달 나가는 돈이에요." }), label: `${COACH_FIELD_LABELS.cost} (월 고정비)` },
+    operatingBudget,
     fieldQuestion("capacity", "지금은 누가, 얼마나 감당하나요?", { hint: "누가 일하는지 고른 뒤 하루·주·월에 몇 건까지 할 수 있는지 정해요." }),
     fieldQuestion("channel", "지금 고객을 만나거나 판매하는 주요 경로는 어디인가요? (최대 3개)"),
     goal,
