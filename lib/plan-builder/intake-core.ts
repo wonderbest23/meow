@@ -920,6 +920,11 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
 }
 
 const ESTIMATE_SUFFIX = ":estimate";
+/*
+ * 첫 문장 읽기의 짐작(applyGuessed)은 '요청번호:guess:estimate' — 끝이 :estimate 라 화면 · 다른 규칙에는 채운 값(제안)으로 보이고,
+ * 낱말 기준표는 이 칸을 다시 채우지 않는다(업종을 고를 때 이 사업에 맞춘 짐작이 업종 고정값으로 덮이지 않게, 2026-11-17).
+ */
+const GUESS_ESTIMATE = `:guess${ESTIMATE_SUFFIX}`;
 
 /**
  * 제목이 아직 문장 앞부분(임시 제목)이면 기준표가 찾은 이름으로 바꾼다 — 사용자가 적은 띄어쓰기대로('강아지 수제 간식').
@@ -945,7 +950,7 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   const picked = intake.mode === "exploring" && !!intake.selectedCandidate;
   if (intake.mode !== "startup" && !picked || !business) return;
   const messageId = `${requestId}${ESTIMATE_SUFFIX}`, drafted = Object.keys(plan.sections).length > 0;
-  const open = (id: string) => { const answer = intake.answers[id]; return !answer || !drafted && answer.messageId.endsWith(ESTIMATE_SUFFIX); };
+  const open = (id: string) => { const answer = intake.answers[id]; return !answer || !drafted && answer.messageId.endsWith(ESTIMATE_SUFFIX) && !answer.messageId.endsWith(GUESS_ESTIMATE); };
   // 업종을 '잘 모르겠어요'로 넘겼으면 고른 것이 없다 — 문장에서 찾은 종류를 그대로 쓴다(넓은 업종으로 걸러 '승마 체험장'을 못 찾던 문제)
   const free = !picked && (open("industry") || intake.answers.industry?.status === "unknown");
   const { sector, ksic, matched, word, answers } = free ? estimateIntake(business, undefined, rules) : estimateIntake(business, intake.sector, rules, intake.ksic);
@@ -1009,6 +1014,51 @@ export function applyUnderstood(coach: CoachState, intake: IntakeState, items: N
     } catch { /* 형식이 안 맞으면 버린다 — 기준값이 그대로 남는다 */ }
   }
   return applied;
+}
+
+/**
+ * 첫 문장 읽기의 짐작(idea-understanding guess)을 넣는다 — 낱말 기준표가 채운 칸(:estimate)만 바꾸고, 말한 값 · 직접 답한 값은 건드리지 않는다.
+ * 사용자가 한 말이 아니므로 근거는 '제안'이고 '말하지 않은 것은 이렇게 채웠어요'에 그대로 보인다. 형식이 안 맞는 값은 버린다(기준표 값이 남는다).
+ * 마지막에 검사 하나: 한 번에 드는 비용이 짐작으로 채운 값인데 가격 이상이면 가격의 40%로 낮춘다 — 팔수록 손해인 초안을 만들지 않게(2026-11-17).
+ */
+export function applyGuessed(coach: CoachState, intake: IntakeState, items: NonNullable<IntakeCommand["guessed"]>, requestId: string, at: string): number {
+  const messageId = `${requestId}${GUESS_ESTIMATE}`, questions = intakeQuestions(intake, coach);
+  const guessed = (id: string) => { const now = intake.answers[id]; return !now || now.messageId.endsWith(ESTIMATE_SUFFIX); };
+  const put = (question: IntakeQuestion, raw: IntakeValue) => {
+    const value = validatedAnswer(question, raw);
+    intake.answers[question.id] = { status: "answered", value, messageId, at, quote: "" };
+    if (question.fieldKey) setField(coach, question.fieldKey, `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, messageId, "", "proposal");
+  };
+  let applied = 0;
+  for (const item of items) {
+    const question = questions.find(candidate => candidate.id === item.questionId);
+    if (!question || question.id === "business" || question.id === "industry" || question.id === "budget" || question.id === "hoursPerWeek" || !guessed(question.id)) continue;
+    try { put(question, item.value); applied += 1; } catch { /* 형식이 안 맞으면 버린다 — 기준표 값이 그대로 남는다 */ }
+  }
+  keepFilledCostBelowPrice(coach, intake, messageId, at);
+  // 안내도 사실대로 — 업종 고정값이 아니라 이 사업에 맞춰 채웠다(예전 안내 '같은 업종 기준값으로' 그대로면 틀린 말이 된다)
+  const notice = coach.messages.find(message => message.role === "assistant" && message.id.endsWith(ESTIMATE_SUFFIX));
+  if (applied && notice) notice.text = GUESS_NOTICE;
+  else if (applied) coach.messages.push({ id: messageId, role: "assistant", text: GUESS_NOTICE, at });
+  return applied;
+}
+export const GUESS_NOTICE = "나머지는 이 사업에 맞춰 먼저 채웠어요. 다르면 눌러서 고칠 수 있어요.";
+
+/**
+ * 검사: 짐작으로 채운 '한 번에 드는 비용'이 가격 이상이면 가격의 40%로 낮춘다 — 사용자가 직접 답한 비용은 건드리지 않는다.
+ * 첫 짐작 때뿐 아니라 가격을 바꾼 뒤에도 본다(2026-11-17: 가격을 3,000원으로 바꾸자 기준표의 한 장 비용 10,000원이 남아 '팔수록 손해' 계획이 됐다).
+ */
+export function keepFilledCostBelowPrice(coach: CoachState, intake: IntakeState, messageId: string, at: string) {
+  const questions = intakeQuestions(intake, coach);
+  const price = questions.find(question => question.fieldKey === "price"), unit = questions.find(question => question.fieldKey === "unitCost");
+  if (!price || !unit) return;
+  const priceValue = intake.answers[price.id]?.value, now = intake.answers[unit.id];
+  if (!now || !now.messageId.endsWith(ESTIMATE_SUFFIX) || typeof priceValue !== "number" || typeof now.value !== "number" || priceValue <= 0 || now.value < priceValue) return;
+  try {
+    const value = validatedAnswer(unit, Math.max(1, Math.round(priceValue * 0.4 / 10) * 10));
+    intake.answers[unit.id] = { status: "answered", value, messageId: messageId.endsWith(ESTIMATE_SUFFIX) ? messageId : `${messageId}${ESTIMATE_SUFFIX}`, at, quote: "" };
+    if (unit.fieldKey) setField(coach, unit.fieldKey, `${displayIntakeValue(value)}${unit.unit ?? ""}`, intake.answers[unit.id].messageId, "", "proposal");
+  } catch { /* 형식 검사에 막히면 그대로 둔다 */ }
 }
 
 /*
@@ -1084,6 +1134,8 @@ export function applyIntakeCandidates(coach: CoachState, intake: IntakeState, co
 }
 
 export function finishIntakeMutation(coach: CoachState, before: string, answers: ServerPlan["answers"], intake = readIntake(answers)) {
+  // 가격이 바뀌었으면 짐작으로 채운 한 번 비용이 가격을 넘지 않게(직접 답한 비용은 그대로)
+  if (intake) keepFilledCostBelowPrice(coach, intake, `cost-check-${coach.revision + 1}`, new Date().toISOString());
   const changed = before !== intakeBusinessFingerprint(coach, answers, intake);
   const documentRevision = coachDocumentRevision(coach);
   coach.revision += 1;

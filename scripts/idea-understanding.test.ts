@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { cleanUnderstood, understandIdea, understoodAnswers } from "../lib/plan-builder/idea-understanding";
+import { cleanGuess, cleanUnderstood, guessedAnswers, understandIdea, understoodAnswers } from "../lib/plan-builder/idea-understanding";
 import { UNDERSTAND_AI_MIN_MS, UNDERSTAND_SAVE_BY_MS, UNDERSTAND_WAIT_MS, understandAiBudget, understandSaveOnTime } from "../lib/plan-builder/intake-timing";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { capacityDaysDisplay, coachFieldDisplay } from "../lib/plan-builder/coach-presentation";
@@ -36,6 +36,22 @@ assert.deepEqual(understoodAnswers({ offer: "쿠키", prices: twoPrices }, offer
 assert.deepEqual(understoodAnswers({ offer: "수제 쿠키", prices: "한 봉지 6천원" }, offerQ), [{ questionId: "offer", value: "수제 쿠키" }]);
 assert.equal(cleanUnderstood({ prices: "쿠키 6천원, 케이크 3만원" }, "쿠키는 6천원에 팔아요").prices, undefined);
 assert.deepEqual(understoodAnswers({}, questions, "대표자 혼자 / 하루 50건"), []);
+// 짐작(guess, 2026-11-17): 적히지 않은 칸을 이 사업에 맞게 — 코드는 형식 · 범위 · '한 번 비용 < 값'만 본다
+assert.deepEqual(cleanGuess({ guessCustomer: "고양이를 좋아하는 20~30대", guessProblem: "", guessOffer: "길고양이 사진 엽서 1장", guessChannel: "인스타그램", guessPrice: 2500, guessUnitCost: 400, guessMonthlyCost: 50000 }),
+  { customer: "고양이를 좋아하는 20~30대", offer: "길고양이 사진 엽서 1장", channel: "인스타그램", price: 2500, unitCost: 400, monthlyCost: 50000 });
+assert.equal(cleanGuess({ guessPrice: 3000, guessUnitCost: 10000 }).unitCost, undefined, "값보다 큰 한 번 비용은 버린다(팔수록 손해인 초안)");
+assert.deepEqual(cleanGuess({ guessPrice: 50, guessCustomer: "고양이\n좋아하는 사람", guessOffer: "가".repeat(61) }), {}, "100원 미만 값 · 여러 줄 · 너무 긴 글은 버린다");
+assert.deepEqual(cleanGuess({ guessPrice: 0, guessCustomer: "" }), {}, "빈 짐작은 넣지 않는다");
+assert.equal(cleanUnderstood({ guessPrice: 2500 } as never, "엽서").guess, undefined, "'말한 것' 읽기는 짐작을 받지 않는다(따로 부른다)");
+const guessQ = [q("customer", "customer", "multi"), q("offer", "offer"), q("price", "price", "number"), q("structure.unitCost", "unitCost", "number"), q("structure.cost", "cost", "number"), q("channel", "channel", "multi")];
+assert.deepEqual(guessedAnswers({ customer: "고양이를 좋아하는 20~30대", offer: "엽서 1장", price: 2500, unitCost: 400, monthlyCost: 50000, channel: "인스타그램" }, guessQ, new Set(["price"])), [
+  { questionId: "customer", value: ["고양이를 좋아하는 20~30대"] }, { questionId: "offer", value: "엽서 1장" }, { questionId: "channel", value: ["인스타그램"] },
+  { questionId: "structure.unitCost", value: 400 }, { questionId: "structure.cost", value: 50000 },
+], "말한 칸(가격)은 빼고, 여러 개 고르는 질문은 목록으로");
+assert.deepEqual(guessedAnswers(undefined, guessQ), []);
+const source = readFileSync(new URL("../lib/plan-builder/idea-understanding.ts", import.meta.url), "utf8");
+assert.ok(source.includes("guessPrice") && source.includes("이 글에 적힌 바로 그 사업에 맞추세요"), "짐작 칸과 '업종 고정값이 아니라 이 사업' 규칙이 프롬프트에 있다");
+
 // 보일 때는 사용자가 적은 말에 가깝게 — 저장값(일주일 N)은 계산용
 assert.equal(capacityDaysDisplay("대표자 혼자 · 평일만 / 일주일 400건"), "대표자 혼자 / 하루 80건 · 평일만");
 assert.equal(capacityDaysDisplay("대표자 혼자 · 주말만 / 일주일 160건"), "대표자 혼자 / 하루 80건 · 주말만");
