@@ -101,7 +101,8 @@ async function main() {
     }
     return { plan, coach, intake };
   }
-  const full = startupPlan([["business", "맞벌이 가정 반찬 정기배송"], ["industry", "food_beverage"], ["price", 30000], ["structure.unitCost", 12000], ["structure.cost", 800000], ["capacity", "대표자 혼자 / 일주일 30건"]]);
+  // 반찬 정기배송은 구독이라(#419) 감당할 양도 구독 단위로 답한다 — '30건'처럼 다른 단위면 본전과 견주지 않는다
+  const full = startupPlan([["business", "맞벌이 가정 반찬 정기배송"], ["industry", "food_beverage"], ["price", 30000], ["structure.unitCost", 12000], ["structure.cost", 800000], ["capacity", "대표자 혼자 / 일주일 30가구"]]);
   const money = narrationMoney(full.coach, full.intake);
   assert.ok(money && money.breakEven && money.perUnit > 0, JSON.stringify(money));
   assert.equal(money!.vat, true, "the per-unit margin is after VAT, like the money chapter");
@@ -109,7 +110,8 @@ async function main() {
   const table = intakeFinancialTable(full.plan, full.coach, owner) ?? "";
   assert.ok(table.includes(`${money!.breakEven!.toLocaleString("ko-KR")}${money!.unit}`), `the money chapter shows the same break-even (${money!.breakEven}${money!.unit}):\n${table.slice(0, 1200)}`);
   assert.ok(table.includes(money!.perUnit.toLocaleString("ko-KR")), "the money chapter shows the same per-unit margin");
-  assert.ok(money!.reach && money!.reachWord?.startsWith("감당할 수 있는"), "a directly answered capacity is the comparison");
+  assert.ok(money!.reach === 30 && money!.reachWord === "맡을 수 있는 가구 수", `a directly answered capacity is the comparison: ${JSON.stringify(money)}`);
+  assert.doesNotMatch(breakEvenLine(money!)!.note, /수 있는 [^(]*수 있는/, "'감당할 수 있는 맡을 수 있는 …'처럼 겹치지 않는다");
   // 업종 가이드는 사업 방향 정리 지시문과 같은 것
   const { businessProfile } = await import("../lib/plan-builder/business-launch");
   assert.equal(narrationFacts(full.coach, full.intake).guide, businessProfile(full.plan).playbook?.name ?? null);

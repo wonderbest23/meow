@@ -398,8 +398,8 @@ console.log("studio navigation ok");
   /* 첫 화면 입력창에서 고른 전문가 모드는 주소 인자(depth=expert)로 넘어가 대화가 그 방식으로 시작한다. 말로 입력하기(마이크)는 뺐다(대표 결정 2026-11-14) */
   {
     const home = readFileSync(new URL("../app/plan/PlanList.tsx", import.meta.url), "utf8"), chat = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
-    /* 전환 단추는 입력칸에서 빼고 입력칸 아래 '하나씩 자세히 정할게요' 링크가 같은 인자를 싣는다(2026-11-15) */
-    assert.match(home, /\["하나씩 자세히 정할게요", `\$\{newChatHref\(\)\}&\$\{DEPTH_PARAM\}=expert`\]/);
+    /* 입력칸 아래 '하나씩 자세히 정할게요' 링크는 뺐다(2026-11-17 사장님) — 전문가 방식은 대화 화면 입력 상자 위 [일반 | 전문가] 전환에서 고른다. 주소 인자(depth=expert)는 그대로 받는다 */
+    assert.doesNotMatch(home, /하나씩 자세히 정할게요/);
     assert.match(chat, /searchParams\.get\(DEPTH_PARAM\) === "expert" \? "expert" : "easy"/);
     for (const source of [home, chat]) assert.doesNotMatch(source, /SpeechRecognition|useDictation|말로 적기"|말로 입력하기"/);
   }

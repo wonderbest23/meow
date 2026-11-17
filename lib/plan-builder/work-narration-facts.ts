@@ -21,7 +21,9 @@ export function narrationMoney(coach: CoachState, intake: Omit<IntakeState, "rec
   const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, scenario) : null;
   if (flow) {
     const capacity = basis("capacity") === "user" && flow.capacity ? flow.capacity.volume : null;
-    return { unit: flow.unit, perUnit: flow.contribution, vat: flow.vat > 0, breakEven: fixedByOwner ? flow.breakEven : null, reach: capacity, reachWord: capacity != null ? `감당할 수 있는 ${flow.terms.capacity}` : null };
+    // 업종 말이 이미 '맡을 수 있는 가구 수'처럼 '…수 있는'으로 시작하면 그대로 쓴다('감당할 수 있는 맡을 수 있는 …'이 되지 않게). '처리량'만 앞에 붙인다
+    const reachWord = /수 있는/.test(flow.terms.capacity) ? flow.terms.capacity : `감당할 수 있는 ${flow.terms.capacity}`;
+    return { unit: flow.unit, perUnit: flow.contribution, vat: flow.vat > 0, breakEven: fixedByOwner ? flow.breakEven : null, reach: capacity, reachWord: capacity != null ? reachWord : null };
   }
   const result = calculateFinancials({ unitPrice: scenario.unitPrice, unitVariableCost: scenario.unitVariableCost, monthlyFixedCost: scenario.monthlyFixedCost, monthlyGrowthPct: 0 });
   if (!result.unit) return null;

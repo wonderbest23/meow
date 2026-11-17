@@ -3,13 +3,13 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, ChevronRight, ArrowUp, MoreHorizontal, Plus, Search } from "lucide-react";
+import { ChevronRight, ArrowUp, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, readAuthFlag, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
 import { clearLandingDraft, normalizeLandingIdea, readLandingDraft, readLandingIdea, saveLandingDraft, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
 import { navigateWithTransition } from "../../lib/client/view-transition";
-import { DEPTH_PARAM, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
+import { newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
 /* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
@@ -118,7 +118,7 @@ export default function PlanList() {
   /* 손님 대화가 열려 있으면(서버가 알려 줌) 첫 화면에서 로그인 창 대신 바로 대화로 보낸다 — 사장님 결정 2026-11-17 "한도 걸고 열어줘" */
   const [guestIntake, setGuestIntake] = useState(false);
   useEffect(() => { let alive = true; if (readAuthFlag()) setSignedIn(true); /* 직전에 로그인돼 있던 기기는 확인을 기다리지 않고 화면부터 그린다 — 풀렸으면 아래 확인이 로그인 화면으로 보낸다 */ loadAuthSession().then(d => { if (alive) { setSignedIn(!!d.authenticated); setGuestIntake(d.guestIntake === true); } }).catch(() => {}); return () => { alive = false; }; }, []);
-  // 로그인 전에도 대화 입력 화면을 먼저 보여 준다(대표 결정 2026-11-14) — 예시 작업실로 바로 보내던 것을 바꿨다. 예시 두 개는 입력칸 아래 샘플 링크로, 보내면 로그인을 거쳐 그 문장으로 대화가 시작된다
+  // 로그인 전에도 대화 입력 화면을 먼저 보여 준다(대표 결정 2026-11-14) — 예시 작업실로 바로 보내던 것을 바꿨다. 보내면 로그인을 거쳐 그 문장으로 대화가 시작된다
   useEffect(() => { if (signedIn !== false) return; try { sessionStorage.setItem(GUEST_NEXT_KEY, "/plan"); } catch { /* 못 적으면 새 대화로 */ } }, [signedIn]);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
   const plans = allPlans;
@@ -175,7 +175,7 @@ export default function PlanList() {
     <PlanLoading fill variant="compact" note="화면을 불러오고 있어요" />
   </BusinessAppChrome></main>;
   const guest = signedIn === false;
-  /* 대화를 시작하려면 로그인이 필요한가 — 손님 대화가 열려 있으면 아니다(이어서 하기·예시·'로그인하면 저장돼요' 안내는 guest 그대로) */
+  /* 대화를 시작하려면 로그인이 필요한가 — 손님 대화가 열려 있으면 아니다(이어서 하기·'로그인하면 저장돼요' 안내는 guest 그대로) */
   const loginToStart = guest && !guestIntake;
   /* 로그인 전에 쓰던 사업 중 가장 최근 것(예시 제외) — 첫 화면에서 '이어서 하기'로 연다 */
   const resume = guest ? allPlans[0] ?? null : null;
@@ -231,17 +231,8 @@ export default function PlanList() {
           <p className={home.resumeNote}>로그인하면 저장돼요. <button type="button" onClick={() => openLogin(openHref(resume))}>로그인</button></p>
         </div>}
         <Composer guest={loginToStart} />
-        {/* 적는 것이 기본, 다른 길 세 개는 입력칸 아래 작은 글로(2026-11-15 사장님: 새 대화도 이 화면 하나로). 일반/전문가 전환은 입력칸에서 빼고 '하나씩 자세히'로 옮겼다 */}
-        <nav className={home.alt} aria-label="다른 시작">
-          {([["아직 정한 사업이 없어요", newChatEntryHref("exploring")], ["이미 운영 중이에요", newChatEntryHref("operating")], ["하나씩 자세히 정할게요", `${newChatHref()}&${DEPTH_PARAM}=expert`]] as const).map(([label, href]) =>
-            <Link key={label} href={href} onClick={event => { if (loginToStart) { event.preventDefault(); openLogin(href); } }}>{label}</Link>)}
-        </nav>
-        {/* 휴대폰 첫 화면의 최근 사업 3개는 뺐다(2026-11-15 사장님) — 첫 화면은 입력칸만, 사업은 아래 탭 '내 사업'에서 */}
-        {/* 완성 예시 두 개 — 아직 사업이 없는 사람(로그인 전 포함)만. 필요하면 눌러 본다 */}
-        {guest && <nav className={home.samples} aria-label="완성 예시">
-          <Link href="/plan/studio?planId=sample_banchan_easy">일반 (샘플)<ArrowRight size={14} aria-hidden="true" /></Link>
-          <Link href="/plan/studio?planId=sample_banchan_expert">전문가 (샘플)<ArrowRight size={14} aria-hidden="true" /></Link>
-        </nav>}
+        {/* 입력칸 아래 '다른 시작'(정한 사업 없음 · 운영 중 · 하나씩 자세히) 줄과 '완성 예시'(일반 · 전문가 샘플) 줄은 뺐다(2026-11-17 사장님: "이것도 불필요해, 이것도 필요없어").
+            첫 화면은 인사말 · 입력칸(로그인 전이면 이어서 하기)만. 휴대폰 첫 화면의 최근 사업 3개도 이미 뺐다(2026-11-15) — 사업은 아래 탭 '내 사업'에서 */}
       </section>}
       {/* 첫 화면에는 입력칸만 — 사업 목록은 '내 사업'에서만 본다(2026-11-15 사장님: 새 대화 · 내 사업 둘만). 전에는 PC 첫 화면 아래에 같은 목록이 또 있었다 */}
       {!guest && listOnly && <section className={home.listCard} data-list-only={listOnly || undefined} aria-label="내 사업 목록" id="businesses">

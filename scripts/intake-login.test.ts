@@ -28,6 +28,7 @@ assert.match(session, /authenticated: false, email: null, projects: \[\], guestI
 const planList = readFileSync(new URL("../app/plan/PlanList.tsx", import.meta.url), "utf8");
 assert.match(planList, /const loginToStart = guest && !guestIntake;/);
 assert.match(planList, /<Composer guest=\{loginToStart\} \/>/, "첫 화면 입력칸은 손님 대화가 열려 있으면 로그인 창을 띄우지 않는다");
-assert.match(planList, /if \(loginToStart\) \{ event\.preventDefault\(\); openLogin\(href\); \}/, "다른 시작 링크도 같은 기준");
+// 입력칸 아래 '다른 시작' 링크 줄과 '완성 예시' 줄은 뺐다(2026-11-17 사장님) — 첫 화면에서 대화를 여는 길은 입력칸 하나
+assert.doesNotMatch(planList, /aria-label="다른 시작"|aria-label="완성 예시"/, "첫 화면에 다른 시작 · 완성 예시 줄이 다시 생겼다");
 
 console.log(JSON.stringify({ passed: 13 }));

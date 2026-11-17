@@ -1206,6 +1206,80 @@ async function main() {
     assert.match(intake, /\{error && !ideaError && !staleFailure && !prepareNoticeOnTop && <div className=\{styles\.notice\} role="alert">/);
     assert.ok(css.includes(".statusAction"), "맨 위 줄의 다시 시도 단추");
   }
+  // 채움 상자 '생각하며 채우기'(2026-11-17 사장님) — 언제 재생하는지 · 얼마나 걸리는지 · 무엇을 읽히는지
+  {
+    const { nextFillSeen, fillThinkingTiming } = await import("../app/plan/chat/intake-ui/fill-thinking");
+    const { FillThinking } = require("../app/plan/chat/intake-ui/FillThinking") as typeof import("../app/plan/chat/intake-ui/FillThinking");
+    // 불러오는 중이면 기록 없음 · 다 불러온 첫 그림이 기준(이미 있던 상자는 재생하지 않는다 — 새로고침 · 다시 열기 · 이전 대화)
+    assert.deepEqual(nextFillSeen({ planId: "p1", batches: ["a:estimate"] }, false, "p1", ["a:estimate"]), { seen: null, fresh: [], refill: false });
+    const reopened = nextFillSeen(null, true, "p1", ["a:estimate"]);
+    assert.deepEqual(reopened.fresh, [], "다시 연 대화는 재생하지 않는다");
+    assert.equal(nextFillSeen(reopened.seen, true, "p1", ["a:estimate"]).seen, reopened.seen, "같은 상자가 다시 그려지면 그대로");
+    assert.deepEqual(nextFillSeen(reopened.seen, true, "p1", ["a:estimate"]).fresh, []);
+    // 빈 새 대화 → 첫 문장을 보내 사업이 생기며 채워졌다 → 재생(짧게가 아니라 처음 길이로)
+    const blank = nextFillSeen(null, true, null, []);
+    const first = nextFillSeen(blank.seen, true, "p2", ["r1:estimate"]);
+    assert.deepEqual([first.fresh, first.refill], [["r1:estimate"], false], "첫 채움은 재생");
+    // 읽은 값(:said)이 일부를 바꿔 같은 묶음의 개수만 줄면 재생하지 않는다
+    assert.deepEqual(nextFillSeen(first.seen, true, "p2", ["r1:estimate"]).fresh, []);
+    // 사업이 잠깐 비는 순간(다시 불러오는 중)은 건드리지 않는다
+    assert.equal(nextFillSeen(first.seen, true, null, []).seen, first.seen);
+    // 업종을 바꿔 다시 채우면 새 묶음 — 짧게 재생
+    const refill = nextFillSeen(first.seen, true, "p2", ["r2:estimate"]);
+    assert.deepEqual([refill.fresh, refill.refill], [["r2:estimate"], true], "다시 채우면 짧게 재생");
+    // 다른 사업으로 옮기면 그 사업의 지금 상자가 기준(재생 없음)
+    assert.deepEqual(nextFillSeen(refill.seen, true, "p3", ["x:estimate"]).fresh, [], "다른 사업을 열면 재생하지 않는다");
+    // 타이밍 — 줄 간격 약 0.2~0.3초(많으면 줄인다), 다 나오기까지 2~3초 안, 다 나오고 0.3~0.5초 뒤 접힌다
+    for (let count = 1; count <= 16; count++) {
+      const timing = fillThinkingTiming(count);
+      assert.ok(timing.shown <= 3000, `${count}개: 다 나오기까지 ${timing.shown}ms`);
+      assert.ok(timing.mergeAt - timing.shown >= 300 && timing.mergeAt - timing.shown <= 500, `${count}개: 다 나온 뒤 멈춤`);
+      assert.ok(timing.step <= 260 && (count > 7 || timing.step >= 200), `${count}개: 줄 간격 ${timing.step}ms`);
+      assert.ok(fillThinkingTiming(count, true).doneAt < timing.doneAt, "다시 채울 때는 더 짧게");
+    }
+    assert.ok(fillThinkingTiming(10).doneAt <= 3200, "10개도 합쳐지기까지 약 3초");
+    // 그림 — 머리줄(빛이 지나가는 글) + 칸 이름 · 값 줄. 줄과 머리줄은 화면 읽기에서 숨기고 알림 칸만 둔다(요약은 그린 뒤 한 번 넣는다)
+    const lines = [{ id: "industry", label: "업종", value: "카페" }, { id: "customer", label: "주요 고객", value: "근처 직장인" }, { id: "price", label: "판매 가격", value: "5,500원" }];
+    const thinking = renderToStaticMarkup(<FillThinking items={lines} head={<h3>말하지 않은 것은 이렇게 채웠어요</h3>} announce="말하지 않은 것은 이렇게 채웠어요 · 3개 · 업종 · 주요 고객 · 판매 가격" onDone={noop} />);
+    assert.ok(thinking.includes("data-fill-thinking") && thinking.includes('data-phase="think"') && thinking.includes("빈칸을 채우는 중…"), thinking);
+    assert.ok(lines.every(line => thinking.includes(`<small>${line.label}</small><span>${line.value}</span>`)), "실제 채운 값 그대로 한 줄씩");
+    assert.ok(!thinking.includes("<h3>"), "합쳐지기 전에는 요약 줄 대신 머리줄");
+    assert.match(thinking, /<p[^>]*aria-hidden="true"><span>빈칸을 채우는 중…<\/span><\/p><div[^>]*aria-hidden="true"><ul>/, "머리줄 · 줄은 하나씩 읽히지 않는다");
+    assert.match(thinking, /<span[^>]*role="status" aria-live="polite"><\/span><\/div>$/, "알림 칸은 비어 있다가 요약 한 줄만 받는다");
+    const delays = [...thinking.matchAll(/animation-delay:(\d+)ms/g)].map(match => Number(match[1]));
+    assert.deepEqual(delays, [0, 1, 2].map(index => fillThinkingTiming(3).first + index * fillThinkingTiming(3).step), "줄이 차례로 올라온다");
+    const fillSource = readFileSync(new URL("../app/plan/chat/intake-ui/FillThinking.tsx", import.meta.url), "utf8");
+    assert.match(fillSource, /setTimeout\(\(\) => setSpoken\(announce\), 120\)/, "요약 한 줄은 알림 칸이 그려진 뒤 한 번");
+    assert.doesNotMatch(fillSource, /fetch\(|\/api\//, "AI·서버를 부르지 않는다");
+    const fillCss = readFileSync(new URL("../app/plan/chat/intake-ui/fill-thinking.module.css", import.meta.url), "utf8");
+    assert.match(fillCss, /\.root\[data-phase="merge"\] \.list \{ grid-template-rows: 0fr; opacity: 0; \}/, "다 나오면 높이가 줄며 접힌다");
+    assert.match(fillCss, /@media \(prefers-reduced-motion: reduce\) \{\n  \.head span, \.list li, \.root\.root h3 \{ animation: none; \}/);
+    // 대화 화면 — 처음 보는 묶음만 재생, 움직임 줄이기면 재생 없이 바로 접힌 요약 줄, 재생 중에는 FillThinking 이 채움 상자 자리를 대신한다
+    const intakeSource = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
+    assert.match(intakeSource, /const fillNext = nextFillSeen\(fillSeen, loaded, plan\?\.planId \?\? null, \[\.\.\.new Set\(filledAnswers\.map\(item => item\.batch\)\)\]\);/);
+    assert.match(intakeSource, /const still = typeof window !== "undefined" && window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches;\n\s*setChipsOpen\(current => \(\{ \.\.\.current, filled: false \}\)\);\n\s*setFillPlay\(still \|\| !items\.length \? null : /, "움직임 줄이기면 재생하지 않고 접힌 요약 줄");
+    assert.match(intakeSource, /\{fillPlay \? <FillThinking key=\{fillPlay\.key\} items=\{fillPlay\.items\}[^\n]*head=\{filledAnswers\.length \? understoodHead\("filled", FILLED_TITLE, filledSummary\(filledAnswers\), false\) : null\}/, "합쳐지는 자리는 지금의 접힌 요약 줄 그대로");
+    assert.match(intakeSource, /: understoodBox\("filled", FILLED_TITLE, filledAnswers, filledSummary\(filledAnswers\)\)\}/);
+  }
+  // 금액 범위 칩 질문의 보조 설명 '대략 고르면 가운데 값으로 계산해요…'는 뺐다(2026-11-17 사장님). 다른 질문의 힌트는 그대로
+  {
+    const budgetAsk = original.questions.find(question => question.id === "budget")!;
+    const coachBudget = renderToStaticMarkup(<QuestionForm inChat coach question={budgetAsk} snapshot={original} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
+    assert.ok(coachBudget.includes("data-amount-ladder") || coachBudget.includes("만원"), "대화의 준비금 질문은 금액 범위 칩");
+    assert.ok(!coachBudget.includes("가운데 값으로 계산해요") && !coachBudget.includes("정확히 알면 입력창에 적어 주세요") && !coachBudget.includes(budgetAsk.hint!), coachBudget);
+    const plainBudget = renderToStaticMarkup(<QuestionForm question={budgetAsk} snapshot={original} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
+    assert.ok(plainBudget.includes(budgetAsk.hint!), "예전 화면(대화 밖)의 준비금 힌트는 그대로");
+    const capacityAsk = original.questions.find(question => question.id === "capacity")!;
+    const coachCapacity = renderToStaticMarkup(<QuestionForm inChat coach question={capacityAsk} snapshot={original} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
+    assert.ok(coachCapacity.includes(capacityAsk.hint!), "다른 질문의 힌트는 그대로");
+    assert.doesNotMatch(readFileSync(new URL("../app/plan/chat/intake-ui/IntakePanels.tsx", import.meta.url), "utf8"), /가운데 값으로 계산해요/);
+  }
+  // 마무리 화면의 '로그인하지 않으면 이 브라우저에만 저장돼요…' 안내는 뺐다(2026-11-17 사장님: 필요하면 알아서 로그인한다)
+  {
+    const intakeSource = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
+    assert.doesNotMatch(intakeSource, /guestSaveNote|이 브라우저에만 저장돼요/);
+    assert.ok(!css.includes(".guestSaveNote"));
+  }
   console.log(`business-intake-ui: ownership, pending retries, optimistic rollback inputs, choice composer, hybrid chips, number stepper, amount ladder, period presets, seeds, extraction consent, source summary, artifact links passed; local next-question p95 ${p95.toFixed(2)}ms`);
 }
 

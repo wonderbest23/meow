@@ -234,7 +234,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       {editing && <AppButton type="button" variant="text" className={styles.textButton} onClick={onCancel}>{snapshot.coreComplete ? "마무리로 돌아가기" : "현재 질문으로"}</AppButton>}
     </div>}
     <h2 id="intake-question-heading" tabIndex={-1}>{showMention ? `${question.label}, 앞서 말한 내용으로 이어갈까요?` : showSuggested ? "이 업종으로 정리할까요?" : questionPromptText(question.prompt)}</h2>
-    {question.hint && !showSuggested && !showMention && <p className={styles.questionHint}>{coach && numeric && question.unit === "원" && ladder.length > 0 ? "대략 고르면 가운데 값으로 계산해요. 정확히 알면 입력창에 적어 주세요." : question.hint}</p>}
+    {/* 대화의 금액 범위 칩 질문에는 보조 설명을 달지 않는다(2026-11-17 사장님: '대략 고르면 가운데 값…' 한 줄 뺌). 다른 질문의 힌트는 그대로 */}
+    {question.hint && !showSuggested && !showMention && !(coach && numeric && question.unit === "원" && ladder.length > 0) && <p className={styles.questionHint}>{question.hint}</p>}
     {draft.hint && <p className={styles.draftHint}>이전 답변: {draft.hint}</p>}
     {soloSeeded && soloOption && draft.selected.includes(soloOption.value) && <p className={styles.draftHint}>앞서 혼자 한다고 하셔서 &apos;{soloOption.label}&apos;를 골라 뒀어요. 다르면 바꿔 주세요.</p>}
     <form onSubmit={submit}>

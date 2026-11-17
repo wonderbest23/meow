@@ -47,6 +47,8 @@ import { JourneyGuideTurn } from "./intake-ui/JourneyGuideTurn";
 import { GUIDE_PARAM, journeyGuide, journeyGuideContext, readJourneyGuide, type JourneyGuideCode } from "../../../lib/plan-builder/journey-guides";
 import { planSectionEditMessage } from "../../../lib/plan-builder/studio-plan-edit";
 import { WorkLog } from "./intake-ui/WorkLog";
+import { FillThinking } from "./intake-ui/FillThinking";
+import { nextFillSeen, type FillSeen } from "./intake-ui/fill-thinking";
 import { designLogItem, planLogItem } from "./intake-ui/work-log";
 import { editExamples } from "../../../lib/plan-builder/edit-examples";
 import { STUDIO_QUEUE_LIMIT, editTurnBusy, editTurnsKey, enqueueRequest, queuedRequestRoute, readRequestQueue, requestQueueKey, restoreEditTurns, sectionHint, studioEditAction, studioEditError, studioEditReducer, studioTargetChipText, type QueuedStudioRequest, type StudioEditTurn } from "./intake-ui/studio-edit";
@@ -1729,7 +1731,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     const option = item.options?.find(choice => choice.value === answer.value)?.label;
     const shown = option ?? (typeof answer.quote === "string" && answer.quote ? answer.quote : Array.isArray(answer.value) ? answer.value.join(", ") : `${answer.value ?? ""}`);
     // 숫자만 남은 값에는 질문의 단위를 붙인다('9000' → '9000원')
-    return [{ id: item.id, label: item.label, value: coachFieldDisplay(/^\d[\d,]*$/.test(shown) ? `${shown}${item.unit ?? ""}` : shown) }];
+    // batch: 같은 번에 채운 답은 메시지 번호가 같다('요청번호:estimate') — 채움 상자 재생을 묶음 단위로 정한다(fill-thinking.ts)
+    return [{ id: item.id, label: item.label, value: coachFieldDisplay(/^\d[\d,]*$/.test(shown) ? `${shown}${item.unit ?? ""}` : shown), batch: answer.messageId }];
   }) : [];
   const filledAnswers = answerChips(":estimate"), saidAnswers = answerChips(":said");
   /*
@@ -1761,6 +1764,25 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   else if (loaded && chipCount && chipsSeen.at === null && !understanding) setChipsSeen({ empty: chipsSeen.empty, at: chipsSeen.empty ? turnKey : "\u0000" });
   const chipsFresh = chipsSeen.at === null || chipsSeen.at === turnKey;
   const [chipsOpen, setChipsOpen] = useState<{ said?: boolean; filled?: boolean }>({});
+  /*
+   * 채움 상자 '생각하며 채우기'(2026-11-17 사장님: GPT·Claude 처럼 채우는 모습을 한 줄씩 보이고 그다음 한 줄 요약으로 합친다).
+   * 이 화면에서 처음 보는 채움 묶음이 생길 때만 한 번 재생한다 — 첫 채움, 업종·사업 문장을 바꿔 다시 채울 때(짧게).
+   * 불러올 때 이미 있던 상자(새로고침 · 다시 열기 · 이전 대화)와 같은 상자가 다시 그려질 때는 재생하지 않는다(규칙: fill-thinking.ts).
+   * 재생하든 안 하든 새로 채운 상자는 접힌 한 줄 요약으로 끝난다. 움직임 줄이기를 켰으면 재생 없이 바로 요약 줄.
+   */
+  const [fillSeen, setFillSeen] = useState<FillSeen | null>(null);
+  const [fillPlay, setFillPlay] = useState<{ key: string; items: typeof filledAnswers; refill: boolean } | null>(null);
+  const fillNext = nextFillSeen(fillSeen, loaded, plan?.planId ?? null, [...new Set(filledAnswers.map(item => item.batch))]);
+  if (fillNext.seen !== fillSeen) {
+    setFillSeen(fillNext.seen);
+    if (!loaded && fillPlay) setFillPlay(null);
+    if (fillNext.fresh.length) {
+      const items = filledAnswers.filter(item => fillNext.fresh.includes(item.batch));
+      const still = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      setChipsOpen(current => ({ ...current, filled: false }));
+      setFillPlay(still || !items.length ? null : { key: fillNext.fresh.join("\n"), items, refill: fillNext.refill });
+    }
+  }
   const understandingRef = useRef(false);
   useEffect(() => { understandingRef.current = understanding; });
   // 읽기 시작하면 '적은 글을 읽고 있어요' 줄까지, 끝나면 다음 질문까지 내린다
@@ -1848,15 +1870,18 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    */
   /* 대화가 불러와진 뒤(브라우저에서만) 그려지는 상자라 여기서 화면 폭을 읽어도 서버 그림과 어긋나지 않는다 */
   const narrowScreen = typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches;
+  const understoodHead = (key: "said" | "filled", title: string, summary: string, open: boolean) => <h3><button type="button" aria-expanded={open} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><b>{title}</b>{open ? <small>다르면 눌러서 바꾸세요</small> : <span>{summary}</span>}<em data-open={open || undefined} aria-hidden="true"><ChevronDown size={16} /></em></button></h3>;
   const understoodBox = (key: "said" | "filled", title: string, items: typeof saidAnswers, summary: string) => {
     if (!items.length) return null;
     /* 휴대폰에서는 처음부터 접힌 채로(2026-11-15 사장님) — 펼쳐 두면 화면을 다 차지해 질문이 아래로 밀렸다 */
     const open = chipsOpen[key] ?? (chipsFresh && !narrowScreen);
     return <>
-      <h3><button type="button" aria-expanded={open} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><b>{title}</b>{open ? <small>다르면 눌러서 바꾸세요</small> : <span>{summary}</span>}<em data-open={open || undefined} aria-hidden="true"><ChevronDown size={16} /></em></button></h3>
+      {understoodHead(key, title, summary, open)}
       {open && <div data-said={key === "said" ? "" : undefined}>{items.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div>}
     </>;
   };
+  const FILLED_TITLE = "말하지 않은 것은 이렇게 채웠어요";
+  const filledSummary = (items: typeof filledAnswers) => `${items.length}개 · ${items.map(item => item.label).join(" · ")}`;
   /* 보내기 단추 — 예전 모양은 입력칸 오른쪽, PC 는 입력 카드 아래 줄 오른쪽 */
   const sendButton = <button type="submit" className={styles.sendButton} aria-label={studioRoute ? studioRoute === "queue" ? "기다리는 요청으로 보내기" : "보내기" : sendLabel} title={studioRoute ? "보내기" : sendLabel} disabled={studioRoute ? studioSendDisabled || !visibleComposerText(studioText) : !loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{!studioRoute && (busy && !answerQueueOpen || replyTurn) ? <LoaderCircle size={20} className={styles.spinner} /> : !studioRoute && askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>;
   return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined} data-studio-pro={pro || undefined} data-focus={focus && embedded || undefined} data-drawer={drawerOpen || undefined} data-keyboard={keyboardOpen || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={embedded ? undefined : summaryToggle}>
@@ -1912,9 +1937,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
               </section>) : <>
             <ConversationHistory snapshot={plan} onEdit={editQuestion} receipt={receipt} readOnly={documentFixed} pro={pro} log={historyLog} />
 {/* 일반 모드: 문장에서 읽은 것(실선)과 말하지 않아 채운 것(점선)을 한눈에 — 누르면 그 답을 고친다 */}
-            {chipCount > 0 && <section className={styles.understood} aria-label="알아들은 내용">
+            {(chipCount > 0 || fillPlay) && <section className={styles.understood} aria-label="알아들은 내용">
               {understoodBox("said", "이렇게 알아들었어요", saidAnswers, saidAnswers.map(item => item.value).join(" · "))}
-              {understoodBox("filled", "말하지 않은 것은 이렇게 채웠어요", filledAnswers, `${filledAnswers.length}개 · ${filledAnswers.map(item => item.label).join(" · ")}`)}
+              {/* 처음 채울 때 — 채운 값이 한 줄씩 나온 뒤 접힌 요약 줄로 합쳐진다. 합쳐진 뒤는 아래 상자 그대로(눌러서 펼치기) */}
+              {fillPlay ? <FillThinking key={fillPlay.key} items={fillPlay.items} refill={fillPlay.refill} head={filledAnswers.length ? understoodHead("filled", FILLED_TITLE, filledSummary(filledAnswers), false) : null} announce={`${FILLED_TITLE} · ${filledSummary(fillPlay.items)}`} onDone={() => setFillPlay(null)} />
+                : understoodBox("filled", FILLED_TITLE, filledAnswers, filledSummary(filledAnswers))}
             </section>}
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}
@@ -1943,7 +1970,6 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
                 {nextStep === "prepare" && signedIn && <StageAlertOffer />}
                 </>}
                 {generating && generation.state && !embedded && <AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => setGenerationOpen(true)}>사업계획서 작성 중 {generation.state.done}/{generation.state.total} · 진행 보기</AppButton>}
-                {!signedIn && <p className={styles.guestSaveNote}>로그인하지 않으면 이 브라우저에만 저장돼요. <Link href={loginHref}>로그인</Link>하면 다른 기기·브라우저에서도 이어서 볼 수 있어요.</p>}
                 {/* '지금까지 답변 보기' 글 단추는 뺐다 — 결제 단추 하나만 남긴다(2026-11-07 사장님). 답 고치기는 입력칸의 ＋에서 */}
               </section>)}
             </div>
