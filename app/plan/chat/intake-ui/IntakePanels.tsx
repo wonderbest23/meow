@@ -12,7 +12,7 @@ import { ArrowRight, Check, CheckCircle2, ChevronRight, Copy, FileText, Lightbul
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion, type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
-import { amountRanges, rangeMidpoint, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
+import { amountRanges, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
 import { answerText, assembleHybridText, hybridComplete, incompleteChoiceText, COUNT_PREFIX, candidateConflict, attachmentName, bulkCandidateIds, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, optionGroups, PERIOD_PRESETS, periodDates, periodDisplay, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
 import { mentionedAnswer, mentionsSolo, undecidedHelp } from "./guidance";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
@@ -31,7 +31,8 @@ import { MessageMeta, WorkLog } from "./WorkLog";
 import { editFoundItem, marginLogItem } from "./work-log";
 import { splitSectionEditMessage } from "../../../../lib/plan-builder/studio-plan-edit";
 
-export const ENTRY_GREETING = "안녕하세요! 오늘은 어떤 사업을 새로 시작해볼까요?";
+/* 첫 인사는 세 길(아이디어 찾기 · 생각한 사업 · 이미 운영 중) 모두에 맞는 말로 — '새로 시작해볼까요?'는 운영 중인 사장님께 맞지 않았다(2026-11-16 점검) */
+export const ENTRY_GREETING = "안녕하세요! 오늘은 어떤 사업 이야기를 나눠 볼까요?";
 export const ENTRY_QUESTION = "지금 어느 단계세요?";
 const GREETING_TYPING_MS = 600;
 const GREETING_CHAR_MS = 28;
@@ -389,12 +390,20 @@ function HybridChips({ question, draft, disabled, groups, revealed, suggestions,
         return <button key={`ai-${item}`} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} data-picked={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => option ? tap(option.value) : toggleSuggestion(item)}><span className={styles.suggestionLabel}>{item}<span className={styles.srOnly}> (맞춤 추천)</span></span></button>;
       })}{folded ? <button type="button" className={styles.chip} disabled={disabled} aria-expanded={false} onClick={() => setShowAll(true)}>다른 선택지 보기<ChevronRight size={14} aria-hidden="true" /></button> : group.options.filter(option => !(index === aiGroup && aiItems.includes(option.label))).map(option => {
         const selected = draft.selected.includes(option.value);
-        // 고른 칩은 입력창 글로 옮겨 가므로 줄에서 사라진다(data-picked, 코치 채팅 CSS). 필터 단계 칩은 다음 단계의 기준이라 남긴다
-        return <button key={option.value} type="button" className={styles.chip} aria-pressed={selected} data-selected={selected || undefined} data-picked={selected && !filter || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => tap(option.value)}>{goalChipLabel(question.id, option.label)}{option.hint && <small className={styles.chipHint}>{option.hint}</small>}</button>;
+        /*
+         * 고른 칩은 입력창 글로 옮겨 가므로 줄에서 사라진다(data-picked, 코치 채팅 CSS). 필터 단계 칩은 다음 단계의 기준이라 남긴다.
+         * 입력창 글에 아직 안 들어간 칩(목표의 기간 — 목표를 고르기 전에는 글이 비어 있다)은 고른 채로 남긴다: 예전엔 눌러도 글이 안 생기면서 칩만 사라져
+         * '6개월 안에'가 숨은 채 골라져 있었다(2026-11-16 점검)
+         */
+        const moved = selected && !filter && chipInComposer(draft.text, option.label);
+        return <button key={option.value} type="button" className={styles.chip} aria-pressed={selected} data-selected={selected || undefined} data-picked={moved || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => tap(option.value)}>{goalChipLabel(question.id, option.label)}{option.hint && <small className={styles.chipHint}>{option.hint}</small>}</button>;
       })}</div>
     </div>;
   }), countUnit !== undefined && <CountStep key="count" question={question} unit={countUnit} count={count} disabled={disabled} onCount={value => update(withCount(draft.selected, value))} />]}</div>;
 }
+
+/** 고른 칩의 글이 입력창 답 글에 들어갔는지 — 들어간 칩만 줄에서 뺀다 */
+export const chipInComposer = (text: string, label: string) => !!label && text.includes(label);
 
 /**
  * 목표 칩의 'N원'·'N건' 자리표는 칩에서 감춘다 — 금액·건수는 바로 다음 단계에서 고른다('월 매출 N원' → '목표 월 매출').
@@ -480,7 +489,8 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
     const item = ranges[index];
     if (onRange) { onRange(item); return; } // text mode: the range label itself becomes the answer text
     if (item.min === 0 && item.max === 0 || item.max === 0) return onCommit("0원");
-    if (quick) return onCommit(wonAnswer(rangeMidpoint(item)));
+    // 범위 이름을 그대로 보낸다 — 계산은 서버가 범위 가운데 값으로 하고, 대화에는 고른 범위('100만원 미만')가 보인다(정한 금액처럼 보이지 않게)
+    if (quick) return onCommit(item.label);
     setRangeIndex(index); setKeypad(false);
   };
   const parsed = /^\d+(?:\.\d+)?$/.test(amountText.replace(/,/g, "")) ? Number.parseFloat(amountText.replace(/,/g, "")) : null;
@@ -618,6 +628,14 @@ export function ConversationText({ text }: { text: string }) {
   </div>;
 }
 
+/** 금액 범위로 답한 질문이면 계산에 쓴 값(서버가 범위 가운데로 넣은 숫자), 아니면 null */
+export function rangeAnswerAmount(question: Pick<IntakeQuestion, "kind" | "unit">, answer: IntakeSnapshot["intake"]["answers"][string] | undefined): number | null {
+  if (question.kind !== "number" || question.unit !== "원" || answer?.status !== "answered") return null;
+  // 대화 화면의 답은 사업 정보 칸 값('250000원')으로 올 때가 많다 — 같은 규칙으로 읽는다
+  const amount = typeof answer.value === "number" ? answer.value : typeof answer.value === "string" ? parseWonAmount(answer.value) : undefined;
+  return amount !== undefined && /[~～〜–]|미만$|이상$/.test((answer.quote ?? "").replace(/\s+/g, "")) ? amount : null;
+}
+
 /** businessDesignReply()가 만든 사업 방향 요약 글인지 — 이 두 소제목이 함께 있는 글은 설계 결과뿐이다. */
 /** 답 말풍선 표기 — +/− 단추·연필로 넣은 숫자만 있는 답('25', '6000')도 요약 패널처럼 단위를 붙인다('25시간', '6,000원'). */
 function bubbleAnswerText(question: IntakeQuestion | undefined, text: string) {
@@ -714,6 +732,8 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
         </div>}
         {message.role === "assistant" && <MessageMeta text={text} at={message.at} />}
         {typed && labelled && answerEntry?.[1].status !== "unknown" && <p className={styles.messageStatus} data-read-as>{withRo(bubbleAnswerText(labelled, text))} 적었어요</p>}
+        {/* 범위로 고른 금액('100만원 미만')은 범위 그대로 두고, 계산에 쓴 값만 작게 — 정한 금액처럼 보이지 않게(2026-11-16 점검) */}
+        {labelled && rangeAnswerAmount(labelled, answerEntry?.[1]) !== null && <p className={styles.messageStatus} data-range-value>계산에는 {formatWon(rangeAnswerAmount(labelled, answerEntry?.[1])!)}을 써요</p>}
         {receipt && message.id === lastUserId && !notes.length ? <p className={styles.messageStatus} data-receipt>{receipt}</p>
           : message.id === industryAnswerId && replacedIndustry.size > 0 ? <p className={styles.messageStatus}>업종을 바꿨어요</p>
           : changedAnswerIds.has(message.id) && <p className={styles.messageStatus}>답을 바꿨어요</p>}
@@ -1056,15 +1076,21 @@ export function DesignResult({ snapshot, disabled, onName }: { snapshot: IntakeS
    * 운영 중인 가게는 AI 이름 추천보다 지금 쓰는 가게 이름이 먼저다 — 칸을 바로 보여 주고 고치면 저장한다(여정 점검 2026-10-22).
    * 추천 이름은 '새 이름 추천 보기'로만 펼친다.
    */
-  const shopName = (custom ?? current).replace(/\s+/g, " ").trim();
+  /*
+   * 아직 실제 가게 이름을 받지 않았으면(사장님이 정한 적 없음) 사업 설명 앞부분이나 AI가 지은 이름을 칸에 미리 넣지 않는다 — 빈 칸으로 실제 이름을 묻는다
+   * (2026-11-16 점검: 운영 중인 가게인데 '동네 직장인 기준의…' 같은 설명 조각이 가게 이름 칸에 들어가 있었다).
+   */
+  const askShopName = operating && !snapshot.coach.business.nameConfirmed;
+  const shownName = custom ?? (askShopName ? "" : current);
+  const shopName = shownName.replace(/\s+/g, " ").trim();
   if (operating) return <section className={styles.result} aria-label="결과">
     <div className={styles.resultBlock}>
-      <p className={styles.resultLabel}>지금 가게 이름</p>
-      {onName ? <form className={styles.identityCustom} onSubmit={event => { event.preventDefault(); if (shopName && shopName !== current) { onName(shopName); setCustom(null); } }}>
-          <TextField aria-label="지금 가게 이름" maxLength={40} value={custom ?? current} onChange={event => setCustom(event.target.value)} placeholder="간판에 적힌 이름 (예: 망원 아침빵집)" />
-          <AppButton type="submit" variant="secondary" className={styles.secondaryButton} disabled={disabled || !shopName || shopName === current}>이 이름으로</AppButton>
+      <p className={styles.resultLabel}>{askShopName ? "지금 쓰는 가게 이름을 알려 주세요" : "지금 가게 이름"}</p>
+      {onName ? <form className={styles.identityCustom} onSubmit={event => { event.preventDefault(); if (shopName && (askShopName || shopName !== current)) { onName(shopName); setCustom(null); } }}>
+          <TextField aria-label="지금 가게 이름" maxLength={40} value={shownName} onChange={event => setCustom(event.target.value)} placeholder="간판에 적힌 이름 (예: 망원 아침빵집)" />
+          <AppButton type="submit" variant="secondary" className={styles.secondaryButton} disabled={disabled || !shopName || !askShopName && shopName === current}>이 이름으로</AppButton>
         </form> : <h2 className={styles.resultName}>{businessDisplayName(current)}</h2>}
-      <small className={styles.identityNote}>계획서와 홈페이지에 이 이름이 들어가요.</small>
+      <small className={styles.identityNote}>{askShopName ? "간판·스토어에 쓰는 이름을 적으면 계획서와 홈페이지에 그 이름이 들어가요. 적기 전까지는 임시 이름으로 둬요." : "계획서와 홈페이지에 이 이름이 들어가요."}</small>
       {onName && <div className={styles.resultNames} role="group" aria-label="추천 이름">
         {showNames ? identity.names.filter(item => item.name !== current).map(item => <button key={item.name} type="button" className={styles.chip} disabled={disabled} onClick={() => { setCustom(null); onName(item.name); }}>{item.name}</button>)
           : <button type="button" className={styles.chip} disabled={disabled} onClick={() => setShowNames(true)}>새 이름 추천 보기</button>}

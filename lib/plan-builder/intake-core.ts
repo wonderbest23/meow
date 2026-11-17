@@ -7,7 +7,7 @@ import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coac
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
 import { calculateFinancials, financialsToReference } from "./financials";
 import { acceptsFreeChoice, FREE_CHOICE_MAX_CHARS, amountCheckPrompt, coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
-import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
+import { INDUSTRY_HINTS, PRICE_BASIS, amountRanges, periodMonths, rangeMidpoint, scaledAmountRanges, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
 import { estimateIntake, type KindRules } from "./intake-estimate";
 import { playbookForKsic, playbookForText, salesRoute } from "./industry-playbooks";
@@ -266,11 +266,23 @@ function missingSectionCount(plan: ServerPlan): number {
   return chaptersForType(plan.planType).reduce((total, chapter) => total + chapter.sections.filter(section => !plan.sections[sectionKey(chapter.id, section.id)]).length, 0);
 }
 
+/*
+ * 아직 정한 사업이 없으면(탐색 · '살펴볼 사업'을 '잘 모르겠어요'로 넘김) 그 사업의 고객·가격·월세 질문은 뒤로 미룬다 — 사업 정하기가 먼저다
+ * (2026-11-16 점검: 정해지지 않은 사업의 질문 8개를 다 답한 뒤에야 '사업 하나만 정하면 시작할 수 있어요'가 나왔다).
+ * 다음 질문 · 진행 수에서만 뺀다(답은 그대로 받는다). 사업을 고르거나 직접 적으면 다시 이어서 묻는다.
+ */
+export function deferredIntakeQuestionIds(intake: Pick<IntakeState, "mode">, coach: Pick<CoachState, "fields">, questions: readonly IntakeQuestion[]): Set<string> {
+  if (intake.mode !== "exploring" || coach.fields.some(field => field.key === "business" && field.basis === "user")) return new Set();
+  const cut = questions.findIndex(question => question.id === "candidate");
+  return new Set(cut < 0 ? [] : questions.slice(cut + 1).map(question => question.id));
+}
+
 export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: IntakeState, resourceAsOf = new Date(Math.max(Date.now(), Date.parse(plan.updatedAt) || 0)).toISOString()): IntakeSnapshot {
   const resources = evaluateIntakeCandidates(intake, coach, resourceAsOf);
   const questions = intakeQuestions(intake, coach, resources.ideas);
+  const deferred = deferredIntakeQuestionIds(intake, coach, questions);
   const coreIds = new Set(coreQuestions(intake.mode).map(question => question.id));
-  const core = questions.filter(question => coreIds.has(question.id));
+  const core = questions.filter(question => coreIds.has(question.id) && !deferred.has(question.id));
   const answered = core.filter(question => answeredIntakeQuestion(intake, coach, question)).length;
   const { receipts: _receipts, ...publicIntake } = intake;
   publicIntake.answers = structuredClone(intake.answers);
@@ -287,7 +299,7 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
     summary.push({ id: question.id, label: question.label, value, basis: "user" });
   }
   return { planId: plan.id, title: plan.title, planType: plan.planType, updatedAt: plan.updatedAt, coach,
-    intake: publicIntake, nextQuestion: questions.find(question => !answeredIntakeQuestion(intake, coach, question)) ?? null,
+    intake: publicIntake, nextQuestion: questions.find(question => !deferred.has(question.id) && !answeredIntakeQuestion(intake, coach, question)) ?? null,
     questions, coreComplete: answered === core.length, coreAnswered: answered, coreTotal: core.length,
     summary, financialSummary: intakeFinancialReference(coach, intake), financialWarning: intakeFinancialWarning(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0, documentStatus: intakeDocumentStatus(plan, coach), rewriteCount: staleRewriteCount(plan.sections, coachDocumentRevision(coach)), freeReflects: freeReflectsLeft(plan.answers.__coach_generation), missingSections: missingSectionCount(plan),
     ksic: intakeKsic(intake), ksicCandidates: intakeKsicCandidates(coach, intake), structure: intakeStructureSnapshot(coach, intake),
@@ -705,7 +717,8 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
   if (question.kind !== "multi" && Array.isArray(value)) throw new IntakeError(question.kind === "number" ? "invalid_number" : "invalid_answer", "이 질문에는 하나의 답변을 입력해 주세요");
   if (question.id === "budget" || question.id === "hoursPerWeek") {
     const parsed = parseResourceLimit(value, question.id === "budget" ? "initialCost" : "weeklyOperatingHours");
-    if (parsed.status === "invalid" || parsed.status === "missing") throw new IntakeError("invalid_number", "단위와 기간에 맞는 값을 입력해 주세요");
+    // 무엇이 틀렸는지 알 수 있게 질문마다 예시를 든다(2026-11-16 점검: '단위와 기간에 맞는 값'만으로는 고칠 곳을 몰랐다)
+    if (parsed.status === "invalid" || parsed.status === "missing") throw new IntakeError("invalid_number", question.id === "budget" ? "준비 예산은 '300만원'이나 '100만원~300만원'처럼 금액 하나나 범위 하나로 적어 주세요" : "일주일에 쓸 시간은 '20시간'처럼 168시간 안에서 적어 주세요");
     // Ranges remain ranges; rejected units remain in the recoverable client draft.
     if (parsed.status !== "known" || parsed.lower !== parsed.upper) return String(value).trim();
     return parsed.lower;
@@ -737,7 +750,30 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
     if (question.id.startsWith("structure.") && !validStructureNumber(question.id, number)) throw new IntakeError("invalid_number", question.id === "structure.retentionMonths" ? "평균 이용 기간은 0보다 큰 개월 수로 입력해 주세요" : "해당 지표의 범위에 맞는 숫자를 입력해 주세요");
     return number;
   }
+  // 사업 소개는 글자가 있어야 한다 — 이모지·기호만 적어도 사업으로 저장되던 문제(2026-11-16 점검)
+  if (question.id === "business" && !/[\p{L}\p{N}]/u.test(String(value))) throw new IntakeError("answer_letters", "어떤 사업인지 글로 적어 주세요. 예: 퇴근 후 동네에서 수제 쿠키 팔기");
   return String(value).trim();
+}
+
+/*
+ * 금액 범위 칩('100만원 미만')을 누르거나 그대로 적은 답 — 계산에는 범위 가운데 값을 쓰고, 대화에는 고른 범위 그대로 보인다
+ * (2026-11-16 점검: 운영 중 사업에서 '100만원 미만'을 고르면 '50만원'으로 정한 것처럼 보였다). 화면과 같은 범위 표(intake-options)를 본다. 범위가 아니면 undefined.
+ */
+export function amountRangeAnswer(intake: Pick<IntakeState, "sector" | "answers" | "mode">, coach: Pick<CoachState, "fields">, question: Pick<IntakeQuestion, "id" | "kind" | "unit" | "options">, value: IntakeValue | undefined): number | undefined {
+  // 준비 예산은 범위를 범위대로 남긴다(적은 쪽으로 계산 — validatedAnswer)
+  if (question.kind !== "number" || question.unit !== "원" || question.id === "budget" || typeof value !== "string") return undefined;
+  const label = value.replace(/\s+/g, "");
+  if (!/[~～〜–]|미만$|이상$/.test(label)) return undefined;
+  const period = intake.answers.period?.value, months = question.id === "sales" ? periodMonths(typeof period === "string" ? period : null) : null;
+  const sector = intakeChipSector(intake, coach);
+  // 가격 기준(시간당 · 1박 …)마다 범위 표가 다르다 — 기준 칩이 있는 질문은 모든 기준의 표에서 찾는다
+  const bases = [undefined, ...(question.options ?? []).map(option => option.label)];
+  for (const basis of bases) {
+    const ladder = amountRanges(sector, question.id, intake.mode, basis);
+    const range = (months && months > 1 ? scaledAmountRanges(ladder, months) : ladder).find(item => item.label.replace(/\s+/g, "") === label);
+    if (range) return range.max === 0 ? 0 : rangeMidpoint(range);
+  }
+  return undefined;
 }
 
 /** 사업 설명으로 만든 임시 이름은 60자 안에서 낱말 경계로 자르고 '…'을 붙인다 — 글자 가운데(이모지 반쪽)에서 끊기지 않게 글자 단위로 센다 */
@@ -796,7 +832,8 @@ function answerQuestionFor(intake: IntakeState, coach: CoachState, id: string | 
 export function assertAmountConfirmed(intake: IntakeState, coach: CoachState, command: IntakeCommand) {
   if (command.unknown || command.confirmed) return;
   const question = answerQuestionFor(intake, coach, command.questionId);
-  const prompt = amountCheckPrompt(question, command.value) ?? marginCheckPrompt(question, command.value, coach);
+  const value = question ? amountRangeAnswer(intake, coach, question, command.value) ?? command.value : command.value;
+  const prompt = amountCheckPrompt(question, value) ?? marginCheckPrompt(question, value, coach);
   if (prompt) throw new IntakeError("amount_check", prompt, 422);
 }
 
@@ -824,7 +861,8 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
   const question = answerQuestionFor(intake, coach, id);
   if (!question) throw new IntakeError("question_unknown", "이 사업의 질문을 다시 불러와 주세요");
   const previousAnswer = intake.answers[question.id];
-  const value = command.unknown ? null : validatedAnswer(question, command.value);
+  const ranged = command.unknown ? undefined : amountRangeAnswer(intake, coach, question, command.value);
+  const value = command.unknown ? null : validatedAnswer(question, ranged ?? command.value);
   const quote = displayIntakeValue(command.value ?? null);
   intake.answers[question.id] = { status: command.unknown ? "unknown" : "answered", value, messageId: command.requestId, at, quote };
   if (question.fieldKey) setField(coach, question.fieldKey, value === null ? null : `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, command.requestId, quote);
@@ -874,7 +912,7 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
   coach.business.stage = coach.stage === "operating" ? "운영 중" : "사업 기획";
   coach.ready = coach.stage !== "exploring" && !!coach.fields.find(field => field.key === "business" && field.basis === "user")?.value;
   const shown = question.id === "industry" && intake.answers[question.id]?.status === "answered" ? intake.answers[question.id].value : value;
-  const selected = question.options && shown !== null ? intakeValueLabel(question, shown) : undefined;
+  const selected = question.options && shown !== null && ranged === undefined ? intakeValueLabel(question, shown) : undefined;
   const ksicName = question.id === "industry" && intake.ksic ? ksicByCode(intake.ksic)?.name : undefined;
   coach.messages.push({ id: command.requestId, role: "user", text: `${question.label}: ${command.unknown ? "아직 미정" : ksicName ? `${ksicName} (${ksicSectorLabel(intake.ksic, intake.sector, selected ?? quote)})` : selected ?? quote}`, at });
   // Supplementary prose stays an unconfirmed note, in the same atomic answer save.
@@ -927,15 +965,30 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
     const guess = answers[question.id];
     // 준비 예산·일할 시간은 짐작하지도, '모름'으로 넘기지도 않는다 — 그대로 묻는다(안 물으면 계획서가 '감당할 수 있는지 알 수 없다'로만 채워진다)
     if (!guess) continue;
+    /*
+     * 준비 예산·주당 시간은 문장에 적혀 있을 때만 들어온다(intake-estimate) — 짐작이 아니라 사용자가 한 말이다. '이렇게 알아들었어요'(:said)로 보이고
+     * 다시 묻지 않는다(2026-11-16 점검: '쿠키 팔고 싶어요, 예산 300'이라고 적어도 예산 질문이 다시 나왔다). 다르면 눌러서 고친다.
+     */
+    const said = question.id === "budget" || question.id === "hoursPerWeek";
+    const id = said ? `${requestId}${SAID_SUFFIX}` : messageId;
     try {
       const value = validatedAnswer(question, guess);
-      intake.answers[question.id] = { status: "answered", value, messageId, at, quote: guess };
-      if (question.fieldKey) setField(coach, question.fieldKey, `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, messageId, "", "proposal");
-      filled += 1;
+      intake.answers[question.id] = { status: "answered", value, messageId: id, at, quote: guess };
+      if (question.fieldKey) setField(coach, question.fieldKey, `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, id, said ? guess : "", said ? "user" : "proposal");
+      if (!said) filled += 1;
     } catch { /* 형식이 안 맞는 짐작은 버린다 — 그 질문은 평소처럼 묻는다 */ }
   }
-  if (filled && !coach.messages.some(message => message.id === messageId)) coach.messages.push({ id: messageId, role: "assistant", text: "나머지는 같은 업종 기준값으로 먼저 채웠어요. 다르면 눌러서 고칠 수 있어요.", at });
+  if (!filled) return;
+  /*
+   * 기준값 안내는 대화에 한 번만 — 업종을 바꿔 다시 채우면 같은 말을 또 넣지 않고 처음 안내를 지금 업종에 맞게 고친다
+   * (2026-11-16 점검: 업종을 바꿀 때마다 '나머지는 같은 업종 기준값으로 먼저 채웠어요'가 쌓여 대화가 고장 난 것처럼 보였다).
+   */
+  const label = intakeSectorOptions.find(option => option.value === intake.sector)?.label;
+  const notice = coach.messages.find(message => message.role === "assistant" && message.id.endsWith(ESTIMATE_SUFFIX));
+  if (!notice) coach.messages.push({ id: messageId, role: "assistant", text: ESTIMATE_NOTICE, at });
+  else if (notice.id !== messageId) notice.text = label && intake.sector !== "general" ? `나머지는 고른 업종(${label}) 기준값으로 다시 채웠어요. 다르면 눌러서 고칠 수 있어요.` : ESTIMATE_NOTICE;
 }
+export const ESTIMATE_NOTICE = "나머지는 같은 업종 기준값으로 먼저 채웠어요. 다르면 눌러서 고칠 수 있어요.";
 
 export const SAID_SUFFIX = ":said";
 /**

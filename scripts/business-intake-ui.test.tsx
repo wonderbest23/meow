@@ -8,7 +8,7 @@ import type { ServerPlan } from "../lib/plan-builder/plan-server-store";
 import type { IntakeCandidate, IntakeCommand, IntakeSnapshot } from "../lib/plan-builder/intake-types";
 import { createIntake, intakeSnapshot } from "../lib/plan-builder/intake-core";
 import { structureQuestions, coreQuestions, detailQuestions, intakeSectorOptions } from "../lib/plan-builder/intake-questions";
-import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCandidateDraftKey, optionGroups, selectedCount, stepVisible, withCount, draftKey, emptyAnswer, emptyDraft, entryMessage, hasExclusiveOptions, isHybridQuestion, isPrefillQuestion, needsPolling, parseDraft, periodDates, periodPresetRange, persistDraft, plainText, previewIntakeAnswer, readIntakePayload, readableFinancialSummary, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, suggestedIntakeIndustry, summaryAnswerText, toggleChip, typedChoiceAnswer, typedEntryCommand, unfinishedAnswerText, unmatchedPieces, jobProgress, intakeNextStep, looseUnknownReply } from "../app/plan/chat/intake-ui/model";
+import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCandidateDraftKey, optionGroups, selectedCount, stepVisible, withCount, draftKey, emptyAnswer, emptyDraft, entryMessage, hasExclusiveOptions, isHybridQuestion, isPrefillQuestion, needsPolling, parseDraft, periodDates, periodPresetRange, persistDraft, plainText, previewIntakeAnswer, readIntakePayload, readableFinancialSummary, seedAnswerDraft, numericAnswer, easyNumberRetryHint, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, suggestedIntakeIndustry, summaryAnswerText, toggleChip, typedChoiceAnswer, typedEntryCommand, unfinishedAnswerText, unmatchedPieces, jobProgress, intakeNextStep, looseUnknownReply } from "../app/plan/chat/intake-ui/model";
 import { amountRanges, rangeMidpoint, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
@@ -113,6 +113,20 @@ async function main() {
   assert.deepEqual(routeComposerInput(original, price, "-5000"), { kind: "invalid", hint: "0 이상의 숫자만 적어 주세요 (예: 25000, 2만5천원)" });
   assert.equal(routeComposerInput(original, price, "3만원 정도인데 확실치 않아요").kind, "clarify", "글이 섞이면 기존 확인 흐름");
   assert.equal(routeComposerInput(original, weeklyHours, "-5").kind, "invalid");
+  // ux-editnum(2026-11-16): 고치기 칸에 남은 숫자 뒤에 이어 적은 금액은 이유와 함께 다시 적게 한다(예전엔 '어떻게 남길까요?'만 떴다)
+  {
+    const budgetQ = original.questions.find(question => question.id === "budget")!;
+    const huge = routeComposerInput(original, budgetQ, "65000005000만원");
+    assert.equal(huge.kind, "invalid"); assert.match(huge.kind === "invalid" ? huge.hint : "", /^금액이 너무 커요\. 앞에 있던 숫자를 지우고/);
+    const joined = routeComposerInput(original, budgetQ, "650만원5000만원");
+    assert.equal(joined.kind, "invalid"); assert.match(joined.kind === "invalid" ? joined.hint : "", /^금액이 두 번 이어 적혔어요/);
+    assert.match((routeComposerInput(original, price, "3만원2만원") as { hint?: string }).hint ?? "", /^금액이 두 번 이어 적혔어요/);
+    assert.equal(routeComposerInput(original, budgetQ, "650만원").kind, "answer", "고친 금액 하나면 그대로 답");
+    // ux-amount: 일반 모드에서 숫자 질문에 숫자가 아닌 말을 적으면 왜 다시 묻는지 알린다
+    assert.match(easyNumberRetryHint(price), /메모로 남겼어요\. 이 질문은 금액으로 답해 주세요/);
+    assert.match(easyNumberRetryHint(weeklyHours), /숫자로 답해 주세요 \(예: 20시간\)/);
+    assert.equal(easyNumberRetryHint(customer), "", "글 질문에는 붙이지 않는다");
+  }
   // 서버와 같은 규칙(intake-core validatedAnswer)으로 저장된다
   const answered = (questionId: string, value: string) => { const saved = previewIntakeAnswer(original, command({ questionId, value }))!.intake.answers[questionId]?.value; return typeof saved === "number" ? saved : coachAmount(String(saved)); };
   assert.equal(answered("price", "2만5천원"), 25000);
@@ -397,8 +411,12 @@ async function main() {
   assert.deepEqual(seedAnswerDraft(feedbackMulti, ["과제 첨삭", "예전 값"]).text, "예전 값");
   const budgetQuestion = startupQuestions.find(question => question.id === "budget")!;
   const hoursQuestion = startupQuestions.find(question => question.id === "hoursPerWeek")!;
-  assert.equal(seedAnswerDraft(budgetQuestion, "12,000원").text, "12000");
-  assert.equal(seedAnswerDraft(budgetQuestion, "300만원").text, "3000000");
+  // 답 고치기: 금액은 읽기 쉬운 '300만원'으로 채운다 — '3000000' 뒤에 이어 적어 '30000005000만원'이 되던 문제(ux-editnum 2026-11-16)
+  assert.equal(seedAnswerDraft(budgetQuestion, "12,000원").text, "12,000원");
+  assert.equal(seedAnswerDraft(budgetQuestion, "300만원").text, "300만원");
+  assert.equal(seedAnswerDraft(budgetQuestion, 6_500_000).text, "650만원");
+  assert.equal(seedAnswerDraft(budgetQuestion, 150_000_000).text, "1억 5,000만원");
+  for (const value of [12_000, 6_500_000, 150_000_000, 1_234_567]) assert.equal(numericAnswer(budgetQuestion, seedAnswerDraft(budgetQuestion, value).text), value, `${value}: 채운 글을 그대로 보내도 같은 금액`);
   const proseAmount = seedAnswerDraft({ ...budgetQuestion, id: "price" }, "대표 메뉴 1개 7500");
   assert.deepEqual([proseAmount.text, proseAmount.hint], ["", "대표 메뉴 1개 7500"], "unparsable legacy amounts seed empty with the original as a hint");
   assert.equal(seedAnswerDraft(hoursQuestion, "10시간").text, "10");
@@ -417,7 +435,7 @@ async function main() {
   const css = readFileSync(new URL("../app/plan/chat/intake.module.css", import.meta.url), "utf8");
   const cssClasses = Object.fromEntries([...css.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(match => [match[1], match[1]]));
   require.extensions[".css"] = module => { module.exports = cssClasses; };
-  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, DesignProgress, DesignResult, DocumentLockedTurn, EditChatTurn, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction, RewriteCost } = await import("../app/plan/chat/intake-ui/IntakePanels");
+  const { ENTRY_GREETING, chipInComposer, rangeAnswerAmount, EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, DesignProgress, DesignResult, DocumentLockedTurn, EditChatTurn, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction, RewriteCost } = await import("../app/plan/chat/intake-ui/IntakePanels");
   const noop = () => {};
   const entry = renderToStaticMarkup(<EntryChoices disabled={false} onStart={noop} />);
   assert.equal((entry.match(/<button/g) ?? []).length, 3);
@@ -487,6 +505,17 @@ async function main() {
   const hybridReady = chat(customerChips, { text: "주거 상권 가족·주부", selected: ["개인", "가족"], custom: false });
   // 고른 칩은 줄에서 사라진다(data-picked); 필터 단계 칩('개인')은 남는다(소유자 2026-11-04)
   assert.equal((hybridReady.match(/data-picked="true"/g) ?? []).length, 1, "고른 선택지 칩 하나만 data-picked");
+  // ux-goalchip(2026-11-16): 목표의 기간 칩은 목표를 고르기 전엔 입력창 글이 되지 않는다 — 고른 채로 보이고(숨지 않고) 다시 누르면 풀린다
+  {
+    const goalOperating: IntakeQuestion = { ...coreQuestions("operating").find(question => question.id === "goal")!, options: sectorChipOptions("b2b_service", "goal", "operating") };
+    const periodOnly = chat(goalOperating, { ...emptyAnswer(), selected: ["6개월 안에"], text: assembleHybridText(goalOperating, ["6개월 안에"]) });
+    assert.equal((periodOnly.match(/data-picked="true"/g) ?? []).length, 0, "a period chip without composer text is not hidden");
+    assert.match(buttonMarkup(periodOnly, "6개월 안에"), /aria-pressed="true"/);
+    const withMetric = ["6개월 안에", "월 매출 N원 올리기"];
+    const metricPicked = chat(goalOperating, { ...emptyAnswer(), selected: withMetric, text: assembleHybridText(goalOperating, withMetric) });
+    assert.equal((metricPicked.match(/data-picked="true"/g) ?? []).length, 2, "once the sentence is in the composer both picked chips move there");
+    assert.ok(chipInComposer("6개월 안에 월 매출 N원 올리기", "6개월 안에") && !chipInComposer("", "6개월 안에"));
+  }
   assert.equal(incompleteChoiceText(customerChips, { text: "주거 상권 가족·주부", selected: ["개인", "가족"], custom: false }), false);
   assert.match(buttonMarkup(hybridReady, "주거 상권 가족·주부"), /aria-pressed="true"/);
   assert.ok(incompleteChoiceText(customerChips, { text: "주거 상권 가족·주부 / ", selected: ["개인", "가족"], custom: false }), "A dangling separator blocks the save");
@@ -579,6 +608,24 @@ async function main() {
   const contextHistory = renderToStaticMarkup(<ConversationHistory snapshot={withContext} onEdit={noop} />);
   assert.ok(contextHistory.includes("업종 답변 수정") && contextHistory.includes("소프트웨어 · 플랫폼"), "a supplemental note must not swallow the selected answer or its edit action");
   assert.ok(contextHistory.includes("온라인으로만 제공하고 싶어요"), "the raw supplemental note stays in the conversation");
+  // ux-operating(2026-11-16): 금액 범위 칩('100만원 미만')은 범위 그대로 보이고, 계산에 쓴 값은 작은 글로 — 정한 금액처럼 보이지 않게
+  {
+    const fixedCostQuestion = original.questions.find(question => question.id === "structure.cost")!;
+    const lowRange = amountRanges(intakeChipSector(original), "structure.cost", "startup").find(range => range.min === null && range.max !== null)!;
+    assert.equal(routeComposerInput(original, fixedCostQuestion, lowRange.label).kind, "answer");
+    assert.deepEqual(routeComposerInput(original, fixedCostQuestion, lowRange.label), { kind: "answer", questionId: "structure.cost", value: lowRange.label }, "the range label itself is sent");
+    const ranged = previewIntakeAnswer(original, command({ questionId: "structure.cost", value: lowRange.label }))!;
+    assert.equal(coachAmount(String(ranged.intake.answers["structure.cost"].value)), rangeMidpoint(lowRange), "calculation uses the middle of the range");
+    assert.equal(ranged.intake.answers["structure.cost"].quote, lowRange.label, "the picked range is kept as the quote");
+    assert.equal(ranged.coach.fields.find(field => field.key === "cost")?.value, `${rangeMidpoint(lowRange)}원`);
+    assert.equal(rangeAnswerAmount(fixedCostQuestion, ranged.intake.answers["structure.cost"]), rangeMidpoint(lowRange));
+    const rangedHistory = renderToStaticMarkup(<ConversationHistory snapshot={ranged} onEdit={noop} />);
+    assert.ok(rangedHistory.includes(`<p>${lowRange.label}</p>`), "the bubble shows the picked range");
+    assert.ok(rangedHistory.includes("data-range-value") && rangedHistory.includes(`계산에는 ${rangeMidpoint(lowRange).toLocaleString("ko-KR")}원을 써요`), "the computed value is a small note");
+    const exact = previewIntakeAnswer(original, command({ questionId: "structure.cost", value: "40만원" }))!;
+    assert.equal(rangeAnswerAmount(fixedCostQuestion, exact.intake.answers["structure.cost"]), null, "an exact amount is not a range");
+    assert.ok(!renderToStaticMarkup(<ConversationHistory snapshot={exact} onEdit={noop} />).includes("data-range-value"));
+  }
   // 대화로 고치기의 [바꾸기]가 적용한 답은 손님 말풍선이 아니라 '바꾼 내용' 한 줄 · 예전 답의 '계획서 다시 작성하기'는 지금 단추 이름으로
   {
     const at = "2026-10-23T00:00:00.000Z";
@@ -725,6 +772,18 @@ async function main() {
   const operatingResult = renderToStaticMarkup(<DesignResult snapshot={{ ...nextSnapshot({}, identityDesign), intake: { ...summarized.intake, mode: "operating" } }} onName={noop} />);
   assert.ok(operatingResult.includes("이렇게 바꿔 봐요") && !operatingResult.includes("이렇게 시작해요") && operatingResult.includes("새 이름 추천 보기") && !operatingResult.includes("동네찬방"), "operating results keep the current name first");
   assert.ok(operatingResult.includes("지금 가게 이름") && operatingResult.includes('aria-label="지금 가게 이름"'), "operating results ask the current shop name in a plain input");
+  // ux-operating(2026-11-16): 사장님이 정한 적 없는 이름(설명 앞부분 · AI 이름표)은 칸에 미리 넣지 않고 실제 가게 이름을 묻는다. 정한 이름은 그대로 보인다
+  {
+    const operatingBase = nextSnapshot({}, { ...identityDesign, business: { ...summarized.coach.business, name: "동네 직장인 기준의 합성 설명", nameConfirmed: false } } as Partial<CoachState>);
+    const unnamed = renderToStaticMarkup(<DesignResult snapshot={{ ...operatingBase, intake: { ...operatingBase.intake, mode: "operating" } }} onName={noop} />);
+    assert.ok(unnamed.includes("지금 쓰는 가게 이름을 알려 주세요") && unnamed.includes('value=""') && !unnamed.includes('value="동네 직장인 기준의 합성 설명"'), "an unconfirmed operating name is asked, not prefilled");
+    const namedBase = nextSnapshot({}, { ...identityDesign, business: { ...summarized.coach.business, name: "망원 아침빵집", nameConfirmed: true } } as Partial<CoachState>);
+    const named = renderToStaticMarkup(<DesignResult snapshot={{ ...namedBase, intake: { ...namedBase.intake, mode: "operating" } }} onName={noop} />);
+    assert.ok(named.includes('value="망원 아침빵집"') && !named.includes("지금 쓰는 가게 이름을 알려 주세요"), "a confirmed shop name stays in the field");
+    // 첫 인사는 운영 중인 사장님께도 맞는 말
+    assert.ok(!ENTRY_GREETING.includes("새로 시작") && ENTRY_GREETING.includes("사업 이야기"), ENTRY_GREETING);
+    assert.ok(renderToStaticMarkup(<ConversationHistory snapshot={fixture("operating")} onEdit={noop} />).includes(ENTRY_GREETING));
+  }
   for (const text of ["AI 제안", "이유 하나", "키프리스", "<details", "설명 문장"]) assert.ok(!result.includes(text), `result should not include: ${text}`);
   const pricedPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal payNote="첫 항목 먼저 보기 · 전체 49,000원" onDesign={noop} onPrepare={noop} />);
   assert.ok(pricedPrepare.includes("첫 항목 먼저 보기 · 전체 49,000원"), "the plan button shows the price before payment");

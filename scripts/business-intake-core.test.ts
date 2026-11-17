@@ -368,11 +368,14 @@ async function main() {
     for (const mode of ["exploring", "startup", "operating"] as const) {
       check(`${mode}: all core questions may be unknown without inventing a ready business`, () => {
         const f = fixture(mode);
-        for (let index = 0; index < coreQuestions(mode).length; index++) {
+        // 탐색: '살펴볼 사업'까지 모르면 그 뒤(정해지지 않은 사업의 고객·가격·월세)는 묻지 않는다(ux-unknown 2026-11-16)
+        const asked = mode === "exploring" ? coreQuestions(mode).findIndex(question => question.id === "candidate") + 1 : coreQuestions(mode).length;
+        for (let index = 0; index < asked; index++) {
           const question = snapshot(f).nextQuestion;
           assert.ok(question);
           answer(f, question.id, undefined, true);
         }
+        if (mode === "exploring") assert.deepEqual(Object.keys(f.intake.answers).at(-1), "candidate", "the last asked question is the business pick");
         assert.equal(snapshot(f).coreComplete, true);
         assert.equal(snapshot(f).nextQuestion, null);
         assert.equal(f.coach.ready, false);

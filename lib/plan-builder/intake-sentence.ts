@@ -1,4 +1,4 @@
-import { parseWonAmount } from "./answer-number";
+import { bareBudgetManwon, parseWonAmount } from "./answer-number";
 
 /*
  * 사업 문장에서 사용자가 직접 적은 고객·금액·수량을 읽는다(AI 0회). 읽힌 값은 업종 기준표의 어림값보다 먼저 쓴다(intake-estimate).
@@ -83,7 +83,9 @@ export function readSentence(text: string): SentenceFacts {
     const token = match[0].replace(/\s/g, ""), start = match.index, end = start + match[0].length;
     const before = text.slice(previousEnd, start).slice(-16), after = text.slice(end, end + 24);
     previousEnd = end;
-    const amount = /원$/.test(token) || /[억만]/.test(token) && !NOT_MONEY.test(after) ? parseWonAmount(token) : undefined;
+    // '예산 300'처럼 예산 말 바로 뒤에 단위 없이 적은 작은 수는 만원으로 읽는다(2026-11-16 점검: 첫 메시지의 예산을 못 읽어 다시 물었다)
+    const bare = !/원$/.test(token) && !/[억만천백]/.test(token) && !NOT_MONEY.test(after) && BUDGET_BEFORE.test(before) ? bareBudgetManwon(token) : undefined;
+    const amount = bare ?? (/원$/.test(token) || /[억만]/.test(token) && !NOT_MONEY.test(after) ? parseWonAmount(token) : undefined);
     if (!amount || OTHER_MONEY.test(before)) continue;
     const label = /원$/.test(token) ? token : `${token}원`;
     if (BUDGET_BEFORE.test(before) || !MONTHLY.test(before) && BUDGET_AFTER.test(after)) facts.budget ??= amount;
