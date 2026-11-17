@@ -1,6 +1,6 @@
 import { patchDocumentAmounts } from "./fact-patch";
 import { createHash } from "node:crypto";
-import { classifyEditRequest, EDIT_REPLIES, type EditRoute } from "./intake-edit-filter";
+import { classifyEditRequest, EDIT_REPLIES, EDIT_REPLIES_BEFORE_DOCUMENT, objectParticle, type EditRoute } from "./intake-edit-filter";
 import { z } from "zod";
 import { completeJson } from "../llm/complete";
 import { resolveIntakeLLMConfig, intakeBetaSafetyRequired } from "../llm/intake-policy";
@@ -156,17 +156,22 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);
     }
     else if (command.action === "edit") {
-      // 계획서가 있는 사업의 채팅 수정. 범위 밖 요청은 AI 없이 정해진 답으로 끝내고, 사실 변경 요청만 AI 작업으로 넘긴다.
-      if (!Object.keys(plan.sections).length) throw new IntakeError("edit_requires_document", "사업계획서를 만든 뒤에 채팅으로 고칠 수 있어요", 409);
+      // 채팅 수정. 범위 밖 요청은 AI 없이 정해진 답으로 끝내고, 사실 변경 요청만 AI 작업으로 넘긴다.
+      /*
+       * 계획서 전이라도 사업 방향을 정리했으면 받는다(2026-11-17 사장님: 방향을 본 뒤 적은 말이 메모로만 남고 아무 대답도, 반영도 없었다).
+       * 계획서 전에는 묻지 않고 바로 넣은 뒤 사업 방향을 다시 정리한다(아래 edit 작업 끝 · 사장님 결정 '바로 반영').
+       */
+      const beforeDocument = !Object.keys(plan.sections).length;
+      if (beforeDocument && !coach.design) throw new IntakeError("edit_requires_document", "사업 방향을 정리한 뒤에 채팅으로 고칠 수 있어요", 409);
       const text = command.message?.trim() ?? "";
       if (text.length > 1200) throw new IntakeError("edit_too_long", "바꿀 내용을 1,200자 이내로 적어 주세요");
       const route = options.editRoute ?? classifyEditRequest(text);
       if (text) coach.messages.push({ id: command.requestId, role: "user", text, at });
-      if (route !== "in_scope") coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: EDIT_REPLIES[route], at });
+      if (route !== "in_scope") coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: (beforeDocument ? EDIT_REPLIES_BEFORE_DOCUMENT : EDIT_REPLIES)[route], at });
       else {
         if (active(intake.job)) throw new IntakeError("ai_busy", "앞선 요청을 정리하고 있어요. 잠시 후 다시 보내 주세요", 409);
-        if (!options.aiAvailable) throw new IntakeError("ai_unavailable", "지금은 채팅 수정을 쓸 수 없어요. 계획서에서 문장으로 바로 고칠 수 있어요", 503);
-        if (!options.aiAllowed) throw new IntakeError("ai_limit", "오늘 이 계획서의 수정 요청 한도에 도달했어요. 계획서에서 문장으로 바로 고치기는 계속 쓸 수 있어요", 429);
+        if (!options.aiAvailable) throw new IntakeError("ai_unavailable", beforeDocument ? "지금은 채팅으로 반영할 수 없어요. 입력칸의 ＋에서 답을 직접 고칠 수 있어요" : "지금은 채팅 수정을 쓸 수 없어요. 계획서에서 문장으로 바로 고칠 수 있어요", 503);
+        if (!options.aiAllowed) throw new IntakeError("ai_limit", beforeDocument ? "오늘 이 사업의 수정 요청 한도에 도달했어요. 입력칸의 ＋에서 답을 직접 고칠 수 있어요" : "오늘 이 계획서의 수정 요청 한도에 도달했어요. 계획서에서 문장으로 바로 고치기는 계속 쓸 수 있어요", 429);
         await allowAiJob("edit");
         created = newIntakeJob(coach, intake, "edit", at, text);
       }
@@ -419,6 +424,22 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         if (current.status !== "running" || coachDocumentRevision(coach) !== job.baseDocumentRevision) throw new IntakeError("source_changed", "정리하는 중 사업정보가 바뀌었어요. 다시 요청해 주세요", 409);
         current.proposal = proposal; current.status = "complete";
         const id = `${current.id}:reply`;
+        /*
+         * 계획서 전(사업 방향만 정리한 상태) — 묻지 않고 바로 넣는다(2026-11-17 사장님 결정 '바로 반영'). 적은 말은 메모로도 남겨
+         * 칸으로 옮기지 못한 내용('정기구독도 하고 싶어요')까지 방향 정리가 읽게 한다(ownerNotesContext). 그리고 방향을 옛 기준으로 표시해
+         * 화면이 사업 방향을 다시 정리하게 한다(intakeNextStep → design · 화면의 자동 시작).
+         */
+        if (!Object.keys(_plan.sections).length && !coach.messages.some(message => message.id === id)) {
+          const at = new Date().toISOString(), before = intakeBusinessFingerprint(coach, _plan.answers, _intake);
+          proposal.forEach((change, index) => applyIntakeAnswer(_plan, coach, _intake, { action: "answer", revision: 0, requestId: `${current.id}:apply:${index}`, questionId: change.questionId, value: change.value, unknown: false }, at));
+          if (proposal.length) current.proposalStatus = "applied";
+          const said = (job.request ?? "").trim().slice(0, 4000);
+          if (said && _intake.notes.length < 64 && _intake.notes.reduce((total, note) => total + note.text.length, 0) + said.length <= 100_000) _intake.notes.push({ id: `${current.id}:memo`, text: said, at, status: "stored", intent: "memo" });
+          if (!finishIntakeMutation(coach, before, _plan.answers, _intake)) coach.documentRevision = coachDocumentRevision(coach) + 1;
+          const labels = proposal.map(change => questions.find(question => question.id === change.questionId)?.label).filter((label): label is string => !!label);
+          coach.messages.push({ id, role: "assistant", text: labels.length ? `말씀하신 대로 ${labels.join(", ")}${objectParticle(labels.at(-1)!)} 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.` : "말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.", at });
+          return;
+        }
         if (!coach.messages.some(message => message.id === id)) {
           coach.messages.push({ id, role: "assistant", text: proposal.length ? "바꿀 내용을 정리했어요. 아래에서 확인해 주세요." : "어떤 내용을 어떻게 바꿀지 찾지 못했어요. 예: 가격을 5,000원으로, 주 고객을 1인 가구로", at: new Date().toISOString() });
           coach.revision += 1;

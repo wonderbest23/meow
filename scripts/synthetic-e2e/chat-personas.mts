@@ -15,7 +15,9 @@ type Step =
   | { help: string }
   | { reanswer: string; value: unknown }
   | { ideas: string; rejectFirst?: boolean }
-  | { design: true };
+  | { design: true }
+  /** 사업 방향을 본 뒤 대화창에 적는 말 — 계획서 전 '대화로 고치기'(바로 반영 → 방향 다시 정리) */
+  | { change: string };
 type Persona = {
   id: string; label: string; mode: "startup" | "operating" | "exploring";
   desc: string; customer: string; offer: string; price: number; channel: string;
@@ -24,6 +26,8 @@ type Persona = {
   /** 이 번호의 질문(0부터)을 답한 직후 끼워 넣는 행동 */
   during?: Record<number, Step[]>;
   after?: Step[];
+  /** 마지막 사업 방향 정리가 끝난 뒤(계획서 전) 이어서 하는 말 */
+  afterDesign?: Step[];
   lazy?: boolean;
 };
 
@@ -56,7 +60,7 @@ const PERSONAS: Persona[] = [
     during: { 2: [{ help: "Do I need a special license to run a food truck in Korea as a foreigner with an F-2 visa?" }] } },
   { id: "p12-pii", label: "메모에 개인정보를 적는 손님", mode: "startup", desc: "동네 반찬가게", customer: "1인 가구", offer: "국·반찬 세트", price: 15000, channel: "당근마켓",
     during: { 2: [{ memo: "제 이름은 김민지, 주민번호 900101-2345678, 연락처 010-1234-5678이에요. 사업자 통장은 국민은행 123456-01-234567로 받을 거예요. 반찬 세트 원가는 6천원 정도예요." }] } },
-  { id: "p13-angry", label: "화난 손님", mode: "startup", desc: "그냥 치킨집이요. 질문 좀 그만하고 빨리 계획서나 줘요", customer: "몰라요 그냥 동네 사람", offer: "치킨", price: 20000, channel: "배달앱",
+  { id: "p13-angry", afterDesign: [{ change: "가격은 만팔천원으로 해요" }, { change: "고마워요" }], label: "화난 손님", mode: "startup", desc: "그냥 치킨집이요. 질문 좀 그만하고 빨리 계획서나 줘요", customer: "몰라요 그냥 동네 사람", offer: "치킨", price: 20000, channel: "배달앱",
     during: { 1: [{ help: "AI가 뭘 알아요? 질문만 계속하고. 돈 낸 거 환불되죠? 지금 당장 환불해 줘요" }], 3: [{ memo: "아 짜증나 그냥 알아서 다 채워요" }] } },
   { id: "p14-noise", label: "의미 없는 입력을 하는 손님", mode: "startup", desc: "ㅋㅋㅋㅋ", customer: "asdf", offer: "...", price: 1, channel: "ㅇㅇ",
     during: { 1: [{ memo: "ㅋㅋㅋㅋㅋㅋㅋ ㅎㅎ 1234 asdf qwer" }, { help: "?" }] } },
@@ -69,7 +73,7 @@ const PERSONAS: Persona[] = [
   { id: "p18-b2b", label: "무형 서비스 B2B 프리랜서", mode: "startup", desc: "중소기업 대상 영상 편집 외주 프리랜서", customer: "유튜브 채널을 운영하는 중소기업 마케팅 담당자", offer: "월 4편 영상 편집 패키지", price: 1200000, channel: "크몽·지인 소개",
     during: { 4: [{ help: "세금계산서 발행하려면 뭐가 필요해요? 프리랜서 3.3% 떼는 거랑 뭐가 달라요?" }] } },
   { id: "p19-novel", label: "새로운 개념의 사업", mode: "startup", desc: "AI가 반려식물 사진을 보고 병충해를 진단해 주고 식물 집사를 연결해 주는 앱", customer: "식물 키우다 자주 죽이는 1인 가구", offer: "식물 진단 + 출장 관리 매칭", price: 9900, channel: "앱스토어·인스타그램" },
-  { id: "p20-redesign", label: "사업 방향을 두 번 정리하는 손님", mode: "startup", desc: "동네 꽃집", customer: "기념일 꽃을 사는 30대 남성", offer: "꽃다발", price: 45000, channel: "네이버 플레이스",
+  { id: "p20-redesign", afterDesign: [{ help: "이 가격이면 손님이 정말 올까요?" }, { change: "주 고객은 근처 대학생으로 할래요" }, { change: "꽃 정기구독도 같이 하고 싶어요" }], label: "사업 방향을 두 번 정리하는 손님", mode: "startup", desc: "동네 꽃집", customer: "기념일 꽃을 사는 30대 남성", offer: "꽃다발", price: 45000, channel: "네이버 플레이스",
     after: [{ design: true }, { reanswer: "offer", value: "정기 꽃 구독(격주 배송)" }, { reanswer: "price", value: 39000 }] },
   { id: "p21-teen", label: "고등학생 손님", mode: "startup", desc: "고등학생인데 수제 키링 만들어서 용돈 벌고 싶어요", customer: "또래 친구들", offer: "비즈 키링", price: 5000, channel: "인스타 DM",
     during: { 1: [{ help: "미성년자도 사업자등록 할 수 있어요? 부모님 허락 꼭 받아야 해요?" }] } },
@@ -104,7 +108,7 @@ const PERSONAS: Persona[] = [
   // ---- 4차 패턴(2026-10-21) ----
   { id: "p35-why", label: "질문마다 왜 묻냐고 하는 손님", mode: "startup", desc: "동네 반려견 수제 간식 가게", customer: "반려견 키우는 30대", offer: "수제 간식", price: 12000, channel: "스마트스토어",
     during: { 1: [{ help: "근데 이걸 왜 물어봐요? 고객이 누군지 꼭 알아야 돼요?" }], 3: [{ help: "가격은 또 왜요? 그냥 알아서 정해 주면 안 돼요?" }] } },
-  { id: "p36-senior", label: "쉬운 말을 원하는 60대 손님", mode: "startup", desc: "60대인데 퇴직하고 동네에서 작은 김밥집 하려고요", customer: "출근하는 직장인", offer: "김밥", price: 4000, channel: "동네 단골",
+  { id: "p36-senior", afterDesign: [{ help: "이거 정말 될까요? 나이도 많고 자신이 없어요" }], label: "쉬운 말을 원하는 60대 손님", mode: "startup", desc: "60대인데 퇴직하고 동네에서 작은 김밥집 하려고요", customer: "출근하는 직장인", offer: "김밥", price: 4000, channel: "동네 단골",
     during: { 1: [{ help: "어려운 말은 하나도 모르겠어요. 영업신고가 뭔지 아주 쉽게 설명해 주세요" }] } },
   { id: "p37-dialect", label: "사투리를 쓰는 손님", mode: "startup", desc: "부산 바닷가 쪽에 회 포장 전문점 하나 채려볼라카는데예", customer: "관광객하고 동네 사람들", offer: "모둠회 포장", price: 35000, channel: "배민이랑 인스타",
     during: { 2: [{ memo: "가격은 소짜 삼만오천 대짜 오만 정도로 할라꼬예. 생선 원가는 한 접시에 만오천쯤 들낍니더" }] } },
@@ -112,15 +116,21 @@ const PERSONAS: Persona[] = [
     during: { 3: [{ memo: "월세는 백오십이고 보증금은 이천이에요. 버거 하나 재료비는 삼천오백 원쯤이고 하루에 오십 개 팔고 싶어요" }, { help: "이러면 한 달에 얼마 남아요?" }] } },
   { id: "p39-url", label: "링크를 붙여 넣는 손님", mode: "startup", desc: "제 인스타 https://instagram.com/cake_by_mina 보고 판단해 주세요. 주문 케이크 만들어요", customer: "생일 케이크 찾는 사람", offer: "레터링 케이크", price: 45000, channel: "인스타그램",
     during: { 1: [{ help: "제 인스타 https://instagram.com/cake_by_mina 들어가서 사진 보고 가격 적당한지 봐 주세요" }] } },
-  { id: "p40-guarantee", label: "수익 보장을 묻는 손님", mode: "startup", desc: "무인 아이스크림 할인점", customer: "동네 학생과 가족", offer: "아이스크림·과자", price: 1500, channel: "매장",
+  { id: "p40-guarantee", afterDesign: [{ help: "그래도 망하면 어떡해요?" }, { change: "밤에도 열어서 24시간으로 할래요" }], label: "수익 보장을 묻는 손님", mode: "startup", desc: "무인 아이스크림 할인점", customer: "동네 학생과 가족", offer: "아이스크림·과자", price: 1500, channel: "매장",
     during: { 1: [{ help: "이거 하면 월 천만 원은 확실히 벌 수 있죠? 유튜브에서 다들 그렇다던데" }] } },
   { id: "p41-partner", label: "동업 지분을 묻는 손님", mode: "startup", desc: "친구랑 둘이 하는 브런치 카페", customer: "주말 브런치 손님", offer: "브런치 세트", price: 16000, channel: "인스타그램",
     during: { 2: [{ help: "친구는 돈 70% 내고 저는 일을 다 해요. 지분은 어떻게 나눠야 공평해요? 계약서도 써야 해요?" }] } },
   { id: "p42-mode-mismatch", label: "운영 중인데 창업 준비를 고른 손님", mode: "startup", desc: "이미 3년째 운영 중인 미용실인데 손님이 줄어서 다시 계획을 세우고 싶어요", customer: "동네 주민", offer: "커트·펌", price: 25000, channel: "네이버 예약" },
+
+  // ---- 5차 패턴(2026-11-17): 사업 방향을 본 뒤 대화하기 · 작아 보이는 사업에 희망적인 말투 ----
+  { id: "p43-small", label: "돈이 될지 모르겠다는 손님", mode: "startup", desc: "돈이 될지는 모르겠지만 길고양이 사진으로 엽서 만들어서 팔아 보고 싶어요", customer: "고양이 좋아하는 사람들", offer: "길고양이 사진 엽서", price: 2000, channel: "플리마켓",
+    afterDesign: [{ help: "이런 걸로 진짜 먹고살 수 있을까요?" }, { change: "가격은 3천원으로 올릴래요" }] },
 ];
 
 const H = { "content-type": "application/json", "x-business-intake": "2", origin } as Record<string, string>;
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+/* 말투 점검용 — 사업 방향에 나온 글을 빠짐없이 남긴다 */
+const designView = (d: any) => d ? { headline: d.identity?.headline ?? d.headline, pitch: d.identity?.pitch ?? d.pitch, names: d.identity?.names ?? d.names, startingPlan: d.startingPlan ?? null, alternatives: d.alternatives ?? null, assumptions: d.assumptions ?? null, nextAction: d.nextAction ?? null, direction: d.direction ?? d.summary ?? null, risks: d.risks ?? d.checks ?? null } : null;
 
 async function runPersona(p: Persona, index: number) {
   let cookie = `syn_uid=syn-chat-${index + 1}-${Date.now() % 100000}`;
@@ -181,6 +191,21 @@ async function runPersona(p: Persona, index: number) {
       await waitJob("사업 방향 정리(1차)");
       const d = plan.coach?.design;
       result.ai[result.ai.length - 1].design = d ? { headline: d.identity?.headline, pitch: d.identity?.pitch, names: d.identity?.names } : null;
+    } else if ("change" in step) {
+      const seen = plan?.coach?.messages?.length ?? 0;
+      const res = await cmd({ action: "edit", message: step.change });
+      if (res.status === 202) await waitJob("방향 본 뒤 고치기", { said: step.change });
+      else result.ai.push({ step: "방향 본 뒤 고치기", said: step.change, status: res.status, reply: null });
+      const last = result.ai[result.ai.length - 1];
+      last.reply = (plan?.coach?.messages ?? []).slice(seen).filter((m: any) => m.role === "assistant").map((m: any) => m.text).join(" / ") || last.reply;
+      last.fields = (plan?.coach?.fields ?? []).filter((f: any) => ["customer", "price", "offer", "channel"].includes(f.key)).map((f: any) => `${f.key}=${f.value}`);
+      // 화면처럼 — 방향이 옛 기준이 되면 다시 정리한다
+      const d = plan?.coach?.design;
+      if (d && d.sourceRevision !== (plan.coach.documentRevision ?? plan.coach.revision)) {
+        await cmd({ action: "design" });
+        await waitJob("다시 정리한 사업 방향");
+        result.ai[result.ai.length - 1].design = designView(plan.coach?.design);
+      }
     } else if ("ideas" in step) {
       const rejectIds = step.rejectFirst ? (plan?.intake?.generatedIdeas ?? []).slice(0, 3).map((i: any) => i.id) : undefined;
       await cmd({ action: "ideas", message: step.ideas, ...(rejectIds?.length ? { rejectIds } : {}) });
@@ -226,7 +251,8 @@ async function runPersona(p: Persona, index: number) {
     await cmd({ action: "design" });
     await waitJob("사업 방향 정리");
     const d = plan.coach?.design;
-    result.ai[result.ai.length - 1].design = d ? { headline: d.identity?.headline ?? d.headline, pitch: d.identity?.pitch ?? d.pitch, names: d.identity?.names ?? d.names, direction: d.direction ?? d.summary ?? null, risks: d.risks ?? d.checks ?? null } : null;
+    result.ai[result.ai.length - 1].design = designView(d);
+    for (const step of p.afterDesign ?? []) await doStep(step);
   }
   result.fields = (plan.coach?.fields ?? []).map((f: any) => ({ key: f.key, value: f.value, basis: f.basis }));
   result.title = plan.title; result.ms = Date.now() - t0; result.answers = log;

@@ -914,6 +914,57 @@ async function main() {
       assert.equal(calls.length, 0, "filtered requests never reach the provider");
     });
 
+    await check("before the plan, a change typed after the direction goes in without asking, is kept as a memo, and the direction is redone with it", async () => {
+      configureAI(true);
+      const DESIGN = { identity: { headline: "출근길 커피, 한 달에 한 번 결제로 끝", pitch: "동네 직장인에게 월 구독 커피 패스를 파는 원두 카페", names: [{ name: "커피패스", why: "구독형이라는 게 바로 보임" }, { name: "단골원두", why: "동네 단골 느낌" }] }, approach: "known-business", startingPlan: { scope: "월 구독 커피 패스 50명으로 시작", connectionToVision: "동네 단골 기반 구독 카페", whyThis: "고정 매출을 먼저 확인", notIncluded: ["배달"] },
+        alternatives: [{ name: "테이크아웃 전용", scope: "매장 없이 픽업만", tradeoff: "체류 고객을 포기" }], assumptions: [{ statement: "직장인이 월 3만원을 낸다", howToCheck: "사전 예약 20명 모집" }],
+        nextAction: { action: "사전 예약 페이지 열기", doneWhen: "20명 예약", usableText: "월 3만원 커피 패스 사전 예약을 받습니다." } };
+      const ownerHash = `intake-reflect-${randomUUID()}`;
+      const started = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: "동네 원두 정기 구독 카페", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
+      const session = { ownerHash, planId: started.plan.id };
+      await send(session, { action: "answer", questionId: "customer", value: "근처 직장인" });
+      await assert.rejects(send(session, { action: "edit", message: "고객을 대학생으로" }, true), (error: unknown) => error instanceof IntakeError && error.code === "edit_requires_document", "before the direction there is nothing to change yet");
+      const direction = async () => {
+        const queued = await send(session, { action: "design" }, true);
+        assert.deepEqual(await executeIntakeJob(jobRequest(session, queued)), { ok: true });
+        const current = await load(session);
+        assert.equal(current.coach.design?.sourceRevision, current.coach.documentRevision, "the direction is current");
+      };
+      respond = () => completion(DESIGN);
+      await direction();
+
+      const quiet = calls.length;
+      const thanks = await send(session, { action: "edit", message: "고마워요" }, true);
+      assert.equal(thanks.job, null, "small talk needs no AI");
+      assert.equal(calls.length, quiet);
+      assert.match((await load(session)).coach.messages.at(-1)?.text ?? "", /사업 방향에 바로 넣을게요/, "before the plan the fixed reply talks about the direction, not the plan");
+
+      respond = () => completion({ changes: [{ questionId: "customer", value: "근처 대학생" }] });
+      const changed = await send(session, { action: "edit", message: "고객은 근처 대학생으로 할래요" }, true);
+      assert.equal(changed.job?.kind, "edit");
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, changed)), { ok: true });
+      const applied = await load(session);
+      assert.equal(applied.intake.answers.customer.value, "근처 대학생", "applied right away, no confirm step");
+      assert.equal(applied.intake.job?.proposalStatus, "applied");
+      assert.notEqual(applied.coach.design?.sourceRevision, applied.coach.documentRevision, "the direction is out of date, so the screen redoes it");
+      assert.ok(applied.intake.notes.some(note => note.text === "고객은 근처 대학생으로 할래요" && note.intent === "memo"), "the words are kept for the next direction");
+      assert.equal(applied.coach.messages.at(-1)?.text, "말씀하신 대로 주요 고객을 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.");
+
+      respond = () => completion(DESIGN);
+      await direction();
+      respond = () => completion({ changes: [] });
+      const wish = await send(session, { action: "edit", message: "원두 정기배송도 같이 하고 싶어요" }, true);
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, wish)), { ok: true });
+      const kept = await load(session);
+      assert.notEqual(kept.coach.design?.sourceRevision, kept.coach.documentRevision, "nothing maps to a fact, yet the direction is still redone");
+      assert.equal(kept.coach.messages.at(-1)?.text, "말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.");
+      respond = body => {
+        assert.ok(JSON.stringify(body).includes("원두 정기배송도 같이 하고 싶어요"), "the redone direction reads the words");
+        return completion(DESIGN);
+      };
+      await direction();
+    });
+
     await check("plan edit chat proposes only valid fact changes; apply marks the document stale, dismiss leaves it", async () => {
       configureAI(true);
       const session = await start();
