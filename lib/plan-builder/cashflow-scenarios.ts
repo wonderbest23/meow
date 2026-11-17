@@ -841,7 +841,7 @@ function unitMarginMarkdown(result: CashflowScenarios): string[] {
     `| 항목 | 한 ${unit}당 | 근거 |`,
     "| --- | ---: | --- |",
     `| ${result.shape.service === "connect" ? "한 건 수수료" : "판매가"} | ${won(result.unitPrice)} | 대표님이 정한 값${subscriptionBasis(result)} |`,
-    result.shape.vat === "exempt" ? "| 부가세 | 0원 | 면세일 수 있음(교육용역). 면세 여부는 관할 세무서 확인 |" : `| 부가세 | -${won(result.vat)} | ${result.shape.service === "connect" ? VAT_BASIS.replace(/판매가/g, "수수료") : VAT_BASIS}. 과세 유형 확인 필요 |`,
+    result.shape.vat === "exempt" ? "| 부가세 | 0원 | 면세일 수 있음(교육용역). 면세 여부는 관할 세무서 확인 |" : `| 부가세 | -${won(result.vat)} | ${result.shape.service === "connect" ? VAT_BASIS.replace(/판매가/g, "수수료") : VAT_BASIS}. ${VAT_TYPE_NOTE} |`,
     `| 한 ${unit}당 비용 | -${won(unitCostOf(result))} | 대표님이 정한 값 |`,
     ...unknownCostRows(result).map(row => `| ${row.item} | ${UNKNOWN_CELL} | ${row.note} |`),
     `| **한 ${unit}에 실제 남는 돈** | **${won(result.contribution)}** | '${UNKNOWN_CELL}' 칸을 빼기 전 값 |`,
