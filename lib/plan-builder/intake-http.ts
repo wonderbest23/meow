@@ -124,12 +124,14 @@ export async function intakePost(request: Request, prepare: (request: Request) =
     }
     // 계획서 채팅 수정: 규칙으로 먼저 거른다. 범위 밖 요청은 AI·AI 한도를 건드리지 않고 정해진 답으로 끝난다.
     const editRoute = command.action === "edit" ? classifyEditRequest(command.message ?? "") : undefined;
-    const needsAI = ["message", "extract", "extract-pending", "help", "design", "ideas"].includes(command.action) || editRoute === "in_scope";
+    // 말투(style) · 새 사업(new_business)으로 보이는 말은 계획서 뒤에만 정해진 답으로 끝난다 — 계획서 전에는 사업 이야기일 수 있어 AI가 읽는다(intake-service edit)
+    const editNeedsAI = editRoute === "in_scope" || editRoute === "style" || editRoute === "new_business";
+    const needsAI = ["message", "extract", "extract-pending", "help", "design", "ideas"].includes(command.action) || editNeedsAI;
     if (needsAI && intakeBetaSafetyRequired() && !identity.userId) return json({ code: "login_required", login: true, authenticated: false, ownerScope: scope, message: "AI 생성은 로그인 후 이용할 수 있어요. 입력한 내용은 유지되며 로그인하고 이어갈 수 있어요." }, 401);
     const aiAvailable = needsAI && !!resolvePlanningLLMConfig(identity.hash);
     const aiLimited = needsAI && aiAvailable ? await enforceRateLimit("business-intake-ai", request, { key: identity.hash, limit: 24, windowMs: 600_000 }) : null;
     // 같은 계획서의 수정 요청은 하루 20번까지 — 계정 한도와 별개로, 한 계획서를 끝없이 고치며 AI를 쓰지 않도록.
-    const editLimited = editRoute === "in_scope" && aiAvailable && !aiLimited ? await enforceRateLimit("business-intake-edit-daily", request, { key: `${identity.hash}:${command.planId ?? ""}`, limit: EDIT_DAILY_LIMIT, windowMs: 86_400_000 }) : null;
+    const editLimited = editNeedsAI && aiAvailable && !aiLimited ? await enforceRateLimit("business-intake-edit-daily", request, { key: `${identity.hash}:${command.planId ?? ""}`, limit: EDIT_DAILY_LIMIT, windowMs: 86_400_000 }) : null;
     // 사업 1건당 무료 AI 비용 상한(lib/llm/plan-cost-cap.ts). 원문 메모 저장은 AI 없이 계속되고, AI 작업만 멈춘다.
     const capReached = needsAI && aiAvailable && !aiLimited && !editLimited ? await planFreeAiCapReached(command.planId) : false;
     if (capReached && command.action !== "message") return json({ code: "ai_limit", message: PLAN_FREE_AI_CAP_MESSAGE }, 429);

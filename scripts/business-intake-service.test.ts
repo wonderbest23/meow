@@ -939,7 +939,7 @@ async function main() {
       assert.equal(calls.length, quiet);
       assert.match((await load(session)).coach.messages.at(-1)?.text ?? "", /사업 방향에 바로 넣을게요/, "before the plan the fixed reply talks about the direction, not the plan");
 
-      respond = () => completion({ changes: [{ questionId: "customer", value: "근처 대학생" }] });
+      respond = () => completion({ answer: "대학생 손님이면 시험 기간 아침이 기회예요.", changes: [{ questionId: "customer", value: "근처 대학생" }], rethink: true });
       const changed = await send(session, { action: "edit", message: "고객은 근처 대학생으로 할래요" }, true);
       assert.equal(changed.job?.kind, "edit");
       assert.deepEqual(await executeIntakeJob(jobRequest(session, changed)), { ok: true });
@@ -948,21 +948,91 @@ async function main() {
       assert.equal(applied.intake.job?.proposalStatus, "applied");
       assert.notEqual(applied.coach.design?.sourceRevision, applied.coach.documentRevision, "the direction is out of date, so the screen redoes it");
       assert.ok(applied.intake.notes.some(note => note.text === "고객은 근처 대학생으로 할래요" && note.intent === "memo"), "the words are kept for the next direction");
-      assert.equal(applied.coach.messages.at(-1)?.text, "말씀하신 대로 주요 고객을 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.");
+      assert.equal(applied.coach.messages.at(-1)?.text, "대학생 손님이면 시험 기간 아침이 기회예요.\n\n말씀하신 대로 주요 고객을 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.", "the AI's words first, then what changed");
 
       respond = () => completion(DESIGN);
       await direction();
-      respond = () => completion({ changes: [] });
+      respond = () => completion({ answer: "정기배송은 단골을 만드는 좋은 길이에요.", changes: [], rethink: true });
       const wish = await send(session, { action: "edit", message: "원두 정기배송도 같이 하고 싶어요" }, true);
       assert.deepEqual(await executeIntakeJob(jobRequest(session, wish)), { ok: true });
       const kept = await load(session);
       assert.notEqual(kept.coach.design?.sourceRevision, kept.coach.documentRevision, "nothing maps to a fact, yet the direction is still redone");
-      assert.equal(kept.coach.messages.at(-1)?.text, "말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.");
+      assert.equal(kept.coach.messages.at(-1)?.text, "정기배송은 단골을 만드는 좋은 길이에요.\n\n말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.");
       respond = body => {
         assert.ok(JSON.stringify(body).includes("원두 정기배송도 같이 하고 싶어요"), "the redone direction reads the words");
         return completion(DESIGN);
       };
       await direction();
+
+      // 묻는 말 — 물음표가 없어도 AI가 질문으로 읽으면 답만 하고 방향은 그대로 둔다(예전엔 답 없이 방향만 다시 만들었다)
+      const notesBefore = (await load(session)).intake.notes.length;
+      respond = body => {
+        assert.ok(JSON.stringify(body).includes("출근길 커피"), "the answer can see the direction the founder is looking at");
+        return completion({ answer: "카페 영업 신고는 가게가 있는 구청 위생과에 물어보시면 돼요.", changes: [], rethink: false });
+      };
+      const asked = await send(session, { action: "edit", message: "영업신고는 구청 어디로 전화하면 됨" }, true);
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, asked)), { ok: true });
+      const answered = await load(session);
+      assert.equal(answered.coach.messages.at(-1)?.text, "카페 영업 신고는 가게가 있는 구청 위생과에 물어보시면 돼요.", "a question gets an answer");
+      assert.equal(answered.coach.design?.sourceRevision, answered.coach.documentRevision, "a question does not redo the direction");
+      assert.equal(answered.intake.notes.length, notesBefore, "a question is not kept as a business memo");
+
+      // 부탁을 물음으로 해도("~해 주실 수 있나요?") 바꿀 말이면 넣는다
+      respond = () => completion({ answer: "네, 그렇게 할게요.", changes: [{ questionId: "price", value: "15,000원" }], rethink: true });
+      const polite = await send(session, { action: "edit", message: "가격을 만오천원으로 넣어 주실 수 있나요?" }, true);
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, polite)), { ok: true });
+      const politeDone = await load(session);
+      assert.equal(politeDone.intake.answers.price.value, 15000);
+      assert.match(politeDone.coach.messages.at(-1)?.text ?? "", /판매 가격을 바꿨어요/);
+
+      // 계획서 전에는 말투 · 새 사업처럼 보이는 말도 사업 이야기로 AI가 읽는다(계획서 뒤에는 정해진 답)
+      for (const [message, why] of [["친근하게 다가가는 동네 가게로 하고 싶어요", "a wish the rules took for a new business"], ["말투는 좀 더 친근하게요", "a tone wish"]] as const) {
+        respond = () => completion(DESIGN);
+        await direction();
+        const quietStyle = calls.length;
+        respond = () => completion({ answer: "친근한 동네 가게는 단골이 빨리 생겨요.", changes: [], rethink: true });
+        const style = await send(session, { action: "edit", message }, true);
+        assert.equal(style.job?.kind, "edit", `before the plan ${why} reaches the AI`);
+        assert.deepEqual(await executeIntakeJob(jobRequest(session, style)), { ok: true });
+        assert.equal(calls.length, quietStyle + 1);
+      }
+
+      // 대화로 못 바꾸는 항목(업종)은 AI가 표시만 하고, 바꾸는 방법은 서비스가 정해진 말로 붙인다
+      respond = () => completion({ answer: "공연 일이시군요, 좋은 방향이에요.", changes: [], rethink: false, cannotChange: ["업종"] });
+      const industry = await send(session, { action: "edit", message: "업종이 제조로 돼 있는데 공연 서비스예요" }, true);
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, industry)), { ok: true });
+      assert.equal((await load(session)).coach.messages.at(-1)?.text, "공연 일이시군요, 좋은 방향이에요.\n\n업종은 대화에 있는 그 항목을 눌러 바꿀 수 있어요.");
+    });
+
+    await check("a typed answer the screen rules could not read is read by AI: the words stay in the chat and the filled value is said back", async () => {
+      const session = await start();
+      const before = await load(session);
+      const requestId = randomUUID();
+      await saveIntakeCommand(session.ownerHash, { action: "read", planId: session.planId, revision: before.coach.revision, requestId, read: { answers: [{ questionId: "hoursPerWeek", value: 48, quote: "주6일 48시간" }], unknown: [] }, message: "하루8시간 주6일 48시간" }, { aiAvailable: false, aiAllowed: false });
+      const after = await load(session);
+      assert.equal(after.intake.answers.hoursPerWeek.value, 48);
+      const tail = after.coach.messages.slice(-2);
+      assert.deepEqual(tail.map(message => message.role), ["user", "assistant"]);
+      assert.equal(tail[0].text, "하루8시간 주6일 48시간", "the founder's own words stay in the chat");
+      assert.match(tail[1].text, /이렇게 넣었어요: .*48시간/, "the value is said back so a wrong read is easy to spot");
+      assert.ok(after.intake.notes.some(note => note.text === "하루8시간 주6일 48시간" && note.intent === "memo"), "other details in the sentence reach the direction as a memo");
+
+      const quiet = await load(session);
+      await saveIntakeCommand(session.ownerHash, { action: "read", planId: session.planId, revision: quiet.coach.revision, requestId: randomUUID(), read: { answers: [{ questionId: "budget", value: 3000000, quote: "300" }], unknown: [] } }, { aiAvailable: false, aiAllowed: false });
+      assert.equal((await load(session)).coach.messages.length, quiet.coach.messages.length, "a background read without the typed words adds no chat lines");
+
+      // 서비스가 먼저 채운 값과 같은 값은 손님 답으로 바꾸지 않는다("하루 50건은 좀 많은 것 같아요" — 거절한 기본값을 확정해 버렸다)
+      const priorEstimate = process.env.INTAKE_ESTIMATE; process.env.INTAKE_ESTIMATE = "1";
+      try {
+        const owner = `intake-read-estimate-${randomUUID()}`;
+        const made = await saveIntakeCommand(owner, { action: "start", mode: "startup", questionId: "business", value: "동네 반찬 정기배송", revision: 0, requestId: randomUUID() }, { aiAvailable: false, aiAllowed: false });
+        const estimated = Object.entries(made.snapshot.intake.answers).find(([, answer]) => answer.status === "answered" && answer.messageId.endsWith(":estimate") && typeof answer.value === "number");
+        assert.ok(estimated, "an estimated number to repeat");
+        const [questionId, answer] = estimated!;
+        await saveIntakeCommand(owner, { action: "read", planId: made.plan.id, revision: made.snapshot.coach.revision, requestId: randomUUID(), read: { answers: [{ questionId, value: answer.value, quote: "x" }], unknown: [] } }, { aiAvailable: false, aiAllowed: false });
+        const kept = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!;
+        assert.ok(String(readIntake(kept.answers)?.answers[questionId]?.messageId).endsWith(":estimate"), "repeating the service's own value does not turn it into the founder's answer");
+      } finally { if (priorEstimate === undefined) delete process.env.INTAKE_ESTIMATE; else process.env.INTAKE_ESTIMATE = priorEstimate; }
     });
 
     await check("plan edit chat proposes only valid fact changes; apply marks the document stale, dismiss leaves it", async () => {

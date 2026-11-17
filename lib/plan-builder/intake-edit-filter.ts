@@ -46,5 +46,10 @@ export function objectParticle(word: string): "을" | "를" {
   return code % 28 ? "을" : "를";
 }
 
+/** 주격 보조사 — 받침이 있으면 '은', 없으면 '는'(한글이 아닌 끝 글자는 '은') */
+export function topicParticle(word: string): "은" | "는" {
+  return objectParticle(word) === "을" ? "은" : "는";
+}
+
 /** Requests to change the plan's facts per plan per day, on top of the account-wide AI limit. */
 export const EDIT_DAILY_LIMIT = 20;
