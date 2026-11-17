@@ -52,6 +52,29 @@ export const ONLINE_FEE_PITFALL = "판매 수수료(확인 필요): 스마트스
 export const ONLINE_SHIPPING_PITFALL = "택배비(확인 필요): 작은 상자 한 건에 흔히 3,000~5,000원 안팎이에요(계약 물량·크기·무게·지역에 따라 달라요). 상자·완충재 값은 따로 들어요. 무료배송이면 이 돈이 한 개당 남는 돈에서 빠지니, 택배사 견적을 받아 원가에 넣어요.";
 export const ONLINE_SALES_STEP: IndustryPlaybook["steps"][number] = { title: "통신판매업 신고", where: "관할 시·군·구청 (정부24로도 신청)", detail: "온라인으로 직접 팔면 판매를 시작하기 전에 신고해요. 사업자등록증과 구매안전서비스 이용확인증(스마트스토어·오픈마켓은 판매자 센터에서 발급)이 필요하니 사업자등록 다음에 해요. 직전 해 거래 횟수가 공정거래위원회 고시 기준보다 적거나 간이과세자면 신고하지 않아도 되니 대상인지 먼저 확인하고, 받은 신고번호는 판매 페이지에 적어요." };
 
+/*
+ * 판매 경로(2026-11-17 실제 AI 계획서 9개 점검) — '배송'이라는 말만으로 온라인 스토어 사업으로 봐서, 맘카페·당근마켓으로 주문받아 동네에 직접 배달하는
+ * 반찬 정기배송에 '스토어 공개'·'스토어 판매·결제 수수료'·택배비가 나왔고, 지인 소개로만 만나는 어르신 소개팅에 '통신판매업 신고' 단계가 나왔다.
+ * - online-store: 판매 채널이나 사업 설명에 온라인 스토어·쇼핑몰·택배가 있다
+ * - offline-only: 판매 채널을 답했는데 온라인 창구(커뮤니티·SNS·앱·홈페이지 등)가 하나도 없다(지인 소개·전단 등)
+ * - other: 그 밖(동네 커뮤니티 글로 알리고 직접 거래 등). 채널을 답하지 않았으면 판정하지 않는다(unknown)
+ */
+const ONLINE_STORE_WORDS = /스마트\s*스토어|스토어|쇼핑몰|자사몰|온라인\s*몰|오픈\s*마켓|쿠팡(?!\s*이츠)|11번가|[지G]\s*마켓|옥션|아이디어스|컬리|위메프|티몬|선물하기|라이브\s*커머스|택배|전국\s*(?:배송|판매)|온라인\s*(?:판매|주문|결제)/i;
+const ONLINE_CHANNEL_WORDS = /온라인|인터넷|앱|어플|웹|홈페이지|사이트|카페|당근|인스타|블로그|카카오|카톡|밴드|유튜브|틱톡|스토어|몰|마켓|플랫폼|숨고|크몽|네이버|SNS|커뮤니티|오픈\s*채팅|단톡|메신저|이메일|문자/i;
+export type SalesRoute = "online-store" | "offline-only" | "other" | "unknown";
+export function salesRoute(input: { channel?: string | null; description?: string | null }): SalesRoute {
+  const channel = input.channel?.trim() ?? "";
+  if (ONLINE_STORE_WORDS.test(`${channel} ${input.description ?? ""}`)) return "online-store";
+  if (!channel) return "unknown";
+  return ONLINE_CHANNEL_WORDS.test(channel) ? "other" : "offline-only";
+}
+
+/** 온라인으로 팔지 않는 사업(지인 소개·전단 등) — 업종 가이드에서 통신판매업 단계와 온라인 판매 주의점을 뺀다 */
+export function withoutOnlineSales(playbook: IndustryPlaybook): IndustryPlaybook {
+  const online = new Set([ONLINE_RETURN_PITFALL, ONLINE_FEE_PITFALL, ONLINE_SHIPPING_PITFALL]);
+  return { ...playbook, steps: playbook.steps.filter(step => !/통신판매업/.test(step.title)), pitfalls: playbook.pitfalls.filter(item => !online.has(item)) };
+}
+
 /** 택배로 파는 사업 — 업종 가이드에 통신판매업 신고 단계와 온라인 판매 주의점을 더한다(이미 있으면 그대로) */
 export function withOnlineSales(playbook: IndustryPlaybook): IndustryPlaybook {
   if (playbook.id === "online-store") return playbook;

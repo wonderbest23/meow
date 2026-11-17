@@ -57,9 +57,9 @@ async function main() {
     // (가) 한 개에 실제 남는 돈 = 9,000 − 부가세 818 − 3,500 = 4,682원, 본전 = 1,500,000 ÷ 4,682 → 월 321개(하루 약 12개)
     assert.match(table, /### 한 개에 실제 남는 돈/);
     assert.match(table, /\| 부가세 \| -818원 \|/);
-    assert.match(table, /\| 포장·용기 \| 확인 필요 \|/);
-    assert.match(table, /\| 팔지 못해 버리는 몫\(폐기\) \| 확인 필요 \|/);
-    assert.match(table, /\| 카드·결제 수수료 \| 확인 필요 \|/);
+    assert.match(table, /\| 포장·용기 \| 알아본 뒤 채움 \|/);
+    assert.match(table, /\| 팔지 못해 버리는 몫\(폐기\) \| 알아본 뒤 채움 \|/);
+    assert.match(table, /\| 카드·결제 수수료 \| 알아본 뒤 채움 \|/);
     assert.match(table, /\*\*4,682원\*\*/);
     assert.match(table, /본전 판매량은 월 321개, 하루 약 12개/);
     assert.match(table, /낙관적인 쪽입니다/);

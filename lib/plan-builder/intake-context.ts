@@ -1,7 +1,7 @@
 import { readCoach } from "./coach";
 import { bigIndustryContext, bigIndustryFor } from "./big-industry-paths";
 import { businessTypeContext, businessTypeFor } from "./business-types";
-import { playbookContext, playbookForKsic, playbookForText, withOnlineSales } from "./industry-playbooks";
+import { playbookContext, playbookForKsic, playbookForText, salesRoute, withOnlineSales, withoutOnlineSales } from "./industry-playbooks";
 import { allStructureQuestions, detailQuestions, intakeSectorOptions } from "./intake-questions";
 import { readIntake, effectiveStructure } from "./intake-core";
 import { intakeResourceSource } from "./intake-resource-context";
@@ -131,9 +131,14 @@ export function confirmedIntakeContext(answers: Answers): string {
   const bigIdea = big ? bigIndustryContext(big, ksic && big.ksic.includes(ksic.code) ? "ksic" : "description") : null;
   if (!details.length && !reportingPeriod && !ksic && !structure && !resources && !selectedProposal && !playbook && !typed && !bigIdea) return "";
 
+  // 판매 경로(2026-11-17) — 동네 커뮤니티로 주문받아 직접 배달하는 사업에 스토어 수수료·택배비를, 지인 소개로만 만나는 사업에 통신판매업 단계를 넣지 않는다
+  const route = salesRoute({ channel: coachForGuide?.fields.find(field => field.key === "channel")?.value, description: describedAs });
+  const guide = !playbook ? null
+    : route === "offline-only" ? withoutOnlineSales(playbook)
+      : typed?.type.id === "ship" && (route === "online-store" || route === "unknown") ? withOnlineSales(playbook) : playbook;
   const context = { guidance: INTAKE_CONTEXT_RULES + (resources ? ` ${RESOURCE_CONTEXT_RULES}` : ""), industry: industry || null, sector: sector ?? null, ksic, structure,
     // 택배로 파는 사업은 업종 가이드에 온라인 판매 준비(통신판매업 신고·청약철회 7일·수수료·택배비 범위)를 더한다
-    ...(playbook ? { industryGuide: playbookContext(typed?.type.id === "ship" ? withOnlineSales(playbook) : playbook, ksic ? "ksic" : "description") } : {}), ...(typed ? { businessType: businessTypeContext(typed) } : {}), ...(bigIdea ? { bigIdea } : {}), ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
+    ...(guide ? { industryGuide: playbookContext(guide, ksic ? "ksic" : "description") } : {}), ...(typed ? { businessType: businessTypeContext(typed) } : {}), ...(bigIdea ? { bigIdea } : {}), ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
   while (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && context.resources?.quotes.length) { context.resources.quotes.pop(); context.omitted = true; }
   // 넘치면 업종 가이드부터 줄인다 — 사업 구조·계산(structure)이 더 중요하다
   const guided = context as typeof context & { industryGuide?: ReturnType<typeof playbookContext> };
