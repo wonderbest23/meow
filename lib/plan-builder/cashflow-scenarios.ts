@@ -116,6 +116,13 @@ export type CashflowShape = {
   open?: { week: number; startWeek: number };
   /** 물건을 파는 스토어가 아닌 온라인 사업 — 두 쪽을 잇는 연결(connect) · 앱(app). '스토어 공개' · '포장·택배' · '판매량' 대신 그 사업의 말을 쓴다(2026-11-14 과외 매칭 계획서 검토) */
   service?: "connect" | "app";
+  /**
+   * 정기배송·구독(2026-11-16 반찬 정기배송 계획서: '주 2회 59,000원'을 한 달 2건으로 세어 가구 수·생산량·조사 기준이 흔들렸다).
+   * 판매가를 '한 가구(사람·곳)가 한 달에 내는 돈'으로 보고, 한 달 1건 = 구독 1가구로 센다. 값은 세는 단위(가구·명·곳).
+   */
+  subscription?: "가구" | "명" | "곳";
+  /** 매장 없이 차량(용달·이사 등)으로 일하는 사업 — 월 고정비(차량 할부·보험 등)는 차량을 계약하는 개업 주부터 센다(2026-11-16 이사 계획서: 8주차 계약인데 1주차부터 셈) */
+  vehicle?: boolean;
 };
 const DEFAULT_SHAPE: CashflowShape = { premises: true, cycle: "weekly", vat: "general" };
 const FOOD_TEXT = /도시락|반찬|음식|식당|카페|커피|빵|베이커리|디저트|케이크|쿠키|김밥|분식|떡|밀키트|샐러드|주점|베이글|샌드위치/;
@@ -128,14 +135,28 @@ const MAKES_TEXT = /만드는|만들어|제작|제조|수제|공방/;
  */
 const OPEN_STEP = /개업|첫 유료|소량 출시|첫 예약|첫 수업과|실제 거래와|유료 기능/;
 const CONTRACT_STEP = /^계약(?! 전)/;
-export function roadmapOpening(typeId: BusinessTypeId | null | undefined, premises: boolean): { week: number; startWeek: number } | undefined {
+/*
+ * 고정비가 나가기 시작하는 주: 매장을 빌리는 사업은 순서의 계약 단계, 아니면 1주.
+ * 매장 없이 차량으로 일하는 사업은 순서에 '면허가 없으면 장비·차량 구매를 미룸'만 있고 계약 단계가 따로 없다 — 차량은 개업 주에 계약한다고 보고
+ * 그 주부터 센다(startWeek = week, 준비 기간 고정비 0원). 더 일찍 계약하면 그 주부터 더 뺀다는 문장을 돈 장에 함께 둔다.
+ */
+export function roadmapOpening(typeId: BusinessTypeId | null | undefined, premises: boolean, vehicle = false): { week: number; startWeek: number } | undefined {
   const roadmap = typeId ? BUSINESS_TYPES[typeId]?.roadmap : undefined;
   if (!roadmap) return undefined;
   const steps = premises ? roadmap : roadmap.filter(step => !/빌릴 때만/.test(step));
   const open = steps.findIndex(step => OPEN_STEP.test(step));
   if (open < 0) return undefined;
+  // 계약 단계는 공간 계약이라 매장을 빌리는 사업에만 센다(집에서 하는 가게에 7주차 계약이 생기지 않게)
   const contract = premises ? steps.findIndex(step => CONTRACT_STEP.test(step)) : -1;
-  return { week: Math.min(12, open + 1), startWeek: contract >= 0 && contract < open ? contract + 1 : 1 };
+  const week = Math.min(12, open + 1);
+  return { week, startWeek: contract >= 0 && contract < open ? contract + 1 : !premises && vehicle ? week : 1 };
+}
+const VEHICLE_TEXT = /용달|이사|화물|트럭|퀵\s*서비스|탁송/;
+/* 정기배송·구독 — 판매가를 한 달 금액으로 본다. 세는 단위는 가구(가정·집)·곳(가게·업체)·명 순으로 */
+const SUBSCRIPTION_TEXT = /정기\s*(?:배송|구독|결제)|월\s*구독|구독\s*(?:서비스|료|형|제)|월정액/;
+function subscriptionUnit(text: string): CashflowShape["subscription"] {
+  if (!SUBSCRIPTION_TEXT.test(text)) return undefined;
+  return /가구|가정|집\b|부부/.test(text) ? "가구" : /가게|매장|업체|사장님|미용실|식당|병원|학원/.test(text) ? "곳" : "명";
 }
 const NO_PREMISES_TEXT = /집에서|자택|무점포|재택/;
 export function cashflowShapeFor(input: { typeId?: BusinessTypeId | null; structure?: Pick<BusinessStructure, "sector" | "offering" | "revenue" | "delivery" | "capital"> | null; description?: string; online?: boolean }): CashflowShape {
@@ -146,17 +167,19 @@ export function cashflowShapeFor(input: { typeId?: BusinessTypeId | null; struct
       : typeId === "lesson" ? /학원|교습소|공부방|매장|상가|스튜디오/.test(text) || (!/과외|방문|출장|온라인|화상/.test(text) && structurePremises)
         : typeId ? false : structurePremises);
   const revenue = structure?.revenue;
-  const cycle: CashflowShape["cycle"] = revenue === "subscription" || (typeId === "lesson" && revenue !== "per_unit" && revenue !== "per_hour") ? "enroll"
+  const subscription = subscriptionUnit(text);
+  const cycle: CashflowShape["cycle"] = subscription || revenue === "subscription" || (typeId === "lesson" && revenue !== "per_unit" && revenue !== "per_hour") ? "enroll"
     : revenue === "per_hour" || typeId === "lesson" || (structure?.offering === "service" && (typeId === "store" || typeId === "visit")) ? "visits"
       : (typeId === "ship" || input.online) && structure?.offering !== "service" && revenue === "per_unit" ? "once"
         : "weekly";
   const vat: CashflowShape["vat"] = typeId === "lesson" || structure?.sector === "education" ? "exempt" : "general";
   const trade: CashflowShape["trade"] = typeId === "lesson" || structure?.sector === "education" ? "lesson" : BEAUTY_TEXT.test(text) ? "beauty" : FOOD_TEXT.test(text) ? "food" : "other";
   const makesGoods = structure?.offering !== "service" && trade !== "food" && MAKES_TEXT.test(text);
-  return { premises, cycle, vat, trade, exemptPossible: vat === "general" && EXEMPT_GOODS_TEXT.test(text), makesGoods, open: roadmapOpening(typeId, premises), ...(typeId === "platform" ? { service: "connect" as const } : typeId === "app" ? { service: "app" as const } : {}) };
+  const vehicle = !premises && VEHICLE_TEXT.test(text);
+  return { premises, cycle, vat, trade, exemptPossible: vat === "general" && EXEMPT_GOODS_TEXT.test(text), makesGoods, open: roadmapOpening(typeId, premises, vehicle), ...(typeId === "platform" ? { service: "connect" as const } : typeId === "app" ? { service: "app" as const } : {}), ...(subscription ? { subscription } : {}), ...(vehicle ? { vehicle } : {}) };
 }
 /** 포장·용기와 팔지 못해 버리는 몫(폐기)이 생기는 판매 단위 */
-const GOODS_UNIT = /^(?:개|잔|세트|병|봉|봉지|판|상자|박스|인분|컵|통|팩|송이|다발|조각|권|켤레|마리)$/;
+const GOODS_UNIT = /^(?:개|줄|잔|세트|병|봉|봉지|판|상자|박스|인분|컵|통|팩|송이|다발|조각|권|켤레|마리)$/;
 
 export type CashflowInputs = {
   unitPrice: number; unitVariableCost: number; monthlyFixedCost: number;
@@ -169,9 +192,17 @@ export type CashflowInputs = {
   online?: boolean;
   /** 사업 모양(Q7) — 없으면 예전처럼 매장·자주 사는 상품·일반과세자로 본다 */
   shape?: CashflowShape;
+  /**
+   * 이미 운영 중인 사업(2026-11-16 김밥집·옷가게 계획서: 예전 손익표로 '1개월차 흑자 전환'·부가세 없음·12개월 1억 5,501만 원).
+   * 준비 기간·중단선·초기 지출 한도 없이, 조심스러운 경우를 '지금 실적이 그대로'로 둔다. actualVolume = 실적 매출 ÷ 기간 ÷ 가격(월).
+   * 이때 budget은 준비 예산이 아니라 '이번 개선에 쓸 수 있는 돈'이다.
+   */
+  operating?: { actualVolume?: number };
 };
 /** 가게 문을 여는 사업, 스토어를 공개하는 사업, 매장 없이 영업을 시작하는 사업(방문·과외 등)의 말 */
 type Words = { before: string; at: string; after: string; afterOpen: string; day: string };
+/* 운영 중인 사업은 문을 여는 때가 없다 — 계획을 시작하는 때(1주차)부터 센다 */
+const OPERATING_WORDS: Words = { before: "계획 시작 전", at: "계획 1주차", after: "계획 시작 뒤", afterOpen: "계획을 시작한 뒤", day: "영업" };
 const STORE_WORDS: Words = { before: "문 열기 전", at: "문 열 때", after: "문 연 뒤", afterOpen: "문을 연 뒤", day: "영업" };
 const ONLINE_WORDS: Words = { before: "스토어 공개 전", at: "스토어 공개 때", after: "스토어 공개 뒤", afterOpen: "스토어를 공개한 뒤", day: "작업" };
 const OPEN_SERVICE_WORDS: Words = { before: "서비스 열기 전", at: "서비스를 열 때", after: "서비스를 연 뒤", afterOpen: "서비스를 연 뒤", day: "작업" };
@@ -182,12 +213,18 @@ const SERVICE_WORDS: Words = { before: "영업 시작 전", at: "영업 시작 �
  * counted: 관심 조사에서 응답마다 적는 것, expect: 할인 원칙으로 셈한 값, actual: 문을 연 뒤 셀 실제 숫자, intent: 아직 돈을 받지 않은 의사
  */
 type Terms = { volume: string; sold: string; verb: string; capacity: string; counted: string; expect: string; actual: string; intent: string };
-export function cashflowTerms(shape: Pick<CashflowShape, "cycle" | "trade" | "service">): Terms {
+export function cashflowTerms(shape: Pick<CashflowShape, "cycle" | "trade" | "service" | "subscription">): Terms {
   // 두 쪽을 잇는 사업은 파는 것이 아니라 성사시키는 것이다
   if (shape.service === "connect" && shape.cycle !== "enroll") return { volume: "성사 건수", sold: "성사", verb: "성사시킬", capacity: "한 달에 이을 수 있는 건수", counted: "적은 신청 횟수", expect: "예상 성사", actual: "실제 성사 건수", intent: "신청 의사" };
   if (shape.cycle === "visits") {
     const what = shape.trade === "beauty" ? "예약·시술 건수" : "예약 건수";
     return { volume: what, sold: shape.trade === "beauty" ? "예약·시술" : "예약", verb: "받을", capacity: "받을 수 있는 예약 건수", counted: "적은 예약 횟수", expect: "예상 예약", actual: `실제 ${what}`, intent: "예약 의사" };
+  }
+  // 정기배송·구독은 등록이 아니라 구독 — 한 가구(사람·곳)가 한 달 금액을 낸다(2026-11-16 반찬 정기배송)
+  if (shape.cycle === "enroll" && shape.subscription) {
+    const noun = shape.subscription === "명" ? "인원" : shape.subscription === "곳" ? "업체 수" : "가구 수";
+    const who = `구독 ${noun}`;
+    return { volume: who, sold: "구독", verb: "받을", capacity: `맡을 수 있는 ${noun}`, counted: `적은 ${who}`, expect: "예상 구독", actual: `실제 ${who}`, intent: "구독 의사" };
   }
   if (shape.cycle === "enroll") {
     const who = shape.trade === "lesson" ? "등록 학생 수" : "등록 인원";
@@ -205,7 +242,10 @@ export type CashflowScenarios = {
   /** 포장·폐기처럼 상품에만 생기는 '확인 필요' 칸을 보일지 */
   goods: boolean;
   breakEven: number; capacity: { volume: number; note: string } | null;
-  goal: { revenue: number; months: number } | null; budget: number | null; setupCost: number | null;
+  /** label: 인원·가구 목표('원생 40명')를 읽었을 때 그 말 — 표 근거 칸에 매출 대신 보인다 */
+  goal: { revenue: number; months: number; label?: string } | null; budget: number | null; setupCost: number | null;
+  /** 운영 중인 사업 — actualVolume: 지금 실적의 한 달 판매량(없으면 null). 이때 budget은 이번 개선에 쓸 수 있는 돈 */
+  operating: { actualVolume: number | null } | null;
   scenarios: Scenario[]; carefulWorst: number;
   /**
    * 초기 지출 한도 — 중단선에서 거꾸로 계산한다(계획서 품질 Q6): 준비 예산 − 중단선 − 조심스러운 경우 판단 기간(REVIEW_MONTHS) 동안 모자라는 돈.
@@ -239,7 +279,7 @@ export type CashflowScenarios = {
    * 준비 기간(Q9) — 12주 표의 개업(첫 판매) 주차와 고정비가 나가기 시작하는 주에서 센다. source: roadmap(사업 유형 순서),
    * goal(대표가 답한 개업 목표 기간이 순서보다 이를 때), assumed(유형을 모를 때 PREP_MONTHS)
    */
-  prep: { months: number; openWeek: number | null; startWeek: number; source: "roadmap" | "goal" | "assumed" };
+  prep: { months: number; openWeek: number | null; startWeek: number; source: "roadmap" | "goal" | "assumed" | "operating" };
   /** 목표에 적힌 기간('6개월 안에 …') — 개업 시점 목표가 아닐 때만. 장마다 '오늘부터'와 '개업 뒤'로 다르게 세지 않게 세는 법을 한 줄로 넘긴다(2026-11-14 과외 매칭 계획서: 한 장은 개업 뒤 5개월째, 다른 장은 개업 뒤 6개월) */
   goalPeriodMonths: number | null;
   /** 매장을 빌리는 사업의 한도 나누기 예(제안) — 보증금 상한 + 써서 없어지는 돈 상한 = 초기 지출 한도 */
@@ -303,14 +343,36 @@ function goalMonths(goal: string | undefined): number {
 }
 
 /*
- * 판매량으로 적은 목표('6개월 안에 월 40건', '3개월 안에 하루 150잔') → 월 판매량. 매출 목표가 없을 때만 쓴다.
- * '재방문 고객 100명', '단골 가게 20곳'처럼 한 달 판매량이 아닌 목표는 바꾸지 않는다(없는 숫자를 만들지 않는다).
+ * 판매량으로 적은 목표('6개월 안에 월 40건', '월 거래 600건', '3개월 안에 하루 150잔') → 월 판매량. 매출 목표가 없을 때만 쓴다.
+ * 인원·가구·곳으로 적은 목표(2026-11-16 실제 계획서: '원생 40명', '유료 구독 500명', '정기 구독 80가구'는 목표 경우가 없어 그래프가 손해 선 하나뿐이었다)도
+ * 한 달 판매량으로 바꿀 수 있을 때만 읽는다:
+ * - 월 등록·구독 사업(cycle enroll): 등록 인원·구독 가구가 곧 한 달 건수 — 그대로
+ * - 몇 주마다 받는 서비스(visits)의 '고객 ○명': 한 사람이 4주에 1번 온다고 보고(가정 — 단골 수 계산의 가운데 값) 월 건수로
+ * - 판매 단위와 같은 단위(처리량이 '곳'이면 '10곳')면 그대로
+ * '누적·총 ○명'처럼 쌓인 숫자, 자주 사는 상품의 '단골 ○명'은 한 달 판매량을 알 수 없어 바꾸지 않는다(없는 숫자를 만들지 않는다).
  */
-export function parseVolumeGoal(goal: string | undefined, monthDays = DEFAULT_DAYS_PER_MONTH): { volume: number; months: number } | null {
-  const monthly = goal?.match(/월\s*([\d,]+)\s*(?:건|개|잔|명|곳|회|벌|박)(?:\s*판매)?/);
-  const daily = goal?.match(/하루\s*([\d,]+)\s*(?:건|개|잔|명|회|벌)/);
-  const volume = monthly ? Number(monthly[1].replace(/,/g, "")) : daily ? Number(daily[1].replace(/,/g, "")) * monthDays : 0;
-  return volume > 0 ? { volume, months: goalMonths(goal) } : null;
+const VISIT_GOAL_WEEKS = 4;
+export function parseVolumeGoal(goal: string | undefined, monthDays = DEFAULT_DAYS_PER_MONTH, context: { cycle?: CashflowShape["cycle"]; unit?: string } = {}): { volume: number; months: number; label?: string } | null {
+  if (!goal) return null;
+  // '6개월 안에'의 '월'을 월 판매량으로 읽지 않는다(앞 글자가 '개')
+  const monthly = goal.match(/(?<!개)월\s*(?:[가-힣]+\s*){0,2}?([\d,]+)\s*(?:건|개(?!월)|잔|명|곳|회|벌|박|가구|팀|세트)/);
+  const daily = goal.match(/하루\s*([\d,]+)\s*(?:건|개|잔|명|회|벌)/);
+  const explicit = monthly ? Number(monthly[1].replace(/,/g, "")) : daily ? Number(daily[1].replace(/,/g, "")) * monthDays : 0;
+  if (explicit > 0) return { volume: explicit, months: goalMonths(goal) };
+  if (/누적|총\s|모두|합계|합쳐|매출|%/.test(goal)) return null;
+  const counted = goal.match(/([\d,]+)\s*(명|가구|곳|팀|건|개(?!월)|세트)/);
+  const n = counted ? Number(counted[1].replace(/,/g, "")) : 0;
+  if (!counted || !(n > 0)) return null;
+  const unit = counted[2];
+  const label = goal.slice(0, (counted.index ?? 0) + counted[0].length).replace(/^.*?(?:안에|이내|내로|까지)\s*/, "").trim() || counted[0];
+  const people = /^(?:명|가구|곳|팀)$/.test(unit);
+  if (context.cycle === "enroll" && people) return { volume: n, months: goalMonths(goal), label };
+  if (context.cycle === "visits" && unit === "명") {
+    const volume = Math.ceil(n * WEEKS_PER_MONTH / VISIT_GOAL_WEEKS);
+    return { volume, months: goalMonths(goal), label: `${label} — 한 사람이 ${VISIT_GOAL_WEEKS}주에 1번 온다고 보면(가정) 월 약 ${volume.toLocaleString("ko-KR")}건` };
+  }
+  if (context.unit && people && unit === context.unit) return { volume: n, months: goalMonths(goal), label };
+  return null;
 }
 
 export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios | null {
@@ -326,12 +388,12 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
    * 월 등록 사업(과외·구독)은 '일주일 6명'이 한 달 26명이 아니라 동시에 맡는 6명이다 — 4.3을 곱하지 않는다(Q7).
    * 등록 인원이 아닌 단위(회·시간)로 답했으면 등록 인원과 비교할 수 없어 상한으로 쓰지 않는다.
    */
-  const enrollCapacity = shape.cycle === "enroll" && capacityParsed ? (capacityParsed.unit === "명" ? Number(input.capacity!.match(/(?:하루|일주일|한 달)\s*([\d,]+)/)![1].replace(/,/g, "")) : null) : undefined;
+  const enrollCapacity = shape.cycle === "enroll" && capacityParsed ? (capacityParsed.unit === "명" || capacityParsed.unit === shape.subscription ? Number(input.capacity!.match(/(?:하루|일주일|한 달)\s*([\d,]+)/)![1].replace(/,/g, "")) : null) : undefined;
   const capacity = enrollCapacity !== undefined
-    ? (enrollCapacity ? { volume: enrollCapacity, note: `동시에 맡을 수 있는 인원 ${enrollCapacity.toLocaleString("ko-KR")}명` } : null)
+    ? (enrollCapacity ? { volume: enrollCapacity, note: shape.subscription ? `맡을 수 있는 구독 ${enrollCapacity.toLocaleString("ko-KR")}${shape.subscription}` : `동시에 맡을 수 있는 인원 ${enrollCapacity.toLocaleString("ko-KR")}명` } : null)
     : capacityParsed && capacityParsed.volume > 0 ? { volume: capacityParsed.volume, note: capacityParsed.note } : null;
   // 몇 주마다 받는 서비스는 사람 수가 아니라 횟수를 센다('하루 6명'이면 한 달 156건) — 단골 수(명)와 섞이지 않게(Q7 네일)
-  const unit = shape.cycle === "enroll" ? "명" : shape.cycle === "visits" && capacityParsed?.unit === "명" ? "건" : capacityParsed?.unit || "건";
+  const unit = shape.cycle === "enroll" ? shape.subscription ?? "명" : shape.cycle === "visits" && capacityParsed?.unit === "명" ? "건" : capacityParsed?.unit || "건";
   const cap = (volume: number) => Math.max(0, Math.min(capacity?.volume ?? Infinity, Math.round(volume)));
   // 본전은 사업 비용(월 고정비)만 메우는 판매량 하나로 정한다 — 대표 생활비는 넣지 않는다(Q3)
   const breakEven = Math.ceil(input.monthlyFixedCost / contribution);
@@ -339,10 +401,12 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
    * 조심스러운 경우 = 본전의 절반(올림). 본전이 1이면 절반을 올림해도 1이라 '조심스러운 경우 = 본전'이 되고
    * 진행·변경 기준이 같은 1건에 걸렸다(Q7 과외) — 본전이 1이면 조심스러운 경우는 0으로 둔다.
    */
-  const careful = cap(breakEven <= 1 ? 0 : Math.ceil(breakEven / 2));
-  const revenueGoal = parseRevenueGoal(input.goal), volumeGoal = revenueGoal ? null : parseVolumeGoal(input.goal, monthDays);
-  // 판매량 목표는 매출로 바꿔 같은 계산을 쓴다(표의 '대표 목표'도 매출로 보인다)
-  const goal = revenueGoal ?? (volumeGoal ? { revenue: volumeGoal.volume * input.unitPrice, months: volumeGoal.months } : null);
+  // 운영 중인 사업은 이미 팔고 있다 — 조심스러운 경우는 본전의 절반이 아니라 '지금 실적이 그대로(개선 효과 없음)'
+  const operating = input.operating ? { actualVolume: input.operating.actualVolume != null && input.operating.actualVolume > 0 ? Math.round(input.operating.actualVolume) : null } : null;
+  const careful = operating?.actualVolume != null ? cap(operating.actualVolume) : cap(breakEven <= 1 ? 0 : Math.ceil(breakEven / 2));
+  const revenueGoal = parseRevenueGoal(input.goal), volumeGoal = revenueGoal ? null : parseVolumeGoal(input.goal, monthDays, { cycle: shape.cycle, unit });
+  // 판매량·인원 목표는 매출로 바꿔 같은 계산을 쓴다(인원 목표는 표 근거 칸에 그 말을 그대로 보인다)
+  const goal = revenueGoal ?? (volumeGoal ? { revenue: volumeGoal.volume * input.unitPrice, months: volumeGoal.months, ...(volumeGoal.label ? { label: volumeGoal.label } : {}) } : null);
   const make = (key: Scenario["key"], label: string, volumes: number[]): Scenario => {
     const net = volumes.map(volume => volume * contribution - input.monthlyFixedCost);
     const cumulative = net.reduce<number[]>((sum, value) => [...sum, (sum.at(-1) ?? 0) + value], []);
@@ -350,8 +414,10 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   };
   const flat = (volume: number) => Array.from({ length: MONTHS }, () => volume);
   const scenarios = [make("careful", "조심스러운 경우", flat(careful)), make("breakeven", "본전", flat(cap(breakEven)))];
-  if (goal) {
-    const target = cap(Math.ceil(goal.revenue / input.unitPrice));
+  const goalTarget = goal ? cap(Math.ceil(goal.revenue / input.unitPrice)) : 0;
+  // 운영 중인 사업의 목표가 지금 실적보다 낮으면 '목표 경우'가 지금 그대로보다 나빠 보인다 — 그 경우는 두지 않는다
+  if (goal && !(operating && goalTarget <= careful)) {
+    const target = goalTarget;
     const ramp = Array.from({ length: MONTHS }, (_, i) => (i + 1 >= goal.months || goal.months <= 1 ? target : cap(careful + (target - careful) * i / (goal.months - 1))));
     scenarios.push(make("goal", "목표 경우", ramp));
   }
@@ -359,22 +425,27 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const budget = coachAmountLower(input.budget) ?? null, setupCost = coachAmount(input.setupCost) ?? null;
   const carefulWorst = Math.min(0, ...scenarios[0].cumulative);
   const fixed = input.monthlyFixedCost;
-  const stopReserve = fixed > 0 ? fixed * 3 : null;
+  // 중단선·초기 지출 한도·버티는 기간은 문을 열기 전 사업의 판단이다 — 운영 중인 사업에는 두지 않는다
+  const stopReserve = fixed > 0 && !operating ? fixed * 3 : null;
   /*
    * 문 열기 전(준비 기간) 고정비 — 매출 없이 나가는 돈이라 준비 예산에서 먼저 뺀다(Q7).
    * Q9: 1개월(가정) 대신 12주 표와 같은 주차로 센다 — 고정비가 나가기 시작하는 주(매장은 계약 주)부터 개업 주 전까지의 주 수 ÷ 4.33, 올림.
    */
-  const roadmapOpen = shape.open ?? null;
+  const roadmapOpen = operating ? null : shape.open ?? null;
   const goalWeeks = goalOpeningWeeks(input.goal);
   const openWeek = roadmapOpen ? (goalWeeks != null && goalWeeks < roadmapOpen.week ? Math.max(1, goalWeeks) : roadmapOpen.week) : null;
-  const startWeek = roadmapOpen && openWeek != null ? Math.min(roadmapOpen.startWeek, Math.max(1, openWeek - 1)) : 1;
-  const prep: CashflowScenarios["prep"] = openWeek == null
-    ? { months: PREP_MONTHS, openWeek: null, startWeek: 1, source: "assumed" }
-    : { months: Math.max(1, Math.ceil((openWeek - startWeek) / WEEKS_PER_MONTH)), openWeek, startWeek, source: openWeek < roadmapOpen!.week ? "goal" : "roadmap" };
+  // 차량으로 일하는 사업은 개업 주에 계약한다(startWeek = 개업 주) — 그때만 준비 기간 고정비가 0개월이다
+  const sameWeek = !!roadmapOpen && roadmapOpen.startWeek >= roadmapOpen.week;
+  const startWeek = roadmapOpen && openWeek != null ? (sameWeek ? openWeek : Math.min(roadmapOpen.startWeek, Math.max(1, openWeek - 1))) : 1;
+  const prep: CashflowScenarios["prep"] = operating
+    ? { months: 0, openWeek: null, startWeek: 1, source: "operating" }
+    : openWeek == null
+      ? { months: PREP_MONTHS, openWeek: null, startWeek: 1, source: "assumed" }
+      : { months: Math.max(sameWeek ? 0 : 1, Math.ceil((openWeek - startWeek) / WEEKS_PER_MONTH)), openWeek, startWeek, source: openWeek < roadmapOpen!.week ? "goal" : "roadmap" };
   const prepCost = fixed * prep.months;
   // 초기 지출 한도와 중단선은 같은 논리에서 나온다: 한도대로 쓰면 조심스러운 경우 판단 기간이 끝나는 달에 남은 예산이 중단선에 닿는다
   const reviewShortfall = -Math.min(0, scenarios[0].cumulative[REVIEW_MONTHS - 1]);
-  const setupLimit = budget != null && setupCost == null ? budget - (stopReserve ?? 0) - prepCost - reviewShortfall : null;
+  const setupLimit = budget != null && setupCost == null && !operating ? budget - (stopReserve ?? 0) - prepCost - reviewShortfall : null;
   const stopAt = (spend: number): number | null => {
     if (budget == null || stopReserve == null) return null;
     if (budget - spend - prepCost <= stopReserve) return 0;
@@ -384,7 +455,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   // 한도가 0원 이하면 초기 지출 없이(0원) 시작해도 언제 중단선에 닿는지 센다 — '안전하다'와 '바로 중단선'이 함께 나오지 않게(Q7)
   const stopMonth = setupCost != null ? stopAt(setupCost) : setupLimit != null ? stopAt(Math.max(0, setupLimit)) : null;
   // 초기 지출을 알면 실제 통장 잔고(준비 예산 − 초기 지출 − 준비 기간 고정비 + 누적)가 바닥나는 달을 센다
-  const runOut = budget != null && setupCost != null
+  const runOut = budget != null && setupCost != null && !operating
     ? scenarios.flatMap(s => { const month = s.cumulative.findIndex(value => budget - setupCost - prepCost + value < 0); return month >= 0 ? [{ label: s.label, month: month + 1 }] : []; })
     : [];
   /*
@@ -394,7 +465,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const terms = cashflowTerms(shape);
   const decision = { go: breakEven, goLabel: `본전 ${terms.volume}`, floor: careful };
   // 버티는 기간 = (준비 예산 − 초기 지출 − 준비 기간 고정비) ÷ 월 고정비(매출이 하나도 없다고 볼 때). 초기 지출을 모르면 준비 예산의 20·40·60·80%를 100만 원 단위로
-  const survival = budget != null && fixed > 0
+  const survival = budget != null && fixed > 0 && !operating
     ? (setupCost != null ? [setupCost] : [...new Set([0.2, 0.4, 0.6, 0.8].map(share => Math.round(budget * share / 1_000_000) * 1_000_000))].filter(spend => spend > 0 && spend < budget))
       .map(spend => ({ spend, months: Math.max(0, Math.floor((budget - spend - prepCost) / fixed)), toStop: Math.max(0, Math.floor((budget - spend - prepCost - (stopReserve ?? 0)) / fixed)) }))
     : [];
@@ -413,21 +484,22 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
     .map(price => ({ price, breakEven: Math.ceil(input.monthlyFixedCost / realUnitMargin(price, input.unitVariableCost, shape.vat)) }));
   const taxableMargin = realUnitMargin(input.unitPrice, input.unitVariableCost);
   const taxableBreakEven = shape.vat === "exempt" && taxableMargin > 0 ? Math.ceil(input.monthlyFixedCost / taxableMargin) : null;
-  const words = shape.service ? OPEN_SERVICE_WORDS : store ? ONLINE_WORDS : shape.premises ? STORE_WORDS : SERVICE_WORDS;
+  const words = operating ? { ...OPERATING_WORDS, day: store ? "작업" : "영업" } : shape.service ? OPEN_SERVICE_WORDS : store ? ONLINE_WORDS : shape.premises ? STORE_WORDS : SERVICE_WORDS;
   const unitNote = /세트/.test(input.offer ?? "") && capacityParsed && !/세트/.test(capacityParsed.unit)
     ? `처리량(${capacityParsed.note.replace(/월 (\d+)일 영업/g, (_whole, days: string) => `월 ${days}일 ${words.day}`)})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
     : null;
   const goalPeriod = /개업|오픈|문\s*열|출시|영업\s*시작/.test(input.goal ?? "") ? null : Number(input.goal?.match(/(\d+)\s*개월\s*(?:안|내|이내|뒤|후)/)?.[1]) || null;
-  return { goalPeriodMonths: goalPeriod, unit, daily: /하루/.test(input.capacity ?? "") && shape.cycle !== "enroll", days: monthDays, unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || store, breakEven, capacity, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, reviewShortfall, stopMonth, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: store, shape, prepCost, prep, depositSplit, terms, taxableBreakEven };
+  return { goalPeriodMonths: goalPeriod, unit, daily: /하루/.test(input.capacity ?? "") && shape.cycle !== "enroll", days: monthDays, unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, vat, contribution, goods: GOODS_UNIT.test(unit) || store, breakEven, capacity, goal, budget, setupCost, operating, scenarios, carefulWorst, setupLimit, reviewShortfall, stopMonth, runOut, decision, survival, stopReserve, priceAlternatives, unitNote, words, online: store, shape, prepCost, prep, depositSplit, terms, taxableBreakEven };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < result.breakEven;
 const unitCostOf = (result: CashflowScenarios) => result.unitPrice - result.vat - result.contribution;
 
 function scenarioBasis(result: CashflowScenarios, s: Scenario): string {
+  if (s.key === "careful" && result.operating?.actualVolume != null) return `가정: 지금 실적(월 ${count(result.operating.actualVolume, result.unit)})이 그대로, 개선 효과 없음. 매출이 줄고 있으면 이보다 낮음`;
   if (s.key === "careful") return result.breakEven <= 1 ? `가정: 본전이 1${result.unit}이라 절반 대신 0${result.unit}` : `가정: ${result.decision.goLabel}의 절반`;
   if (s.key === "breakeven") return capacityShort(result) ? `${result.terms.capacity} 최대치로도 본전(월 ${count(result.breakEven, result.unit)})에 못 미침` : `월 고정비를 겨우 메우는 ${result.terms.volume}, 대표 몫 0원`;
-  return `대표 목표(월 매출 ${won(result.goal!.revenue)})까지 ${result.goal!.months}개월 동안 같은 폭으로 는다고 가정`;
+  return `대표 목표(${result.goal!.label ?? `월 매출 ${won(result.goal!.revenue)}`})까지 ${result.operating ? "지금 실적에서 " : ""}${result.goal!.months}개월 동안 같은 폭으로 는다고 가정`;
 }
 
 /*
@@ -446,7 +518,9 @@ function unknownCostRows(result: CashflowScenarios): Array<{ item: string; note:
   const payment = result.online ? { item: "스토어 판매·결제 수수료", note: "입점한 스토어의 수수료율 확인" }
     : result.shape.premises ? { item: "카드·결제 수수료", note: "가맹한 카드사·결제 서비스의 수수료율 확인" }
       : { item: "결제 수수료(카드·간편결제로 받을 때)", note: "계좌이체로 받으면 없음. 카드·간편결제로 받으면 그 서비스의 수수료율 확인" };
-  return [...rows, payment];
+  // 운영 중인 온라인 가게(2026-11-16 옷가게): 광고로 주문을 받는데 광고비가 어디에도 없으면 남는 돈이 크게 부풀려진다
+  const ads = result.online && result.operating ? [{ item: "광고비(주문 1건당)", note: "월 고정비에 들어 있지 않다면 지난달 광고비 ÷ 주문 수로 확인" }] : [];
+  return [...rows, ...ads, payment];
 }
 
 const VAT_BASIS = "판매가에 부가세가 들어 있고 일반과세자일 때 판매가의 1/11, 법정 세율 10%";
@@ -467,7 +541,7 @@ const VAT_POINTER = "과세 유형(일반·간이·면세)에 따라 부가세�
 const VAT_SIMPLE = "간이과세자는 업종에 따라 매출의 약 1.5~4%를 부가세로 내고, 한 해 매출이 4,800만 원 미만이면 내지 않습니다(부가가치세법 제63조·제69조). 재료·설비를 살 때 세금계산서·카드 영수증으로 낸 부가세는 일반과세자면 공제받지만, 간이과세자는 산 금액의 0.5%만 공제되고 내야 할 세금보다 많아도 돌려받지 않습니다(제63조제3항·제6항)";
 const VAT_EXEMPT_GOODS = "미가공 식료품·도서·의료처럼 부가세가 면제되는 상품·용역이 섞이면 그만큼은 빼지 않습니다";
 const VAT_MAKER = "직접 만들어 파는 사업은 제조업으로 보면 간이과세를 적용받지 못할 수 있으므로(제61조, 대통령령으로 정한 업종) 관할 세무서에서 확인합니다";
-const vatOther = (result: CashflowScenarios) => [VAT_SIMPLE, result.shape.exemptPossible ? VAT_EXEMPT_GOODS : "", result.shape.makesGoods ? VAT_MAKER : "", "어느 쪽인지는 사업자등록 전에 관할 세무서·홈택스에서 확인합니다"].filter(Boolean).join(". ");
+const vatOther = (result: CashflowScenarios) => [VAT_SIMPLE, result.shape.exemptPossible ? VAT_EXEMPT_GOODS : "", result.shape.makesGoods && !result.operating ? VAT_MAKER : "", result.operating ? "지금 어느 쪽인지는 사업자등록증이나 홈택스에서 확인하고, 일반과세자가 아니면 이 표의 부가세 줄을 그에 맞게 바꿉니다" : "어느 쪽인지는 사업자등록 전에 관할 세무서·홈택스에서 확인합니다"].filter(Boolean).join(". ");
 
 /*
  * 돌려받는 돈과 써서 없어지는 돈(계획서 품질 Q6) — 초기 지출 입력은 한 숫자라 여기서 나누지 않고, 나눠 적는 원칙만 둔다.
@@ -519,7 +593,7 @@ function prepBasis(result: CashflowScenarios): string {
   // 참고 문장에도 같은 식을 쓴다 — 12주 장이 같은 주차를 쓰는지 대표가 확인할 수 있게
 }
 /** 12주 장이 같은 개업 주차를 쓰게 하는 한 줄(참고 문장에만) */
-const openingLine = (result: CashflowScenarios) => (result.prep.openWeek == null ? "" : `개업(첫 판매) 주차: 12주 표·실행 요약도 ${result.prep.openWeek}주차${result.prep.startWeek > 1 ? `(계약 ${result.prep.startWeek}주차)` : ""}로 씁니다${result.prep.source === "goal" ? "(대표가 답한 개업 목표 기간)" : ""}.`);
+const openingLine = (result: CashflowScenarios) => (result.prep.openWeek == null ? "" : `개업(첫 판매) 주차: 12주 표·실행 요약도 ${result.prep.openWeek}주차${result.prep.startWeek > 1 && result.prep.startWeek < result.prep.openWeek ? `(계약 ${result.prep.startWeek}주차)` : ""}로 씁니다${result.prep.source === "goal" ? "(대표가 답한 개업 목표 기간)" : ""}.`);
 
 /** 본전이 '대표 수입 0원'이라는 것과 본전을 넘긴 뒤 대표 몫 — 입력 없이 계산되는 한 줄 */
 const ownerShareLine = (result: CashflowScenarios) =>
@@ -527,6 +601,7 @@ const ownerShareLine = (result: CashflowScenarios) =>
 
 /** 통장 흐름을 바로 읽히는 문장으로 — 표 아래 주석과 다른 장의 참고값에 같이 쓴다 */
 function cashflowFindings(result: CashflowScenarios, options: { reference?: boolean } = {}): string[] {
+  if (result.operating) return operatingFindings(result);
   const lines: string[] = [];
   const careful = result.scenarios[0];
   // 참고 문장에는 경우별 줄(한 달에 −…원, 12개월 누적 −…원)이 이미 있어 같은 숫자를 다시 쓰지 않는다 — intake-context 8,000자 상한(Q7)
@@ -534,6 +609,8 @@ function cashflowFindings(result: CashflowScenarios, options: { reference?: bool
   if (result.stopReserve != null && result.budget != null) lines.push(`중단선: ${result.words.afterOpen} 남은 준비 예산이 ${won(result.stopReserve)}(월 고정비 3개월분)에 닿으면 계속할지 다시 정합니다.`);
   // 참고 문장에서는 개업 주차를 같은 줄에 붙인다 — 12주 장이 이 주차를 그대로 쓴다(Q9), intake-context 8,000자 상한
   if (result.budget != null && result.prepCost > 0) lines.push(`${prepLabel(result)}: ${prepPeriod(result)} ${prepBasis(result)}에도 고정비 ${won(result.prepCost)}이 나가 준비 예산에서 먼저 뺍니다.${options.reference && openingLine(result) ? ` ${openingLine(result)}` : ""}`);
+  // 차량으로 일하는 사업(2026-11-16 이사 계획서): 차량은 개업 주에 계약한다고 보고 그 주부터 고정비를 센다 — 더 일찍 계약하면 더 뺀다는 조건을 함께
+  if (result.prep.months === 0 && result.prep.openWeek != null) lines.push(`고정비 시작: 매장 없이 ${result.shape.vehicle ? "차량으로" : ""} 일하는 사업이라 월 고정비(${result.shape.vehicle ? "차량 할부·리스·보험 등" : "장비 등"})는 ${result.shape.vehicle ? "차량을 계약하는 " : ""}${result.prep.openWeek}주차(개업 주)부터 나간다고 봤습니다(가정). ${result.shape.vehicle ? "차량" : "장비"}을 더 일찍 계약하면 그 주부터 한 달마다 ${won(result.monthlyFixedCost)}을 준비 예산에서 더 뺍니다.${options.reference && openingLine(result) ? ` ${openingLine(result)}${result.shape.vehicle ? " 차량 계약도 그 주에 둡니다." : ""}` : ""}`.replace("매장 없이  일하는", "매장 없이 일하는"));
   const reserve = result.stopReserve ?? 0;
   const reserveText = result.stopReserve != null ? ` − 중단선 ${won(result.stopReserve)}` : "";
   const prepText = result.prepCost > 0 ? ` − ${prepLabel(result)} ${won(result.prepCost)}` : "";
@@ -552,11 +629,59 @@ function cashflowFindings(result: CashflowScenarios, options: { reference?: bool
   for (const item of result.runOut) lines.push(`${item.label}에는 준비 예산에서 초기 지출을 뺀 돈이 ${item.month}개월차에 바닥납니다.`);
   const goal = result.scenarios.find(s => s.key === "goal");
   const recover = goal ? goal.cumulative.findIndex(value => value >= 0) : -1;
+  // 목표가 본전보다 낮으면 목표에 닿아도 모자란다 — 숨기지 않고 무엇을 바꾸면 되는지 함께(2026-11-16 반찬 정기배송: 80가구 < 본전 91가구)
+  if (goal && goal.net.at(-1)! < 0) lines.push(`대표 목표(월 ${count(goal.volumes.at(-1)!, result.unit)})는 본전(월 ${count(result.breakEven, result.unit)})보다 적어, 목표에 닿아도 한 달 ${won(-goal.net.at(-1)!)}이 모자랍니다. 목표를 본전 위로 잡거나 가격·월 고정비를 다시 보면 목표가 곧 흑자가 됩니다.`);
   if (goal && goal.net[0] < 0) lines.push(recover >= 0 ? `목표 경우에는 ${recover + 1}개월차에 그동안 모자랐던 돈을 모두 메웁니다.` : "목표 경우에도 12개월 안에 그동안 모자랐던 돈을 다 메우지 못합니다.");
   if (capacityShort(result)) lines.push(`${result.terms.capacity} 최대치(${result.capacity!.note})를 ${result.terms.verb === "팔" ? "다 팔아도" : "다 채워도"} 본전에 못 미칩니다. 가격·고정비·${eul(result.terms.capacity)} 다시 봐야 합니다.`);
   // 표 아래에서는 보증금 나눠 적기 원칙(DEPOSIT_SPLIT) 바로 뒤에 붙인다(cashflowMarkdown)
   if (options.reference) lines.push(...siteLines(result, true));
   return lines;
+}
+
+/*
+ * 운영 중인 사업의 읽는 문장(2026-11-16 김밥집·옷가게) — 이미 매출이 있으니 '버티는 기간'이 아니라
+ * 지금 실적이 본전에서 얼마나 떨어져 있는지(안전 여유), 목표까지 가면 무엇이 달라지는지, 개선에 쓸 돈을 되찾는 때를 계산한다.
+ */
+function operatingFindings(result: CashflowScenarios): string[] {
+  const lines: string[] = [];
+  const { unit } = result, actual = result.operating!.actualVolume, careful = result.scenarios[0];
+  if (actual != null) {
+    const gap = actual - result.breakEven;
+    lines.push(gap >= 0
+      ? `지금 실적(월 ${count(actual, unit)})은 본전(월 ${count(result.breakEven, unit)})보다 ${count(gap, unit)} 많아, 한 달 약 ${won(careful.net[0])}이 남습니다(부가세를 뺀 값, '확인 필요' 칸과 소득세를 빼기 전). 월 고정비에 대표님(가족) 인건비가 없으면 그 몫도 여기서 나갑니다.`
+      : `지금 실적(월 ${count(actual, unit)})은 본전(월 ${count(result.breakEven, unit)})보다 ${count(-gap, unit)} 적어, 한 달 약 ${won(-careful.net[0])}이 모자랍니다(부가세를 뺀 값). 판매를 늘리는 일과 함께 월 고정비를 먼저 다시 봅니다.`);
+  }
+  const goal = result.scenarios.find(s => s.key === "goal");
+  const budget = result.budget != null && result.budget > 0 ? result.budget : null;
+  if (goal) {
+    const extra = goal.cumulative.map((value, i) => value - careful.cumulative[i]);
+    lines.push(`목표 경우는 지금 그대로보다 12개월 동안 ${won(extra[MONTHS - 1])} 더 남깁니다(목표까지 같은 폭으로 는다고 본 가정, '확인 필요' 칸을 빼기 전).`);
+    if (budget != null) {
+      const back = extra.findIndex(value => value >= budget);
+      lines.push(back >= 0
+        ? `이번 개선에 쓸 수 있는 돈 ${won(budget)}을 다 써도, 목표 경우에는 ${back + 1}개월차에 더 남긴 돈으로 되찾습니다(가정).`
+        : `이번 개선에 쓸 수 있는 돈 ${won(budget)}을 다 쓰면 목표 경우에도 12개월 안에 되찾지 못합니다. 실험마다 쓸 돈을 나눠 정하고, 늘어난 판매로 되찾는지 매달 봅니다.`);
+    }
+  } else if (budget != null) {
+    const perMonth = Math.ceil(budget / MONTHS / result.contribution);
+    lines.push(`이번 개선에 쓸 수 있는 돈 ${won(budget)}을 다 쓰고 12개월 안에 되찾으려면 지금보다 한 달 약 ${count(perMonth, unit)} 더 늘려야 합니다(${won(budget)} ÷ 12개월 ÷ 한 ${unit}에 실제 남는 돈 ${won(result.contribution)}).`);
+  }
+  if (capacityShort(result)) lines.push(`${result.terms.capacity} 최대치(${result.capacity!.note})를 다 채워도 본전에 못 미칩니다. 가격·고정비·${eul(result.terms.capacity)} 다시 봐야 합니다.`);
+  if (result.unitNote) lines.push(result.unitNote);
+  return lines;
+}
+
+/** 운영 중인 사업의 판단 기준 — 관심 조사·계약 판단 대신 매달 실제 판매를 지금 실적·본전·목표선과 견준다 */
+function operatingDecisionLines(result: CashflowScenarios): string[] {
+  const { unit, terms } = result, actual = result.operating!.actualVolume;
+  const goal = result.scenarios.find(s => s.key === "goal");
+  const now = actual != null ? `지금 실적(월 ${count(actual, unit)})` : "지난달 실적";
+  return [
+    `판단 기준(${chapterRef("summary/roadmap")}에서 씀): 매달 실제 ${terms.sold} 수를 ${goal ? "목표 경우 월별 판매선, " : ""}${now}, 본전(월 ${count(result.breakEven, unit)})과 비교합니다. ${goal ? "목표선 이상이면 하던 개선을 이어 가며 넓히고, 목표선과 지금 실적 사이면 개선 방법을 바꿔 다시 시험합니다." : "지금 실적보다 늘면 하던 개선을 이어 가며 넓히고, 늘지 않으면 개선 방법을 바꿔 다시 시험합니다."} 지금 실적보다 줄면 손님 수·한 번에 쓰는 돈·판매 경로 가운데 어디서 줄었는지 먼저 나눠 봅니다. 본전 아래로 내려가는 달은 대표님 몫이 없으므로 월 고정비부터 다시 봅니다.`,
+    result.budget != null
+      ? `이번 개선에 쓸 돈(${won(result.budget)}) 안에서 실험마다 쓸 돈을 먼저 정하고, 실험 비용은 매달 나가는 돈과 따로 적어 늘어난 판매로 남은 돈과 나란히 비교합니다.`
+      : "이번 개선에 쓸 돈은 아직 정하지 않았습니다(확인 필요). 실험마다 쓸 돈을 먼저 정하고, 매달 나가는 돈과 따로 적습니다.",
+  ];
 }
 
 /** 목표 경우의 월별 판매선 — 실행 장의 '매달 볼 숫자' 목표로 쓴다 */
@@ -587,11 +712,12 @@ export function regularsNeeded(monthly: number): { period: "week" | "month"; row
  * 캔들은 한 번 사는 의사를 매주 반복 판매와 비교했고, 과외는 월 등록인데 수량으로 셌다. 모두 가정이라 '(가정)'을 붙인다.
  */
 const VISIT_WEEKS = [3, 4, 6] as const, ITEMS_PER_ORDER = [1, 2] as const;
-export function regularsLine(monthly: number, unit: string, cycle: CashflowShape["cycle"] = "weekly"): string {
+export function regularsLine(monthly: number, unit: string, cycle: CashflowShape["cycle"] = "weekly", subscription?: CashflowShape["subscription"]): string {
   const n = (value: number) => value.toLocaleString("ko-KR");
   // 한 달 횟수 = 4.33 ÷ 주기(주) — 단위를 분명히(Q9)
   if (cycle === "visits") return `본전(한 달 ${count(monthly, unit)}) ÷ 한 사람의 한 달 횟수(= ${WEEKS_PER_MONTH} ÷ 주기(주), 가정) — ${VISIT_WEEKS.map(weeks => `${weeks}주에 1번(한 달 약 ${Math.round(WEEKS_PER_MONTH / weeks * 100) / 100}번)이면 약 ${n(Math.ceil(monthly * weeks / WEEKS_PER_MONTH))}명`).join(", ")}(가정)`;
   if (cycle === "once") return `본전(한 달 ${count(monthly, unit)}) ÷ 한 사람이 한 번에 사는 개수(가정) — ${ITEMS_PER_ORDER.map(items => `${items}${unit}면 매달 새 구매자 약 ${n(Math.ceil(monthly / items))}명`).join(", ")}(가정 — 한 번 사는 상품이라 매주 다시 산다고 보지 않음, 다시 사는 사람만큼 줄어듦)`;
+  if (cycle === "enroll" && subscription) return `본전은 한 달 구독 ${n(monthly)}${unit}입니다(한 ${unit}${final(unit) ? "이" : "가"} 한 달 금액을 한 번 냄, 가정). 구독은 매주 다시 사는 것이 아니므로 횟수로 나누지 않고 ${unit} 수로 셉니다`;
   if (cycle === "enroll") return `본전은 한 달 등록 ${n(monthly)}명입니다(한 사람이 한 달에 1번 등록, 가정). 등록은 매주 다시 사는 것이 아니므로 횟수로 나누지 않고 사람 수로 셉니다`;
   const { period, rows } = regularsNeeded(monthly);
   const word = period === "week" ? "일주일" : "한 달";
@@ -651,19 +777,33 @@ const breakEvenWord = (result: CashflowScenarios) => eun(result.decision.goLabel
 const surveyPeriodFor = (result: CashflowScenarios, monthly: number) => (result.shape.cycle === "weekly" ? surveyPeriod(monthly, result.unit) : `한 달 ${count(monthly, result.unit)}`);
 
 function decisionLines(result: CashflowScenarios): string[] {
+  if (result.operating) return operatingDecisionLines(result);
   const { decision, unit, terms } = result;
   const reach = (rate: number) => {
     const monthly = Math.ceil(decision.go / rate);
     return result.daily ? `하루 약 ${Math.ceil(monthly / result.days).toLocaleString("ko-KR")}명` : monthly / 4.3 >= 1 && result.shape.cycle === "weekly" ? `일주일 약 ${Math.ceil(monthly / 4.3).toLocaleString("ko-KR")}명` : `한 달 ${monthly.toLocaleString("ko-KR")}명`;
   };
-  const { ask, kept } = SURVEY_ASK[result.shape.cycle](unit);
+  const subscription = result.shape.cycle === "enroll" ? result.shape.subscription : undefined;
+  const { ask, kept } = subscription ? { ask: "언제부터(시작 월) 구독하겠는지", kept: "시작 월을 남긴 구독 의사" } : SURVEY_ASK[result.shape.cycle](unit);
   const discount = result.shape.service === "connect" && result.shape.cycle !== "enroll"
     ? SURVEY_DISCOUNT.replace("예상 구매 = 응답마다 적은 수량", "예상 성사 = 응답마다 적은 신청 횟수").replace("날짜·수량을", "날짜를").replace("날짜·수량 없는", "날짜 없는").replace("실제 구매로", "실제 성사로")
-    : surveyDiscount(result.shape.cycle, result.shape.trade);
-  const people = result.shape.cycle === "once" ? "새 구매자 수" : result.shape.cycle === "enroll" ? (result.shape.trade === "lesson" ? "학생 수" : "등록 인원") : "단골 수";
+    : subscription ? surveyDiscount("enroll").replace("예상 등록 = 응답마다 적은 등록 인원", `예상 구독 = 응답마다 적은 ${terms.volume}`).replace("실제 등록으로", "실제 구독으로")
+      : surveyDiscount(result.shape.cycle, result.shape.trade);
+  const people = result.shape.cycle === "once" ? "새 구매자 수" : result.shape.cycle === "enroll" ? (subscription ? terms.volume : result.shape.trade === "lesson" ? "학생 수" : "등록 인원") : "단골 수";
+  /*
+   * 목표 응답 수(2026-11-16 네일·레시피 앱 계획서): 예전엔 '필요한 단골 수 이상'이라, 응답을 그만큼 다 모아도 모르는 사람 응답 × 0.5로 세면
+   * 예상 예약이 본전의 절반에 그쳐 저절로 '시작안 변경'이 됐다(계획서가 스스로 "본전의 절반 정도에 그칩니다"라고 적음).
+   * 목표 응답 수 = 필요한 사람 수 ÷ 실제로 이어지는 비율(0.5) — 이만큼 모이면 지인이 아닌 응답만으로 본전에 닿는다.
+   */
+  const toResponses = (needed: number) => Math.ceil(needed / SURVEY_CONVERSION);
+  const n = (value: number) => value.toLocaleString("ko-KR");
+  const targets = result.shape.cycle === "enroll" ? `약 ${n(toResponses(decision.go))}${unit}`
+    : result.shape.cycle === "visits" ? VISIT_WEEKS.map(weeks => `${weeks}주에 1번이면 약 ${n(toResponses(Math.ceil(decision.go * weeks / WEEKS_PER_MONTH)))}명`).join(", ")
+      : result.shape.cycle === "once" ? ITEMS_PER_ORDER.map(items => `${items}${unit}면 약 ${n(toResponses(Math.ceil(decision.go / items)))}명`).join(", ")
+        : (() => { const { period, rows } = regularsNeeded(decision.go); const word = period === "week" ? "일주일" : "한 달"; return rows.map(row => `${word}에 ${row.times}번이면 약 ${n(toResponses(row.people))}명`).join(", "); })();
   const before = result.shape.premises ? "계약·개업 전 판단" : "시작 전 판단";
   // 규모를 줄이는 방법도 업종 말로(Q9: 네일에 '공간·장비·상품 수')
-  const scale = result.shape.cycle === "visits" ? "영업 시간·메뉴 수" : result.shape.cycle === "enroll" ? "수업 시간·반 수" : result.shape.premises ? "공간·장비·상품 수" : "일하는 시간·상품 수";
+  const scale = result.shape.cycle === "visits" ? "영업 시간·메뉴 수" : subscription ? "받는 지역·구성 수" : result.shape.cycle === "enroll" ? "수업 시간·반 수" : result.shape.premises ? "공간·장비·상품 수" : "일하는 시간·상품 수";
   const expect = terms.expect;
   /*
    * 본전이 아주 작으면(과외 본전 1명) '본전의 절반'이 0이 되거나 본전과 겹쳐 진행·변경 기준이 같은 숫자에 걸린다(Q7) —
@@ -676,11 +816,11 @@ function decisionLines(result: CashflowScenarios): string[] {
   const pass = twoWay
     ? `${iga(expect)} 본전(${surveyPeriodFor(result, decision.go)}) 이상이고 ${kept} 수가 위 ${people} 이상이면 진행을 검토하고, 그보다 적으면 시작안을 바꿉니다.`
     : `${iga(expect)} 본전(${surveyPeriodFor(result, decision.go)}) 이상이고 ${kept} 수가 위 ${people}${result.shape.cycle === "enroll" ? "" : `(쓴 ${result.shape.cycle === "once" ? "개수" : "횟수"} 가정을 함께 밝힘)`} 이상이면 ${result.shape.premises ? "계약을 검토하고" : "진행을 검토하고"}, ${iga(expect)} 본전의 절반(${surveyPeriodFor(result, decision.floor)}) 이하이면 ${result.shape.premises ? "계약하지 않고 " : ""}시작안을 바꾸며, 그 사이면 규모를 줄여 다시 조사합니다.`;
-  const trial = result.shape.service === "connect" ? "첫 유료 연결" : result.shape.service === "app" ? "첫 유료 이용" : result.shape.cycle === "visits" ? "첫 유료 예약" : result.shape.cycle === "enroll" ? "체험 수업 뒤 첫 등록" : "시범 판매";
+  const trial = result.shape.service === "connect" ? "첫 유료 연결" : result.shape.service === "app" ? "첫 유료 이용" : result.shape.cycle === "visits" ? "첫 유료 예약" : subscription ? "한 달분 첫 유료 구독" : result.shape.cycle === "enroll" ? "체험 수업 뒤 첫 등록" : "시범 판매";
   return [
     `판단 기준(${chapterRef("summary/roadmap")}에서 씀): ${rule} 판단은 ${result.shape.premises ? "계약처럼 " : ""}큰돈을 쓰기 전(출시 전)에 한 번, ${result.words.afterOpen}에 다시 합니다.`,
-    `${before}(관심 조사 결과를 볼 때): ${terms.counted}에 할인 원칙을 곱한 '${expect}'${final(expect) ? "을" : "를"} ${terms.capacity}${result.shape.cycle === "enroll" ? "" : result.shape.service ? "" : result.shape.cycle === "visits" ? "(하루 기준)" : "(하루에 만들 수 있는 양)"}${final(terms.capacity) ? "이" : "가"} 아니라 ${gwa(decision.goLabel)} 같은 기간끼리 비교합니다. ${discount} ${kept} 수는 본전에 필요한 ${gwa(people)} 비교합니다: ${regularsLine(decision.go, unit, result.shape.cycle)}. 조사 글(질문 문구)에는 ${ask} 꼭 묻고, ${kept}만 셉니다(지인·가족인지도 물음). 통과 기준(제안): ${pass} 목표 응답 수는 ${people} 이상으로 잡습니다(적으면 다 받아도 못 닿음). 이 기준을 넘어도 ${result.words.afterOpen} ${ro(terms.actual)} 다시 판단합니다.`,
-    `출시 전 판단: 돈을 받고 해 볼 수 있으면(${result.shape.premises ? "이미 신고된 공간·" : ""}${trial}) ${eul(terms.actual)} 위 기준과 같은 기간끼리 비교합니다. 아직 돈을 받을 수 없으면 ${terms.intent}만으로 기준을 채웠다고 보지 않고, 작은 표본에서 잰 실제 비율(${result.shape.cycle === "weekly" && result.goods ? GOODS_RATIO_EXAMPLES : RATIO_EXAMPLES[result.shape.cycle]})과 경쟁 자료를 함께 봅니다.`,
+    `${before}(관심 조사 결과를 볼 때): ${terms.counted}에 할인 원칙을 곱한 '${expect}'${final(expect) ? "을" : "를"} ${terms.capacity}${result.shape.cycle === "enroll" ? "" : result.shape.service ? "" : result.shape.cycle === "visits" ? "(하루 기준)" : "(하루에 만들 수 있는 양)"}${final(terms.capacity) ? "이" : "가"} 아니라 ${gwa(decision.goLabel)} 같은 기간끼리 비교합니다. ${discount} ${kept} 수는 본전에 필요한 ${gwa(people)} 비교합니다: ${regularsLine(decision.go, unit, result.shape.cycle, subscription)}. 조사 글(질문 문구)에는 ${ask} 꼭 묻고, ${kept}만 셉니다(지인·가족인지도 물음). 통과 기준(제안): ${pass} 목표 응답 수(제안)는 위 ${people}의 2배(${targets})로 잡습니다 — 모르는 사람 응답도 0.5로 세므로(가정) 이만큼 모여야 ${iga(expect)} 본전에 닿습니다. 통과하면 수요가 본전만큼 있다는 첫 신호이니 다음 단계(${trial})로 넘어갑니다. 이 기준을 넘어도 ${result.words.afterOpen} ${ro(terms.actual)} 다시 판단합니다.`,
+    `출시 전 판단: 돈을 받고 해 볼 수 있으면(${result.shape.premises ? "이미 신고된 공간·" : ""}${trial}) ${eul(terms.actual)} 위 기준과 같은 기간끼리 비교합니다. 아직 돈을 받을 수 없으면 ${terms.intent}만으로 기준을 채웠다고 보지 않고, 작은 표본에서 잰 실제 비율(${subscription ? "첫 달 구독 가운데 다음 달도 이어 간 비율, 의견을 준 사람 중 시작 월까지 남긴 비율" : result.shape.cycle === "weekly" && result.goods ? GOODS_RATIO_EXAMPLES : RATIO_EXAMPLES[result.shape.cycle]})과 경쟁 자료를 함께 봅니다.`,
     `${eul(decision.goLabel)} 채우려면 닿아야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 그만큼의 사람에게 닿을 길(${result.online ? "스토어 방문자, 팔로워, 커뮤니티 회원 등" : result.shape.premises ? "지나가는 사람, 단지 세대, 커뮤니티 회원 등" : "지역 커뮤니티 회원, 소개 등"})이 있어야 진행합니다.`,
     `${result.words.afterOpen}: ${eul(terms.actual)} 위 기준과 매달 비교하고, 중단선에 닿으면 계속할지 다시 정합니다. 관심 글의 댓글·공감 수는 ${iga(terms.actual)} 아니므로 이 기준과 바로 비교하지 않습니다.`,
   ];
@@ -689,6 +829,9 @@ function decisionLines(result: CashflowScenarios): string[] {
 const chart = (title: string, values: number[], breakEvenMonth: number | null) =>
   ["```plan-chart", JSON.stringify({ kind: "cumulative", title, points: values.map((value, i) => ({ label: `${i + 1}개월차`, value })), breakEvenMonth, paybackMonth: null }), "```"].join("\n");
 
+/** 정기배송·구독은 판매가를 한 달 금액으로 본다는 것을 표에 밝힌다 — 한 주 금액이면 계산이 4배 넘게 달라진다 */
+const subscriptionBasis = (result: CashflowScenarios) => (result.shape.cycle === "enroll" && result.shape.subscription
+  ? ` — 한 ${result.shape.subscription}${final(result.shape.subscription) ? "이" : "가"} 한 달에 내는 돈으로 봄(한 주 금액이면 × ${WEEKS_PER_MONTH}으로 다시 계산)` : "");
 /** 한 건에 실제 남는 돈 표 — 법정 부가세만 계산하고 나머지는 '확인 필요' 칸 */
 function unitMarginMarkdown(result: CashflowScenarios): string[] {
   const { unit } = result;
@@ -697,8 +840,8 @@ function unitMarginMarkdown(result: CashflowScenarios): string[] {
     "",
     `| 항목 | 한 ${unit}당 | 근거 |`,
     "| --- | ---: | --- |",
-    `| ${result.shape.service === "connect" ? "한 건 수수료" : "판매가"} | ${won(result.unitPrice)} | 대표님이 정한 값 |`,
-    result.shape.vat === "exempt" ? "| 부가세 | 0원 | 면세일 수 있음(교육용역). 면세 여부는 관할 세무서 확인 |" : `| 부가세 | -${won(result.vat)} | ${result.shape.service === "connect" ? VAT_BASIS.replace(/판매가/g, "수수료") : VAT_BASIS}. ${VAT_TYPE_NOTE} |`,
+    `| ${result.shape.service === "connect" ? "한 건 수수료" : "판매가"} | ${won(result.unitPrice)} | 대표님이 정한 값${subscriptionBasis(result)} |`,
+    result.shape.vat === "exempt" ? "| 부가세 | 0원 | 면세일 수 있음(교육용역). 면세 여부는 관할 세무서 확인 |" : `| 부가세 | -${won(result.vat)} | ${result.shape.service === "connect" ? VAT_BASIS.replace(/판매가/g, "수수료") : VAT_BASIS}. 과세 유형 확인 필요 |`,
     `| 한 ${unit}당 비용 | -${won(unitCostOf(result))} | 대표님이 정한 값 |`,
     ...unknownCostRows(result).map(row => `| ${row.item} | ${UNKNOWN_CELL} | ${row.note} |`),
     `| **한 ${unit}에 실제 남는 돈** | **${won(result.contribution)}** | '${UNKNOWN_CELL}' 칸을 빼기 전 값 |`,
@@ -712,7 +855,7 @@ function unitMarginMarkdown(result: CashflowScenarios): string[] {
 /** 돈 장에 붙는 표·그래프(시스템이 본문 끝에 붙인다). 숫자는 모두 이 파일에서 계산한다 */
 export function cashflowMarkdown(result: CashflowScenarios): string {
   const { unit } = result;
-  const opening = result.budget != null && result.setupCost != null ? result.budget - result.setupCost - result.prepCost : null;
+  const opening = result.budget != null && result.setupCost != null && !result.operating ? result.budget - result.setupCost - result.prepCost : null;
   const headLabel = opening != null ? "통장 잔고" : "통장 누적";
   const rows = Array.from({ length: 12 }, (_, i) => `| ${i + 1}개월차 | ${result.scenarios.map(s => won((opening ?? 0) + s.cumulative[i])).join(" | ")} |`);
   const goal = result.scenarios.find(s => s.key === "goal");
@@ -742,9 +885,9 @@ export function cashflowMarkdown(result: CashflowScenarios): string {
     ...rows,
     "",
     ...cashflowFindings(result).map(line => `- ${line}`),
-    result.budget != null ? `- ${result.shape.premises && !result.online ? DEPOSIT_SPLIT : result.shape.service ? NO_PREMISES_SETUP.replace("장비·재료처럼", "홈페이지·도구 이용료·첫 홍보비처럼") : NO_PREMISES_SETUP}` : undefined,
+    result.budget != null && !result.operating ? `- ${result.shape.premises && !result.online ? DEPOSIT_SPLIT : result.shape.service ? NO_PREMISES_SETUP.replace("장비·재료처럼", "홈페이지·도구 이용료·첫 홍보비처럼") : NO_PREMISES_SETUP}` : undefined,
     ...siteLines(result).map(line => `- ${line}`),
-    `- ${opening != null ? `통장 잔고는 준비 예산 ${won(result.budget!)}에서 초기 지출 ${won(result.setupCost!)}${result.prepCost > 0 ? `과 ${prepLabel(result)} ${won(result.prepCost)}` : ""}을 뺀 ${won(opening)}에서 시작합니다.` : `통장 누적은 사업에서 들어오고 나간 돈만 더한 값입니다. ${result.prepCost > 0 ? `초기 지출과 ${eun(prepLabel(result))}` : "초기 지출은"} 빠져 있습니다.`} 대표님 개인 생활비와 소득세는 이 계산에 넣지 않았습니다.`,
+    result.operating ? `- 통장 누적은 지금 통장에 더해지는(모자라면 빠지는) 사업 돈만 더한 값입니다.${result.budget != null ? ` 이번 개선에 쓸 돈 ${won(result.budget)}은 넣지 않았습니다.` : ""} 대표님 개인 생활비와 소득세도 이 계산에 넣지 않았습니다.` : `- ${opening != null ? `통장 잔고는 준비 예산 ${won(result.budget!)}에서 초기 지출 ${won(result.setupCost!)}${result.prepCost > 0 ? `과 ${prepLabel(result)} ${won(result.prepCost)}` : ""}을 뺀 ${won(opening)}에서 시작합니다.` : `통장 누적은 사업에서 들어오고 나간 돈만 더한 값입니다. ${result.prepCost > 0 ? `초기 지출과 ${eun(prepLabel(result))}` : "초기 지출은"} 빠져 있습니다.`} 대표님 개인 생활비와 소득세는 이 계산에 넣지 않았습니다.`,
     result.capacity ? `- ${result.terms.capacity} 최대치: ${dayWord(result, result.capacity.note)}. 어느 경우도 이보다 많이 ${result.terms.verb === "팔" ? "팔지" : "받지"} 않는다고 계산했습니다.` : undefined,
     ...(result.survival.length ? [
       "",
@@ -761,7 +904,7 @@ export function cashflowMarkdown(result: CashflowScenarios): string {
     "",
     // 그래프는 하나만(2026-10-10 빵집 시험: 표 3개·그래프 2개로 재무 장이 길다는 채점) — 목표 경우가 있으면 모자랐다가 메워지는 모습을 보인다
     goal
-      ? chart(`목표 경우 ${headLabel}`, goal.cumulative.map(value => (opening ?? 0) + value), (() => { const i = goal.cumulative.findIndex(value => value >= 0); return i >= 0 ? i + 1 : null; })())
+      ? chart(`목표 경우 ${headLabel}`, goal.cumulative.map(value => (opening ?? 0) + value), result.operating ? null : (() => { const i = goal.cumulative.findIndex(value => value >= 0); return i >= 0 ? i + 1 : null; })())
       : chart(`조심스러운 경우 ${headLabel}`, result.scenarios[0].cumulative.map(value => (opening ?? 0) + value), null),
   ].filter((line): line is string => line !== undefined).join("\n");
 }
@@ -773,8 +916,8 @@ export function cashflowMarkdown(result: CashflowScenarios): string {
 export function cashflowReference(result: CashflowScenarios, options: { basis?: string } = {}): string {
   const unknown = unknownCostRows(result).map(row => row.item).join("·");
   return [
-    `계획 시나리오 계산(실적 아님). ${options.basis ? `${options.basis}으로 ` : ""}${eul(result.terms.volume)} 하나로 정하지 않고 ${kinds(result)} 경우로 계산했습니다(${result.terms.capacity} 최대치를 넘지 않음).`,
-    `- 판매가 ${won(result.unitPrice)} / 변동비(한 ${result.unit}당 비용) ${won(unitCostOf(result))} / 부가세 ${result.shape.vat === "exempt" ? `0원(면세로 봄 — 교육용역은 면세일 수 있어 관할 세무서 확인 필요${result.taxableBreakEven != null ? `, 과세면 본전 월 ${count(result.taxableBreakEven, result.unit)}` : ""})` : `${won(result.vat)}(일반과세자 가정 — 판매가의 1/11, ${VAT_TYPE_NOTE})`} / 한 ${result.unit}에 실제 남는 돈 ${won(result.contribution)}`,
+    `${result.operating ? "운영 중인 사업의 계획 시나리오 계산(지금 실적에서 시작, 앞으로의 숫자는 실적 아님)" : "계획 시나리오 계산(실적 아님)"}. ${options.basis ? `${options.basis}으로 ` : ""}${eul(result.terms.volume)} 하나로 정하지 않고 ${kinds(result)} 경우로 계산했습니다(${result.terms.capacity} 최대치를 넘지 않음).`,
+    `- 판매가 ${won(result.unitPrice)}${subscriptionBasis(result)} / 변동비(한 ${result.unit}당 비용) ${won(unitCostOf(result))} / 부가세 ${result.shape.vat === "exempt" ? `0원(면세로 봄 — 교육용역은 면세일 수 있어 관할 세무서 확인 필요${result.taxableBreakEven != null ? `, 과세면 본전 월 ${count(result.taxableBreakEven, result.unit)}` : ""})` : `${won(result.vat)}(일반과세자 가정 — 판매가의 1/11, ${VAT_TYPE_NOTE})`} / 한 ${result.unit}에 실제 남는 돈 ${won(result.contribution)}`,
     `- 손익분기: 월 ${count(result.breakEven, result.unit)} (매출 ${won(result.breakEven * result.unitPrice)}) — 본전은 사업 비용(월 고정비)만 메우는 ${result.terms.volume} 하나로 씁니다.`,
     // 과세 유형 안내(VAT_OTHER)는 돈 장의 표 아래에만 싣는다 — 이 참고 문장은 모든 장에 들어가 같은 안내가 두 장에 거의 그대로 나왔다(계획서 품질 Q5)
     `- 한 ${result.unit}에 실제 남는 돈에서 ${unknown}는 아직 빼지 않았습니다(${UNKNOWN_CELL}). 그래서 ${breakEvenWord(result)} 낙관적인 쪽이고, 이 값을 지어서 채우지 않습니다. ${VAT_POINTER}`,
@@ -787,9 +930,11 @@ export function cashflowReference(result: CashflowScenarios, options: { basis?: 
     // 참고 문장은 중단선까지만 달수를 쓰고 잔액 0원까지는 한 마디로(중단선이 월 고정비 3개월분이라 최대 3개월 더) — intake-context 8,000자 상한
     result.survival.length ? `- 매출이 없어도 중단선까지 버티는 기간((준비 예산 − 초기 지출${result.prepCost > 0 ? ` − ${prepLabel(result)}` : ""} − 중단선) ÷ 월 고정비, 잔액 0원까지는 최대 3개월 더): ${result.survival.map(row => `초기 지출 ${won(row.spend)}이면 ${monthsText(row.toStop)}`).join(", ")}` : "",
     goalLine(result),
-    result.goalPeriodMonths ? `- 목표 기간 세는 법(모든 장에서 같게 씁니다): '${result.goalPeriodMonths}개월 안에'는 ${result.words.at}${result.prep.openWeek ? `(${result.prep.openWeek}주차)` : ""}부터 ${result.goalPeriodMonths}개월로 셉니다(가정). 오늘부터 세지 않습니다.` : undefined,
+    result.goalPeriodMonths ? (result.operating
+      ? `- 목표 기간 세는 법(모든 장에서 같게 씁니다): '${result.goalPeriodMonths}개월 안에'는 ${result.words.at}부터 ${result.goalPeriodMonths}개월로 셉니다(가정).`
+      : `- 목표 기간 세는 법(모든 장에서 같게 씁니다): '${result.goalPeriodMonths}개월 안에'는 ${result.words.at}${result.prep.openWeek ? `(${result.prep.openWeek}주차)` : ""}부터 ${result.goalPeriodMonths}개월로 셉니다(가정). 오늘부터 세지 않습니다.`) : undefined,
     result.priceAlternatives.length ? `- 가격을 바꾸면(${won(Math.abs(result.priceAlternatives[0].price - result.unitPrice))}씩, 한 건당 비용은 같다고 가정, ${result.shape.vat === "exempt" ? "부가세는 면세로 봄" : "부가세는 가격마다 다시 뺌"}, ${chapterRef("strategy/price")}에서 씀): ${result.priceAlternatives.map(alt => `${won(alt.price)} → 본전 ${result.daily && alt.breakEven / result.days >= 1 ? `하루 약 ${count(alt.breakEven / result.days, result.unit)} / 한 달 ${count(alt.breakEven, result.unit)}` : surveyPeriodFor(result, alt.breakEven)}`).join(" / ")}` : "",
-    "- 초기 지출(입력이 없으면), 대표님 개인 생활비, 소득세는 이 계산에 빠져 있습니다.",
+    result.operating ? "- 이번 개선에 쓸 돈, 대표님 개인 생활비, 소득세는 이 계산에 빠져 있습니다." : "- 초기 지출(입력이 없으면), 대표님 개인 생활비, 소득세는 이 계산에 빠져 있습니다.",
   ].filter(Boolean).join("\n");
 }
 
@@ -833,7 +978,7 @@ export function fixedCostAssumptionMarkdown(result: FixedCostAssumptions): strin
 }
 
 /** 대화에서 모은 값(가격·변동비·고정비 + 처리량·목표·예산·초기 지출)으로 세 경우를 만든다. 저장된 대표 생활비(livingCost)는 쓰지 않는다 */
-export function cashflowFromFields(fields: Array<{ key: string; value: string }>, money: { unitPrice: number; unitVariableCost: number; monthlyFixedCost: number; online?: boolean; shape?: CashflowShape }): CashflowScenarios | null {
+export function cashflowFromFields(fields: Array<{ key: string; value: string }>, money: { unitPrice: number; unitVariableCost: number; monthlyFixedCost: number; online?: boolean; shape?: CashflowShape; operating?: CashflowInputs["operating"] }): CashflowScenarios | null {
   const get = (key: string) => fields.find(field => field.key === key)?.value;
-  return buildCashflowScenarios({ unitPrice: money.unitPrice, unitVariableCost: money.unitVariableCost, monthlyFixedCost: money.monthlyFixedCost, capacity: get("capacity"), monthDays: monthDaysFromFields(fields), goal: get("goal"), budget: get("budget"), setupCost: get("setupCost"), offer: get("offer"), online: money.online, shape: money.shape });
+  return buildCashflowScenarios({ unitPrice: money.unitPrice, unitVariableCost: money.unitVariableCost, monthlyFixedCost: money.monthlyFixedCost, capacity: get("capacity"), monthDays: monthDaysFromFields(fields), goal: get("goal"), budget: get("budget"), setupCost: money.operating ? undefined : get("setupCost"), offer: get("offer"), online: money.online, shape: money.shape, ...(money.operating ? { operating: money.operating } : {}) });
 }

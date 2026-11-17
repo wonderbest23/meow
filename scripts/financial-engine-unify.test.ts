@@ -51,11 +51,12 @@ async function main() {
     assert.equal(JSON.parse(coachContext(full.coach, reference)).financialScenario, reference);
     assert.equal(JSON.parse(coachContext(full.coach)).financialScenario, coachFinancialReference(full.coach), "legacy callers keep the old behaviour");
 
-    // 3) 문서 요약: 월 운영 가정 300건, 손익분기 167건
+    // 3) 문서 요약: 월 운영 가정 300건(지금 실적 그대로), 손익분기는 문서 돈 장과 같은 '부가세를 뺀 남는 돈' 기준 — 1,000,000 ÷ (10,000 − 909 − 4,000) → 197건
+    //    (2026-11-16: 운영 중 사업도 새 돈 흐름 표를 쓴다. 예전엔 부가세를 빼지 않은 167건)
     const summary = buildExecutiveSummary(full.plan);
     const lines = summary.blocks.flatMap(block => block.lines);
-    assert.ok(lines.some(line => line.value.startsWith("300건 판매 / 매출 3,000,000원")), lines.map(line => `${line.label}: ${line.value}`).join("\n"));
-    assert.ok(lines.some(line => line.label === "손익분기" && line.value.startsWith("월 167건")));
+    assert.ok(lines.some(line => line.label === "월 운영 가정" && line.value.includes("(지금 실적이 그대로일 때) 300건 판매 / 매출 3,000,000원 / 한 달 +527,300원")), lines.map(line => `${line.label}: ${line.value}`).join("\n"));
+    assert.ok(lines.some(line => line.label === "손익분기" && line.value.startsWith("월 197건")));
 
     // 4) 12개월 손익표: 손익표를 두는 섹션에만, 같은 판매량으로
     const owner = financialTableOwner(full.plan.planType)!;
@@ -64,6 +65,14 @@ async function main() {
     assert.ok(table!.includes("판매량 기준: 실적 기준 판매량"), "the table states where the volume comes from");
     assert.equal(intakeFinancialTable(full.plan, full.coach, "summary/executive"), undefined, "only the table-owner section gets the table");
 
+    // 4-1) 운영 중 사업의 '이번 개선에 쓸 수 있는 돈'(budget 질문, 2026-11-16)이 돈 장까지 이어진다 — 목표 경우가 없으면 12개월 안에 되찾을 판매 증가분을 계산
+    const budgeted = operatingPlan([["business", "동네 반찬 가게"], ["industry", "food_beverage"], ["price", 10000], ["structure.unitCost", 4000],
+      ["period", "2026-06-01 / 2026-08-31"], ["sales", 9000000], ["cost", 1000000], ["budget", 3000000], ["capacity", "대표자 혼자 / 하루 20건"]]);
+    const budgetedTable = intakeFinancialTable(budgeted.plan, budgeted.coach, owner)!;
+    assert.match(budgetedTable, /이번 개선에 쓸 수 있는 돈 3,000,000원을 다 쓰고 12개월 안에 되찾으려면 지금보다 한 달 약 50건 더 늘려야 합니다/, budgetedTable);
+    assert.doesNotMatch(budgetedTable, /흑자 전환|중단선|초기 지출 한도|버티는 기간/);
+    assert.match(planFinancialReference(budgeted.coach, budgeted.plan.answers), /이번 개선에 쓸 돈\(3,000,000원\) 안에서 실험마다 쓸 돈을 먼저 정하고/);
+
     // 5) 값이 빠지면 표·판매량을 지어내지 않는다
     const partial = operatingPlan([["business", "동네 반찬 가게"], ["price", 10000], ["cost", 1000000]]);
     assert.ok("missing" in intakeScenarioInputs(partial.coach, partial.intake));
@@ -71,9 +80,10 @@ async function main() {
     assert.ok(planFinancialReference(partial.coach, partial.plan.answers).includes("아직 없는 값"));
     // 5-1) 판매량만 없으면 12개월 표는 만들지 않고, 건당 이익과 손익분기점(입력만으로 계산됨)은 넣는다(2026-10-09)
     const noVolume = operatingPlan([["business", "동네 반찬 가게"], ["industry", "food_beverage"], ["price", 10000], ["structure.unitCost", 4000], ["cost", 1000000]]);
+    // 2026-11-16: 운영 중 사업도 새 돈 흐름 표 — 실적이 없으면 조심스러운 경우는 본전의 절반(가정), 지금 실적 줄은 만들지 않는다
     const noVolumeTable = intakeFinancialTable(noVolume.plan, noVolume.coach, owner);
-    assert.ok(noVolumeTable && noVolumeTable.includes("건당 단위경제") && noVolumeTable.includes("손익분기점") && noVolumeTable.includes("월 167건"), noVolumeTable ?? "no table");
-    assert.ok(!noVolumeTable!.includes("12개월 손익 추정") && noVolumeTable!.includes("판매량을 아직 정하지 않아"), "no invented monthly volume");
+    assert.ok(noVolumeTable && noVolumeTable.includes("한 건에 실제 남는 돈") && noVolumeTable.includes("월 197건") && noVolumeTable.includes("가정: 본전 판매량의 절반"), noVolumeTable ?? "no table");
+    assert.ok(!noVolumeTable!.includes("12개월 손익 추정") && !noVolumeTable!.includes("지금 실적"), "no invented monthly volume");
 
     // 6) 업종 상세 질문 숫자가 계산에 쓰인다(2026-09-28). 필요한 값이 없으면 줄을 만들지 않는다.
     const lesson = operatingPlan([["business", "성인 대상 기타 레슨"], ["industry", "education"], ["hoursPerWeek", 10], ["capacity", "대표자 혼자 / 일주일 10건"], ["education.sessionMinutes", 60]], "startup");

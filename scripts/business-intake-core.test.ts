@@ -224,7 +224,8 @@ async function main() {
         const f = fixture(mode);
         const coreIds = coreQuestions(mode).map(question => question.id);
         // 변동비·고정비가 기본 질문에 들어왔다(운영 중은 가격·변동비). 탐색은 시작 조건 단계가 하나 더 있다. 신규는 대표 생활비 질문이 하나 더 있다(2026-10-10).
-        assert.equal(coreIds.length, mode === "exploring" ? 14 : 13, "exploring adds the start-conditions step; startup no longer asks the owner's living cost (계획서 품질 Q3)");
+        // 운영 중은 '이번 개선에 쓸 수 있는 돈'(budget)을 묻는다(2026-11-16 — 김밥집·옷가게 계획서에 답한 예산이 '정해지지 않음'으로 나왔다)
+        assert.equal(coreIds.length, mode === "startup" ? 13 : 14, "exploring adds the start-conditions step; operating asks the improvement budget; startup no longer asks the owner's living cost (계획서 품질 Q3)");
         const visited: string[] = [];
         for (let index = 0; index < coreIds.length; index++) {
           const state = snapshot(f);

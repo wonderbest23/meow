@@ -1,7 +1,7 @@
 import { coachDocumentRevision, currentNextAction, readCoach, type CoachField } from "./coach";
 import { coachFieldDisplay } from "./coach-presentation";
 import { coachAmount, checkCoachFeasibility } from "./coach-feasibility";
-import { intakeScenarioInputs, readIntake } from "./intake-core";
+import { intakeCashflowMoney, intakeScenarioInputs, readIntake } from "./intake-core";
 import { buildPlanBusinessContext, type ContextField } from "./context/build";
 import { calculateFinancials, collectFinancialInputs, describeFinancialFields } from "./financials";
 import { cashflowFromFields, cashflowScenariosEnabled, implausibleMoneyFromFields } from "./cashflow-scenarios";
@@ -70,7 +70,9 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
    * 문서 돈 장과 같은 계산(cashflow-scenarios)의 첫 달 값을 쓰고, 그 계산이 없으면 판매량을 정하지 않는다.
    */
   const startupIntake = !!intake && intake.mode !== "operating" && !period;
-  const flow = startupIntake && coach && scenario && !("missing" in scenario) && cashflowScenariosEnabled() ? cashflowFromFields(coach.fields, scenario) : null;
+  // 운영 중인 사업(운영 기록 없이 상담 실적만 있을 때)도 문서 돈 장과 같은 계산(지금 실적에서 시작, 부가세 뺀 남는 돈)을 쓴다(2026-11-16)
+  const operatingIntake = !!intake && intake.mode === "operating" && !period;
+  const flow = (startupIntake || operatingIntake) && coach && intake && scenario && !("missing" in scenario) && cashflowScenariosEnabled() ? cashflowFromFields(coach.fields, intakeCashflowMoney(intake, scenario)) : null;
   const capacityOnly = startupIntake && !!scenario && !("missing" in scenario) && (scenario.volumeSource === "capacity" || !!flow);
   const inputs = scenario && !("missing" in scenario) ? {
     unitPrice: scenario.unitPrice, unitVariableCost: scenario.unitVariableCost, monthlyFixedCost: scenario.monthlyFixedCost,
@@ -95,7 +97,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
     line("계산 상태", `${implausible.map(item => `${item.label} ${won(item.value)}`).join(" / ")}: 10만 원보다 적어 실제 금액으로 보기 어려워 손익을 계산하지 않음. 실제 금액으로 다시 입력하면 계산`, "missing", ["financials.inputs"], 150),
   ] : flow && careful ? [
     // 요약에는 조심스러운 경우 한 줄만 보여 '이 사업은 적자'로 읽혔다 — 왜 적자인지(가정)를 같이 적는다
-    line("첫 달 가정", `조심스러운 경우${careful.volumes[0] > 0 ? "(본전의 절반만 팔릴 때)" : ""} ${careful.volumes[0].toLocaleString("ko-KR")}${flow.unit} ${flow.terms.sold} / 매출 ${won(careful.volumes[0] * flow.unitPrice)} / 한 달 ${signed(careful.net[0])}${goalCase && flow.goal ? ` · 목표 경우 ${flow.goal.months}개월차 ${goalCase.volumes[Math.min(flow.goal.months, goalCase.volumes.length) - 1].toLocaleString("ko-KR")}${flow.unit}` : ""}`, "calculation", ["cashflow.careful.1"], 115),
+    line(flow.operating ? "월 운영 가정" : "첫 달 가정", `조심스러운 경우${flow.operating?.actualVolume != null ? "(지금 실적이 그대로일 때)" : careful.volumes[0] > 0 ? "(본전의 절반만 팔릴 때)" : ""} ${careful.volumes[0].toLocaleString("ko-KR")}${flow.unit} ${flow.terms.sold} / 매출 ${won(careful.volumes[0] * flow.unitPrice)} / 한 달 ${signed(careful.net[0])}${goalCase && flow.goal ? ` · 목표 경우 ${flow.goal.months}개월차 ${goalCase.volumes[Math.min(flow.goal.months, goalCase.volumes.length) - 1].toLocaleString("ko-KR")}${flow.unit}` : ""}`, "calculation", ["cashflow.careful.1"], 115),
     line("산출 조건", `판매가 ${won(flow.unitPrice)} / 부가세 ${flow.shape.vat === "exempt" ? "0원(면세로 봄, 관할 세무서 확인)" : `${won(flow.vat)}(일반과세자 가정)`} / 건당 변동비 ${won(flow.unitPrice - flow.vat - flow.contribution)} / 한 건에 실제 남는 돈 ${won(flow.contribution)} / 월 고정비 ${won(flow.monthlyFixedCost)}`, "calculation", ["financials.inputs"], 130),
     // 준비 기간(계획서 품질 Q9) — 문서 돈 장·12주 표와 같은 개업 주차에서 센 값
     ...(flow.budget != null && flow.prepCost > 0 ? [line("준비 기간", `${flow.prep.openWeek != null ? `${flow.prep.openWeek}주차 개업 가정, ` : ""}문 열기 전 고정비 ${flow.prep.months}개월분 ${won(flow.prepCost)}(가정)`, "calculation", ["cashflow.prep"], 90)] : []),
@@ -151,7 +153,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
     abbreviated, note, blocks,
     ...(flow && !implausible.length && flow.contribution > 0 && flow.breakEven > 0 ? { easy: {
       unit: flow.unit, price: flow.unitPrice, perDay: flow.daily && flow.breakEven / flow.days >= 1, enroll: flow.shape.cycle === "enroll", contribution: flow.contribution, fixed: flow.monthlyFixedCost,
-      breakEven: flow.breakEven, cap: flow.capacity?.volume ?? null, budget: flow.budget, limit: flow.setupLimit, shortfall: flow.reviewShortfall,
+      breakEven: flow.breakEven, cap: flow.capacity?.volume ?? null, budget: flow.operating ? null : flow.budget, limit: flow.setupLimit, shortfall: flow.operating ? 0 : flow.reviewShortfall,
     } } : {}),
   };
 }
