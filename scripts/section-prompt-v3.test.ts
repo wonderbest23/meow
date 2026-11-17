@@ -118,6 +118,38 @@ assert.match(roadmap, /이미 신고된 공간\(공유주방·팝업 매장 등\
 assert.match(executive, /그 시점에 할 수 없는 행동\(계약 뒤에 공간을 줄이는 것 등\)은 쓰지 않습니다/);
 assert.doesNotMatch(buildUserPrompt(base("market/personas")), /실행 전 확인 목록/);
 
+// 희망적으로 말하기(2026-11-17 실제 AI 계획서 9개 점검: 6개 중 4개가 제목·첫 문장을 손해로 시작, 결론 없음)
+assert.match(system, /<hope>[\s\S]*<\/hope>/);
+assert.match(system, /장의 첫 소제목과 첫 문장은 손해·부족·중단선·'뿐입니다'로 시작하지 않습니다/);
+assert.match(system, /본전\(손익분기\)은 '안전선'이라고 부릅니다/);
+assert.match(system, /첫걸음은 걸리는 시간과 함께 씁니다/);
+assert.match(system, /모자라는 돈, 중단선, 빠듯한 초기 지출 한도는 빼지 않고 숫자 그대로 씁니다[^\n]*'지켜야 할 선'/);
+assert.match(system, /'반드시', '무조건', '확실히 번다'처럼 결과를 보장하는 말은 쓰지 않고, 숫자를 바꾸거나 부풀리지 않습니다/);
+// 안전 문장은 글자 그대로 남는다(덧붙이기만)
+assert.match(system, /대표가 보장된 결과로 읽으면 무리하게 돈을 쓸 수 있기 때문입니다/);
+assert.match(system, /조심스러운 경우에 돈이 얼마나 모자라는지와 버티기 위한 조건\(초기 지출 한도 등\)을 먼저 해석합니다\. 대표가 가장 먼저 알아야 할 위험이기 때문입니다\. 여기서 '먼저 해석한다'는 빠뜨리지 않고 따져 본다는 뜻이고/);
+assert.match(system, /- '실행 요약' 장\(요약·다음 단계 > 실행 요약\): 맨 앞 한 줄 결론/);
+assert.match(system, /- '한눈에 보기' 장\(사업 개요 > 한눈에 보기\): 맨 앞 한 줄 결론\('이 숫자라면 해 볼 만합니다\. 조건은 ○○입니다'/);
+for (const key of ["overview/summary", "summary/executive"]) assert.match(buildUserPrompt(base(key)), /첫 문단의 첫 문장은 이 계획의 결론 한 줄입니다: '이 숫자라면 해 볼 만합니다\. 조건은 ○○입니다'[^\n]*'이렇게 바꾸면 가능해집니다/, key);
+assert.doesNotMatch(buildUserPrompt(base("market/personas")), /이 숫자라면 해 볼 만합니다/, "only the two summary chapters get the one-line verdict");
+assert.doesNotMatch(executive, /이 계획의 결론과 가장 큰 위험을 말합니다/);
+assert.match(executive, /가장 큰 위험은 빼지 않되 첫 문단이 아니라 '## 지금 정할 것' 안의 지켜야 할 선으로 씁니다/);
+assert.match(executive, /가장 먼저 할 행동 하나를 걸리는 시간과 함께 씁니다/);
+// 표 아래에 시스템이 붙이는 문장(과세 유형 안내·본전에서 대표 몫 0원)은 본문에서 다시 쓰지 않는다
+const money = buildUserPrompt(base("financials/expenses", { financialsMarkdown: "### 한 개에 실제 남는 돈\n| 항목 | 값 |" }));
+assert.match(money, /표 아래에는 시스템이 '알아본 뒤 채움' 칸[^\n]*과세 유형\(일반·간이·면세\) 안내, 본전에서 대표 몫이 0원[^\n]*본문은 이 문장들을 다시 쓰지 않고/);
+assert.match(money, /첫 소제목은 안전선을 이 사업의 단위로 보여 주며 넘기는 길로 쓰고[^\n]*'지켜야 할 선' 소제목 아래에 숫자 그대로 씁니다/);
+assert.match(system, /- 본전에서 대표 몫이 0원이라는 설명: '비용' 장\. .*계산 표 아래에 시스템이 이미 붙이므로 맡은 장의 본문은 이 문장을 다시 쓰지 않고/);
+assert.match(buildUserPrompt(base("summary/executive")), /이 장에서 쓰지 않는 말: [^\n]*본전에서 대표 몫이 0원이라는 설명\('비용' 장\)/);
+assert.match(roadmap, /과세 유형 전체 설명은 돈 숫자를 맡은 장의 계산 표 아래에 있으므로 다시 쓰지 않습니다/);
+// '(확인 필요)'는 꼭 필요한 값에만, 업종 기준값은 '(기준값)'
+assert.match(system, /'\(확인 필요\)' 표시는 문서 전체에서 세 번 안팎으로 줄입니다\. 한 장에는 많아야 한 번/);
+assert.match(system, /basis가 proposal인 것은 같은 업종 기준값으로 먼저 채운 값이므로, 그 값을 그대로 쓰고 처음 한 번만 '\(기준값\)'이라고 밝힙니다/);
+assert.match(system, /필요한 값이 자료에 없으면 그 자리에 '\(확인 필요\)'를 한 번 붙이고 넘어갑니다/, "the original sentence stays");
+// '(판매 준비)' 꼬리표를 붙이지 않는다(법정 절차로 부르지 않는다는 원래 문장은 그대로)
+assert.match(system, /'신고·등록이 아닌 판매 준비'가 붙은 것\(지도 등록, 예약·신청 받을 곳 열기 등\)은 법정 절차라고 부르지 않고 판매 준비로 씁니다/);
+assert.match(system, /본문에 '\(판매 준비\)'나 '판매 준비로' 같은 꼬리표를 붙이지 않고 '네이버 예약을 엽니다'처럼 할 일만 씁니다/);
+
 // 예전 방식: 공통 사업 정보가 없는 계획서, 또는 PLAN_SECTION_PROMPT=v1
 const legacy = sectionSystemPrompt(base("market/personas", { coachContext: undefined }));
 assert.match(legacy, /\[읽기 쉬운 문장\]/);
