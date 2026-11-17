@@ -14,6 +14,8 @@ import { withEul } from "../josa";
  * ✓(done)는 정말 끝난 일에만 붙인다 — 코드 계산은 요청 전에 이미 끝났고, 장은 저장된 뒤에만 done 이다.
  * AI가 하는 중인 일은 active 한 줄(돌아가는 표시)로만 보인다.
  * 희망 한마디는 아래 고정 목록에서만 고른다. 숫자를 넣지 않고 결과를 약속하지 않는다(NARRATION_BANNED 로 시험).
+ * 철학자의 말(2026-11-17 대표 결정)은 출처를 검증한 목록(philosophy-quotes.ts)의 짧은 말만 글자 그대로, 무거운 말·결과 약속으로 읽힐 말은 빼고 넣는다.
+ * 화면 묶음을 작게 두려고 목록을 가져오지 않고 여기 적는다 — 목록과 글자까지 같은지는 scripts/philosophy-voice.test.ts가 확인한다.
  */
 
 export type NarrationMoney = {
@@ -66,12 +68,21 @@ export function breakEvenLine(money: NarrationMoney): { text: string; note: stri
   return { text, note: "이 숫자가 첫 목표가 돼요" };
 }
 
-/** 희망 한마디 — 숫자 없이, 약속 없이. 철학적이되 쉬운 말로 */
+/** 희망 한마디 — 숫자 없이, 약속 없이. 철학적이되 쉬운 말로. 철학자의 말은 '— 이름'을 붙인다 */
 export const DESIGN_HOPES = [
   "흩어진 답이 하나의 방향으로 모이고 있어요.",
+  "천 리 길도 발밑 한 걸음에서 시작된다. — 노자",
   "막연했던 생각도 적어 보면 길이 보이기 시작해요.",
+  "세상의 어떤 큰일도 열정 없이 이루어진 적은 없다. — 헤겔",
   "작게 시작하는 것도 분명한 시작이에요.",
+  "시작이 반이다. — 아리스토텔레스가 인용한 옛말",
   "이미 답한 것만으로도 꽤 많은 것이 정해졌어요.",
+];
+/** 계획서를 쓰는 동안(앞부분) 장이 하나씩 끝날 때마다 바뀌는 철학자의 말 */
+export const PLAN_QUOTE_HOPES = [
+  "배우고 때맞춰 익히면, 이 또한 기쁘지 않은가. — 공자",
+  "너 자신을 믿어라. — 에머슨",
+  "훌륭한 것은 모두 드문 만큼 어렵다. — 스피노자",
 ];
 export const PLAN_HOPES = {
   start: "첫 줄이 가장 멀어 보여요. 이미 시작됐어요.",
@@ -162,7 +173,8 @@ export function planNarration(input: {
     lines.push({ id: "writing", text, state: "active", ...(note ? { note } : {}) });
   }
   const ratio = input.sections.length ? done / input.sections.length : 0;
-  const hope = done === 0 ? PLAN_HOPES.start : pending.length === 1 || ratio >= 0.8 ? PLAN_HOPES.late : ratio >= 0.5 ? PLAN_HOPES.half : PLAN_HOPES.early;
+  const early = [PLAN_HOPES.early, ...PLAN_QUOTE_HOPES];
+  const hope = done === 0 ? PLAN_HOPES.start : pending.length === 1 || ratio >= 0.8 ? PLAN_HOPES.late : ratio >= 0.5 ? PLAN_HOPES.half : early[(done - 1) % early.length];
   return { lines, hope };
 }
 

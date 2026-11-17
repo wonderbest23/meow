@@ -198,6 +198,8 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     chapter,
     section,
     answers,
+    // 장마다 고르는 철학자의 말 후보 순서(같은 계획서는 같은 후보, 장끼리 겹치지 않음 — philosophy-quotes.ts)
+    planId: plan.id,
     planTitle: plan.title,
     planType: plan.planType,
     business: coach?.business ?? state.business,

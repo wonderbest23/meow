@@ -13,6 +13,8 @@ import { checkDocumentQuality, qualityRepairIssues } from "./document-quality";
 import { boundedIntakeContext, intakeContextEvidence, INTAKE_CONTEXT_RULES, type IntakeContextInput } from "./intake-context";
 import { compactCoachContext, intakeDataOnly, onePlaceNotes, SECTION_PROMPT_V3_EXAMPLES, sectionPromptV3Rules } from "./section-prompt-v3";
 import { ESSENTIAL_GROUP_NAMES, essentialGroup, essentialsForChapter } from "./industry-essentials";
+import { quoteCandidateLines, quoteCandidatesForSection, type PhilosophyQuote } from "./philosophy-quotes";
+import { guardSectionQuotes } from "./quote-guard";
 
 /*
  * 장 작성 지시문 v3(section-prompt-v3.ts) — 상담으로 만든 계획서(공통 사업 정보가 있는 것)의 기본(2026-10-10 블라인드 검토 3회로 결정).
@@ -132,6 +134,8 @@ export interface SectionGenInput extends IntakeContextInput {
   operatingContext?: string;
   /** Complete current paragraphs for deterministic duplication checks, never used as numeric evidence. */
   priorSections?: string[];
+  /** 계획서 id — 장마다 고르는 철학자의 말 후보 순서를 정한다(같은 계획서는 같은 후보, 장끼리 겹치지 않음). 없으면 계획서 제목 */
+  planId?: string;
 }
 
 export interface PromptEvidence {
@@ -349,6 +353,23 @@ const GOAL_PERIOD_RULE = "대표가 답한 목표 기간(coach.fields의 goal, �
  */
 const HOPE_FIRST_LINE = "첫 문단의 첫 문장은 이 계획의 결론 한 줄입니다: '이 숫자라면 해 볼 만합니다. 조건은 ○○입니다'(조건은 안전선 판매량·시작 규모처럼 계산 자료의 숫자로). 계산 자료로 보아 조건이 정말 어려우면(안전선이 처리량보다 크거나 초기 지출 한도가 0원 아래) '이렇게 바꾸면 가능해집니다. ○○을 바꾸면 ○○입니다'로 씁니다. 그다음 안전선(본전)을 이 사업의 단위로 보여 주고, 목표 경우가 있으면 목표에서의 대표 몫(계산 자료의 숫자)을 씁니다. 첫 소제목도 손해·부족·위험으로 시작하지 않습니다. 결론이 없으면 대표가 하라는 건지 말라는 건지 알 수 없기 때문입니다.";
 
+/*
+ * 철학자의 말 후보(2026-11-17 대표 결정, philosophy-quotes.ts) — 장마다 그 장에 맞는 자리로 3~4개, 계획서 id로 정해지는 순서, 장끼리 겹치지 않음.
+ * 상담으로 만든 계획서(v3)에만 넣는다. 저장 전 거르기(quote-guard.ts)는 이 후보 밖의 인용을 지운다.
+ */
+export function sectionQuoteCandidates(input: Pick<SectionGenInput, "planId" | "planTitle" | "planType" | "chapter" | "section" | "coachContext">): PhilosophyQuote[] {
+  if (!promptV3(input)) return [];
+  // 사업 정보는 씨앗에 넣지 않는다 — 검토 원천(사업 정보 + 작성 지시문)과 작성 지시문의 후보가 달라지면 안 된다
+  const seed = input.planId || input.planTitle || "";
+  const keys = chaptersForType(input.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`));
+  return quoteCandidatesForSection(seed, keys, `${input.chapter.id}/${input.section.id}`);
+}
+
+/** AI가 쓴 장 본문에서 출처가 맞지 않거나 후보 밖인 명언 문장을 지운다(지운 횟수는 로그) — 장마다 명언은 많아야 하나 */
+function guardQuotes(markdown: string, input: SectionGenInput): string {
+  return guardSectionQuotes(markdown, { where: "section", section: `${input.chapter.id}/${input.section.id}`, allowedIds: promptV3(input) ? sectionQuoteCandidates(input).map(quote => quote.id) : undefined, maxQuotes: 1 });
+}
+
 function buildUserPromptV3(input: SectionGenInput): string {
   const tag = (name: string, body: string | undefined, attrs = "") => (body?.trim() ? `<${name}${attrs}>\n${body.trim()}\n</${name}>` : "");
   const key = `${input.chapter.id}/${input.section.id}`, executive = key === "summary/executive", roadmap = key === "summary/roadmap", overview = key === "overview/summary";
@@ -388,6 +409,7 @@ function buildUserPromptV3(input: SectionGenInput): string {
     ref ? `<financials>의 숫자는 ${chapterRef(financialTableOwner(input.planType) ?? "financials/expenses")}에 표로 실립니다. 이 장에서는 필요한 값만 문장 속에서 인용합니다.` : "",
     input.coachContext ? "공통 사업 정보로 실제 사업안 본문을 씁니다. 이미 정리된 AI 제안은 빈칸으로 되돌리지 않고 살려 씁니다." : "위 자료만 근거로 이 장의 본문을 씁니다.",
     overview || executive ? HOPE_FIRST_LINE : "",
+    quoteCandidateLines(sectionQuoteCandidates(input)),
     executive && !hasRoadmap(input.planType) ? "첫 소제목과 첫 문단에서 이 사업의 결론(누구에게 무엇을 얼마에 팔고, 숫자로 보면 어떤지)을 말합니다. 끝에 '## 실행 전 확인 목록' 표를 하나 만들고, 앞 장들이 (확인 필요)로 남긴 것과 시작 전에 확인할 일을 겹치지 않게 5~8개로 모읍니다. 항목마다 어디서 어떻게 확인하는지 한 줄을 붙입니다." : "",
     executive && hasRoadmap(input.planType) ? "첫 소제목과 첫 문단에서 이 계획의 결론과 첫걸음을 말합니다. 가장 큰 위험은 빼지 않되 첫 문단이 아니라 '## 지금 정할 것' 안의 지켜야 할 선으로 씁니다. '## 지금 정할 것'에 가장 큰 위험 2~3개(지켜야 할 선)와 대표가 지금 정해야 할 결정을 쓰고, 마지막에 가장 먼저 할 행동 하나를 걸리는 시간과 함께 씁니다. 이 행동은 '12주 할 일과 매달 볼 숫자' 장의 1주차 할 일과 같은 일로 씁니다. 장마다 첫 행동이 다르면 대표가 무엇부터 할지 헷갈리기 때문입니다. " + GOAL_PERIOD_RULE + " 결정과 판단 뒤에 할 행동도 그 장의 기준·행동과 같게 쓰고, 그 시점에 할 수 없는 행동(계약 뒤에 공간을 줄이는 것 등)은 쓰지 않습니다. 확인할 일, 12주 할 일, 매달 볼 숫자는 '12주 할 일과 매달 볼 숫자' 장이 맡으므로 표로 다시 만들지 않고 그 장을 가리킵니다. 같은 표가 두 장에 나오면 대표가 같은 내용을 두 번 읽기 때문입니다." : "",
     roadmap && operating ? [
@@ -637,7 +659,7 @@ export async function generateSection(
   if (!checked) return { markdown: "", source: "failed" };
   const passed = await passQualityCheck(config, checked, input);
   if (!passed) return { markdown: "", source: "failed" };
-  return { markdown: appendFinancials(passed, input), source: "ai" };
+  return { markdown: appendFinancials(guardQuotes(passed, input), input), source: "ai" };
 }
 
 function qualitySource(input: SectionGenInput): string {
@@ -704,5 +726,5 @@ export async function streamSection(
    * 스트리밍 화면에는 재무 블록이 델타로 흐르지 않지만, 최종 저장본에는 붙는다.
    * 클라이언트는 마지막 done 페이로드의 markdown/html로 갈아끼우므로 문제없다.
    */
-  return { markdown: appendFinancials(passed, input), source: "ai" };
+  return { markdown: appendFinancials(guardQuotes(passed, input), input), source: "ai" };
 }
