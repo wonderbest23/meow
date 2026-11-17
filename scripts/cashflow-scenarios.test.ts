@@ -190,7 +190,7 @@ assert.match(cashflowReference(buildCashflowScenarios({ unitPrice: 3000, unitVar
   assert.equal(fashion.scenarios[0].net[0], 769 * 18_455 - 4_000_000);
   const fashionMd = cashflowMarkdown(fashion);
   assert.doesNotMatch(fashionMd, /155,016,000/);
-  assert.match(fashionMd, /\| 광고비\(주문 1건당\) \| 확인 필요 \|/);
+  assert.match(fashionMd, /\| 광고비\(주문 1건당\) \| 알아본 뒤 채움 \|/);
   assert.match(fashionMd, /지금보다 한 달 약 46건 더 늘려야 합니다\(10,000,000원 ÷ 12개월 ÷ 한 건에 실제 남는 돈 18,455원\)/);
   // 실적이 본전보다 적은 운영 중 사업은 모자라는 돈을 숨기지 않는다
   const thin = buildCashflowScenarios({ unitPrice: 10_000, unitVariableCost: 4000, monthlyFixedCost: 1_000_000, operating: { actualVolume: 150 } })!;
