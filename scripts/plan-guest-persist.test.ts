@@ -68,7 +68,7 @@ async function main() {
   assert.match(list, /const resume = guest \? allPlans\[0\] \?\? null : null;/, "손님이 쓰던 가장 최근 사업(예시 제외)");
   assert.match(list, /\{guest && resume && <div className=\{home\.resume\} data-guest-resume>[\s\S]*?href=\{openHref\(resume\)\}[\s\S]*?이어서 하기<\/span><strong>\{planDisplayName\(resume\)\}<\/strong>[\s\S]*?로그인하면 저장돼요\./);
   // 로그인 전에 적고 보내지 않은 글 — 잠깐 맡겼다가 다시 채우고, 보내면 지운다
-  assert.match(list, /readLandingDraft\(draftStorage\(\), Date\.now\(\)\)/);
+  assert.match(list, /readLandingDraft\(storage, now\) \|\| readLandingIdea\("", storage, now\)/, "첫 화면은 초안과 보낼 때 맡긴 글을 모두 읽어 다시 채운다");
   assert.match(list, /onChange=\{event => edit\(event\.target\.value\)\}/);
   assert.match(list, /stashLandingIdea\(storage, idea, Date\.now\(\)\);\n\s*clearLandingDraft\(storage\);/);
   // 결제한 사업을 지울 때는 경고를 더한다(전체 이용권은 빼고, 확인 못 하면 평소 문구)

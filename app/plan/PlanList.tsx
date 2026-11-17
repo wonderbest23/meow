@@ -7,7 +7,7 @@ import { ArrowRight, ChevronRight, ArrowUp, MoreHorizontal, Plus, Search } from 
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, readAuthFlag, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
-import { clearLandingDraft, normalizeLandingIdea, readLandingDraft, saveLandingDraft, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
+import { clearLandingDraft, normalizeLandingIdea, readLandingDraft, readLandingIdea, saveLandingDraft, stashLandingIdea, LANDING_IDEA_MAX } from "../../lib/plan-builder/landing-idea";
 import { navigateWithTransition } from "../../lib/client/view-transition";
 import { DEPTH_PARAM, newChatEntryHref, newChatHref, STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
 
@@ -268,7 +268,8 @@ function Composer({ guest = false }: { guest?: boolean }) {
   const [sending, setSending] = useState(false);
   /* 보내지 않은 글을 잠깐 맡겨 두고(sessionStorage) 다시 열면 채운다 — 로그인하고 돌아와도 적은 글이 남게 */
   const draftStorage = () => { try { return window.sessionStorage; } catch { return null; } };
-  useEffect(() => { const saved = readLandingDraft(draftStorage(), Date.now()); if (saved) setText(current => current || saved); }, []);
+  /* 보낸 뒤 로그인 창이 떠서 첫 화면으로 돌아온 경우: 보낼 때 맡긴 글(5분 보관본)로도 채운다 — 미리보기 점검 2026-11-17 */
+  useEffect(() => { const storage = draftStorage(); const now = Date.now(); const saved = readLandingDraft(storage, now) || readLandingIdea("", storage, now)?.text || ""; if (saved) setText(current => current || saved); }, []);
   const edit = (value: string) => { setText(value); saveLandingDraft(draftStorage(), value, Date.now()); };
   /* 작업실 경로를 미리 받아 둔다 — 보낼 때 코드 묶음을 그제야 받아 버벅였다 */
   useEffect(() => { router.prefetch(newChatHref()); }, [router]);
