@@ -7,7 +7,7 @@ import { chargeGuestAi, intakeLoginRequired } from "../../../../../lib/plan-buil
 import { GUEST_AI_UNITS } from "../../../../../lib/plan-builder/guest-ai-budget";
 import { resolveTextLLMConfig } from "../../../../../lib/llm/config";
 import { suggestionConfig } from "../../../../../lib/plan-builder/answer-suggestions";
-import { understandIdea, understoodAnswers } from "../../../../../lib/plan-builder/idea-understanding";
+import { guessedAnswers, understandIdea, understoodAnswers } from "../../../../../lib/plan-builder/idea-understanding";
 import { loadPlanState } from "../../../../../lib/plan-builder/plan-server-store";
 import { readCoach } from "../../../../../lib/plan-builder/coach";
 import { intakeQuestions, readIntake } from "../../../../../lib/plan-builder/intake-core";
@@ -23,6 +23,7 @@ const nothing = () => new Response(null, { status: 204, headers: noStore });
 
 /*
  * 일반 모드: 사용자가 적은 사업 문장을 AI로 읽어 말한 값(가격 · 판매 경로 · 준비금 · 처리량 · 혼자인지 · 평일만인지 …)을 기준값 대신 넣는다.
+ * 적히지 않은 칸(고객 · 문제 · 대표 상품 · 가격 · 한 번 비용 · 월 고정비 · 경로)도 같은 호출에서 이 사업에 맞게 짐작해 기준표 값 대신 넣는다(2026-11-17).
  * 저장된 내 사업의 문장만 읽고(화면이 보낸 글은 쓰지 않는다), 사업마다 한 번만 한다(intake.understood).
  * AI 연결이 없거나 실패하거나 늦으면 204로 조용히 끝난다 — 대화는 기준값으로 그대로 진행된다. INTAKE_UNDERSTAND=0 또는 INTAKE_BETA_SAFETY=1 로 끈다.
  * 시간은 요청을 받은 때부터 잰다(intake-timing UNDERSTAND_SAVE_BY_MS) — 화면이 기다림(8초)을 끝낸 뒤에는 저장하지 않는다.
@@ -55,13 +56,16 @@ export async function POST(request: Request) {
   const now = await read();
   // 다른 요청(같은 사업을 다시 연 화면 등)이 먼저 읽어 저장했으면 한 번 더 넣지 않는다 — 판만 또 오른다
   if (!now || now.intake.understood) return nothing();
-  const items = understoodAnswers(result.understood, intakeQuestions(now.intake, now.coach), now.coach.fields.find(field => field.key === "capacity")?.value);
+  const questions = intakeQuestions(now.intake, now.coach);
+  const items = understoodAnswers(result.understood, questions, now.coach.fields.find(field => field.key === "capacity")?.value);
+  // 적히지 않은 칸 — 이 사업에 맞춘 짐작(말한 칸은 빼고). 저장 쪽에서 기준표로 채운 칸만 바꾼다
+  const guessed = guessedAnswers(result.understood.guess, questions, new Set(items.map(item => item.questionId)));
   // 화면은 이미 기다림을 끝내고 질문을 보였을 수 있다 — 늦은 읽기는 버린다(저장하면 화면이 모르는 새 판이 생겨 다음 답이 막힌다)
   const late = !understandSaveOnTime(startedAt, Date.now());
-  console.log(`[intake-understand] ${JSON.stringify({ model: result.model, totalMs: result.totalMs, items: items.length, failure: result.failure, ...(late ? { late: Date.now() - startedAt } : {}) })}`);
+  console.log(`[intake-understand] ${JSON.stringify({ model: result.model, totalMs: result.totalMs, items: items.length, guessed: guessed.length, failure: result.failure, ...(late ? { late: Date.now() - startedAt } : {}) })}`);
   if (result.failure || late) return nothing();
   try {
-    await saveIntakeCommand(identity.hash, { action: "understand", planId: now.plan.id, revision: now.coach.revision, requestId: randomUUID(), understood: items });
+    await saveIntakeCommand(identity.hash, { action: "understand", planId: now.plan.id, revision: now.coach.revision, requestId: randomUUID(), understood: items, guessed });
   } catch { return nothing(); }
-  return NextResponse.json({ applied: items.length }, { headers: noStore });
+  return NextResponse.json({ applied: items.length, guessed: guessed.length }, { headers: noStore });
 }

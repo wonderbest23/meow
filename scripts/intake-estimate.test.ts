@@ -288,6 +288,34 @@ async function main() {
     assert.match(String(said.snapshot.intake.answers.budget?.value), /^30000000/, "직접 답한 준비금은 읽은 값으로 덮지 않는다");
     assert.equal(said.snapshot.intake.understood, true);
   }
+  // 첫 문장 읽기의 짐작(guessed, 2026-11-17): 기준표로 채운 칸만 이 사업에 맞춘 값(제안)으로 바꾸고, 말한 값 · 직접 답한 값 · 준비금은 그대로.
+  // 업종을 다시 골라도 기준표가 짐작을 덮지 않는다. 짐작으로 채운 한 번 비용이 가격 이상이면(가격을 바꾼 뒤에도) 가격의 40%로 낮춘다
+  {
+    const owner = `intake-guess-${randomUUID()}`;
+    const made = await saveIntakeCommand(owner, { action: "start", mode: "startup", questionId: "business", value: "동네 네일샵을 열려고 해요", revision: 0, requestId: randomUUID() }, off);
+    const next = async (command: Record<string, unknown>) => { const current = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!; return saveIntakeCommand(owner, { ...command, planId: made.plan.id, revision: readCoach(current.answers)!.revision, requestId: randomUUID() } as never, off); };
+    const id = (key: string) => made.snapshot.questions.find(question => question.fieldKey === key)!.id;
+    await next({ action: "answer", questionId: "budget", value: 30000000 });
+    const guessed = await next({ action: "understand", understood: [{ questionId: id("price"), value: 45000 }],
+      guessed: [{ questionId: id("price"), value: 1000 }, { questionId: id("offer"), value: "손톱 케어 + 원컬러 젤네일 1회" }, { questionId: id("unitCost"), value: 90000 }, { questionId: "budget", value: 1000 }, { questionId: "no-such-question", value: "x" }] });
+    const answers = guessed.snapshot.intake.answers;
+    assert.match(answers[id("price")]!.messageId, /:said$/, "말한 가격은 짐작이 덮지 않는다");
+    assert.equal(answers[id("offer")]?.value, "손톱 케어 + 원컬러 젤네일 1회");
+    assert.match(answers[id("offer")]!.messageId, /:guess:estimate$/, "짐작은 채운 값(:estimate)으로 보인다");
+    assert.equal(readCoach(guessed.plan.answers)!.fields.find(field => field.key === "offer")?.basis, "proposal", "짐작은 사용자가 한 말이 아니다");
+    assert.match(String(answers.budget?.value), /^30000000/, "준비금은 짐작하지 않는다");
+    assert.match(String(answers[id("unitCost")]?.value), /^18000/, "짐작한 한 번 비용이 가격(45,000원) 이상이면 가격의 40%");
+    assert.ok(readCoach(guessed.plan.answers)!.messages.some(message => message.text === "나머지는 이 사업에 맞춰 먼저 채웠어요. 다르면 눌러서 고칠 수 있어요."), "안내도 '이 사업에 맞춰'로 바뀐다");
+    assert.ok(!readCoach(guessed.plan.answers)!.messages.some(message => message.text.startsWith("나머지는 같은 업종 기준값")), "예전 안내가 남지 않는다");
+    const cheaper = await next({ action: "answer", questionId: id("price"), value: 15000 });
+    assert.match(String(cheaper.snapshot.intake.answers[id("unitCost")]?.value), /^6000/, "가격을 낮추면 채운 한 번 비용도 가격 아래로");
+    const typed = await next({ action: "answer", questionId: id("unitCost"), value: 9000 });
+    assert.match(String(typed.snapshot.intake.answers[id("unitCost")]?.value), /^9000/);
+    const lower = await next({ action: "answer", questionId: id("price"), value: 8000, confirmed: true }).catch(() => null);
+    if (lower) assert.match(String(lower.snapshot.intake.answers[id("unitCost")]?.value), /^9000/, "직접 답한 한 번 비용은 검사가 바꾸지 않는다");
+    const resector = await next({ action: "answer", questionId: "industry", value: "retail_commerce" });
+    assert.equal(resector.snapshot.intake.answers[id("offer")]?.value, "손톱 케어 + 원컬러 젤네일 1회", "업종을 다시 골라도 이 사업에 맞춘 짐작은 남는다");
+  }
   // 대화 중 적은 말에서 읽은 것(read, 2026-11-16): 방금 한 말이므로 직접 답한 칸도 새 값으로 바꾼다. 영업일은 표에 바로 적히고 계산표가 읽는다
   {
     const owner = `intake-read-${randomUUID()}`;

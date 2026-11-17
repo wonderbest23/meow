@@ -66,6 +66,8 @@ export type IntakeCommand = {
   planId?: string; revision: number; requestId: string;
   /** action "understand": 사용자가 적은 문장에서 읽은 답(서버가 AI로 읽어 넣는다 — 화면이 보내지 않는다) */
   understood?: Array<{ questionId: string; value: IntakeValue }>;
+  /** 첫 문장 읽기에서 적히지 않은 칸을 이 사업에 맞게 짐작한 값 — 기준표 값만 바꾼다(제안) */
+  guessed?: Array<{ questionId: string; value: IntakeValue }>;
   /** action "read": 대화 중 적은 말에서 AI가 읽은 것(intake-reader) — 질문의 답 · 주당 영업일 · 모른다고 한 질문. 서버가 읽어 넣는다(INTAKE_AI_READER) */
   read?: { answers: Array<{ questionId: string; value: IntakeValue; quote: string }>; operatingDays?: { days: number; quote: string }; unknown: string[] };
   /** action "start"(새 대화) · "depth"(진행 중 바꾸기): 대화 방식 */
