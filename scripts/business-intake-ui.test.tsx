@@ -1110,7 +1110,10 @@ async function main() {
     const money = (cost: number | string): IntakeSnapshot => ({ ...base0, coach: { ...base0.coach, messages: [{ id: "m-price", role: "user", text: "판매 가격: 9000", at }, { id: "m-cost", role: "user", text: "비용: 3000", at }] }, intake: { ...base0.intake, answers: { ...base0.intake.answers, price: { status: "answered", value: 9000, messageId: "m-price", at }, "structure.unitCost": { status: "answered", value: cost, messageId: "m-cost", at } } } });
     const margin = workLog.marginLogItem(money("3,000원"));
     assert.equal(margin?.anchor, "m-cost", "둘 중 나중에 답한 메시지 뒤에 붙인다");
-    assert.match(margin!.sub!, /6,000원$/);
+    // 계획서 돈 장과 같은 기준(부가세를 뺀 남는 돈)을 한 줄 붙인다: 9,000 − 818(1/11) − 3,000 = 5,182원(2026-11-16)
+    assert.match(margin!.sub!, /6,000원 · 부가세를 빼면 5,182원$/);
+    assert.ok(margin!.detail!.some(line => /부가세\(일반과세자 가정, 판매 가격의 1\/11\) 818원 — 계획서는 이 값을 뺀 5,182원으로 계산해요/.test(line)));
+    assert.doesNotMatch(workLog.marginLogItem({ ...money(3000), intake: { ...money(3000).intake, sector: "education" } })!.sub!, /부가세/, "교육은 면세일 수 있어 빼지 않는다");
     assert.match(workLog.marginLogItem(money(12000))!.sub!, /3,000원 손해$/);
     assert.equal(workLog.marginLogItem(base0), null);
     const logMarkup = renderToStaticMarkup(<WorkLog items={[planItem, workLog.editFoundItem(2), null]} />);
@@ -1189,6 +1192,16 @@ async function main() {
     // 다른 칸을 보면 대상 칩을 거둔다(적던 글이 있으면 둔다)
     assert.match(intake, /if \(sideChanged \|\| before\.pane && !paneActive\) leaveEditTarget\(\);/);
     assert.equal(studioEditError(new Error("아직 준비 중이에요. 조금만 기다려 주세요."), "기본"), "아직 준비 중이에요. 조금만 기다려 주세요.", "홈페이지 칸의 준비 중 문장은 그대로");
+    // 계획서 작성 시작 실패(예: 503) — 답은 저장돼 있으니 맨 위에 '저장하지 못했어요' 대신 '작성을 시작하지 못했어요 · 다시 시도'(점검 2026-11-16)
+    assert.match(intake, /if \(!response\.ok \|\| data\?\.login\) \{\n\s*setLogin\([^\n]*\n\s*if \(pending\.command\.action === "prepare"\) setPrepareFailed\(true\);/);
+    assert.match(intake, /setStatus\("saving"\); setError\(""\); setLogin\(false\); setResume\(""\); setPrepareFailed\(false\);/, "다시 보내면 실패 표시를 거둔다");
+    assert.match(intake, /const prepareFailedTop = prepareFailed && status === "failed" && !staleFailure;/);
+    assert.match(intake, /\{prepareFailedTop \? <><AlertCircle size=\{15\} aria-hidden="true" \/><span>작성을 시작하지 못했어요<\/span>\{login \? <Link href=\{loginHref\}[^>]*>로그인하고 이어가기<\/Link> : <button [^>]*onClick=\{retryPrepare\}>[\s\S]*?다시 시도<\/button>\}<\/> :/);
+    assert.match(intake, /\{prepareFailedTop \? null : loaded \? status === "failed" && staleFailure \? "" : saveLabel : "불러오는 중"\}/, "'저장하지 못했어요'를 같이 띄우지 않는다");
+    // 같은 요청을 다시 보낼 수 있으면 아래 알림(어긋나는 두 번째 안내)은 띄우지 않는다
+    assert.match(intake, /const prepareNoticeOnTop = prepareFailedTop && !!draft\.pending && !login;/);
+    assert.match(intake, /\{error && !ideaError && !staleFailure && !prepareNoticeOnTop && <div className=\{styles\.notice\} role="alert">/);
+    assert.ok(css.includes(".statusAction"), "맨 위 줄의 다시 시도 단추");
   }
   console.log(`business-intake-ui: ownership, pending retries, optimistic rollback inputs, choice composer, hybrid chips, number stepper, amount ladder, period presets, seeds, extraction consent, source summary, artifact links passed; local next-question p95 ${p95.toFixed(2)}ms`);
 }

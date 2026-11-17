@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../../lib/api-auth";
 import { createPlanOrder, paidHomepagePlanIds, domainEntitlement, productName, PLAN_PRODUCT_NAME, type PlanProduct } from "../../../../../lib/payments/plan-orders";
-import { purchaseBlocked } from "../../../../../lib/payments/purchase-rules";
+import { planNotInMyList, purchaseBlocked } from "../../../../../lib/payments/purchase-rules";
 import { nicepayClientKey, nicepayConfigured, nicepaySdkUrl } from "../../../../../lib/payments/nicepay-client";
 import { evaluatePlatformLaunchReadiness } from "../../../../../lib/platform-legal/domain";
 import { getPlatformLegalSettings } from "../../../../../lib/platform-legal/repository";
@@ -82,6 +82,9 @@ export async function POST(request: Request) {
   }
 
   if (product === "domain" || product === "domain-purchase") {
+    // 지운 문서·남의 문서 번호로는 도메인도 결제하지 않는다(계획서·홈페이지와 같은 확인)
+    const missing = await planNotInMyList(planId, identity.hash);
+    if (missing) return missing;
     if (!(await paidHomepagePlanIds(identity.userId)).has(planId)) {
       return NextResponse.json({ error: "homepage_required", message: "홈페이지를 먼저 열어야 도메인을 연결할 수 있어요." }, { status: 409 });
     }

@@ -36,7 +36,7 @@ import { betaApiBoundary } from "../staging/beta-boundary";
 
 import { verifyBody } from "./section-signature";
 import { PLAN_SECTION_INTERNAL_PATH, PLAN_SECTION_API_PATH, type PlanSectionJob, type PlanOutlineJob } from "./section-protocol";
-import { intakeScenarioInputs, planFinancialReference, readIntake } from "./intake-core";
+import { intakeCashflowMoney, intakeScenarioInputs, planFinancialReference, readIntake } from "./intake-core";
 import { cashflowFromFields, cashflowMarkdown, cashflowScenariosEnabled, fixedCostAssumptionMarkdown, fixedCostAssumptionsFromFields, implausibleMoneyFromFields, implausibleMoneyMarkdown } from "./cashflow-scenarios";
 export type { PlanSectionJob, PlanOutlineJob } from "./section-protocol";
 export { callPlanSectionService, callPlanOutlineService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService } from "./section-transport";
@@ -59,13 +59,16 @@ export function intakeFinancialTable(plan: Pick<ServerPlan, "planType" | "answer
   // 준비 예산·월 비용이 실제 금액으로 보기 어려우면 표·그래프 대신 빈 틀 한 블록만(판정은 cashflow-scenarios.ts)
   const implausible = implausibleMoneyFromFields(coach.fields);
   if (implausible.length) return implausibleMoneyMarkdown(implausible);
-  // 돈 장 시험판(cashflow-scenarios.ts): 판매량 하나 대신 세 경우의 12개월 통장 흐름 — 신규 사업만
-  const flow = cashflowScenariosEnabled() && intake?.mode !== "operating" ? cashflowFromFields(coach.fields, scenario) : null;
+  // 돈 장(cashflow-scenarios.ts): 판매량 하나 대신 세 경우의 12개월 통장 흐름 — 운영 중인 사업도 지금 실적에서 시작해 같은 표를 쓴다(2026-11-16:
+  // 예전 손익표는 부가세 없이 '1개월차 흑자 전환'과 12개월 합계 1억 5,501만 원을 보였다)
+  const flow = cashflowScenariosEnabled() && intake ? cashflowFromFields(coach.fields, intakeCashflowMoney(intake, scenario)) : null;
   // 한 건에 실제 남는 돈(부가세를 뺀 뒤)·본전 판매량은 세 경우 표 위에 있다(예전 손익표를 따로 두면 다른 본전이 두 번 나온다)
   if (flow) {
     // 표의 '대표님이 정한 값'은 직접 답한 값일 때만 맞다 — AI 초안으로 채운 값이면 그렇게 적는다
     const drafted = (key: string) => coach.fields.find(field => field.key === key)?.basis === "proposal";
-    return cashflowMarkdown(flow).split("\n").map(row => /^\| 판매가 \|/.test(row) && drafted("price") || /^\| 한 [^|]+당 비용 \|/.test(row) && drafted("unitCost") ? row.replace("대표님이 정한 값", "AI 초안 값(확인 필요)") : row).join("\n");
+    const flowTable = cashflowMarkdown(flow).split("\n").map(row => /^\| 판매가 \|/.test(row) && drafted("price") || /^\| 한 [^|]+당 비용 \|/.test(row) && drafted("unitCost") ? row.replace("대표님이 정한 값", "AI 초안 값(확인 필요)") : row).join("\n");
+    // 운영 중인 사업은 '지금 실적'이 어디서 왔는지(실적 매출 ÷ 기간 ÷ 가격)를 표 아래에 그대로 밝힌다
+    return flow.operating && scenario.notes.length ? `${flowTable}\n\n판매량 기준: ${scenario.notes.join(" / ")}` : flowTable;
   }
   // 새로 시작하는 사업에서 처리량(최대치)만 있으면 판매량을 모르는 것과 같다 — 최대치를 매달 판다고 12개월 표를 만들지 않는다
   const capacityOnly = cashflowScenariosEnabled() && intake?.mode !== "operating" && scenario.volumeSource === "capacity";

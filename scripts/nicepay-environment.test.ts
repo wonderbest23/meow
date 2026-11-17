@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { nicepayEnvironment, isNicepaySdkUrl, NICEPAY_ENDPOINTS } from "../lib/payments/nicepay-environment";
 import { approveNicepayPayment, cancelNicepayPayment, nicepayConfigured, nicepaySdkUrl, verifyAuthSignature } from "../lib/payments/nicepay-client";
 import { loadNicepaySdk } from "../lib/payments/nicepay-sdk";
+import { isProductionPaymentRuntime } from "../lib/payments/production-runtime";
 
 async function main() {
   const keys = ["APP_ENV", "NICEPAY_ENVIRONMENT", "NICEPAY_CLIENT_KEY", "NICEPAY_SECRET_KEY", "NICEPAY_SANDBOX_CLIENT_KEY", "NICEPAY_SANDBOX_SECRET_KEY", "PAYMENTS_ENABLED"];
@@ -16,6 +17,18 @@ async function main() {
       assert.throws(() => nicepayEnvironment({ APP_ENV, NICEPAY_ENVIRONMENT: "production" }), /SANDBOX_REQUIRED/);
     }
     assert.throws(() => nicepayEnvironment({ NICEPAY_ENVIRONMENT: "unknown" }), /ENVIRONMENT_INVALID/);
+    // 운영(APP_ENV 없음 + NODE_ENV=production, 또는 APP_ENV=production)에서 시험 모드면 결제를 막는다 — 돈 없이 유료 기능이 열리는 길
+    assert.equal(isProductionPaymentRuntime({ NODE_ENV: "production" }), true);
+    assert.equal(isProductionPaymentRuntime({ APP_ENV: "production" }), true);
+    assert.equal(isProductionPaymentRuntime({ NODE_ENV: "development", NEXT_PUBLIC_APP_ENV: "production" }), true);
+    for (const APP_ENV of ["staging", "prelaunch", "local"]) assert.equal(isProductionPaymentRuntime({ NODE_ENV: "production", APP_ENV }), false);
+    assert.equal(isProductionPaymentRuntime({ NODE_ENV: "development" }), false);
+    assert.equal(isProductionPaymentRuntime({}), false);
+    assert.throws(() => nicepayEnvironment({ NODE_ENV: "production", NICEPAY_ENVIRONMENT: "sandbox", NICEPAY_SANDBOX_CLIENT_KEY: "fixture-sandbox", NICEPAY_SANDBOX_SECRET_KEY: "fixture-sandbox" }), /SANDBOX_IN_PRODUCTION/);
+    assert.throws(() => nicepayEnvironment({ APP_ENV: "production", NICEPAY_ENVIRONMENT: "sandbox" }), /SANDBOX_IN_PRODUCTION/);
+    assert.equal(nicepayEnvironment({ NODE_ENV: "production", NICEPAY_CLIENT_KEY: "fixture-live" }).mode, "production");
+    assert.equal(nicepayEnvironment({ NODE_ENV: "production", APP_ENV: "staging", NICEPAY_ENVIRONMENT: "sandbox" }).mode, "sandbox");
+    assert.equal(nicepayEnvironment({ NODE_ENV: "development", NICEPAY_ENVIRONMENT: "sandbox" }).mode, "sandbox");
     assert.throws(() => nicepayEnvironment({ NICEPAY_ENVIRONMENT: "sandbox", NICEPAY_CLIENT_KEY: "fixture-live" }), /LIVE_KEYS_IN_SANDBOX/);
     assert.equal(nicepayEnvironment({ NICEPAY_ENVIRONMENT: "sandbox" }).clientKey, null);
     assert.equal(nicepayEnvironment({ NICEPAY_SANDBOX_CLIENT_KEY: "fixture-sandbox" }).clientKey, null);
@@ -73,7 +86,7 @@ async function main() {
       if (oldWindow === undefined) delete globals.window; else globals.window = oldWindow;
       if (oldDocument === undefined) delete globals.document; else globals.document = oldDocument;
     }
-    console.log("nicepay environment: official SDK allowlist, isolated API/keys, disabled checkout, signature, mixed-environment rejection and SDK retry passed (no external calls)");
+    console.log("nicepay environment: official SDK allowlist, isolated API/keys, sandbox blocked in production, disabled checkout, signature, mixed-environment rejection and SDK retry passed (no external calls)");
   } finally {
     globalThis.fetch = fetchBefore;
     for (const key of keys) { if (before[key] === undefined) delete process.env[key]; else process.env[key] = before[key]; }

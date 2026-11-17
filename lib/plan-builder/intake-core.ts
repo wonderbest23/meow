@@ -10,7 +10,7 @@ import { acceptsFreeChoice, FREE_CHOICE_MAX_CHARS, amountCheckPrompt, coreQuesti
 import { INDUSTRY_HINTS, PRICE_BASIS, amountRanges, periodMonths, rangeMidpoint, scaledAmountRanges, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
 import { estimateIntake, type KindRules } from "./intake-estimate";
-import { playbookForKsic, playbookForText } from "./industry-playbooks";
+import { playbookForKsic, playbookForText, salesRoute } from "./industry-playbooks";
 import { businessTypeFor } from "./business-types";
 import { KSIC_SYNONYMS, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
 import { ksicSectorLabel } from "./ksic-hints";
@@ -388,10 +388,14 @@ export type IntakeScenarioInputs = {
 /**
  * 온라인으로 파는 사업인지(택배 판매·앱·중개). business-launch.ts의 businessProfile과 같은 규칙:
  * 업종 코드 또는 사업 설명으로 업종 가이드를 찾고, 직접 고른 구조 → 설명 → 가이드 → 기본 구조 순으로 사업 유형을 정한다.
+ * 만들어 보내는 형(ship)은 판매 채널을 답했으면 온라인 스토어·택배로 팔 때만 온라인으로 본다(2026-11-17: 맘카페·당근마켓으로 주문받아
+ * 동네에 직접 배달하는 반찬 정기배송에 '스토어 공개'·'스토어 판매·결제 수수료'가 나왔다). 채널을 답하지 않았으면 예전처럼 온라인으로 본다.
  */
 export function intakeSellsOnline(coach: Pick<CoachState, "business" | "fields">, intake: Pick<IntakeState, "ksic" | "sector" | "structure">): boolean {
-  const typeId = intakeBusinessType(coach, intake).typeId;
-  return !!typeId && ["ship", "app", "platform"].includes(typeId);
+  const { typeId, described } = intakeBusinessType(coach, intake);
+  if (typeId !== "ship") return !!typeId && ["app", "platform"].includes(typeId);
+  const route = salesRoute({ channel: coach.fields.find(field => field.key === "channel")?.value, description: described });
+  return route === "online-store" || route === "unknown";
 }
 
 /** 사업 유형(business-types.ts)과 그 판정에 쓴 사업 설명 — 온라인 여부와 돈 장의 사업 모양이 같은 판정을 쓴다 */
@@ -464,6 +468,16 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
     }
   } else if (structure.revenue === "rental") notes.push(`입력한 월 예상 판매량 ${volume.toLocaleString("ko-KR")}건 사용: 이용률은 다시 곱하지 않습니다.`);
   return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, volumeSource, online: intakeSellsOnline(coach, intake), shape: intakeCashflowShape(coach, intake) };
+}
+
+/**
+ * 돈 장 계산(cashflow-scenarios.ts)에 넘길 값 — 운영 중인 사업이면 지금 실적의 한 달 판매량을 함께 넘긴다(2026-11-16: 운영 중 사업도 새 돈 흐름 표).
+ * 실적 판매량은 '실적 매출 ÷ 기간 ÷ 가격'(actual)이나 직접 적은 월 판매량(volume)일 때만 — 처리량(최대치)은 실적이 아니다.
+ */
+export function intakeCashflowMoney(intake: Pick<IntakeState, "mode">, inputs: IntakeScenarioInputs) {
+  const { unitPrice, unitVariableCost, monthlyFixedCost, online, shape } = inputs;
+  const actual = inputs.volumeSource === "actual" || inputs.volumeSource === "volume" ? inputs.volume : undefined;
+  return { unitPrice, unitVariableCost, monthlyFixedCost, online, shape, ...(intake.mode === "operating" ? { operating: { actualVolume: actual } } : {}) };
 }
 
 /**
@@ -561,8 +575,8 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   // 돈 입력이 실제 금액으로 보기 어려우면 그 금액으로 만든 숫자(본전·통장 흐름·업종 점검의 예산 비율)를 넘기지 않는다 — 돈 장의 빈 틀과 같은 판정
   const implausible = implausibleMoneyFromFields(coach.fields);
   if (implausible.length) return implausibleMoneyReference(implausible, { unitPrice, unitVariableCost });
-  // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
-  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, online, shape }) : null;
+  // 돈 장(cashflow-scenarios.ts): 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다 — 운영 중인 사업은 지금 실적에서 시작한다(2026-11-16)
+  const flow = cashflowScenariosEnabled() ? cashflowFromFields(coach.fields, intakeCashflowMoney(intake, inputs)) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
   const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준` })] : [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,

@@ -340,7 +340,14 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.match(planBody, /const paneRefresh = pane\?\.refresh \?\? 0;/);
   assert.match(planBody, /generation\.restart\(\);\n\s*if \(syncing\.current\) return;\n\s*hydrateFromServer\(false\)/);
   assert.match(planBody, /if \(arrived\.length \|\| finished\) \{/, "작성이 끝나면 새 장이 없어도 한 번 맞춘다");
-  assert.match(read("../app/plan/document/DocumentWorkspace.tsx"), /else if \(\(grouped\.length \|\| props\.writing\) && autoSummary\.current\)/, "저절로 띄운 요약은 작성이 시작되면 '쓰는 중'으로 돌아온다");
+  {
+    const workspace = read("../app/plan/document/DocumentWorkspace.tsx");
+    // 만들기 전(장 0개)에는 쉽게 보기를 저절로 띄우지 않고 '아직 만들기 전이에요'를 보인다 — 쓰는 중이면 '쓰는 중'(점검 2026-11-16)
+    assert.doesNotMatch(workspace, /autoSummary/, "만들기 전에 요약을 저절로 띄우지 않는다");
+    assert.match(workspace, /\{notMade && props\.writing \? <article[\s\S]*: notMade \? <EmptyState [^>]*title="아직 만들기 전이에요"/);
+    // 휴대폰 작업실 머리의 '내려받기'는 계획서가 있어야 눌린다(만들기 전에는 눌러도 반응이 없었다)
+    assert.match(read("../app/plan/studio/Studio.tsx"), /disabled=\{!!locks\[rightTab\] \|\| rightTab === "plan" && !planTools\}/);
+  }
   // 사업을 못 찾았으면 위 막대의 미리보기 도구(페이지 선택 · 진행 점)를 그리지 않는다
   /* 한 칸 대화(계획서를 쓰기 전, 대표 승인 2026-11-14)에서는 계획서가 있어야 쓰는 위 막대 도구를 그리지 않는다 */
   assert.match(studio, /\{!missing && !focus && <div className=\{styles\.toolbar\}>/);

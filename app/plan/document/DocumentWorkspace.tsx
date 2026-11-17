@@ -326,15 +326,10 @@ export default function DocumentWorkspace(props: Props) {
     if (modal) dialog.current?.showModal(); else dialog.current?.close();
   }, [modal]);
   /*
-   * 상세 항목이 하나도 없을 때만 잠깐 한 장 요약을 보여 주고, 상세 항목이 생기면 상세 계획서로 돌아온다.
-   * 예전엔 만드는 도중(0장)에 열면 요약으로 넘어간 채 고정돼, 다 만든 뒤에도 요약이 먼저 보였다(사용자 피드백).
-   * 만드는 중이면 요약 대신 '쓰는 중' 화면을 보여 준다 — 요약을 저절로 띄운 뒤에 작성이 시작돼도(작업실에서 칸을 먼저 열어 둔 경우) 상세로 돌아온다.
+   * 상세 항목이 하나도 없으면(만들기 전) 한 장 요약을 저절로 띄우지 않는다 — 계획서 탭 주소로 바로 들어오면 쉽게 보기가
+   * '계획서와 준비물이 다 만들어졌어요'로 보이고 내려받기는 반응이 없었다(점검 2026-11-16). 본문 자리에 '아직 만들기 전이에요 · 만들기'를 보인다.
    */
-  const autoSummary = useRef(false);
-  useEffect(() => {
-    if (ready && !grouped.length && props.summary && !props.writing) { autoSummary.current = true; setSummaryMode(true); }
-    else if ((grouped.length || props.writing) && autoSummary.current) { autoSummary.current = false; setSummaryMode(false); }
-  }, [ready, grouped.length, props.summary, props.writing]);
+  const notMade = !grouped.length;
   /*
    * 다 쓴 계획서를 처음 열 때 한 번만 쉽게 보기를 먼저 보인다(대표 결정 2026-11-13 — 표부터 나오면 어렵다).
    * 그 뒤로는 마지막에 보던 대로(전체 문서) — 예전에 요약이 매번 먼저 떠 불편하다는 피드백이 있었다. 주소가 특정 항목(#sec-)이면 건드리지 않는다.
@@ -599,9 +594,9 @@ export default function DocumentWorkspace(props: Props) {
             {!summaryMode && !factMode && grouped.length > 0 && <div className={styles.emphasisBar}><button type="button" aria-pressed={emphasis} onClick={() => { const next = !emphasis; setEmphasis(next); try { localStorage.setItem("oneul-plan-emphasis", next ? "on" : "off"); } catch { /* 못 적어도 이번에는 바뀐다 */ } }}><Highlighter size={15} aria-hidden="true" />숫자 강조</button></div>}
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
             {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong>{planId && !studioHeader && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
-            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <EmptyState className={styles.empty} data-pane={pane ? "" : undefined} icon={FileText} heading={pane ? "h2" : "h1"} title="아직 만든 문서가 없어요" description={pane ? undefined : "사업 이야기를 이어서 계획서를 만들어 보세요."}
+            {notMade && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : notMade ? <EmptyState className={styles.empty} data-pane={pane ? "" : undefined} data-not-made="" icon={FileText} heading={pane ? "h2" : "h1"} title="아직 만들기 전이에요" description={pane ? undefined : "대화를 마치면 계획서를 만들 수 있어요."}
               /* 작업실 안은 대화 칸에 있는 '사업계획서 만들기'로 — 예전 '사업안으로 돌아가기'는 어디로 가는지 몰랐다(r37 점검) */
-              actions={pane ? <AppButton variant="primary" href={coachHref ?? back}>사업계획서 만들기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <AppButton variant="secondary" href={coachHref ?? back}>사업안으로 돌아가기</AppButton>} /> : <article className={styles.article}>
+              actions={pane || coachHref ? <AppButton variant="primary" href={coachHref ?? back}>만들기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <AppButton variant="secondary" href={coachHref ?? back}>사업안으로 돌아가기</AppButton>} /> : <article className={styles.article}>
               {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} pc={studioPc} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length && !nav?.toolbarTools ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}

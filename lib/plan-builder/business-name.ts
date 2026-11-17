@@ -40,3 +40,16 @@ const DRAFT_TITLES = new Set(["새 사업 구상", "새 사업"]);
 export function draftBusinessTitle(title: string, operating: boolean): string {
   return operating && DRAFT_TITLES.has(title.trim()) ? OPERATING_DRAFT_TITLE : title;
 }
+
+/*
+ * 머리줄 '이름 바꾸기'는 사업 제목(plan.title)만 바꾼다 — 대화 저장(intake)이 매번 제목을 대화 속 이름으로 덮어써서,
+ * 앞 답을 고치거나 사업 방향을 다시 정리하면 직접 정한 이름('멍멍간식')이 AI가 지은 이름으로 돌아갔다(점검 2026-11-16).
+ * 제목이 대화 속 이름과 다르고 임시 이름이 아니면 사용자가 정한 이름으로 보고 대화에도 확정 이름으로 넣는다.
+ */
+const PLACEHOLDER_TITLES = new Set(["새 사업", "새 사업 구상", "새 사업 진단", "새 플랜", UNNAMED_BUSINESS, OPERATING_DRAFT_TITLE]);
+export function adoptRenamedTitle(plan: { title: string | null | undefined }, coach: { business: { name: string; nameConfirmed?: boolean } }): boolean {
+  const title = (plan.title ?? "").replace(/\s+/g, " ").trim();
+  if (!title || PLACEHOLDER_TITLES.has(title) || title === coach.business.name.replace(/\s+/g, " ").trim()) return false;
+  coach.business.name = title; coach.business.nameConfirmed = true;
+  return true;
+}
