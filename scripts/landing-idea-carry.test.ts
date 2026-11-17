@@ -126,4 +126,15 @@ check("보내지 않은 첫 화면 글을 잠깐 맡겼다가 다시 채운다(�
   assert.equal(readLandingDraft(null, NOW), "");
 });
 
+check("보낸 뒤 로그인 창으로 첫 화면에 돌아오면 보낼 때 맡긴 글로 다시 채운다(첫 화면 코드가 이 보관본도 읽는다)", () => {
+  const box = storage();
+  saveLandingDraft(box, "퇴근 후 쿠키", NOW);
+  stashLandingIdea(box, "퇴근 후 쿠키", NOW);
+  clearLandingDraft(box);
+  assert.equal(readLandingDraft(box, NOW + 1000), "", "보내면 초안은 지워진다");
+  assert.equal(readLandingIdea("", box, NOW + 1000)?.text, "퇴근 후 쿠키", "보관본은 5분 남는다");
+  const planList = readFileSync(new URL("../app/plan/PlanList.tsx", import.meta.url), "utf8");
+  assert.match(planList, /readLandingDraft\(storage, now\) \|\| readLandingIdea\("", storage, now\)\?\.text/);
+});
+
 console.log(JSON.stringify({ passed }));
