@@ -1,3 +1,4 @@
+import type { NarrationFacts } from "./work-narration";
 import type { CoachField, CoachState } from "./coach";
 import type { BusinessStructure, StructureAxis } from "./business-structure";
 import type { ProposalSector } from "./proposal-blueprint";
@@ -91,6 +92,8 @@ export type IntakeSnapshot = {
   resourceAssessment?: { version: string; asOf: string; total: number; excluded: IntakeIdea[]; excludedCount: number; selected?: IntakeIdea; allUnknown: boolean };
   /** 진행 중인 AI 작업의 서버 기준 경과 시간과 예상·최대 시간. 응답을 보낼 때 HTTP 층이 붙인다(기기 시계 오차와 무관). */
   jobClock?: { elapsedMs: number; expectedMs: number; limitMs: number } | null;
+  /** AI 작업 대기 문구에 쓰는 사실(업종 가이드 이름 · 직접 답한 숫자로 코드가 계산한 값). HTTP 층이 붙인다(work-narration-facts.ts). */
+  narration?: NarrationFacts | null;
   financialSummary: string; financialWarning?: { message: string; fields: Array<"price" | "unitCost" | "cost"> } | null; hasDocuments: boolean; pendingExtraction: boolean;
   documentStatus?: "none" | "current" | "stale" | "unverified";
   /** 지금 계획서에 반영하면 AI 가 다시 쓰는 항목 수(다시 쓰기 횟수 차감량) */

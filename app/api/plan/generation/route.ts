@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
-import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
+import { chaptersForType, financialTableOwner } from "../../../../lib/plan-builder/blueprint";
+import { readCoach } from "../../../../lib/plan-builder/coach";
+import { readIntake } from "../../../../lib/plan-builder/intake-core";
+import { narrationFacts } from "../../../../lib/plan-builder/work-narration-facts";
+import type { NarrationFacts } from "../../../../lib/plan-builder/work-narration";
 import { generationProgress } from "../../../../lib/plan-builder/generation-progress";
 
 export const dynamic = "force-dynamic";
@@ -31,5 +35,16 @@ export async function GET(request: Request) {
   const titles = Object.fromEntries(chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => [`${chapter.id}/${section.id}`, section.title])));
   const progress = generationProgress(generation, plan.sections, titles);
   const status = progress.total && progress.done < progress.total ? await runStatus(generation?.runId) : null;
-  return NextResponse.json({ ...progress, runStatus: status }, { headers: { "Cache-Control": "private, no-store" } });
+  /*
+   * 대기 문구(work-narration.ts)에 쓰는 것 — 돈 장 열쇠와 코드가 계산한 숫자(직접 답한 값만), 장마다 검토를 거치는지(상담으로 만든 계획서).
+   * 쓰는 중일 때만 계산한다. 못 만들면 문구에서 빠질 뿐이다.
+   */
+  let narration: { facts: NarrationFacts | null; moneyKey: string | null; reviewed: boolean } | null = null;
+  if (progress.active) {
+    const coach = readCoach(plan.answers), intake = readIntake(plan.answers);
+    let facts: NarrationFacts | null = null;
+    try { facts = coach && intake ? narrationFacts(coach, intake) : null; } catch { facts = null; }
+    narration = { facts, moneyKey: financialTableOwner(plan.planType), reviewed: !!coach };
+  }
+  return NextResponse.json({ ...progress, runStatus: status, narration }, { headers: { "Cache-Control": "private, no-store" } });
 }
