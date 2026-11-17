@@ -421,9 +421,12 @@ export async function completeText(config: LLMConfig, params: LLMCompleteParams)
     if (signal.aborted) { result = null; failure = requestFailure(signal, signal.reason); params.onFailure?.({ provider: target.provider, code: failure }); }
     const responseReceived = !!result;
     if (result && params.jsonObject) {
-      const parsed = parseJsonObject(result);
-      if (!parsed) failure = "invalid_json";
-      else if (params.validateJson) {
+      const extracted = extractJsonObject(result), parsed = extracted?.value ?? null;
+      if (!parsed) {
+        failure = "invalid_json";
+        console.warn("[llm] invalid-json", JSON.stringify({ kind: params.kind ?? "etc", provider: target.provider, ...jsonFailureShape(result) }));
+      } else if (extracted?.repairs.length) console.info("[llm] json-repaired", JSON.stringify({ kind: params.kind ?? "etc", provider: target.provider, repairs: extracted.repairs }));
+      if (parsed && params.validateJson) {
         try {
           const validation = params.validateJson(parsed);
           if (validation !== true) failure = validation === "output_limit" ? "output_limit" : "invalid_response";
@@ -450,20 +453,128 @@ export async function completeText(config: LLMConfig, params: LLMCompleteParams)
   return (await measuredCall(alt, 1)).result;
 }
 
-/** 모델 출력에서 JSON 객체를 파싱한다. 코드펜스가 있으면 벗겨낸다. 실패 시 null. */
+/** 모델 출력에서 JSON 객체를 파싱한다. 코드펜스·앞뒤 설명이 있거나 글자 몇 개가 어긋나도 객체 하나를 꺼낸다. 실패 시 null. */
 export function parseJsonObject(text: string): Record<string, unknown> | null {
-  let trimmed = text.trim();
-  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  if (fenced) trimmed = fenced[1].trim();
+  return extractJsonObject(text)?.value ?? null;
+}
+
+export type JsonRepair = "fence" | "outer" | "control" | "quote" | "escape" | "comma";
+
+function asJsonObject(text: string): Record<string, unknown> | null {
   try {
-    const parsed = JSON.parse(trimmed) as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
+    const parsed = JSON.parse(text) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
   } catch {
-    // fall through
+    return null;
+  }
+}
+
+/** 첫 '{'부터 짝이 맞는 '}'까지(문자열 안 괄호는 세지 않는다). 짝이 끝까지 안 맞으면 첫 '{'부터 끝까지 */
+function outermostObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0, inString = false, escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === "\"") inString = false;
+    } else if (ch === "\"") inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}" && --depth === 0) return text.slice(start, i + 1);
+  }
+  return text.slice(start);
+}
+
+const JSON_ESCAPES = new Set(["\"", "\\", "/", "b", "f", "n", "r", "t", "u"]);
+const nextNonSpace = (text: string, from: number) => { let i = from; while (i < text.length && /\s/.test(text[i])) i++; return text[i]; };
+
+/*
+ * 사람이 보기엔 맞지만 JSON 문법에 어긋난 글자를 고친다 — 엄격한 파싱이 실패했을 때만 쓴다.
+ * - 문자열 안의 줄바꿈·탭 같은 제어 문자 → \n·\t (긴 글 칸에 여러 줄 글을 그대로 넣는 경우)
+ * - 문자열 안의 따옴표: 뒤에 , } ] : 가 오지 않으면 글 속 따옴표로 보고 \" 로 (예: "하루 "소금빵"이에요")
+ * - JSON이 모르는 역슬래시(\% 등) → \\ , 끝 쉼표(,} ,])는 뺀다
+ * 고친 결과도 호출부의 스키마 검사를 다시 거친다. 따옴표 짐작이 틀리면 문법이 다시 깨져 null 이 된다(틀린 값을 지어내지 않는다).
+ */
+function repairJsonText(text: string): { text: string; repairs: JsonRepair[] } {
+  const repairs = new Set<JsonRepair>();
+  let out = "", inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (!inString) {
+      if (ch === "\"") inString = true;
+      else if (ch === "," && (nextNonSpace(text, i + 1) === "}" || nextNonSpace(text, i + 1) === "]")) { repairs.add("comma"); continue; }
+      out += ch;
+      continue;
+    }
+    if (ch === "\\") {
+      const next = text[i + 1];
+      if (next !== undefined && JSON_ESCAPES.has(next)) { out += ch + next; i++; }
+      else { out += "\\\\"; repairs.add("escape"); }
+      continue;
+    }
+    if (ch === "\"") {
+      const next = nextNonSpace(text, i + 1);
+      if (next === undefined || next === "," || next === "}" || next === "]" || next === ":") { inString = false; out += ch; }
+      else { out += "\\\""; repairs.add("quote"); }
+      continue;
+    }
+    const code = ch.charCodeAt(0);
+    if (code < 0x20) {
+      out += ch === "\n" ? "\\n" : ch === "\r" ? "\\r" : ch === "\t" ? "\\t" : `\\u${code.toString(16).padStart(4, "0")}`;
+      repairs.add("control");
+      continue;
+    }
+    out += ch;
+  }
+  return { text: out, repairs: [...repairs] };
+}
+
+/*
+ * 모델 출력에서 JSON 객체 하나를 꺼내고, 어떤 손질을 했는지 함께 돌려준다(손질 없음 = 원래 그대로 유효한 JSON).
+ * 사업 방향 정리(설계, 출력 2~3천 토큰)는 스키마 강제 없이 글로만 JSON을 받아 6~14%가 파싱 단계에서 실패했다
+ * (2026-11-17 AI 손님 점검 서버 기록: 346번 중 32번 invalid_json, 같은 기록에서 다른 호출은 0번). 화면에는 "사업안 생성을 완료하지 못했어요"가 떴다.
+ * 순서: 그대로 → 코드펜스·앞뒤 설명을 벗긴 바깥 객체 → 글자 손질(repairJsonText).
+ */
+export function extractJsonObject(text: string): { value: Record<string, unknown>; repairs: JsonRepair[] } | null {
+  const trimmed = text.trim();
+  const direct = asJsonObject(trimmed);
+  if (direct) return { value: direct, repairs: [] };
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*(?:```|$)/);
+  const body = fenced && fenced[1].includes("{") ? fenced[1].trim() : trimmed;
+  const base: JsonRepair[] = body !== trimmed ? ["fence"] : [];
+  const candidates = new Map<string, JsonRepair[]>([[body, base]]);
+  const outer = outermostObject(body);
+  if (outer && outer !== body) candidates.set(outer, [...base, "outer"]);
+  const first = body.indexOf("{"), last = body.lastIndexOf("}");
+  if (first >= 0 && last > first && !candidates.has(body.slice(first, last + 1))) candidates.set(body.slice(first, last + 1), [...base, "outer"]);
+  for (const [candidate, repairs] of candidates) {
+    const value = asJsonObject(candidate);
+    if (value) return { value, repairs };
+  }
+  for (const [candidate, repairs] of candidates) {
+    const fixed = repairJsonText(candidate);
+    const value = fixed.repairs.length ? asJsonObject(fixed.text) : null;
+    if (value) return { value, repairs: [...repairs, ...fixed.repairs] };
   }
   return null;
+}
+
+/*
+ * 파싱에 실패한 원문의 '모양'만 로그로 남긴다 — 어디서 왜 깨졌는지 보려고(2026-11-18).
+ * 한글 등 ASCII 밖 글자는 '·'로 가리고 길게 이어지면 개수만 적는다: 사장님 사업 내용은 남기지 않고 따옴표·괄호·줄바꿈·영문 칸 이름 같은 뼈대만 남는다.
+ */
+export function jsonFailureShape(text: string) {
+  const mask = (value: string) => value.replace(/[^\x20-\x7e\n\r\t]/g, "·").replace(/·{4,}/g, run => `·{${run.length}}`);
+  const trimmed = text.trim();
+  let error = "", near = "";
+  try { JSON.parse(trimmed); } catch (err) {
+    error = err instanceof Error ? err.message.replace(/[^\x20-\x7e]/g, "·").slice(0, 160) : "parse error";
+    const pos = Number(error.match(/position (\d+)/)?.[1]);
+    if (Number.isFinite(pos)) near = mask(trimmed.slice(Math.max(0, pos - 60), pos)) + "<<HERE>>" + mask(trimmed.slice(pos, pos + 40));
+  }
+  return { length: text.length, fenced: /```/.test(text), head: mask(trimmed.slice(0, 100)), tail: mask(trimmed.slice(-100)), error, near };
 }
 
 /** provider에 맞는 모델을 호출해 JSON 객체를 반환한다. 실패 시 null. */
