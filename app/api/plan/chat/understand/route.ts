@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../../lib/rate-limit";
-import { intakeLoginRequired } from "../../../../../lib/plan-builder/intake-http";
+import { chargeGuestAi, intakeLoginRequired } from "../../../../../lib/plan-builder/intake-http";
+import { GUEST_AI_UNITS } from "../../../../../lib/plan-builder/guest-ai-budget";
 import { resolveTextLLMConfig } from "../../../../../lib/llm/config";
 import { suggestionConfig } from "../../../../../lib/plan-builder/answer-suggestions";
 import { understandIdea, understoodAnswers } from "../../../../../lib/plan-builder/idea-understanding";
@@ -41,6 +42,8 @@ export async function POST(request: Request) {
   const business = first?.coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim();
   const config = suggestionConfig(resolveTextLLMConfig(identity.hash));
   if (!first || !business || !config || first.intake.understood || first.intake.mode !== "startup" || first.intake.depth === "expert" || Object.keys(first.plan.sections).length) return nothing();
+  // 손님 AI 하루 한도(guest-ai-budget.ts) — AI를 부르기 바로 앞에서 센다. 한도에 닿으면 로그인 필요일 때처럼 조용히 끝난다
+  if (!(await chargeGuestAi(identity, GUEST_AI_UNITS.assist, "understand"))) return nothing();
   const result = await understandIdea(config, business, request.signal);
   // 읽는 동안 사용자가 답을 더 했을 수 있다 — 저장 직전 상태로 다시 읽어 그 번호로 저장한다(직접 답한 것은 저장 쪽에서 건드리지 않는다)
   const now = await read();

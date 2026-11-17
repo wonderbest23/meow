@@ -5,7 +5,8 @@ import { readBoundedJson, RequestBodyError } from "../http/bounded-json";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { requireGuestIdentity } from "../api-auth";
 import { authConfigured } from "../account-auth";
-import { intakeLoginGate } from "./intake-login";
+import { guestIntakeOpen, intakeLoginGate } from "./intake-login";
+import { GUEST_AI_LIMIT_CODE, guestAiLimitBody, intakeJobUnits, spendGuestAiUnits } from "./guest-ai-budget";
 import { enforceRateLimit } from "../rate-limit";
 import { resolvePlanningLLMConfig } from "../llm/config";
 import { intakeBetaSafetyRequired } from "../llm/intake-policy";
@@ -45,7 +46,17 @@ export function intakeLoginRequired(userId: string | null) {
 }
 
 function loginRequired(userId: string | null) {
-  return intakeLoginGate({ authConfigured: authConfigured(), guestAllowed: process.env.INTAKE_GUEST_ALLOWED === "1", userId });
+  return intakeLoginGate({ authConfigured: authConfigured(), guestAllowed: guestIntakeOpen(), userId });
+}
+
+/**
+ * 손님 AI 하루 한도(guest-ai-budget.ts)에서 단위를 쓴다 — AI를 부르기 바로 앞에서만 부른다. false 면 AI를 부르지 않는다.
+ * 로그인한 사람 · 로그인 서버가 없는 곳은 세지 않고 true.
+ */
+export async function chargeGuestAi(identity: { userId: string | null; hash: string }, units: number, work: string) {
+  const spent = await spendGuestAiUnits({ userId: identity.userId, guestHash: identity.hash, units, loginAvailable: authConfigured() });
+  if (!spent.ok) console.info("[guest-ai-budget]", JSON.stringify({ event: "limit", limit: spent.limit, work, units }));
+  return spent.ok;
 }
 
 export async function intakeGet(request: Request) {
@@ -117,7 +128,12 @@ export async function intakePost(request: Request, prepare: (request: Request) =
     const capReached = needsAI && aiAvailable && !aiLimited && !editLimited ? await planFreeAiCapReached(command.planId) : false;
     if (capReached && command.action !== "message") return json({ code: "ai_limit", message: PLAN_FREE_AI_CAP_MESSAGE }, 429);
     // AI 사용 기록에 사업(계획서)을 붙인다 — 사업별 비용 집계
-    const result = await withUsageContext({ planId: command.planId, ownerHash: identity.hash }, () => saveIntakeCommand(identity.hash, command, { aiAvailable, aiAllowed: !aiLimited && !editLimited && !capReached, editRoute }));
+    // 손님 AI 하루 한도: AI 작업을 만들기 바로 앞에서 센다(saveIntakeCommand 안 — 거절 · 같은 요청 다시 보내기 · AI가 필요 없는 메모는 세지 않는다).
+    // 한도에 닿으면 이번 요청은 저장하지 않고(입력은 화면에 남는다) 로그인 필요 응답과 같은 모양으로 돌려준다. 이미 저장된 답은 그대로다.
+    const beforeAiJob = (kind: string) => chargeGuestAi(identity, intakeJobUnits(kind), `intake-${kind}`);
+    const result = await withUsageContext({ planId: command.planId, ownerHash: identity.hash }, () => saveIntakeCommand(identity.hash, command, { aiAvailable, aiAllowed: !aiLimited && !editLimited && !capReached, editRoute, beforeAiJob }))
+      .catch(error => { if (error instanceof IntakeError && error.code === GUEST_AI_LIMIT_CODE) return null; throw error; });
+    if (!result) return json(guestAiLimitBody(scope), 401);
     if (result.job) await withUsageContext({ planId: result.plan.id, ownerHash: identity.hash }, () => dispatchIntakeJob({ ownerHash: identity.hash, planId: result.plan.id, jobId: result.job!.id }));
     return json({ plan: result.snapshot, authenticated: !!identity.userId, ownerScope: scope,
       ...(!aiAvailable && command.action === "message" && result.snapshot.intake.notes.some(note => note.status === "failed") ? { message: "원문은 저장했어요. 자동 정리는 나중에 다시 요청하거나 직접 항목에 입력할 수 있어요" } : {}) }, result.job ? 202 : 200);

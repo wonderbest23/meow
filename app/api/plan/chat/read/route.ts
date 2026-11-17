@@ -30,6 +30,7 @@ export async function POST(request: Request) {
   if (!intakeReaderEnabled()) return nothing();
   const identity = await requireGuestIdentity();
   if (intakeLoginRequired(identity.userId)) return nothing();
+  // 손님 AI 하루 한도(guest-ai-budget.ts)는 세지 않는다(Haiku 한 번 0.6원 — 0단위). 이 IP별 10분 제한만 둔다
   const limited = await enforceRateLimit("intake-read", request, { limit: 40, windowMs: 10 * 60_000, message: "잠시 후 다시 시도해 주세요." });
   if (limited) return limited;
   const parsed = requestSchema.safeParse(await request.json().catch(() => null));

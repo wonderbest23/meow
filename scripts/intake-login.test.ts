@@ -1,12 +1,24 @@
 import assert from "node:assert/strict";
-import { intakeLoginGate } from "../lib/plan-builder/intake-login";
+import { guestIntakeOpen, intakeLoginGate } from "../lib/plan-builder/intake-login";
 
-// 운영(로그인 서버 있음): 비로그인 방문자는 막고 로그인한 사람은 통과
+// 손님 대화가 닫혀 있을 때(guestAllowed=false): 비로그인 방문자는 막고 로그인한 사람은 통과
 assert.equal(intakeLoginGate({ authConfigured: true, guestAllowed: false, userId: null }), true);
 assert.equal(intakeLoginGate({ authConfigured: true, guestAllowed: false, userId: "user-1" }), false);
-// 비상 스위치로 비로그인 체험을 다시 열 수 있다
+// 손님 대화가 열려 있으면 비로그인 방문자도 통과(AI 비용은 손님 하루 한도 guest-ai-budget 가 묶는다)
 assert.equal(intakeLoginGate({ authConfigured: true, guestAllowed: true, userId: null }), false);
 // 로그인 서버가 없는 로컬·테스트 환경은 막지 않는다
 assert.equal(intakeLoginGate({ authConfigured: false, guestAllowed: false, userId: null }), false);
 
-console.log(JSON.stringify({ passed: 4 }));
+/*
+ * 예전 이 시험은 '운영은 손님을 막는다'(INTAKE_GUEST_ALLOWED 없음)를 전제로 했다.
+ * 사장님 결정(2026-11-17 "한도 걸고 열어줘")으로 운영 vars 에 INTAKE_GUEST_ALLOWED=1 을 넣었다.
+ * 다만 로그인 때 손님 사업을 계정으로 옮기는 스위치(PLAN_ACCOUNT_LINKING_ENABLED=true)가 꺼져 있으면 열지 않는다 —
+ * 꺼진 채 열면 손님이 대화하다 로그인했을 때 사업이 계정에 보이지 않는다(2026-09 에 손님을 막은 이유).
+ */
+assert.equal(guestIntakeOpen({ INTAKE_GUEST_ALLOWED: "1", PLAN_ACCOUNT_LINKING_ENABLED: "true" }), true);
+assert.equal(guestIntakeOpen({ INTAKE_GUEST_ALLOWED: "1" }), false, "계정 옮기기 스위치가 꺼져 있으면 열지 않는다");
+assert.equal(guestIntakeOpen({ INTAKE_GUEST_ALLOWED: "1", PLAN_ACCOUNT_LINKING_ENABLED: "false" }), false);
+assert.equal(guestIntakeOpen({ PLAN_ACCOUNT_LINKING_ENABLED: "true" }), false, "손님 열기 스위치가 없으면 닫힘");
+assert.equal(guestIntakeOpen({ INTAKE_GUEST_ALLOWED: "true", PLAN_ACCOUNT_LINKING_ENABLED: "true" }), false, "값은 정확히 1");
+
+console.log(JSON.stringify({ passed: 9 }));
