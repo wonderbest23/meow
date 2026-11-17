@@ -4,6 +4,8 @@ import { completeText } from "../../../../lib/llm/complete";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
+import { chargeGuestAi } from "../../../../lib/plan-builder/intake-http";
+import { GUEST_AI_UNITS } from "../../../../lib/plan-builder/guest-ai-budget";
 
 export const runtime = "nodejs";
 
@@ -121,6 +123,8 @@ export async function POST(req: Request) {
     .filter(Boolean)
     .join("\n");
 
+  // 손님 AI 하루 한도(guest-ai-budget.ts) — 운영에서는 닫힌 주소(launch-scope)지만 열린 곳(스테이징 등)에서도 손님 비용을 같은 한도로 센다. 한도에 닿으면 빈 추천
+  if (!(await chargeGuestAi(identity, GUEST_AI_UNITS.assist, "suggest"))) return NextResponse.json({ suggestions: [], source: "empty" });
   const text = await completeText(config, { kind: "suggest", system: SYSTEM, user, maxOutputTokens: 700, effort: "low" });
   const suggestions = parseArray(text) ?? fallbackSuggest(question);
   return NextResponse.json({ suggestions: suggestions.slice(0, count), source: text ? "ai" : "fallback" });

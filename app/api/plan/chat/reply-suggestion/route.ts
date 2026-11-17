@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../../lib/rate-limit";
-import { intakeLoginRequired } from "../../../../../lib/plan-builder/intake-http";
+import { chargeGuestAi, intakeLoginRequired } from "../../../../../lib/plan-builder/intake-http";
+import { GUEST_AI_UNITS } from "../../../../../lib/plan-builder/guest-ai-budget";
 import { resolveTextLLMConfig } from "../../../../../lib/llm/config";
 import { suggestionConfig } from "../../../../../lib/plan-builder/answer-suggestions";
 import { suggestReply } from "../../../../../lib/plan-builder/reply-suggestion";
@@ -32,6 +33,8 @@ export async function POST(request: Request) {
   const coach = plan ? readCoach(plan.answers) : null;
   const config = suggestionConfig(resolveTextLLMConfig(identity.hash));
   if (!plan || !coach || !config) return new Response(null, { status: 204, headers: noStore });
+  // 손님 AI 하루 한도(guest-ai-budget.ts) — AI를 부르기 바로 앞에서 센다. 한도에 닿으면 로그인 필요일 때처럼 조용히 끝난다
+  if (!(await chargeGuestAi(identity, GUEST_AI_UNITS.assist, "reply-suggestion"))) return new Response(null, { status: 204, headers: noStore });
   const result = await suggestReply(config, {
     business: [coach.business.name, coach.business.description].filter(Boolean).join(" — "),
     facts: coach.fields.map(field => ({ label: field.key, value: coachFieldDisplay(field.value) })),

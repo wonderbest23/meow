@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../../lib/rate-limit";
-import { intakeLoginRequired } from "../../../../../lib/plan-builder/intake-http";
+import { chargeGuestAi, intakeLoginRequired } from "../../../../../lib/plan-builder/intake-http";
+import { GUEST_AI_UNITS } from "../../../../../lib/plan-builder/guest-ai-budget";
 import { resolveTextLLMConfig } from "../../../../../lib/llm/config";
 import { LIVE_COMMENT_MAX_INPUT, liveCommentConfig, streamLiveComment } from "../../../../../lib/plan-builder/live-comment";
 
@@ -28,6 +29,8 @@ export async function POST(request: Request) {
   const identity = await requireGuestIdentity();
   const config = liveCommentConfig(resolveTextLLMConfig(identity.hash));
   if (!config) return new Response(null, { status: 204, headers: noStore });
+  // 손님 AI 하루 한도(guest-ai-budget.ts) — AI를 부르기 바로 앞에서 센다. 한도에 닿으면 로그인 필요일 때처럼 조용히 끝난다
+  if (!(await chargeGuestAi(identity, GUEST_AI_UNITS.assist, "live-comment"))) return new Response(null, { status: 204, headers: noStore });
 
   const encoder = new TextEncoder();
   const abort = new AbortController();

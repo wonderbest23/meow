@@ -22,6 +22,7 @@ import { EDITABLE_FACT_IDS } from "./fact-highlight";
 import { getServerSupabase } from "../persistence";
 import { notifyOwnerBySms } from "../notify/owner-sms";
 import { rateLimit } from "../rate-limit";
+import { GUEST_AI_LIMIT_CODE, GUEST_AI_LIMIT_MESSAGE } from "./guest-ai-budget";
 import { confirmedIntakeContext, ownerNotesContext } from "./intake-context";
 
 import { intakeCommandSchema } from "./intake-command";
@@ -60,7 +61,17 @@ export function newIntakeJob(coach: CoachState, intake: IntakeState, kind: Intak
   return job;
 }
 
-export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand, options: { aiAvailable?: boolean; aiAllowed?: boolean; editRoute?: EditRoute } = {}) {
+/*
+ * beforeAiJob: AI 작업을 만들기 바로 앞에서 한 번 부른다(손님 AI 하루 한도 — guest-ai-budget.ts). 검사 · 같은 요청 다시 보내기 · AI가 필요 없는 저장에서는 부르지 않는다.
+ * false 면 이번 요청은 저장하지 않고 GUEST_AI_LIMIT_CODE 오류를 던진다. 저장 충돌로 다시 돌아도 한 번만 센다.
+ */
+export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand, options: { aiAvailable?: boolean; aiAllowed?: boolean; editRoute?: EditRoute; beforeAiJob?: (kind: IntakeJob["kind"]) => Promise<boolean> } = {}) {
+  let aiJobAllowed: Promise<boolean> | undefined;
+  const allowAiJob = async (kind: IntakeJob["kind"]) => {
+    if (!options.beforeAiJob) return;
+    aiJobAllowed ??= options.beforeAiJob(kind);
+    if (!(await aiJobAllowed)) throw new IntakeError(GUEST_AI_LIMIT_CODE, GUEST_AI_LIMIT_MESSAGE, 401);
+  };
   const parsed = intakeCommandSchema.safeParse(input);
   if (!parsed.success) {
     if (parsed.error.issues.some(issue => issue.code === "custom" && issue.path[0] === "structure")) throw new IntakeError("structure_required", "바꿀 사업 구조 항목을 골라 주세요");
@@ -156,6 +167,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         if (active(intake.job)) throw new IntakeError("ai_busy", "앞선 요청을 정리하고 있어요. 잠시 후 다시 보내 주세요", 409);
         if (!options.aiAvailable) throw new IntakeError("ai_unavailable", "지금은 채팅 수정을 쓸 수 없어요. 계획서에서 문장으로 바로 고칠 수 있어요", 503);
         if (!options.aiAllowed) throw new IntakeError("ai_limit", "오늘 이 계획서의 수정 요청 한도에 도달했어요. 계획서에서 문장으로 바로 고치기는 계속 쓸 수 있어요", 429);
+        await allowAiJob("edit");
         created = newIntakeJob(coach, intake, "edit", at, text);
       }
     } else if (command.action === "edit-apply" || command.action === "edit-dismiss") {
@@ -226,7 +238,11 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         intake.candidates.push(...parsed.candidates.map((candidate, ordinal) => ({ ...candidate, id: `${id}:rule:${ordinal}`, baseValue: coach.fields.find(field => field.key === candidate.fieldKey)?.value ?? null, baseFieldRevision: intakeFieldRevision(coach, intake, candidate.fieldKey), status: "pending" as const })));
       }
       coach.messages.push({ id: command.requestId, role: "user", text: command.message, at });
-      if (options.aiAvailable && options.aiAllowed) created = newIntakeJob(coach, intake, "extract", at);
+      // 규칙으로 다 읽은 메모(AI가 정리할 메모가 없음)는 AI 작업을 만들지 않으니 손님 한도도 세지 않는다
+      if (options.aiAvailable && options.aiAllowed) {
+        if (!active(intake.job) && intake.notes.some(note => note.status === "queued")) await allowAiJob("extract");
+        created = newIntakeJob(coach, intake, "extract", at);
+      }
       else intake.notes = intake.notes.map(note => note.status === "queued" ? { ...note, status: "failed" } : note);
     } else if (["extract", "extract-pending", "help", "design", "ideas"].includes(command.action)) {
       if (active(intake.job)) throw new IntakeError("ai_busy", "앞선 AI 작업이 진행 중이에요. 질문 답변과 직접 수정은 계속할 수 있어요", 409);
@@ -246,7 +262,9 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         if ((intake.ideaTurns?.length ?? 0) >= IDEA_MAX_TURNS) throw new IntakeError("idea_history_limit", "이 대화에서 받을 수 있는 제안 횟수를 다 썼어요. 받은 제안 중에서 고르거나 새 탐색 대화를 시작해 주세요");
         if ((command.rejectIds??[]).some(id=>!intake.generatedIdeas?.some(idea=>idea.id===id && idea.planId===plan!.id))) throw new IntakeError("candidate_unknown", "이 사업에서 받은 제안만 뺄 수 있어요", 404);
       }
-      created = newIntakeJob(coach, intake, command.action === "extract-pending" ? "extract" : command.action as IntakeJob["kind"], at, command.message);
+      const kind = command.action === "extract-pending" ? "extract" : command.action as IntakeJob["kind"];
+      if (kind !== "extract" || intake.notes.some(note => note.status === "queued")) await allowAiJob(kind);
+      created = newIntakeJob(coach, intake, kind, at, command.message);
       if (created?.kind === "ideas") {
         created.baseIdeaRevision = intake.ideaInputRevision ?? 0;
         intake.ideaTurns = [...intake.ideaTurns??[], { id:created.id, request:command.message!, rejectedIds:command.rejectIds??[], baseInputRevision:created.baseIdeaRevision, at, status:"queued" }];

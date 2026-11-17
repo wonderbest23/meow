@@ -62,6 +62,12 @@
     "INTAKE_ANSWER_SUGGESTIONS": "1",
     // 한 문장 → 바로 초안(시험 기능): 사업 문장 뒤 나머지 질문을 업종 기준표로 채워 묻지 않는다. 끄려면 "0".
     "INTAKE_ESTIMATE": "1",
+    // 손님(로그인 전)도 사업 정보 대화를 무료로 끝까지(사장님 결정 2026-11-17 "한도 걸고 열어줘"). 사업계획서 작성 · 결제는 여전히 로그인 + 결제.
+    // 로그인 때 손님 사업을 계정으로 옮기는 스위치(PLAN_ACCOUNT_LINKING_ENABLED=true)가 함께 켜져야 실제로 열린다(lib/plan-builder/intake-login.ts guestIntakeOpen).
+    "INTAKE_GUEST_ALLOWED": "1",
+    // 손님 AI 하루 한도(단위: 사업 방향 정리 8, 그 밖의 AI 보조 1, AI 읽기 0 · 1단위 약 15원). 전체 2,000단위(약 3만 원), 손님 1명 60단위.
+    "GUEST_AI_DAILY_UNITS": "2000",
+    "GUEST_AI_PER_GUEST_UNITS": "60",
     // 사용 한도를 워커 인스턴스별 메모리가 아니라 DB 공유 카운터(마이그레이션 0018 bump_rate_limit)로 센다. DB 오류 시 메모리 한도로 내려간다.
     "RATE_LIMIT_BACKEND": "supabase",
     // 추천 칩에만 쓰는 모델. 비워 두면 기본 텍스트 모델(Opus)을 쓴다.
