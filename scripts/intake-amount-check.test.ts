@@ -14,7 +14,7 @@ async function main() {
     NEXT_PUBLIC_SUPABASE_URL: "", NEXT_PUBLIC_SUPABASE_ANON_KEY: "", RATE_LIMIT_BACKEND: "memory",
     PLAN_ACCOUNT_LINKING_ENABLED: "false", NEXT_PUBLIC_BUSINESS_INTAKE_V2: "1", OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "",
   });
-  const { amountCheckPrompt, coreQuestions } = await import("../lib/plan-builder/intake-questions");
+  const { amountCheckPrompt, coreQuestions, BUSINESS_PROMPT } = await import("../lib/plan-builder/intake-questions");
   const { answerCheckPrompt, ZERO_PRICE_PROMPT } = await import("../app/plan/chat/intake-ui/model");
   const { saveIntakeCommand } = await import("../lib/plan-builder/intake-service");
   const { readIntake, IntakeError } = await import("../lib/plan-builder/intake-core");
@@ -36,6 +36,16 @@ async function main() {
   for (const [id, value] of [["budget", "300만원"], ["budget", "0"], ["structure.cost", "100000"], ["price", "3000"], ["price", "0"], ["structure.unitCost", 0], ["structure.unitCost", "500"], ["hoursPerWeek", "3"], ["customer", "3000"], ["budget", null]] as const) {
     assert.equal(amountCheckPrompt(q(id), value), null, `${id}=${String(value)} 은 묻지 않는다`);
   }
+  // ux-amount(2026-11-16): 너무 큰 금액도 한 번 묻는다 — 약 1조 원이 확인 없이 저장됐다(고치기 칸에 이어 적어 0이 붙는 실수)
+  assert.equal(amountCheckPrompt(q("budget"), 1_000_000_000_000), "준비 예산이 1조 원으로 읽혔어요. 맞나요? 0을 더 넣었거나 금액을 이어 적으셨으면 다시 넣어 주세요.");
+  assert.match(amountCheckPrompt(q("budget"), "200억") ?? "", /^준비 예산이 200억 원으로 읽혔어요/);
+  assert.match(amountCheckPrompt(q("structure.cost"), "월 15억원") ?? "", /^매달 나가는 돈이 15억 원으로 읽혔어요/);
+  assert.match(amountCheckPrompt(q("price"), 1_500_000_000) ?? "", /^판매 가격이 15억 원으로 읽혔어요/);
+  assert.match(amountCheckPrompt(coreQuestions("operating").find(item => item.id === "sales")!, 12_000_000_000) ?? "", /^실제 매출이 120억 원으로 읽혔어요/);
+  for (const [id, value] of [["budget", "50억"], ["budget", 3_000_000_000], ["structure.cost", "5억원"], ["price", "3억원"]] as const) assert.equal(amountCheckPrompt(q(id), value), null, `${id}=${String(value)} 은 큰 가게에서도 있을 수 있어 묻지 않는다`);
+  assert.equal(amountCheckPrompt(coreQuestions("operating").find(item => item.id === "sales")!, "500만원"), null, "실적 매출은 아래 한도가 없다");
+  // 첫 질문 안내는 실제 한도(1,200자)와 맞는다 — 예전 '한 문장(60자 안)'인데 훨씬 긴 글도 받았다
+  assert.ok(!BUSINESS_PROMPT.includes("60자") && q("business").prompt === BUSINESS_PROMPT && q("business").hint?.includes("1,200자"), BUSINESS_PROMPT);
   // 화면은 판매 가격 0원 확인과 같은 자리에서 묻는다
   assert.equal(answerCheckPrompt(q("price"), "0"), ZERO_PRICE_PROMPT);
   assert.equal(answerCheckPrompt(q("budget"), "3000"), amountCheckPrompt(q("budget"), "3000"));
@@ -69,6 +79,19 @@ async function main() {
   await send({ action: "answer", questionId: "structure.cost", value: "0" });
   await send({ action: "answer", questionId: "budget", value: null, unknown: true });
   assert.equal((await load()).intake.answers.budget?.status, "unknown");
-  console.log(JSON.stringify({ passed: 22 }));
+  // 너무 큰 금액: 확인 없이 오면 멈추고, [맞아요]면 저장한다
+  await assert.rejects(send({ action: "answer", questionId: "budget", value: "1000000000000" }), (error: unknown) => error instanceof IntakeError && error.code === "amount_check" && /1조 원으로 읽혔어요/.test(error.message));
+  assert.equal((await load()).intake.answers.budget?.status, "unknown", "확인 전에는 저장하지 않는다");
+  await send({ action: "answer", questionId: "budget", value: "1000000000000", confirmed: true });
+  assert.equal((await load()).intake.answers.budget?.value, 1_000_000_000_000);
+  // 읽을 수 없는 예산·시간은 무엇을 고치면 되는지 예시로 알린다(ux-editnum)
+  await assert.rejects(send({ action: "answer", questionId: "budget", value: "650만원5000만원" }), /준비 예산은 '300만원'이나 '100만원~300만원'처럼/);
+  await assert.rejects(send({ action: "answer", questionId: "hoursPerWeek", value: "200시간" }), /일주일에 쓸 시간은 '20시간'처럼 168시간 안에서/);
+  // 사업 소개는 글자가 있어야 한다 — 이모지·기호만으로는 받지 않는다(첫 메시지도 같은 규칙)
+  await assert.rejects(send({ action: "answer", questionId: "business", value: "🍪🍪🍪" }), (error: unknown) => error instanceof IntakeError && error.code === "answer_letters");
+  await assert.rejects(saveIntakeCommand(`amount-check-${randomUUID()}`, { action: "start", mode: "startup", questionId: "business", value: "✨✨", revision: 0, requestId: randomUUID() }), (error: unknown) => error instanceof IntakeError && error.code === "answer_letters");
+  await send({ action: "answer", questionId: "business", value: "쿠키 🍪 가게" });
+  assert.equal((await load()).coach.fields.find(field => field.key === "business")?.value, "쿠키 🍪 가게", "글자가 있으면 이모지가 섞여도 받는다");
+  console.log(JSON.stringify({ passed: 39 }));
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

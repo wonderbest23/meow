@@ -458,7 +458,8 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         coach.design = { ...design, status: "proposal", sourceRevision: coach.documentRevision };
         /* 상호를 아직 정하지 않았으면 첫 답 문장('그냥 치킨집이요. 질문 좀 그만…') 대신 짧은 이름표로 목록에 보인다 — 실제 AI 시험 2026-10-21 */
         adoptRenamedTitle(_plan, coach);
-        if (!coach.business.nameConfirmed && design.identity?.label) { coach.business.name = design.identity.label; _plan.title = design.identity.label; }
+        // 운영 중인 가게는 이미 이름이 있다 — AI가 지은 이름표를 가게 이름으로 넣지 않는다(결과 화면이 실제 이름을 묻는다, 2026-11-16 점검)
+        if (!coach.business.nameConfirmed && design.identity?.label && _intake.mode !== "operating") { coach.business.name = design.identity.label; _plan.title = design.identity.label; }
         current.reply = businessDesignReply(design); current.status = "complete";
       });
     }
