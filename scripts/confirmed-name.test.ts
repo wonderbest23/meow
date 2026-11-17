@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { adoptRenamedTitle } from "../lib/plan-builder/business-name";
 import { buildUserPrompt, sectionReviewSource, sectionSystemPrompt } from "../lib/plan-builder/section-generator";
 import { PLAN_BLUEPRINT } from "../lib/plan-builder/blueprint";
 
@@ -21,4 +23,21 @@ assert.match(reviewSource, /사업명: 망원 골목반찬 \(사용자가 확정
 assert.ok(reviewSource.includes(buildUserPrompt(coachInput)), "the review still sees everything the writer's user prompt had");
 assert.equal(sectionReviewSource({ ...coachInput, business: undefined }), buildUserPrompt(coachInput), "no business info: same source as before");
 
-console.log(JSON.stringify({ passed: 7 }));
+// 머리줄에서 직접 바꾼 이름(제목)은 확정 이름으로 받는다 — 앞 답을 고치거나 사업 방향을 다시 정리해도 AI 이름으로 돌아가지 않게(점검 2026-11-16)
+const renamed = { business: { name: "직접 확인 필요 기준의 합성", nameConfirmed: false } };
+assert.equal(adoptRenamedTitle({ title: " 멍멍간식 " }, renamed), true);
+assert.deepEqual(renamed.business, { name: "멍멍간식", nameConfirmed: true });
+assert.equal(adoptRenamedTitle({ title: "멍멍간식" }, renamed), false, "같은 이름이면 그대로");
+for (const placeholder of ["새 사업", "새 사업 구상", "새 플랜", "", "  "]) {
+  const draft = { business: { name: "동네 반찬", nameConfirmed: false } };
+  assert.equal(adoptRenamedTitle({ title: placeholder }, draft), false, `임시 이름 '${placeholder}'은 확정 이름이 아니다`);
+  assert.deepEqual(draft.business, { name: "동네 반찬", nameConfirmed: false });
+}
+const service = readFileSync(new URL("../lib/plan-builder/intake-service.ts", import.meta.url), "utf8");
+assert.match(service, /if \(plan && previous && savedIntake\) adoptRenamedTitle\(plan, coach\);[\s\S]*plan\.title = coach\.business\.name;/, "대화 저장은 제목을 덮어쓰기 전에 직접 바꾼 이름을 받는다");
+assert.match(service, /adoptRenamedTitle\(_plan, coach\);\n\s*if \(!coach\.business\.nameConfirmed && design\.identity\?\.label\)/, "사업 방향 정리도 직접 바꾼 이름을 지킨다");
+// 머리줄 '이름 바꾸기'는 열린 대화에 '이름 정하기'로 넘긴다
+assert.match(readFileSync(new URL("../app/plan/studio/StudioBars.tsx", import.meta.url), "utf8"), /renamePlan\(planId, trimmed\);[\s\S]*requestPlanRename\(planId, trimmed\);/);
+assert.match(readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8"), /handlePlanRename\(\(planId, title\) => \{[\s\S]*void sendRef\.current\(\{ action: "name", value: name \}\);/);
+
+console.log(JSON.stringify({ passed: 14 }));

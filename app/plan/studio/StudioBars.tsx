@@ -5,7 +5,7 @@ import { Check, ChevronDown, Lock, Pencil, Plus, LayoutGrid } from "lucide-react
 import { PopMenu, type PopMenuGroup, type PopMenuItem } from "./PopMenu";
 import styles from "./Studio.module.css";
 import { askText } from "../../../components/confirm-dialog";
-import { isSamplePlan, loadState, renamePlan, subscribePlanState, type Plan } from "../../../lib/plan-builder/plan-store";
+import { isSamplePlan, loadState, renamePlan, requestPlanRename, subscribePlanState, type Plan } from "../../../lib/plan-builder/plan-store";
 import { businessDisplayName } from "../../../lib/plan-builder/business-name";
 import { newChatHref, studioHref, STUDIO_TAB_LABELS, type StudioTab } from "../../../lib/plan-builder/studio";
 
@@ -35,6 +35,8 @@ export function BizMenu({ planId, title, canRename, onRenamed, className, label,
     const trimmed = next?.trim().slice(0, 100);
     if (!trimmed || trimmed === title) return;
     renamePlan(planId, trimmed);
+    /* 대화가 열려 있으면 대화에도 확정 이름으로 저장한다 — 다시 정리해도 이 이름이 남는다 */
+    requestPlanRename(planId, trimmed);
     /* 이 기기 저장본에 없는 사업이면 renamePlan 이 아무것도 하지 않는다 — 그때는 머리줄 이름도 그대로 둔다 */
     if (loadState().plans.find(item => item.id === planId)?.title === trimmed) onRenamed(trimmed);
   };
