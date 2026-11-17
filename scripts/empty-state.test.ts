@@ -135,13 +135,31 @@ assert.match(rule(loading, ".spin"), /animation:loadingSpin \.8s linear infinite
 assert.match(rule(loading, ".spinner"), /composes: spin;/, "Spinner 도 같은 규칙으로 돈다");
 const reduced = loading.match(/@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)\s*\{([\s\S]*?\})\s*\}/);
 assert.ok(reduced, "움직임 줄이기 설정을 따르지 않는다");
-assert.match(reduced[1], /\.spin, \.ring \{ animation-duration:2\.4s; \}/, "움직임 줄이기 — 도는 표시는 천천히");
+/*
+ * 움직임 줄이기 — 도는 표시는 천천히(2.4s). 전역(globals.css *) · 화면 틀(.page * { animation:none !important })이 모든 움직임을 끄므로
+ * !important + 한 단계 높인 선택자로 이겨야 한다(예전 animation-duration:2.4s 만으로는 져서 멈춘 그림이 됐다 — 움직임 조사 2026-11-17)
+ */
+assert.match(reduced[1], /\.spin\.spin, \.ring\.ring \{ animation:loadingSpin 2\.4s linear infinite !important; \}/, "움직임 줄이기 — 도는 표시는 천천히, 전역·틀 규칙보다 앞서게");
+assert.match(reduced[1], /\.dots i \{ animation:none; \}/, "움직임 줄이기 — 튀는 점은 그대로 멈춘다");
+// 틀 규칙이 .spin.spin(클래스 둘)보다 높아지면 위 예외가 다시 진다 — 움직임을 통째로 끄는 !important 규칙은 '클래스 하나 + *' 꼴만
+for (const path of modules) {
+  const source = uncomment(read(path));
+  for (const [, head, body] of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    if (!/animation\s*:\s*none\s*!important/.test(body)) continue;
+    for (const part of head.split(",").map(item => item.trim()).filter(Boolean)) {
+      if (/^\.[\w-]+ \*(?:::?(?:before|after))?$/.test(part)) continue;
+      // 키프레임 이름이 회전이 아닌 특정 부품만 끄는 규칙(.x .y 등)은 도는 표시를 덮지 않으면 괜찮다
+      assert.doesNotMatch(part, /\*/, `${path}: '${part}' — 움직임을 통째로 끄는 규칙이 .spin.spin 보다 높다(도는 표시 예외가 진다)`);
+    }
+  }
+}
 const borrowers: [string, string, string][] = [
   ["app/plan/chat/intake.module.css", ".spinner", "../PlanLoading.module.css"],
   ["app/plan/proposal/proposal.module.css", ".spin", "../PlanLoading.module.css"],
   ["app/plan/GenerationProgress.module.css", ".spin", "./PlanLoading.module.css"],
   ["app/plan/WorkNarration.module.css", ".spin", "./PlanLoading.module.css"],
   ["components/app-button.module.css", ".spinner", "../app/plan/PlanLoading.module.css"],
+  ["app/plan/document/DocumentWorkspace.module.css", ".spin", "../PlanLoading.module.css"],
 ];
 for (const [path, selector, from] of borrowers) {
   const body = rule(uncomment(read(path)), selector);
@@ -153,6 +171,33 @@ for (const path of modules) {
   for (const [, name] of source.matchAll(/animation(?:-name)?\s*:\s*([\w-]*spin[\w-]*)/gi)) {
     assert.ok(path === "app/plan/PlanLoading.module.css" && name === "loadingSpin", `${path}: 따로 정한 도는 애니메이션 '${name}'`);
   }
+}
+// 계획서 '확인했어요' 저장 중 아이콘 — 예전엔 회전 클래스가 없어 멈춰 있었다(움직임 조사 2026-11-17)
+assert.match(read("app/plan/document/DocumentSourceReview.tsx"), /\{busy \? <LoaderCircle size=\{15\} className=\{styles\.spin\} aria-hidden="true" \/> : <Check size=\{15\} \/>\}확인했어요/, "'확인했어요' 저장 중 아이콘이 돌지 않는다");
+
+/*
+ * 전역 .spin(lucide 아이콘에 className="spin") — 홈페이지 편집기 공개·고치기·사진 올리기·저장, 도메인 연결 확인, 관리자 로딩.
+ * 예전엔 @keyframes spin 이 어디에도 없어 아이콘이 멈춰 있었다(움직임 조사 TOP1). 속도는 공통 도는 표시와 같은 0.8초.
+ */
+{
+  const globals = uncomment(read("app/globals.css"));
+  assert.equal([...globals.matchAll(/@keyframes spin \{ to \{ transform: rotate\(360deg\); \} \}/g)].length, 1, "전역 @keyframes spin 이 한 곳에 있어야 한다");
+  assert.deepEqual([...globals.matchAll(/(?:^|\n)\.spin \{([^}]*)\}/g)].map(match => match[1].trim()), ["animation: spin .8s linear infinite;"], "전역 .spin 은 한 번만, 0.8초 한 바퀴");
+  assert.match(globals, /\.admin-support-loading svg \{ width: 18px; animation: spin \.8s linear infinite; \}/, "관리자 로딩 아이콘도 같은 속도로");
+  // 움직임 줄이기 — 전역 규칙(.01ms)과 같은 블록에서 작은 회전만 천천히 돌게 연다
+  const reducedGlobal = globals.match(/@media \(prefers-reduced-motion: reduce\) \{\n  \*, \*:before, \*:after \{[^}]*\}\n([^@]*?)\n\}/);
+  assert.ok(reducedGlobal, "전역 움직임 줄이기 블록");
+  assert.match(reducedGlobal[1], /\.spin\.spin, \.admin-support-loading svg \{ animation: spin 2\.4s linear infinite !important; \}/, "움직임 줄이기에서도 작은 회전은 천천히 돈다");
+  const spinUsers: [string, RegExp][] = [
+    ["components/brainwave-editor.tsx", /<LoaderCircle className="spin" \/> 공개하는 중/],
+    ["components/brainwave-editor.tsx", /<LoaderCircle className="spin" \/> 고치는 중/],
+    ["components/brainwave-editor.tsx", /<LoaderCircle className="spin" aria-hidden \/> 사진 올리는 중/],
+    ["components/brainwave-editor.tsx", /persistence\.saving \? <LoaderCircle className="spin" \/> : <Save \/>/],
+    ["components/landing-visual-builder.tsx", /persistence\.saving \? <LoaderCircle className="spin" \/> : <Save \/>/],
+    ["components/landing-domain-connector.tsx", /<em><LoaderCircle className="spin" \/> 연결 확인 중<\/em>/],
+    ["components/landing-domain-connector.tsx", /<RefreshCw className=\{action === "loading" \? "spin" : ""\} \/> 연결 확인/],
+  ];
+  for (const [path, pattern] of spinUsers) assert.match(read(path), pattern, `${path}: 진행 중 아이콘에 회전 클래스가 없다`);
 }
 // 생성 진행 카드의 도는 표시 — 2026-11-17부터 '지금 하는 일' 목록(WorkNarration)의 지금 줄이 공통 도는 규칙으로 돈다
 assert.match(read("app/plan/GenerationProgress.tsx"), /사업계획서 만드는 중<span className=\{styles\.cardCount\}>[\s\S]*?<WorkNarration narration=\{narration\}/, "생성 진행 카드의 도는 표시");

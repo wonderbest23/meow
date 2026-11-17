@@ -19,7 +19,8 @@
 :global(html[data-app-theme="dark"]) .icon { background:color-mix(in srgb, var(--ink) 26%, transparent); color:color-mix(in srgb, var(--ink) 45%, #fff); }
 .icon svg { width:26px; height:26px; }
 .icon em { position:absolute; top:-5px; right:-5px; display:grid; place-items:center; min-width:20px; height:20px; padding:0 5px; border-radius:999px; border:2px solid var(--app-panel); background:var(--app-danger-fill, #e12429); color:#fff; font-size:.6875rem; font-weight:600; font-style:normal; }
-:is(button, a).app:hover .icon { transform:translateY(-2px); }
+/* 아이콘 들림은 마우스 기기에서만(터치에서는 누른 뒤에도 남았다) */
+@media (hover: hover) and (pointer: fine) { :is(button, a).app:hover .icon { transform:translateY(-2px); } }
 @media (prefers-reduced-motion:reduce) { .icon { transition:none; } }
 .summary { display:flex; flex-direction:column; gap:4px; padding-top:16px; border-top:1px solid var(--app-line); }
 .summary p { margin:0; font-size:.9375rem; color:var(--app-text); }

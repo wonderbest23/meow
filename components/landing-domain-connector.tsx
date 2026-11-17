@@ -201,7 +201,7 @@ export function LandingDomainConnector({
           {(needsPurchase || expiresSoon) && renewHref ? <a href={renewHref}> 1년 갱신 {renewPrice.toLocaleString("ko-KR")}원</a> : null}
         </p>
       ) : null}
-      <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>{purchase ? "대신 사 드린 주소를 이 홈페이지에 연결해요." : "구매한 주소의 www 주소만 입력하면 돼요."}</p></span>{connection?.ready ? <em className="ready"><CheckCircle2 /> 연결 완료</em> : connectedHostname ? <em><LoaderCircle /> 연결 확인 중</em> : null}</div>
+      <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>{purchase ? "대신 사 드린 주소를 이 홈페이지에 연결해요." : "구매한 주소의 www 주소만 입력하면 돼요."}</p></span>{connection?.ready ? <em className="ready"><CheckCircle2 /> 연결 완료</em> : connectedHostname ? <em><LoaderCircle className="spin" /> 연결 확인 중</em> : null}</div>
 
       {purchase && !connectedHostname && entitlement?.active ? (
         <div className="domain-service-note purchase" role="status"><CheckCircle2 /><p>{purchase.status === "registered"

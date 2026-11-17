@@ -790,6 +790,13 @@ async function main() {
   assert.ok(pricedPrepare.includes("첫 항목 먼저 보기 · 전체 49,000원"), "the plan button shows the price before payment");
   const minimalPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal onDesign={noop} onPrepare={noop} />);
   assert.ok(minimalPrepare.includes("사업계획서 만들기</button>") && minimalPrepare.includes("몇 분 걸려요.") && !minimalPrepare.includes("진행 단계"), "the result screen ends with one plan button");
+  // 손님이 '사업계획서 만들기'를 누른 뒤 — 단추 아래 옅은 안내 한 줄(오류 알림 · 빨간 글자 아님). 가격 줄 자리를 대신한다(2026-11-17 사장님)
+  for (const minimal of [true, false]) {
+    const guestPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal={minimal} payNote="첫 항목 먼저 보기 · 전체 49,000원" loginNote="로그인하면 첫 항목을 바로 볼 수 있어요" onDesign={noop} onPrepare={noop} />);
+    assert.match(guestPrepare, /<small class="[^"]*" role="status">로그인하면 첫 항목을 바로 볼 수 있어요<\/small>/, `안내 한 줄(옅은 글자) — ${guestPrepare}`);
+    assert.ok(!guestPrepare.includes('role="alert"') && !guestPrepare.includes("작성을 시작하지 못했어요") && !guestPrepare.includes("첫 항목 먼저 보기 · 전체"), guestPrepare);
+    assert.ok(!guestPrepare.includes("사업계획서 준비하고 있어요"), "기다림 표시 없이 바로");
+  }
   // 사업 방향 정리 중: 마지막 답을 보낸 순간부터 지금 하는 일 목록이 보인다(작업 접수 전에도). 경과 시간으로 돌리던 고정 네 단계 이름은 없다(2026-11-17 — 실제 신호만)
   const starting = renderToStaticMarkup(<DesignProgress snapshot={nextSnapshot({}, { design: undefined })} />);
   assert.ok(starting.includes('role="progressbar"') && starting.includes("data-work-narration") && starting.includes("요청을 받았어요") && !starting.includes("답변 모으기") && !starting.includes("시작 범위 제안하기") && starting.includes("보통 30~40초"), "design progress shows the narration list before the job is accepted");
@@ -1206,10 +1213,34 @@ async function main() {
     assert.match(intake, /const prepareNoticeOnTop = prepareFailedTop && !!draft\.pending && !login;/);
     assert.match(intake, /\{error && !ideaError && !staleFailure && !prepareNoticeOnTop && <div className=\{styles\.notice\} role="alert">/);
     assert.ok(css.includes(".statusAction"), "맨 위 줄의 다시 시도 단추");
+    /*
+     * 로그인하지 않은 손님이 '사업계획서 만들기'를 누르면 — 서버에 갔다 오지 않고(화면이 이미 아는 로그인 상태로) 바로 로그인 창.
+     * 예전엔 6초쯤 '사업계획서 준비하고 있어요'가 돈 뒤 빨간 '작성을 시작하지 못했어요 · 로그인하고 이어가기'가 떴다(2026-11-17 사장님).
+     */
+    const startPrepare = intake.slice(intake.indexOf("const startPrepare = () => {"), intake.indexOf("const job = plan?.intake.job;"));
+    const guestGate = startPrepare.indexOf("if (!signedInRef.current) { setPrepareLoginAsked(true); openLogin(loginNext); return; }");
+    assert.ok(guestGate > 0, "손님이면 바로 로그인 창을 연다");
+    for (const later of ["setPreparing(true)", "send(", "navigate(", "fetch("]) {
+      const at = startPrepare.indexOf(later);
+      assert.ok(at === -1 || at > guestGate, `손님 확인보다 먼저 ${later} 가 있다 — 서버에 갔다 오거나 기다림 표시가 돈다`);
+    }
+    assert.match(intake, /import \{ InlineLogin, openLogin \} from "\.\.\/\.\.\/\.\.\/components\/login-dialog";/);
+    // 로그인 뒤 돌아올 곳은 '로그인하고 이어가기' 링크와 같다(next 주소 흐름은 그대로)
+    assert.match(intake, /const loginHref = `\/account\?next=\$\{encodeURIComponent\(loginNext\)\}`;/);
+    assert.match(intake, /const loginNext = unloadedPlanId \? embedded \? studioHref\(unloadedPlanId, "chat"\) : `\/plan\/chat\?planId=\$\{encodeURIComponent\(unloadedPlanId\)\}`\n\s*: embedded \? plan \? studioHref\(plan\.planId, "chat"\) : `\$\{STUDIO_PATH\}\?new=1` : `\/plan\/chat\$\{plan \? `\?planId=\$\{encodeURIComponent\(plan\.planId\)\}` : "\?new=1"\}`;/);
+    // 안내 한 줄은 손님일 때만, 다른 사업을 열면 거둔다
+    assert.match(intake, /const PREPARE_LOGIN_NOTE = "로그인하면 첫 항목을 바로 볼 수 있어요";/);
+    assert.match(intake, /const prepareLoginNote = prepareLoginAsked && !signedIn \? PREPARE_LOGIN_NOTE : null;/);
+    assert.equal([...intake.matchAll(/<NextStepAction [^\n]*?payNote=\{payNote\} loginNote=\{prepareLoginNote\}/g)].length, [...intake.matchAll(/<NextStepAction /g)].length, "다음 단계 단추마다 안내 한 줄을 넘긴다");
+    assert.match(intake, /setLogin\(false\); setPrepareLoginAsked\(false\);/, "다른 사업을 불러오면 안내를 거둔다");
+    // 로그인 창 열기는 창 이벤트 하나(서버 호출 없음) — 받는 쪽이 없으면 예전처럼 /account?next= 로
+    const core = readFileSync(new URL("../components/login-dialog-core.ts", import.meta.url), "utf8");
+    assert.match(core, /window\.dispatchEvent\(new CustomEvent\(OPEN_LOGIN_EVENT, \{ detail: \{ next: target, mode \} \}\)\);/);
+    assert.doesNotMatch(core, /fetch\(/);
   }
   // 채움 상자 '생각하며 채우기'(2026-11-17 사장님) — 언제 재생하는지 · 얼마나 걸리는지 · 무엇을 읽히는지
   {
-    const { nextFillSeen, fillThinkingTiming } = await import("../app/plan/chat/intake-ui/fill-thinking");
+    const { nextFillSeen, fillThinkingTiming, FILL_READING_HEAD } = await import("../app/plan/chat/intake-ui/fill-thinking");
     const { FillThinking } = require("../app/plan/chat/intake-ui/FillThinking") as typeof import("../app/plan/chat/intake-ui/FillThinking");
     // 불러오는 중이면 기록 없음 · 다 불러온 첫 그림이 기준(이미 있던 상자는 재생하지 않는다 — 새로고침 · 다시 열기 · 이전 대화)
     assert.deepEqual(nextFillSeen({ planId: "p1", batches: ["a:estimate"] }, false, "p1", ["a:estimate"]), { seen: null, fresh: [], refill: false });
@@ -1261,6 +1292,24 @@ async function main() {
     assert.match(intakeSource, /const still = typeof window !== "undefined" && window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches;\n\s*setChipsOpen\(current => \(\{ \.\.\.current, filled: false \}\)\);\n\s*setFillPlay\(still \|\| !items\.length \? null : /, "움직임 줄이기면 재생하지 않고 접힌 요약 줄");
     assert.match(intakeSource, /\{fillPlay \? <FillThinking key=\{fillPlay\.key\} items=\{fillPlay\.items\}[^\n]*head=\{filledAnswers\.length \? understoodHead\("filled", FILLED_TITLE, filledSummary\(filledAnswers\), false\) : null\}/, "합쳐지는 자리는 지금의 접힌 요약 줄 그대로");
     assert.match(intakeSource, /: understoodBox\("filled", FILLED_TITLE, filledAnswers, filledSummary\(filledAnswers\)\)\}/);
+    /*
+     * 생각 표시는 한 번만(2026-11-17 사장님) — 채움 상자가 재생 중이면 '적은 글을 읽고 있어요'(회전 아이콘) 줄을 따로 띄우지 않고,
+     * 읽기가 끝날 때까지 상자가 접히지 않고 머리줄로 이어 보인다(hold). 예전엔 상자가 접힌 뒤에도 그 줄이 2~4초 남아 두 번 보였다.
+     */
+    assert.match(intakeSource, /<FillThinking key=\{fillPlay\.key\}[^\n]*hold=\{understanding\} onDone=\{\(\) => setFillPlay\(null\)\} \/>/, "읽는 중이면 채움 상자가 기다린다");
+    assert.match(intakeSource, /\{understanding && !fillPlay && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요"/, "채움 상자가 재생 중이면 읽는 중 줄을 따로 띄우지 않는다");
+    assert.equal([...intakeSource.matchAll(/<ThinkingLine title="적은 글을 읽고 있어요"/g)].length, 1, "읽는 중 줄은 한 곳");
+    assert.match(fillSource, /if \(!due \|\| hold \|\| phase === "merge"\) return;\n\s*setPhase\("merge"\);/, "접힐 때가 돼도 읽는 중(hold)이면 기다린다");
+    assert.match(fillSource, /const reading = due && hold && phase === "think";/);
+    assert.match(fillSource, /\{reading \? FILL_READING_HEAD : "빈칸을 채우는 중…"\}/, "줄이 다 나온 뒤에도 읽는 중이면 머리줄이 이어진다");
+    assert.equal(FILL_READING_HEAD, "적은 글을 읽고 있어요…");
+    assert.match(fillSource, /window\.clearTimeout\(doneTimer\.current\)/, "사라지면 끝 알림을 부르지 않는다(다음 재생을 지우지 않게)");
+    // 처음엔 머리줄 높이만 — 줄은 나올 차례 전에는 자리를 차지하지 않는다(운영: 줄이 나오기 전 잠깐 빈 큰 상자로 보였다)
+    assert.match(fillCss, /\.list ul \{ display: grid; min-height: 0; margin: 0; padding: 0; overflow: hidden; list-style: none; \}/, "줄 묶음 자체에는 여백이 없다");
+    assert.match(fillCss, /\.list li \{[^}]*margin-top: 6px; overflow: hidden;[^}]*animation: fill-line-in var\(--fill-line\) ease both; \}/, "줄 간격은 줄 위 간격으로(나오기 전에는 0)");
+    assert.match(fillCss, /\.list li:first-child \{ margin-top: 10px; \}/);
+    assert.match(fillCss, /@keyframes fill-line-in \{ from \{ opacity: 0; max-height: 0; margin-top: 0; transform: translateY\(4px\); filter: blur\(2px\); \}/, "나오기 전(지연 동안)에는 높이 0 · 위 간격 0");
+    assert.doesNotMatch(fillCss, /\.list ul \{[^}]*\bgap:/, "줄 사이 gap 은 안 보이는 줄에도 자리를 만든다");
   }
   // 금액 범위 칩 질문의 보조 설명 '대략 고르면 가운데 값으로 계산해요…'는 뺐다(2026-11-17 사장님). 다른 질문의 힌트는 그대로
   {

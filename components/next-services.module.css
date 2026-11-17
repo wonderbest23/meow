@@ -52,7 +52,8 @@
 .tabs .tabOn { border-color: var(--app-line-strong); background: var(--app-inverse); color: var(--app-on-inverse); }
 .shop { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
 .product { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px 16px 14px; border: 1px solid var(--app-line, var(--app-line)); border-radius: 16px; background: var(--app-surface, var(--app-surface)); color: var(--app-text, var(--app-text)); font: inherit; text-align: left; cursor: pointer; transition: transform .15s, box-shadow .15s, border-color .15s; }
-.product:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(23, 34, 50, .08); border-color: var(--app-line-strong); }
+/* 들림은 마우스 기기에서만 — 터치에서는 누른 뒤에도 들린 채 남았다 */
+@media (hover: hover) and (pointer: fine) { .product:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(23, 34, 50, .08); border-color: var(--app-line-strong); } }
 .product:focus-visible { outline: 2px solid var(--app-primary); outline-offset: 2px; }
 .product[data-badge="first"], .product[data-badge="need"] { border-color: var(--app-focus-ring); box-shadow: 0 0 0 1px #9cc0f5 inset; }
 .product > strong { font-size: 1.0625rem; line-height: 1.3; }
