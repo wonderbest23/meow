@@ -12,7 +12,7 @@ import { loadPlanState } from "../../../../../lib/plan-builder/plan-server-store
 import { readCoach } from "../../../../../lib/plan-builder/coach";
 import { intakeQuestions, readIntake } from "../../../../../lib/plan-builder/intake-core";
 import { saveIntakeCommand } from "../../../../../lib/plan-builder/intake-service";
-import { understandAiBudget, understandSaveOnTime } from "../../../../../lib/plan-builder/intake-timing";
+import { understandAiBudget, understandSaveOnTime, understandStillUseful } from "../../../../../lib/plan-builder/intake-timing";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
   const first = await read();
   const business = first?.coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim();
   const config = suggestionConfig(resolveTextLLMConfig(identity.hash));
-  if (!first || !business || !config || first.intake.understood || first.intake.mode !== "startup" || first.intake.depth === "expert" || Object.keys(first.plan.sections).length) return nothing();
+  if (!first || !business || !config || first.intake.understood || first.intake.mode !== "startup" || first.intake.depth === "expert" || Object.keys(first.plan.sections).length || !understandStillUseful(first.intake.answers, !!first.coach.design)) return nothing();
   // 여기까지 오래 걸려 저장 시한 안에 AI를 마칠 수 없으면 부르지 않는다(손님 AI 한도도 쓰지 않는다)
   if (!understandAiBudget(startedAt, Date.now())) return nothing();
   // 손님 AI 하루 한도(guest-ai-budget.ts) — AI를 부르기 바로 앞에서 센다. 한도에 닿으면 로그인 필요일 때처럼 조용히 끝난다
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
   // 읽는 동안 사용자가 답을 더 했을 수 있다 — 저장 직전 상태로 다시 읽어 그 번호로 저장한다(직접 답한 것은 저장 쪽에서 건드리지 않는다)
   const now = await read();
   // 다른 요청(같은 사업을 다시 연 화면 등)이 먼저 읽어 저장했으면 한 번 더 넣지 않는다 — 판만 또 오른다
-  if (!now || now.intake.understood) return nothing();
+  if (!now || now.intake.understood || !understandStillUseful(now.intake.answers, !!now.coach.design)) return nothing();
   const questions = intakeQuestions(now.intake, now.coach);
   const items = understoodAnswers(result.understood, questions, now.coach.fields.find(field => field.key === "capacity")?.value);
   // 적히지 않은 칸 — 이 사업에 맞춘 짐작(말한 칸은 빼고). 저장 쪽에서 기준표로 채운 칸만 바꾼다

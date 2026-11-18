@@ -21,7 +21,7 @@ import { useAnswerSuggestions } from "./intake-ui/AnswerSuggestions";
 import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, answerConflictRetry, clearConflictDraft, readIntakePayload, routeComposerInput, easyNumberRetryHint, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber, looseUnknownReply } from "./intake-ui/model";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import { sectorCheckPrompt } from "../../../lib/plan-builder/intake-core";
-import { UNDERSTAND_WAIT_MS } from "../../../lib/plan-builder/intake-timing";
+import { UNDERSTAND_WAIT_MS, understandStillUseful } from "../../../lib/plan-builder/intake-timing";
 import styles from "./intake.module.css";
 import chatUi from "../../../components/coach-chat-ui.module.css";
 import ChatLoading from "./loading";
@@ -1864,7 +1864,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    * 일반 모드: 사업 문장을 적으면 AI로 한 번 읽어 말한 값을 기준값 대신 넣는다(/api/plan/chat/understand, 약 15원 · 2~4초).
    * 기다리지 않는다 — 기준값으로 먼저 진행하고, 읽은 것이 오면 다시 불러와 '이렇게 알아들었어요'로 보인다. 실패하면 아무 일도 없다.
    */
-  const understandId = plan && !plan.hasDocuments && plan.intake.mode === "startup" && plan.intake.depth !== "expert" && !plan.intake.understood && plan.intake.answers.business?.status === "answered" ? plan.planId : "";
+  const understandId = plan && !plan.hasDocuments && plan.intake.mode === "startup" && plan.intake.depth !== "expert" && !plan.intake.understood && plan.intake.answers.business?.status === "answered" && understandStillUseful(plan.intake.answers, !!plan.coach.design) ? plan.planId : "";
   /*
    * 읽는 동안에는 다음 질문을 보이지 않는다 — 준비금 질문을 먼저 띄웠더니 읽은 값(문장 속 준비금)이 도착하며 질문이 바뀌고,
    * 그 순간 적은 답이 저장되지 않았다(실제 AI 점검 2026-11-14). 읽기가 끝나거나 8초가 지나면 진행한다.
