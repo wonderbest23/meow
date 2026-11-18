@@ -35,10 +35,45 @@ const FEATURES = [
 ];
 
 /* 새 대화의 첫 선택지(생각한 사업이 있어요 · 사업을 운영 중이에요 · 아이디어를 찾고 있어요)를 카드가 미리 골라 준다(?entry=) */
-const STARTS: Array<{ title: string; body: string; action: string; entry: EntryMode }> = [
-  { title: "처음 창업해요", body: "관심 있는 일로 고객과 상품부터 정리해요.", action: "아이디어로 시작하기", entry: "startup" },
-  { title: "이미 사업 중이에요", body: "실제 매출과 비용으로 다음 계획을 세워요.", action: "내 사업 개선하기", entry: "operating" },
-  { title: "아이디어가 아직 없어요", body: "시간·돈·잘하는 것으로 맞는 사업안을 골라 드려요.", action: "사업안 추천받기", entry: "exploring" },
+/*
+ * '어떤 사업이든' 구간 — 한 손님이 거친 과정 전부를 단계별로 보여 준다(2026-11-18 사장님: 제목이나 홍보 글만 보여서는 사업을 기획해 주는 것으로 안 보인다 · 진행한 과정 전부를 · 차례로 넘어가게).
+ * 다섯 단계: 대화 → 정리된 사업 정보 → 사업 방향(숫자 포함) → 다른 길과 확인할 것 → 바로 할 일.
+ * 내용은 2026-11-17 AI 손님 점검(가상 손님 · 실제 AI)의 타로 상담 손님 기록 그대로다. 가상 손님이라 실제 고객 사례가 아니다 — "예시"라고 적는다.
+ * 이 손님을 고른 까닭: 심사 점수가 가장 높고 카드 숫자가 서로 맞는다(15,000원 − 1,000원 = 14,000원, 30,000원 ÷ 14,000원 → 3명 · 직접 검산).
+ * 점검에서 지적받은 값(업종 · 하루 10명 · 6개월 목표)과 그 값을 언급한 문장은 뺐다.
+ * 읽기 쉽게(2026-11-18 사장님: 토스페이먼츠 수준으로) 단계마다 큰 제목 한 줄 · 짧은 글 · 넓은 여백으로 줄였다. 제목 · 이름 · 숫자는 나온 그대로고, 나머지 문장은 뜻을 바꾸지 않고 짧게 고쳤다.
+ * 단계는 7초마다 다음으로 넘어간다(구간이 보일 때만 · 단계를 직접 누르면 멈춘다). 움직임 줄이기면 넘기지 않는다. 다섯 단계를 같은 칸에 겹쳐 높이가 변하지 않는다.
+ */
+const DEMO_STAGES = ["대화", "사업 정보 정리", "사업 방향", "다른 길 · 확인할 것", "바로 할 일"];
+const DEMO_STAGE_MS = 7000;
+const DEMO_TALK: Array<{ who: "me" | "ai"; text: string }> = [
+  { who: "me", text: "저 타로 보는 사람인데요, 온라인으로 타로 상담 해 보고 싶어요!!" },
+  { who: "ai", text: "준비에 쓸 수 있는 돈은 얼마인가요?" },
+  { who: "me", text: "한 50만원 정도요? 타로카드랑 천은 이미 있어요" },
+  { who: "ai", text: "일주일에 몇 시간 쓸 수 있나요?" },
+  { who: "me", text: "평일 저녁이랑 주말에 한 20시간 정도요" },
+];
+const DEMO_FIELDS: Array<{ label: string; value: string; mine?: boolean }> = [
+  { label: "제공할 상품", value: "온라인 타로 상담", mine: true },
+  { label: "주요 고객", value: "연애·진로 고민 있는 20~30대" },
+  { label: "고객을 만나는 곳", value: "인스타그램" },
+  { label: "판매 가격", value: "15,000원" },
+  { label: "준비 예산", value: "500,000원", mine: true },
+  { label: "일주일에 쓸 시간", value: "20시간", mine: true },
+];
+const DEMO_START = ["인스타그램으로 알리고 DM으로 예약받기", "채팅·통화로 20~30분 상담", "풀이 요약을 보내고 후기 받기"];
+const DEMO_ALTERNATIVES = [
+  { name: "상담 앱에 입점하기", tradeoff: "손님 모으기는 쉽지만 수수료만큼 남는 돈이 줄어요." },
+  { name: "평일 저녁마다 + 주말 종일", tradeoff: "주 20시간을 10시간 넘게 넘겨요. 알바와 함께 하기엔 지쳐요." },
+];
+const DEMO_ASSUMPTIONS = [
+  { statement: "모르는 사람도 15,000원을 낼까?", check: "인스타에 안내 글을 올려 지인이 아닌 분의 예약 의사를 세어 봐요." },
+  { statement: "상담 1건이 30분 안에 끝날까?", check: "지인 상담 3~5건의 시간을 재 봐요." },
+];
+const STARTS: Array<{ title: string; action: string; entry: EntryMode }> = [
+  { title: "처음 창업해요", action: "아이디어로 시작하기", entry: "startup" },
+  { title: "이미 사업 중이에요", action: "내 사업 개선하기", entry: "operating" },
+  { title: "아이디어가 아직 없어요", action: "사업안 추천받기", entry: "exploring" },
 ];
 
 /*
@@ -83,6 +118,30 @@ function Arrow() {
 export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | null } = {}) {
   const root = useRef<HTMLDivElement>(null);
   const [armed, setArmed] = useState(false);
+  /* 예시 화면 — 지금 보이는 단계. 구간이 보이는 동안 7초마다 다음 단계로, 단계를 직접 누르면 멈춘다 */
+  const who = useRef<HTMLElement>(null);
+  const [stage, setStage] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const autoStage = useRef(true);
+  useEffect(() => {
+    const element = who.current;
+    if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+    let timer: number | undefined;
+    const stop = () => { if (timer !== undefined) window.clearInterval(timer); timer = undefined; setPlaying(false); };
+    const observer = new IntersectionObserver(([entry]) => {
+      stop();
+      if (!entry.isIntersecting || !autoStage.current) return;
+      setPlaying(true);
+      timer = window.setInterval(() => {
+        if (!autoStage.current) { stop(); return; }
+        setStage(current => (current + 1) % DEMO_STAGES.length);
+      }, DEMO_STAGE_MS);
+    }, { threshold: 0.2 });
+    observer.observe(element);
+    return () => { stop(); observer.disconnect(); };
+  }, []);
+  const pickStage = (index: number) => { autoStage.current = false; setPlaying(false); setStage(index); };
+  const stageProps = (index: number) => ({ className: styles.stage, role: "tabpanel", id: `home-who-stage-${index}`, "aria-labelledby": `home-who-step-${index}`, "data-active": stage === index || undefined, "aria-hidden": stage !== index, inert: stage !== index });
   useEffect(() => {
     const element = root.current;
     if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
@@ -123,16 +182,67 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
       </ul>
     </section>
 
-    <section id="who" className={styles.section} aria-labelledby="home-who-title" data-reveal>
+    <section id="who" ref={who} className={styles.section} aria-labelledby="home-who-title" data-reveal>
       <header className={`${styles.sectionHead} ${styles.center}`}>
         <h2 id="home-who-title" className={styles.heading}>어떤 사업이든 시작할 수 있어요</h2>
+        <p className={styles.headNote}>한마디에서 실행 계획까지 <span>예시 · 온라인 타로 상담</span></p>
       </header>
-      <div className={styles.grid3}>
-        {STARTS.map(card => <article key={card.title} className={styles.panel}>
-          <h3>{card.title}</h3>
-          <p>{card.body}</p>
-          <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action}<ChevronRight size={18} aria-hidden="true" /></a>
-        </article>)}
+      <div className={styles.demo}>
+        <ol className={styles.steps} role="tablist" aria-label="진행 단계">
+          {DEMO_STAGES.map((name, index) => <li key={name} role="presentation"><button type="button" role="tab" id={`home-who-step-${index}`} aria-selected={stage === index} aria-controls={`home-who-stage-${index}`} data-done={index < stage || undefined} data-playing={playing && stage === index || undefined} onClick={() => pickStage(index)}><i>{index + 1}</i>{name}</button></li>)}
+        </ol>
+        <div className={styles.stages}>
+          <div {...stageProps(0)}>
+            <h3 className={styles.stageTitle}>한마디만 적으면 돼요<small>모자란 것만 물어봐요</small></h3>
+            <div className={styles.talk}>
+              {DEMO_TALK.map(line => <p key={line.text} className={line.who === "me" ? styles.chatMe : styles.chatAi}>{line.text}</p>)}
+            </div>
+          </div>
+          <div {...stageProps(1)}>
+            <h3 className={styles.stageTitle}>대화가 표로 정리돼요<small>틀린 값은 눌러서 바로 고쳐요</small></h3>
+            <dl className={styles.fields}>
+              {DEMO_FIELDS.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{field.value}</dd><em data-mine={field.mine || undefined}>{field.mine ? "내가 말함" : "AI가 채움"}</em></div>)}
+            </dl>
+          </div>
+          <div {...stageProps(2)}>
+            <h3 className={styles.stageTitle}>잠들기 전, 연애·진로 고민을<br />카드로 풀어 보는 시간<small>이름 후보 · 달빛타로 · 보라카드 · 오늘의 한 장</small></h3>
+            <ul className={styles.calc}>
+              <li><span>한 건에 남는 돈</span><b>14,000원</b><small>15,000원 − 1,000원</small></li>
+              <li><span>본전이 되는 상담 수</span><b>한 달 3명</b><small>매달 30,000원 ÷ 14,000원</small></li>
+            </ul>
+            <ol className={styles.startList}>{DEMO_START.map(item => <li key={item}>{item}</li>)}</ol>
+            <p className={styles.fine}>결제 수수료를 빼기 전 숫자예요.</p>
+          </div>
+          <div {...stageProps(3)}>
+            <h3 className={styles.stageTitle}>다른 길도 함께 따져요<small>돈 쓰기 전에 확인할 것까지</small></h3>
+            <div className={styles.cols}>
+              <div>
+                <span className={styles.sheetLabel}>다른 길</span>
+                {DEMO_ALTERNATIVES.map(item => <div key={item.name} className={styles.memo}><b>{item.name}</b><p>{item.tradeoff}</p></div>)}
+              </div>
+              <div>
+                <span className={styles.sheetLabel}>먼저 확인할 것</span>
+                {DEMO_ASSUMPTIONS.map(item => <div key={item.statement} className={styles.memo}><b>{item.statement}</b><p>{item.check}</p></div>)}
+              </div>
+            </div>
+          </div>
+          <div {...stageProps(4)}>
+            <h3 className={styles.stageTitle}>이번 주 할 일까지 정해요<small>그대로 올리면 되는 글도 써 드려요</small></h3>
+            <div className={styles.cols}>
+              <div>
+                <div className={styles.memo}><b>인스타그램에 예약 조사 글 올리기</b><p>2주 안에 응답 6개가 모이면 끝이에요.</p></div>
+                <p className={styles.chatMe}>달빛타로 이름 완전 맘에 들어요. 글부터 올려 볼게요!!</p>
+              </div>
+              <div>
+                <p className={styles.sheetText}>{"온라인 1:1 타로 상담, 첫 손님을 찾고 있어요\n\n연애·진로 고민을 20~30분 동안 카드로 풀어 드려요. (1회 15,000원 예정)\n\n원하는 날짜와 한 달에 몇 번 받고 싶은지 DM으로 알려 주세요!"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.demoStarts}>
+          <span>내 사업으로 해 보기</span>
+          {STARTS.map(card => <a key={card.title} href={newChatEntryHref(card.entry)}>{card.title}<ChevronRight size={16} aria-hidden="true" /></a>)}
+        </div>
       </div>
     </section>
 
