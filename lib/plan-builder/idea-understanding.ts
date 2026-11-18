@@ -17,7 +17,7 @@ import type { IntakeValue } from "./intake-types";
  * 같은 호출에서 이 사업이라면 처음에 어떨지 짐작하게 하고, 코드는 형식 · 범위 · '한 번 비용 < 가격'만 검사한다. 기준표는 AI가 없을 때의 예비로 남는다.
  */
 export const UNDERSTAND_MAX_INPUT = 1200;
-export type Guess = { sector?: string; customer?: string; problem?: string; offer?: string; channel?: string; price?: number; unitCost?: number; monthlyCost?: number };
+export type Guess = { count?: { period: "하루" | "일주일" | "한 달"; number: number; unit: string }; sector?: string; customer?: string; problem?: string; offer?: string; channel?: string; price?: number; unitCost?: number; monthlyCost?: number };
 export type Understood = {
   price?: string; unitCost?: string; monthlyCost?: string; budget?: string; hoursPerWeek?: string;
   channel?: string; channel2?: string; channel3?: string; customer?: string; problem?: string; offer?: string; prices?: string; goal?: string;
@@ -76,6 +76,11 @@ export const GUESS_RULES = [
    * 답답해한 순간 234개 가운데 45개가 업종 때문이었다). 낱말이 아니라 글 전체의 뜻으로 고른다.
    */
   `- guessSector: 이 사업에 가장 가까운 업종 하나를 다음 값 중에서 고릅니다: ${SECTOR_CHOICES}. 손님이 가게 · 작업실에 찾아오거나 사장님이 찾아가서 해 주는 일, 그리고 상담 · 돌봄 · 수리 · 청소 · 촬영 · 공연 · 대여처럼 사람이 해 주는 일은 온라인으로 하더라도 local_service, 먹고 마시는 가게는 food_beverage, 물건을 손님에게 직접 파는 일은 매장이든 온라인이든, 받아다 팔든 손수 만들어 팔든(수공예 · 굿즈 · 반찬 · 김치 · 잼) retail_commerce, 공장 · 설비로 만들어 가게나 회사에 납품하는 일만 manufacturing, 가르치는 일은 education입니다. 글에 '온라인'이 없으면 온라인 판매라고 넘겨짚지 마세요. 정말 어느 것도 아니면 general.`,
+  /*
+   * 운영 범위도 짐작한다(2026-11-18 AI 손님 점검: 업종 기준표의 '하루 10명' · '일주일 9건'이 주 20시간 타로 상담 · 500만원 명품 리셀과 맞지 않아
+   * 답답해한 순간 234개 가운데 32개가 이 값 때문이었다). 일할 시간과 예산은 아직 모르므로 낮게 잡는다 — 높게 잡으면 본전 계산이 쉬워 보이는 쪽으로 틀린다.
+   */
+  "- guessCountPeriod · guessCountNumber · guessCountUnit: 처음 작게 시작할 때 무리 없이 해낼 수 있는 판매 · 처리 수. 가게를 차려 매일 문을 여는 일(식당 · 카페 · 미용실 · 네일샵 · 매장)은 한 사람이 하루 영업으로 받는 수로, 부업 · 온라인 · 출장 · 프리랜서처럼 틈틈이 하는 일은 주 20시간 안팎으로 해낼 수 있는 수로 잡습니다. 한 건에 걸리는 시간(준비 · 이동 포함)과 한 건의 값을 생각해 낮게 잡습니다(예: 1인 미용실 → 하루 6명, 붕어빵 노점 → 하루 60봉지, 30분 1:1 상담 → 일주일 10명, 1시간 방문 산책 → 일주일 8회, 중고 명품 가방 → 한 달 5개). guessCountPeriod 는 '하루' · '일주일' · '한 달' 중 하나, guessCountUnit 은 세는 말 1~3글자(건 · 명 · 개 · 회 · 봉지). 글에 수가 적혀 있으면 그대로 씁니다. 짐작이 어려우면 guessCountNumber 를 0으로.",
   "- guessCustomer: 주 손님(짧은 명사구, 25자 안). guessProblem: 그 손님이 겪는 불편 한 가지(짧은 문장).",
   "- guessOffer: 처음 팔 대표 상품 · 서비스 하나를 파는 단위가 보이게(예: '길고양이 사진 엽서 1장', '붕어빵 3개 한 봉지', '1:1 영어 과외 월 8회').",
   "- guessPrice: 그 대표 상품을 한 번 팔 때 받는 값(원, 숫자만). guessUnitCost: 그 한 번에 드는 재료비 · 원가(원, 숫자만, 값보다 작게).",
@@ -84,8 +89,8 @@ export const GUESS_RULES = [
 ].join("\n");
 export const guessSchema = {
   type: "object", additionalProperties: false,
-  properties: { guessSector: { type: "string", enum: intakeSectorOptions.map(option => option.value) }, ...Object.fromEntries(GUESS_TEXT.map(key => [key, text])), ...Object.fromEntries(GUESS_NUMBER.map(key => [key, { type: "number" }])) },
-  required: ["guessSector", ...GUESS_TEXT, ...GUESS_NUMBER],
+  properties: { guessSector: { type: "string", enum: intakeSectorOptions.map(option => option.value) }, guessCountPeriod: { type: "string", enum: ["하루", "일주일", "한 달"] }, guessCountNumber: { type: "number" }, guessCountUnit: text, ...Object.fromEntries(GUESS_TEXT.map(key => [key, text])), ...Object.fromEntries(GUESS_NUMBER.map(key => [key, { type: "number" }])) },
+  required: ["guessSector", "guessCountPeriod", "guessCountNumber", "guessCountUnit", ...GUESS_TEXT, ...GUESS_NUMBER],
 };
 
 /** 모델 답에서 원문에 근거가 있는 것만 남긴다 */
@@ -114,6 +119,8 @@ export function cleanGuess(raw: Record<string, unknown> | null): Guess {
   const customer = line(raw.guessCustomer), problem = line(raw.guessProblem), offer = line(raw.guessOffer), channel = line(raw.guessChannel);
   // 업종은 보기 값 중 하나일 때만 — '기타'(general)는 짐작이 아니라 모른다는 뜻이라 넣지 않는다(기준표 값이나 업종 질문이 남는다)
   if (typeof raw.guessSector === "string" && raw.guessSector !== "general" && intakeSectorOptions.some(option => option.value === raw.guessSector)) out.sector = raw.guessSector;
+  if ((raw.guessCountPeriod === "하루" || raw.guessCountPeriod === "일주일" || raw.guessCountPeriod === "한 달") && typeof raw.guessCountNumber === "number" && raw.guessCountNumber >= 1 && raw.guessCountNumber < 100_000)
+    out.count = { period: raw.guessCountPeriod, number: Math.round(raw.guessCountNumber), unit: typeof raw.guessCountUnit === "string" && /^[가-힣]{1,3}$/.test(raw.guessCountUnit.trim()) ? raw.guessCountUnit.trim() : "건" };
   if (customer) out.customer = customer;
   if (problem) out.problem = problem;
   if (offer) out.offer = offer;
@@ -126,7 +133,7 @@ export function cleanGuess(raw: Record<string, unknown> | null): Guess {
 }
 
 /** 짐작을 질문의 답으로 옮긴다(순수 함수) — 이미 말한 칸(said)은 건너뛴다. 판매 경로처럼 여러 개 고르는 질문은 한 개짜리 목록으로 */
-export function guessedAnswers(guess: Guess | undefined, questions: IntakeQuestion[], said: ReadonlySet<string> = new Set()): Array<{ questionId: string; value: IntakeValue }> {
+export function guessedAnswers(guess: Guess | undefined, questions: IntakeQuestion[], said: ReadonlySet<string> = new Set(), capacityNow?: string): Array<{ questionId: string; value: IntakeValue }> {
   if (!guess) return [];
   const out: Array<{ questionId: string; value: IntakeValue }> = [];
   const push = (fieldKey: string, value: string | number | undefined) => {
@@ -138,6 +145,8 @@ export function guessedAnswers(guess: Guess | undefined, questions: IntakeQuesti
   if (guess.sector && !said.has("industry")) out.push({ questionId: "industry", value: guess.sector });
   push("customer", guess.customer); push("problem", guess.problem); push("offer", guess.offer); push("channel", guess.channel);
   push("price", guess.price); push("unitCost", guess.unitCost); push("cost", guess.monthlyCost);
+  // 운영 범위는 '누가 / 얼마나' 한 줄 — 누가(대표자 혼자 · 평일만 …)는 지금 값을 그대로 두고 수만 바꾼다
+  if (guess.count) push("capacity", `${(capacityNow ?? "").split(" / ")[0] || "대표자 혼자"} / ${guess.count.period} ${guess.count.number}${guess.count.unit}`);
   return out;
 }
 

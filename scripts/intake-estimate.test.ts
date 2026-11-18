@@ -340,6 +340,19 @@ async function main() {
     assert.equal(chosen.snapshot.intake.sector, "food_beverage");
     assert.equal(kept.snapshot.intake.sector, "food_beverage", "사용자가 고른 업종은 짐작이 바꾸지 않는다");
   }
+  // 운영 범위 짐작(2026-11-18): 기준표의 수('일주일 10건' 등)를 이 사업에 맞춘 수로 바꾼다. 직접 답한 운영 범위는 그대로
+  {
+    const owner = `intake-guess-capacity-${randomUUID()}`;
+    const made = await saveIntakeCommand(owner, { action: "start", mode: "startup", questionId: "business", value: "온라인으로 타로 상담을 해 보고 싶어요", revision: 0, requestId: randomUUID() }, off);
+    const next = async (command: Record<string, unknown>) => { const current = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!; return saveIntakeCommand(owner, { ...command, planId: made.plan.id, revision: readCoach(current.answers)!.revision, requestId: randomUUID() } as never, off); };
+    const capacityId = made.snapshot.questions.find(question => question.fieldKey === "capacity")!.id;
+    const guessed = await next({ action: "understand", understood: [], guessed: [{ questionId: capacityId, value: "대표자 혼자 / 일주일 6명" }] });
+    assert.equal(readCoach(guessed.plan.answers)!.fields.find(field => field.key === "capacity")?.value, "대표자 혼자 / 일주일 6명");
+    assert.match(guessed.snapshot.intake.answers[capacityId]!.messageId, /:guess:estimate$/);
+    const typed = await next({ action: "answer", questionId: capacityId, value: "대표자 혼자 / 일주일 12명" });
+    const again = await next({ action: "understand", understood: [], guessed: [{ questionId: capacityId, value: "대표자 혼자 / 일주일 3명" }] });
+    assert.equal(readCoach(typed.plan.answers)!.fields.find(field => field.key === "capacity")?.value, readCoach(again.plan.answers)!.fields.find(field => field.key === "capacity")?.value, "직접 답한 운영 범위는 짐작이 바꾸지 않는다");
+  }
   // 대화 중 적은 말에서 읽은 것(read, 2026-11-16): 방금 한 말이므로 직접 답한 칸도 새 값으로 바꾼다. 영업일은 표에 바로 적히고 계산표가 읽는다
   {
     const owner = `intake-read-${randomUUID()}`;
