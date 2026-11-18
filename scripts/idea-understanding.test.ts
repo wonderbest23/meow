@@ -50,6 +50,15 @@ assert.deepEqual(guessedAnswers({ customer: "고양이를 좋아하는 20~30대"
 ], "말한 칸(가격)은 빼고, 여러 개 고르는 질문은 목록으로");
 assert.deepEqual(guessedAnswers(undefined, guessQ), []);
 // 업종 짐작(2026-11-18): 보기 값일 때만 받고 '기타'는 버린다. 답으로 옮길 때는 맨 앞에(업종이 바뀌면 다른 칸의 질문이 바뀐다), 이미 말한 업종이면 건너뛴다
+// 월 비용을 단위 없이 말하면 만원(2026-11-18): '월세 350' → 3,500,000원. 단위가 있으면 적힌 대로
+{
+  const costQ = [{ id: "cost", fieldKey: "cost", label: "월 고정비", prompt: "", kind: "number", unit: "원" }] as never;
+  const cost = (text: string) => String(understoodAnswers({ monthlyCost: text }, costQ)[0]?.value);
+  assert.match(cost("350"), /^3500000/);
+  assert.match(cost("월세 350 정도"), /^3500000/);
+  assert.match(cost("150만원"), /^1500000/);
+  assert.match(cost("월세 80만원"), /^800000/);
+}
 assert.equal(cleanGuess({ guessSector: "local_service" }).sector, "local_service");
 // 이미 운영 중(2026-11-18): true 일 때만 표시하고, 답 목록에는 신호(__running)로 넣는다
 assert.equal(cleanGuess({ guessRunning: true }).running, true);
