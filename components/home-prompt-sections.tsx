@@ -36,26 +36,14 @@ const FEATURES = [
 
 /* 새 대화의 첫 선택지(생각한 사업이 있어요 · 사업을 운영 중이에요 · 아이디어를 찾고 있어요)를 카드가 미리 골라 준다(?entry=) */
 /*
- * 한마디 → 한 줄 방향 예시(2026-11-18). 2026-11-17 AI 손님 점검(가상 손님 41명 · 실제 AI)에서 손님이 적은 첫마디와 AI가 정리한 사업 방향 제목이다.
- * 가상 손님이라 실제 고객 사례가 아니다 — 화면에 "예시"라고 적는다. 첫마디는 짧게 줄였고, 제목은 나온 그대로다.
- * 숫자(가격·본전)는 넣지 않는다: 점검에서 카드 숫자는 대부분 지적을 받았다.
+ * 카드마다 설명 문장 대신 채팅 한 쌍(손님 한마디 → 오늘창업이 정리한 사업 방향 제목)을 보여 준다(2026-11-18 사장님: 글이 빽빽하다 · 구간을 나누지 말고 합치기).
+ * 2026-11-17 AI 손님 점검(가상 손님 · 실제 AI)에서 나온 말이다. 가상 손님이라 실제 고객 사례가 아니다 — 구간 제목 아래 "예시 대화"라고 적는다.
+ * 손님 말은 짧게 줄였고 제목은 나온 그대로다. 숫자(가격·본전)는 넣지 않는다: 점검에서 카드 숫자는 대부분 지적을 받았다.
  */
-const IDEA_EXAMPLES: Array<{ said: string; headline: string }> = [
-  { said: "겨울에 역앞에서 붕어빵 장사", headline: "추운 퇴근길, 역앞에서 갓 구운 붕어빵 한 봉지" },
-  { said: "강아지 산책 알바를 사업으로 키워 보고 싶어요", headline: "바쁜 날에도 우리 강아지는 매일 동네를 걸어요" },
-  { said: "김치를 오십 년 넘게 담갔는데 인터넷으로 팔아 보고 싶어", headline: "오십 년 손맛 김치를 혼자 사는 집 식탁까지" },
-  { said: "제가 그린 그림으로 스티커랑 엽서를 팔아 보고 싶어요", headline: "내가 그린 그림이 누군가의 다이어리에 붙어요" },
-  { said: "부모님 감귤밭에서 못난이 귤이 매년 엄청 나와요", headline: "버려지던 부모님 밭 못난이 귤이 집으로 오는 귤청 한 병" },
-  { said: "어르신들께 스마트폰 쓰는 법을 가르쳐 드리는 일", headline: "카톡 사진 한 장, 이제 자녀에게 묻지 않고 보내요" },
-  { said: "아파트 단지 출장세차", headline: "퇴근 후 주차장에 세워 둔 차가 깨끗해져 있어요" },
-  { said: "애기들 생일파티에 가서 비눗방울쇼 하고 싶어요", headline: "아이 생일파티가 비눗방울로 가득 차는 날" },
-  { said: "중고책 파는 작은 책방에 커피도 같이 하는 공간", headline: "동네에서 커피 한 잔 놓고 헌책 읽다 가는 곳" },
-];
-
-const STARTS: Array<{ title: string; body: string; action: string; entry: EntryMode }> = [
-  { title: "처음 창업해요", body: "관심 있는 일로 고객과 상품부터 정리해요.", action: "아이디어로 시작하기", entry: "startup" },
-  { title: "이미 사업 중이에요", body: "실제 매출과 비용으로 다음 계획을 세워요.", action: "내 사업 개선하기", entry: "operating" },
-  { title: "아이디어가 아직 없어요", body: "시간·돈·잘하는 것으로 맞는 사업안을 골라 드려요.", action: "사업안 추천받기", entry: "exploring" },
+const STARTS: Array<{ title: string; said: string; headline: string; action: string; entry: EntryMode }> = [
+  { title: "처음 창업해요", said: "겨울에 역앞에서 붕어빵 장사", headline: "추운 퇴근길, 역앞에서 갓 구운 붕어빵 한 봉지", action: "아이디어로 시작하기", entry: "startup" },
+  { title: "이미 사업 중이에요", said: "분식집 5년째인데 요즘 매출이 좀 줄었어요", headline: "단골이 배달앱 대신 가게로 직접 주문하는 동네 분식집", action: "내 사업 개선하기", entry: "operating" },
+  { title: "아이디어가 아직 없어요", said: "손재주는 좀 있어요. 집에서 하루 3시간쯤 할 수 있으면 좋겠어요", headline: "아이 낮잠 시간에 그린 그림이 스티커·메모지가 돼요", action: "사업안 추천받기", entry: "exploring" },
 ];
 
 /*
@@ -143,23 +131,17 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
     <section id="who" className={styles.section} aria-labelledby="home-who-title" data-reveal>
       <header className={`${styles.sectionHead} ${styles.center}`}>
         <h2 id="home-who-title" className={styles.heading}>어떤 사업이든 시작할 수 있어요</h2>
+        <p className={styles.headNote}>한마디면 돼요 <span>예시 대화</span></p>
       </header>
       <div className={styles.grid3}>
         {STARTS.map(card => <article key={card.title} className={styles.panel}>
           <h3>{card.title}</h3>
-          <p>{card.body}</p>
+          <div className={styles.chat}>
+            <p className={styles.chatMe}>{card.said}</p>
+            <p className={styles.chatAi}><span>오늘창업</span><strong>{card.headline}</strong></p>
+          </div>
           <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action}<ChevronRight size={18} aria-hidden="true" /></a>
         </article>)}
-      </div>
-      {/* 채팅 모양 예시 — 손님 말풍선(오른쪽)과 오늘창업 답 말풍선(왼쪽) 한 쌍씩. 옆으로 넘겨 본다(스크립트 없이 scroll-snap) */}
-      <div className={styles.ideas}>
-        <p className={styles.ideasLabel}>한마디면 돼요 <span>예시 대화</span></p>
-        <ul className={styles.ideaList} tabIndex={0} aria-label="예시 대화 — 옆으로 넘겨 볼 수 있어요">
-          {IDEA_EXAMPLES.map(item => <li key={item.said} className={styles.chat}>
-            <p className={styles.chatMe}>{item.said}</p>
-            <p className={styles.chatAi}><span>오늘창업</span><strong>{item.headline}</strong></p>
-          </li>)}
-        </ul>
       </div>
     </section>
 
