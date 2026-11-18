@@ -36,46 +36,48 @@ const FEATURES = [
 
 /* 새 대화의 첫 선택지(생각한 사업이 있어요 · 사업을 운영 중이에요 · 아이디어를 찾고 있어요)를 카드가 미리 골라 준다(?entry=) */
 /*
- * '어떤 사업이든' 구간 — 한마디가 사업 방향 한 장이 되는 모습을 통째로 보여 준다(2026-11-18 사장님: 제목만 보여서는 좋은 점이 안 보인다 · 구간을 나누지 말고 합치기 · 채팅 모양 · 차례로 나타나게).
- * 탭 세 개가 예전 시작 카드 세 장이다(처음 창업해요 · 이미 사업 중이에요 · 아이디어가 아직 없어요). 탭마다 손님 한마디 → 사업 방향 한 장(제목 · 소개 · 이름 후보 · 시작 순서 · 바로 쓸 글) → 시작 단추.
- * 내용은 2026-11-17 AI 손님 점검(가상 손님 · 실제 AI)의 사업 방향 카드에서 왔다. 가상 손님이라 실제 고객 사례가 아니다 — "예시 대화"라고 적는다.
- * 제목 · 소개 · 이름은 나온 그대로, 손님 말 · 시작 순서 · 바로 쓸 글은 줄였다. 본전 · 예산 같은 계산 숫자는 넣지 않는다(점검에서 지적이 많았다).
- * 조각은 차례로 나타난다(구간이 보일 때만). 다 나오면 잠시 머물다 다음 탭으로 넘어가고, 탭을 직접 누르면 저절로 넘기지 않는다.
- * 움직임 줄이기나 스크립트가 없으면 처음부터 다 보인다. 세 탭을 같은 칸에 겹쳐 두어 탭이 바뀌어도 높이가 변하지 않는다.
+ * '어떤 사업이든' 구간 — 한 손님이 거친 과정 전부를 단계별로 보여 준다(2026-11-18 사장님: 제목이나 홍보 글만 보여서는 사업을 기획해 주는 것으로 안 보인다 · 진행한 과정 전부를 · 차례로 넘어가게).
+ * 다섯 단계: 대화 → 정리된 사업 정보 → 사업 방향(숫자 포함) → 다른 길과 확인할 것 → 바로 할 일.
+ * 내용은 2026-11-17 AI 손님 점검(가상 손님 · 실제 AI)의 타로 상담 손님 기록 그대로다. 가상 손님이라 실제 고객 사례가 아니다 — "예시"라고 적는다.
+ * 이 손님을 고른 까닭: 심사 점수가 가장 높고 카드 숫자가 서로 맞는다(15,000원 − 1,000원 = 14,000원, 30,000원 ÷ 14,000원 → 3명 · 직접 검산).
+ * 점검에서 지적받은 값(업종 · 하루 10명 · 6개월 목표)과 그 값을 언급한 문장은 뺐고, 긴 글은 줄였다. 그 밖의 문장은 나온 그대로다.
+ * 단계는 7초마다 다음으로 넘어간다(구간이 보일 때만 · 단계를 직접 누르면 멈춘다). 움직임 줄이기면 넘기지 않는다. 다섯 단계를 같은 칸에 겹쳐 높이가 변하지 않는다.
  */
-const STARTS: Array<{ title: string; said: string; headline: string; pitch: string; extra: { label: string; value: string }; steps: string[]; text: { label: string; body: string }; action: string; entry: EntryMode }> = [
-  {
-    title: "처음 창업해요", entry: "startup", action: "아이디어로 시작하기",
-    said: "강아지 산책 알바 하고 있는데 이걸 사업으로 키워 보고 싶어요. 대학생이라 돈은 별로 없어요",
-    headline: "바쁜 날에도 우리 강아지는 매일 동네를 걸어요",
-    pitch: "바쁜 맞벌이·1인 가구 보호자에게 강아지 산책을 집 앞으로 찾아가 1시간 단위로 대신해 드리는 대학생 1인 방문 산책 서비스",
-    extra: { label: "이름 후보", value: "오늘산책 · 꼬리산책 · 동네산책친구" },
-    steps: ["당근에 소개 글 올리기", "첫 만남에서 강아지 성격·건강·주의사항 확인", "정해진 요일에 산책하고 사진·짧은 기록 보내기", "다음 예약 잡기"],
-    text: { label: "당근에 바로 올릴 글", body: "안녕하세요! 이 동네 사는 대학생이에요 🐶 지금 강아지 산책 알바를 하고 있는데, 직접 방문 산책을 시작해 보려고 미리 여쭤봐요.\n- 1회 1시간, 집 앞으로 찾아가요\n- 산책 후 사진과 짧은 기록을 보내 드려요 …" },
-  },
-  {
-    title: "이미 사업 중이에요", entry: "operating", action: "내 사업 개선하기",
-    said: "동네에서 분식집 5년째 하고 있어요. 요즘 매출이 좀 줄었네요",
-    headline: "단골이 배달앱 대신 가게로 직접 주문하는 동네 분식집",
-    pitch: "동네 가족·주부와 학원가 학생에게 떡볶이·김밥 분식을 매장·포장·전화 주문으로 더 자주 드리고, 배달앱 의존을 줄이는 5년 차 분식집 운영 개선",
-    extra: { label: "함께 본 다른 길", value: "떡볶이 가격 500원 조정 시험 · 배달앱 안에서 주문 늘리기" },
-    steps: ["메뉴판·전단에 포장·전화 주문 번호와 포장 혜택 크게 알리기", "배달 봉투에 '다음엔 전화로' 쿠폰 넣기", "하교 시간 세트·저녁 포장 세트 1~2개 정하기", "매달 판매를 경로별로 적어 비교하기"],
-    text: { label: "배달 봉투에 넣을 쿠폰 문구", body: "늘 찾아주셔서 감사해요! 다음엔 가게로 직접 주문해 주세요. 📞 전화 주문·포장 시 이 쿠폰을 보여 주시면 [혜택]을 드려요. 5년 동안 같은 자리에서 매일 아침 직접 만든 떡볶이·김밥으로 기다릴게요." },
-  },
-  {
-    title: "아이디어가 아직 없어요", entry: "exploring", action: "사업안 추천받기",
-    said: "잘 모르겠는데 손재주는 좀 있어요. 집에서 애 보면서 하루 3시간 정도 할 수 있으면 좋겠어요",
-    headline: "아이 낮잠 시간에 그린 그림이 스티커·메모지가 돼요",
-    pitch: "문구를 좋아하는 손님에게 직접 디자인한 스티커·메모지를 스마트스토어에서 소량으로 만들어 택배로 보내는 1인 문구 판매점",
-    extra: { label: "이름 후보", value: "오후세시 문방 · 세시의 종이 · 낮잠문구" },
-    steps: ["스티커 2~3종·메모지 1~2종 디자인", "인쇄소에 소량 제작 맡기기", "사진 찍고 상세 페이지 쓰기", "주문이 들어오면 포장해 택배 발송"],
-    text: { label: "인쇄소에 보낼 견적 문의", body: "안녕하세요, 소량으로 스티커와 메모지를 제작하려고 견적 문의드려요.\n1) 스티커: 크기 약 10x15cm, 반칼 커팅, 수량 50장·100장\n2) 메모지: 크기 약 9x9cm, 50매 묶음, 수량 30권·50권 …" },
-  },
+const DEMO_STAGES = ["대화", "사업 정보 정리", "사업 방향", "다른 길 · 확인할 것", "바로 할 일"];
+const DEMO_STAGE_MS = 7000;
+const DEMO_TALK: Array<{ who: "me" | "ai"; label?: string; text: string }> = [
+  { who: "me", text: "저 타로 보는 사람인데요, 온라인으로 타로 상담 해 보고 싶어요!! 지금은 지인들 위주로만 봐 주고 있어요" },
+  { who: "ai", label: "오늘창업", text: "온라인 타로는 상담사가 많아서, 지인이 아닌 낯선 사람이 처음 믿고 돈을 내게 만드는 게 가장 어려울 수 있어요. 나머지는 이 사업에 맞춰 먼저 채웠어요." },
+  { who: "ai", label: "질문", text: "준비에 쓸 수 있는 돈은 얼마인가요?" },
+  { who: "me", text: "음 한 50만원 정도요? 타로카드랑 천은 이미 있어서 많이는 안 들 것 같아요" },
+  { who: "ai", label: "질문", text: "일주일에 몇 시간 쓸 수 있나요?" },
+  { who: "me", text: "평일 저녁이랑 주말에 할 수 있어서 한 20시간 정도요? 타로카페 알바도 하고 있어서요" },
 ];
-/* 차례로 나오는 조각 수(손님 말 · 제목과 소개 · 이름 · 시작 순서 · 바로 쓸 글 · 시작 단추)와 박자 — 0.9초에 하나씩, 다 나온 뒤 7초쯤 머물고 다음 탭 */
-const DEMO_PARTS = 6;
-const DEMO_TICK_MS = 900;
-const DEMO_HOLD_TICKS = 8;
+const DEMO_FIELDS: Array<{ label: string; value: string; mine?: boolean }> = [
+  { label: "제공할 상품", value: "온라인 타로 상담", mine: true },
+  { label: "주요 고객", value: "연애·진로 고민 있는 20~30대" },
+  { label: "해결할 문제", value: "고민을 털어놓고 조언받을 곳이 마땅치 않다" },
+  { label: "고객을 만나는 곳", value: "인스타그램" },
+  { label: "판매 가격", value: "15,000원" },
+  { label: "한 건당 비용", value: "1,000원" },
+  { label: "매달 나가는 비용", value: "30,000원" },
+  { label: "준비 예산", value: "500,000원", mine: true },
+  { label: "일주일에 쓸 시간", value: "20시간", mine: true },
+];
+const DEMO_ALTERNATIVES = [
+  { name: "상담 앱·플랫폼 입점", tradeoff: "고객을 직접 모으는 부담은 줄지만, 수수료를 떼면 한 건당 남는 돈이 줄어요. 단골을 내 계정으로 쌓기도 어려워요." },
+  { name: "평일 저녁 전체 + 주말 종일 운영", tradeoff: "상담 시간만 주 30시간이 넘어, 말씀하신 주 20시간을 10시간 넘게 초과해요. 알바와 함께 하기엔 지칠 수 있어요." },
+];
+const DEMO_ASSUMPTIONS = [
+  { statement: "지인이 아닌 20~30대도 15,000원을 내고 예약할 거예요.", check: "인스타에 안내 글을 올리고, 지인이 아닌 분의 예약 의사가 몇 건인지 세어 봐요." },
+  { statement: "상담 1건을 30분 안에 끝낼 수 있어요.", check: "지인 상담 3~5건에서 예약 응대부터 풀이 요약 전송까지 걸린 시간을 재 봐요." },
+  { statement: "카드·간편결제 수수료를 빼도 한 건에 남는 돈이 충분해요.", check: "쓸 결제 방법의 수수료를 알아보고, 한 건에 남는 돈을 다시 계산해요." },
+];
+const STARTS: Array<{ title: string; action: string; entry: EntryMode }> = [
+  { title: "처음 창업해요", action: "아이디어로 시작하기", entry: "startup" },
+  { title: "이미 사업 중이에요", action: "내 사업 개선하기", entry: "operating" },
+  { title: "아이디어가 아직 없어요", action: "사업안 추천받기", entry: "exploring" },
+];
 
 /*
  * 결과물 그림 — 첫 화면 진열 띠와 같은 예시 사업('퇴근필라', 실제 AI로 만든 화면). 카드 그림 칸은 3:4.
@@ -119,42 +121,30 @@ function Arrow() {
 export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | null } = {}) {
   const root = useRef<HTMLDivElement>(null);
   const [armed, setArmed] = useState(false);
-  /* 예시 화면 — 고른 탭과 지금까지 나온 조각 수(null 이면 움직이지 않고 다 보인다) */
+  /* 예시 화면 — 지금 보이는 단계. 구간이 보이는 동안 7초마다 다음 단계로, 단계를 직접 누르면 멈춘다 */
   const who = useRef<HTMLElement>(null);
-  const [tab, setTab] = useState(0);
-  const [shown, setShown] = useState<number | null>(null);
-  const demo = useRef({ tab: 0, shown: 1, hold: 0, auto: true, moving: false });
+  const [stage, setStage] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const autoStage = useRef(true);
   useEffect(() => {
     const element = who.current;
     if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
-    const state = demo.current;
-    state.moving = true;
     let timer: number | undefined;
-    const stop = () => { if (timer !== undefined) window.clearInterval(timer); timer = undefined; };
-    const step = () => {
-      if (state.shown < DEMO_PARTS) { state.shown += 1; setShown(state.shown); return; }
-      if (!state.auto) return;
-      state.hold += 1;
-      if (state.hold < DEMO_HOLD_TICKS) return;
-      state.hold = 0; state.shown = 1; state.tab = (state.tab + 1) % STARTS.length;
-      setTab(state.tab); setShown(1);
-    };
+    const stop = () => { if (timer !== undefined) window.clearInterval(timer); timer = undefined; setPlaying(false); };
     const observer = new IntersectionObserver(([entry]) => {
       stop();
-      if (!entry.isIntersecting) return;
-      setShown(state.shown);
-      timer = window.setInterval(step, DEMO_TICK_MS);
-    }, { threshold: 0.25 });
+      if (!entry.isIntersecting || !autoStage.current) return;
+      setPlaying(true);
+      timer = window.setInterval(() => {
+        if (!autoStage.current) { stop(); return; }
+        setStage(current => (current + 1) % DEMO_STAGES.length);
+      }, DEMO_STAGE_MS);
+    }, { threshold: 0.2 });
     observer.observe(element);
-    return () => { stop(); state.moving = false; observer.disconnect(); };
+    return () => { stop(); observer.disconnect(); };
   }, []);
-  const pickTab = (index: number) => {
-    const state = demo.current;
-    state.auto = false; state.tab = index; state.hold = 0;
-    setTab(index);
-    if (state.moving) { state.shown = 1; setShown(1); }
-  };
-  const off = (index: number) => shown !== null && index > shown ? true : undefined;
+  const pickStage = (index: number) => { autoStage.current = false; setPlaying(false); setStage(index); };
+  const stageProps = (index: number) => ({ className: styles.stage, role: "tabpanel", id: `home-who-stage-${index}`, "aria-labelledby": `home-who-step-${index}`, "data-active": stage === index || undefined, "aria-hidden": stage !== index, inert: stage !== index });
   useEffect(() => {
     const element = root.current;
     if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
@@ -198,42 +188,82 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
     <section id="who" ref={who} className={styles.section} aria-labelledby="home-who-title" data-reveal>
       <header className={`${styles.sectionHead} ${styles.center}`}>
         <h2 id="home-who-title" className={styles.heading}>어떤 사업이든 시작할 수 있어요</h2>
-        <p className={styles.headNote}>한마디가 이렇게 정리돼요 <span>예시 대화</span></p>
+        <p className={styles.headNote}>한마디에서 실행 계획까지, 이렇게 진행돼요 <span>예시 · 온라인 타로 상담</span></p>
       </header>
-      <div className={styles.demoTabs} role="tablist" aria-label="내 상황 고르기">
-        {STARTS.map((card, index) => <button key={card.title} type="button" role="tab" id={`home-who-tab-${index}`} aria-selected={tab === index} aria-controls={`home-who-panel-${index}`} onClick={() => pickTab(index)}>{card.title}</button>)}
-      </div>
-      <div className={styles.demoStack}>
-        {STARTS.map((card, index) => {
-          const active = tab === index;
-          const hide = (part: number) => active ? off(part) : undefined;
-          return <div key={card.title} className={styles.demo} role="tabpanel" id={`home-who-panel-${index}`} aria-labelledby={`home-who-tab-${index}`} data-active={active || undefined} aria-hidden={!active} inert={!active}>
-            <div className={styles.demoChat}>
-              <p className={styles.chatMe} data-off={hide(1)}>{card.said}</p>
-              <p className={styles.chatAi} data-off={hide(2)}><span>오늘창업</span>말씀하신 내용으로 사업 방향을 한 장으로 정리했어요.</p>
-              <a className={styles.demoAction} data-off={hide(6)} href={newChatEntryHref(card.entry)}>{card.action}<ChevronRight size={18} aria-hidden="true" /></a>
+      <div className={styles.demo}>
+        <ol className={styles.steps} role="tablist" aria-label="진행 단계">
+          {DEMO_STAGES.map((name, index) => <li key={name} role="presentation"><button type="button" role="tab" id={`home-who-step-${index}`} aria-selected={stage === index} aria-controls={`home-who-stage-${index}`} data-done={index < stage || undefined} data-playing={playing && stage === index || undefined} onClick={() => pickStage(index)}><i>{index + 1}</i>{name}</button></li>)}
+        </ol>
+        <div className={styles.stages}>
+          <div {...stageProps(0)}>
+            <p className={styles.stageLead}>한마디만 적으면 나머지는 AI가 먼저 채우고, 모자란 것만 물어봐요.</p>
+            <div className={styles.talk}>
+              {DEMO_TALK.map(line => <p key={line.text} className={line.who === "me" ? styles.chatMe : styles.chatAi}>{line.label ? <span>{line.label}</span> : null}{line.text}</p>)}
             </div>
-            <article className={styles.sheet}>
-              <div data-off={hide(2)}>
-                <span className={styles.sheetLabel}>사업 방향</span>
-                <h3>{card.headline}</h3>
-                <p>{card.pitch}</p>
+          </div>
+          <div {...stageProps(1)}>
+            <p className={styles.stageLead}>대화가 사업 정보 표로 정리돼요. 틀린 값은 눌러서 바로 고쳐요.</p>
+            <dl className={styles.fields}>
+              {DEMO_FIELDS.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{field.value}<em data-mine={field.mine || undefined}>{field.mine ? "내가 말함" : "AI가 먼저 채움"}</em></dd></div>)}
+            </dl>
+          </div>
+          <div {...stageProps(2)}>
+            <div className={styles.sheetHead}>
+              <span className={styles.sheetLabel}>사업 방향</span>
+              <h3>잠들기 전, 연애·진로 고민을 카드로 풀어 보는 시간</h3>
+              <p>연애·진로 고민이 있는 20~30대에게 평일 저녁과 주말에 채팅·통화로 1:1 타로 상담을 해 드리는 온라인 상담 서비스</p>
+              <p className={styles.sheetStrong}>이름 후보 · 달빛타로 · 보라카드 · 오늘의 한 장</p>
+            </div>
+            <div className={styles.cols}>
+              <div>
+                <span className={styles.sheetLabel}>이렇게 시작해요</span>
+                <p>인스타그램 계정 하나로 알리고 DM으로 예약을 받아요. 상담 1건은 15,000원이고, 고민 1개를 주제로 채팅이나 통화로 20~30분 동안 풀이해 드려요. 순서는 예약 확인 → 상담 → 풀이 요약 메시지 전송 → 후기 요청이에요.</p>
+                <span className={styles.sheetLabel}>이번엔 빼 둔 것</span>
+                <p>자체 앱·홈페이지 제작 · 대면 상담실 · 구독형 상품 · 광고비를 쓰는 홍보</p>
               </div>
-              <div data-off={hide(3)}>
-                <span className={styles.sheetLabel}>{card.extra.label}</span>
-                <p className={styles.sheetStrong}>{card.extra.value}</p>
+              <div>
+                <span className={styles.sheetLabel}>숫자로 따져 보면</span>
+                <ul className={styles.calc}>
+                  <li><span>한 건에 남는 돈</span><b>14,000원</b><small>15,000원 − 1,000원</small></li>
+                  <li><span>본전이 되는 상담 수</span><b>한 달 3명</b><small>매달 30,000원 ÷ 14,000원</small></li>
+                </ul>
+                <p>타로카드와 천을 이미 가지고 계셔서 준비 예산 50만 원 안에서 큰 지출 없이 시작할 수 있어요. 다만 이 숫자는 결제 수수료 등을 빼기 전 값이고, 실제로 그만큼 예약이 들어온다는 뜻은 아니에요.</p>
               </div>
-              <div data-off={hide(4)}>
-                <span className={styles.sheetLabel}>처음 시작하는 순서</span>
-                <ol>{card.steps.map(step => <li key={step}>{step}</li>)}</ol>
+            </div>
+          </div>
+          <div {...stageProps(3)}>
+            <p className={styles.stageLead}>한 가지 길만 권하지 않아요. 다른 길의 장단점과, 돈 쓰기 전에 확인할 것을 함께 짚어요.</p>
+            <div className={styles.cols}>
+              <div>
+                <span className={styles.sheetLabel}>함께 따져 본 다른 길</span>
+                {DEMO_ALTERNATIVES.map(item => <div key={item.name} className={styles.note}><b>{item.name}</b><p>{item.tradeoff}</p></div>)}
               </div>
-              <div data-off={hide(5)}>
-                <span className={styles.sheetLabel}>{card.text.label}</span>
-                <p className={styles.sheetText}>{card.text.body}</p>
+              <div>
+                <span className={styles.sheetLabel}>아직 모르는 것과 확인하는 방법</span>
+                {DEMO_ASSUMPTIONS.map(item => <div key={item.statement} className={styles.note}><b>{item.statement}</b><p>{item.check}</p></div>)}
               </div>
-            </article>
-          </div>;
-        })}
+            </div>
+          </div>
+          <div {...stageProps(4)}>
+            <div className={styles.cols}>
+              <div>
+                <span className={styles.sheetLabel}>이번 주에 할 일</span>
+                <p className={styles.sheetStrong}>인스타그램에 &lsquo;첫 손님 상담 예약 조사&rsquo; 글을 올려서 언제, 몇 번 상담받고 싶은지 응답을 모아 봐요.</p>
+                <span className={styles.sheetLabel}>여기까지 하면 끝</span>
+                <p>2주 안에 날짜(요일)와 횟수를 남긴 응답을 6개 이상 모으고, 그중 지인이 아닌 분의 응답이 몇 개인지 따로 세어 두면 끝이에요.</p>
+                <p className={styles.chatMe}>우와 너무 좋아요ㅠㅠ 달빛타로 이름 완전 맘에 들어요. 인스타에 예약 조사 글부터 올려 볼게요!!</p>
+              </div>
+              <div>
+                <span className={styles.sheetLabel}>그대로 올리면 되는 글</span>
+                <p className={styles.sheetText}>{"온라인 1:1 타로 상담, 첫 손님을 찾고 있어요\n연애·진로 고민을 채팅이나 통화로 20~30분 동안 카드로 풀어 드려요. (1회 15,000원 예정)\n\n상담을 받아 보고 싶으시면 DM이나 댓글로 알려 주세요!\n1) 원하는 날짜·요일과 시간대\n2) 한 달에 몇 번 받고 싶으신지\n3) 궁금한 주제 (연애/진로/기타)\n4) 저와 아는 사이인지 (지인/처음)\n\n※ 아직 예약 의사만 여쭤보는 거라 지금 돈을 받지는 않아요"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className={styles.demoStarts}>
+          <span>내 사업으로 해 보기</span>
+          {STARTS.map(card => <a key={card.title} href={newChatEntryHref(card.entry)}>{card.title}<ChevronRight size={16} aria-hidden="true" /></a>)}
+        </div>
       </div>
     </section>
 
