@@ -83,6 +83,9 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 .panel .chat p { text-wrap: wrap; }
 .panel .chatMe { align-self: flex-end; max-width: 88%; padding: 10px 14px; border-radius: 18px 18px 4px 18px; background: #191f28; color: #fff; font-size: .9375rem; line-height: 1.5; }
 .panel .chatAi { align-self: flex-start; max-width: 94%; padding: 12px 14px; border-radius: 18px 18px 18px 4px; background: #f2f4f6; display: flex; flex-direction: column; gap: 4px; }
+.panel .chatAi { color: #333d4b; font-size: .9375rem; line-height: 1.5; }
+.chat > p { transition: opacity 320ms ease, transform 320ms cubic-bezier(0.16, 1, 0.3, 1); }
+.chat > p[data-off] { opacity: 0; transform: translateY(8px); }
 .chatAi span { color: #1b64da; font-size: .75rem; font-weight: 800; }
 .chatAi strong { color: #191f28; font-size: 1.0625rem; line-height: 1.45; font-weight: 800; text-wrap: balance; }
 
@@ -186,7 +189,7 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 @media (prefers-reduced-motion: reduce) {
   .sections[data-armed] [data-reveal] { transition: none; }
   .sections[data-armed] [data-reveal]:not([data-seen]) { opacity: 1; transform: none; }
-  .arrow, .plus, .panelAnchor { transition: none; }
+  .arrow, .plus, .panelAnchor, .chat > p { transition: none; }
 }
 
 @media (max-width: 1000px) {

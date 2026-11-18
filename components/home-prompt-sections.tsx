@@ -38,13 +38,19 @@ const FEATURES = [
 /*
  * 카드마다 설명 문장 대신 채팅 한 쌍(손님 한마디 → 오늘창업이 정리한 사업 방향 제목)을 보여 준다(2026-11-18 사장님: 글이 빽빽하다 · 구간을 나누지 말고 합치기).
  * 2026-11-17 AI 손님 점검(가상 손님 · 실제 AI)에서 나온 말이다. 가상 손님이라 실제 고객 사례가 아니다 — 구간 제목 아래 "예시 대화"라고 적는다.
- * 손님 말은 짧게 줄였고 제목은 나온 그대로다. 숫자(가격·본전)는 넣지 않는다: 점검에서 카드 숫자는 대부분 지적을 받았다.
+ * 답 말풍선은 사업 방향 카드의 제목 · 이름 후보 · 바로 할 일 순서다. 손님 말과 바로 할 일은 짧게 줄였고 제목과 이름은 나온 그대로다.
+ * 말풍선은 차례로 나타난다(구간이 화면에 보일 때만 · 움직임 줄이기나 스크립트가 없으면 처음부터 다 보인다 · 자리는 미리 잡아 두어 카드 높이가 변하지 않는다).
+ * 숫자(가격·본전)는 넣지 않는다: 점검에서 카드 숫자는 대부분 지적을 받았다.
  */
-const STARTS: Array<{ title: string; said: string; headline: string; action: string; entry: EntryMode }> = [
-  { title: "처음 창업해요", said: "겨울에 역앞에서 붕어빵 장사", headline: "추운 퇴근길, 역앞에서 갓 구운 붕어빵 한 봉지", action: "아이디어로 시작하기", entry: "startup" },
-  { title: "이미 사업 중이에요", said: "분식집 5년째인데 요즘 매출이 좀 줄었어요", headline: "단골이 배달앱 대신 가게로 직접 주문하는 동네 분식집", action: "내 사업 개선하기", entry: "operating" },
-  { title: "아이디어가 아직 없어요", said: "손재주는 좀 있어요. 집에서 하루 3시간쯤 할 수 있으면 좋겠어요", headline: "아이 낮잠 시간에 그린 그림이 스티커·메모지가 돼요", action: "사업안 추천받기", entry: "exploring" },
+const STARTS: Array<{ title: string; said: string; headline: string; names: string; todo: string; action: string; entry: EntryMode }> = [
+  { title: "처음 창업해요", said: "겨울에 역앞에서 붕어빵 장사", headline: "추운 퇴근길, 역앞에서 갓 구운 붕어빵 한 봉지", names: "따끈붕어 · 역앞 붕어빵 · 퇴근붕어", todo: "관할 구청에 역 근처 영업 가능 장소부터 문의해 보세요.", action: "아이디어로 시작하기", entry: "startup" },
+  { title: "이미 사업 중이에요", said: "분식집 5년째인데 요즘 매출이 좀 줄었어요", headline: "단골이 배달앱 대신 가게로 직접 주문하는 동네 분식집", names: "우리동네 떡볶이 · 오년분식 · 골목떡볶이", todo: "배달 봉투에 넣을 전화·포장 주문 쿠폰을 2주 동안 시험해 보세요.", action: "내 사업 개선하기", entry: "operating" },
+  { title: "아이디어가 아직 없어요", said: "손재주는 좀 있어요. 집에서 하루 3시간쯤 할 수 있으면 좋겠어요", headline: "아이 낮잠 시간에 그린 그림이 스티커·메모지가 돼요", names: "오후세시 문방 · 세시의 종이 · 낮잠문구", todo: "스티커·메모지 시안을 만들고 인쇄소 2곳에 소량 견적을 요청해 보세요.", action: "사업안 추천받기", entry: "exploring" },
 ];
+/* 채팅 말풍선 수(손님 말 1 + 답 3)와 차례로 나오는 박자 — 1초에 하나씩 다 나온 뒤 6초 머물고 처음부터 다시 */
+const CHAT_BUBBLES = 4;
+const CHAT_TICK_MS = 1000;
+const CHAT_CYCLE_TICKS = CHAT_BUBBLES + 6;
 
 /*
  * 결과물 그림 — 첫 화면 진열 띠와 같은 예시 사업('퇴근필라', 실제 AI로 만든 화면). 카드 그림 칸은 3:4.
@@ -88,6 +94,25 @@ function Arrow() {
 export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | null } = {}) {
   const root = useRef<HTMLDivElement>(null);
   const [armed, setArmed] = useState(false);
+  /* 시작 카드 채팅 — 지금까지 나온 말풍선 수(null 이면 움직이지 않고 다 보인다) */
+  const who = useRef<HTMLElement>(null);
+  const [chatShown, setChatShown] = useState<number | null>(null);
+  useEffect(() => {
+    const element = who.current;
+    if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
+    let tick = 0;
+    let timer: number | undefined;
+    const stop = () => { if (timer !== undefined) window.clearInterval(timer); timer = undefined; };
+    const observer = new IntersectionObserver(([entry]) => {
+      stop();
+      if (!entry.isIntersecting) return;
+      setChatShown(Math.min(CHAT_BUBBLES, (tick % CHAT_CYCLE_TICKS) + 1));
+      timer = window.setInterval(() => { tick += 1; setChatShown(Math.min(CHAT_BUBBLES, (tick % CHAT_CYCLE_TICKS) + 1)); }, CHAT_TICK_MS);
+    }, { threshold: 0.3 });
+    observer.observe(element);
+    return () => { stop(); observer.disconnect(); };
+  }, []);
+  const off = (index: number) => chatShown !== null && index > chatShown ? true : undefined;
   useEffect(() => {
     const element = root.current;
     if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
@@ -128,7 +153,7 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
       </ul>
     </section>
 
-    <section id="who" className={styles.section} aria-labelledby="home-who-title" data-reveal>
+    <section id="who" ref={who} className={styles.section} aria-labelledby="home-who-title" data-reveal>
       <header className={`${styles.sectionHead} ${styles.center}`}>
         <h2 id="home-who-title" className={styles.heading}>어떤 사업이든 시작할 수 있어요</h2>
         <p className={styles.headNote}>한마디면 돼요 <span>예시 대화</span></p>
@@ -137,8 +162,10 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
         {STARTS.map(card => <article key={card.title} className={styles.panel}>
           <h3>{card.title}</h3>
           <div className={styles.chat}>
-            <p className={styles.chatMe}>{card.said}</p>
-            <p className={styles.chatAi}><span>오늘창업</span><strong>{card.headline}</strong></p>
+            <p className={styles.chatMe} data-off={off(1)}>{card.said}</p>
+            <p className={styles.chatAi} data-off={off(2)}><span>사업 방향</span><strong>{card.headline}</strong></p>
+            <p className={styles.chatAi} data-off={off(3)}><span>이름 후보</span>{card.names}</p>
+            <p className={styles.chatAi} data-off={off(4)}><span>바로 할 일</span>{card.todo}</p>
           </div>
           <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action}<ChevronRight size={18} aria-hidden="true" /></a>
         </article>)}
