@@ -203,7 +203,9 @@ export function understoodAnswers(understood: Understood, questions: IntakeQuest
   const push = (question: IntakeQuestion | undefined, value: IntakeValue | undefined) => { if (question && value !== undefined && value !== null && value !== "") out.push({ questionId: question.id, value: question.kind === "multi" && typeof value === "string" ? [value] : value }); };
   push(byField("price"), understood.price ? coachAmount(understood.price) : undefined);
   push(byField("unitCost"), understood.unitCost ? coachAmount(understood.unitCost) : undefined);
-  push(byField("cost"), understood.monthlyCost ? coachAmount(understood.monthlyCost) : undefined);
+  // 월세 · 고정비도 만원 단위로 말한다 — '월세 350'을 350원으로 넣지 않는다(2026-11-18 실제 AI 확인: 수제맥주 펍 월 비용이 350원으로 들어가 본전 계산이 0이 됐다). 준비 예산과 같은 기준
+  const monthly = understood.monthlyCost?.replace(/^[^\d]*/, "").replace(/\s*(?:정도|쯤|가량)\s*$/, "");
+  push(byField("cost"), monthly ? bareBudgetManwon(monthly) ?? coachAmount(monthly) ?? coachAmount(understood.monthlyCost!) : undefined);
   // '예산 300'은 300만원이다 — 단위 없는 작은 수를 300원으로 넣지 않는다(문장 읽기 intake-sentence 와 같은 기준)
   push(questions.find(question => question.id === "budget"), understood.budget ? bareBudgetManwon(understood.budget) ?? coachAmount(understood.budget) ?? understood.budget : undefined);
   const hours = understood.hoursPerWeek?.match(/\d+/)?.[0];
