@@ -316,6 +316,30 @@ async function main() {
     const resector = await next({ action: "answer", questionId: "industry", value: "retail_commerce" });
     assert.equal(resector.snapshot.intake.answers[id("offer")]?.value, "손톱 케어 + 원컬러 젤네일 1회", "업종을 다시 골라도 이 사업에 맞춘 짐작은 남는다");
   }
+  // 업종 짐작(2026-11-18 AI 손님 점검: '동네 헌책방 카페'가 유통 · 온라인 판매로, '필라테스'가 제조 · 제품으로 채워졌다):
+  // 낱말 기준표가 채운 업종은 첫 문장 읽기의 짐작으로 바뀌고, 그 업종 기준으로 나머지가 다시 채워진다. 말한 값 · 직접 답한 값은 남고, 사용자가 고른 업종은 건드리지 않는다
+  {
+    const owner = `intake-guess-sector-${randomUUID()}`;
+    const made = await saveIntakeCommand(owner, { action: "start", mode: "startup", questionId: "business", value: "역세권 1층에 필라테스 스튜디오를 하려고요. 리포머 6대 놓고요", revision: 0, requestId: randomUUID() }, off);
+    const next = async (command: Record<string, unknown>) => { const current = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!; return saveIntakeCommand(owner, { ...command, planId: made.plan.id, revision: readCoach(current.answers)!.revision, requestId: randomUUID() } as never, off); };
+    const before = made.snapshot.intake.sector, target = before === "local_service" ? "education" : "local_service";
+    await next({ action: "answer", questionId: "budget", value: 30000000 });
+    const guessed = await next({ action: "understand", understood: [], guessed: [{ questionId: "industry", value: target }] });
+    assert.equal(guessed.snapshot.intake.sector, target, "기준표가 채운 업종은 짐작으로 바뀐다");
+    assert.equal(guessed.snapshot.intake.answers.industry?.value, target);
+    assert.match(guessed.snapshot.intake.answers.industry!.messageId, /:guess:estimate$/, "짐작한 업종도 채운 값으로 보인다");
+    assert.equal(readCoach(guessed.plan.answers)!.business.industry, target === "local_service" ? "생활 · 지역 서비스" : "교육 · 코칭");
+    assert.equal(guessed.snapshot.intake.ksic ?? null, null, "앞 업종의 세부 분류는 남기지 않는다");
+    assert.match(String(guessed.snapshot.intake.answers.budget?.value), /^30000000/, "직접 답한 준비금은 그대로");
+    assert.equal(guessed.snapshot.sectorSuggestion ?? null, null, "자기가 짐작한 업종을 다시 바꾸자고 묻지 않는다");
+    assert.ok(readCoach(guessed.plan.answers)!.messages.filter(message => /^나머지는 /.test(message.text)).length <= 1, "채웠다는 안내는 한 번만");
+    const same = await next({ action: "understand", understood: [], guessed: [{ questionId: "industry", value: "general" }, { questionId: "industry", value: "no_such_sector" }] });
+    assert.equal(same.snapshot.intake.sector, target, "'기타'나 없는 값은 넣지 않는다");
+    const chosen = await next({ action: "answer", questionId: "industry", value: "food_beverage" });
+    const kept = await next({ action: "understand", understood: [], guessed: [{ questionId: "industry", value: "education" }] });
+    assert.equal(chosen.snapshot.intake.sector, "food_beverage");
+    assert.equal(kept.snapshot.intake.sector, "food_beverage", "사용자가 고른 업종은 짐작이 바꾸지 않는다");
+  }
   // 대화 중 적은 말에서 읽은 것(read, 2026-11-16): 방금 한 말이므로 직접 답한 칸도 새 값으로 바꾼다. 영업일은 표에 바로 적히고 계산표가 읽는다
   {
     const owner = `intake-read-${randomUUID()}`;

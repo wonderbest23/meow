@@ -12,7 +12,7 @@ import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyGuessed, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote, intakeQuestions, displayIntakeValue, READ_SUFFIX } from "./intake-core";
+import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyGuessed, applyGuessedSector, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote, intakeQuestions, displayIntakeValue, READ_SUFFIX } from "./intake-core";
 import { ruleKind } from "./kind-rules";
 import { adoptRenamedTitle } from "./business-name";
 import { estimateIntake } from "./intake-estimate";
@@ -205,6 +205,8 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       // 문장에서 읽은 답 — 계획서를 만든 뒤나 전문가 모드에서는 넣지 않는다(그때는 사용자가 직접 정한다)
       // 말한 값을 먼저 넣고, 적히지 않은 칸은 이 사업에 맞춘 짐작으로 기준표 값을 바꾼다(말한 값 · 직접 답한 값은 그대로)
       if (!Object.keys(plan.sections).length && intake.depth !== "expert") {
+        // 업종 짐작을 먼저 — 업종이 바뀌면 기준표 값이 새 업종으로 다시 채워지고, 그 위에 말한 값과 짐작이 얹힌다
+        applyGuessedSector(plan, coach, intake, command.guessed?.find(item => item.questionId === "industry")?.value, command.requestId, at, ruleKind);
         applyUnderstood(coach, intake, command.understood ?? [], command.requestId, at);
         applyGuessed(coach, intake, command.guessed ?? [], command.requestId, at);
       }

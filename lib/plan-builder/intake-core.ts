@@ -1017,6 +1017,26 @@ export function applyUnderstood(coach: CoachState, intake: IntakeState, items: N
 }
 
 /**
+ * 첫 문장 읽기가 짐작한 업종을 넣는다(2026-11-18) — 업종을 낱말 기준표가 채웠거나(:estimate) 아직 비어 있을 때만. 사용자가 고른 업종은 건드리지 않는다.
+ * 업종이 바뀌면 그 업종 기준으로 채운 값(운영 범위 '한 달 10대' 같은 단위 포함)이 틀린 것이 되므로, 기준표 값을 지우고 새 업종으로 다시 채운다.
+ * 말한 값(:said) · 직접 답한 값은 그대로 남는다. 바꿨으면 true.
+ */
+export function applyGuessedSector(plan: ServerPlan, coach: CoachState, intake: IntakeState, value: IntakeValue | undefined, requestId: string, at: string, rules?: KindRules): boolean {
+  const option = intakeSectorOptions.find(item => item.value === value);
+  const now = intake.answers.industry;
+  if (!option || option.value === "general" || intake.mode !== "startup" || Object.keys(plan.sections).length) return false;
+  if (now && !(now.status === "answered" && now.messageId.endsWith(ESTIMATE_SUFFIX))) return false;
+  if (now && intake.sector === option.value) return false;
+  clearIntakeEstimates(coach, intake);
+  intake.sector = option.value; intake.ksic = null;
+  coach.business.industry = option.label;
+  intake.answers.industry = { status: "answered", value: option.value, messageId: `${requestId}${GUESS_ESTIMATE}`, at };
+  syncIntakeDetails(plan, intake);
+  if (process.env.INTAKE_ESTIMATE === "1") applyIntakeEstimates(plan, coach, intake, requestId, at, rules);
+  return true;
+}
+
+/**
  * 첫 문장 읽기의 짐작(idea-understanding guess)을 넣는다 — 낱말 기준표가 채운 칸(:estimate)만 바꾸고, 말한 값 · 직접 답한 값은 건드리지 않는다.
  * 사용자가 한 말이 아니므로 근거는 '제안'이고 '말하지 않은 것은 이렇게 채웠어요'에 그대로 보인다. 형식이 안 맞는 값은 버린다(기준표 값이 남는다).
  * 마지막에 검사 하나: 한 번에 드는 비용이 짐작으로 채운 값인데 가격 이상이면 가격의 40%로 낮춘다 — 팔수록 손해인 초안을 만들지 않게(2026-11-17).
