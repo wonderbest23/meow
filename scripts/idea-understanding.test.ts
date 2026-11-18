@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { cleanGuess, cleanUnderstood, guessedAnswers, understandIdea, understoodAnswers } from "../lib/plan-builder/idea-understanding";
-import { UNDERSTAND_AI_MIN_MS, UNDERSTAND_SAVE_BY_MS, UNDERSTAND_WAIT_MS, understandAiBudget, understandSaveOnTime } from "../lib/plan-builder/intake-timing";
+import { UNDERSTAND_AI_MIN_MS, UNDERSTAND_SAVE_BY_MS, UNDERSTAND_WAIT_MS, understandAiBudget, understandSaveOnTime, understandStillUseful } from "../lib/plan-builder/intake-timing";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { capacityDaysDisplay, coachFieldDisplay } from "../lib/plan-builder/coach-presentation";
 
@@ -116,6 +116,14 @@ assert.deepEqual(understoodAnswers({ budget: "3천만원" }, questions), [{ ques
   // 늦게 도착한 읽기(가짜 AI 지연)는 저장하지 않는다 — 시한 안이면 저장
   assert.equal(understandSaveOnTime(0, beforeAi + 4_000), true);
   assert.equal(understandSaveOnTime(0, UNDERSTAND_SAVE_BY_MS), true);
+  // 화면을 다시 열어도 대화가 진행됐으면 읽기를 다시 하지 않는다(2026-11-18 운영: 준비 자금 · 주당 시간까지 답한 뒤 다시 열자 AI가 또 돌아 409)
+  const start = { business: { messageId: "m1" }, industry: { messageId: "m1:estimate" }, price: { messageId: "m1:estimate" }, channel: { messageId: "m1:guess:estimate" } };
+  assert.equal(understandStillUseful(start, false), true, "사업 문장과 기준값만 있으면 읽는다");
+  assert.equal(understandStillUseful({ ...start, industry: { messageId: "m2" } }, false), true, "업종을 직접 골라도 읽는다");
+  assert.equal(understandStillUseful({ ...start, budget: { messageId: "m3" } }, false), false, "다음 질문에 답했으면 읽지 않는다");
+  assert.equal(understandStillUseful({ ...start, hoursPerWeek: { messageId: "m4:read" } }, false), false, "적은 글을 읽어 넣은 답이 있어도 읽지 않는다");
+  assert.equal(understandStillUseful({ ...start, price: { messageId: "m5:said" } }, false), true, "읽기가 넣은 값은 손님 답이 아니다");
+  assert.equal(understandStillUseful(start, true), false, "사업 방향이 나왔으면 읽지 않는다");
   assert.equal(understandSaveOnTime(0, beforeAi + 6_900), false, "화면이 끊었을 시각의 결과는 버린다");
   assert.equal(understandSaveOnTime(0, UNDERSTAND_WAIT_MS + 17_000), false);
 
@@ -123,7 +131,8 @@ assert.deepEqual(understoodAnswers({ budget: "3천만원" }, questions), [{ ques
   const route = readFileSync(new URL("../app/api/plan/chat/understand/route.ts", import.meta.url), "utf8");
   assert.match(route, /export async function POST\(request: Request\) \{\n  const startedAt = Date\.now\(\);\n/, "요청을 받자마자 시각을 잰다");
   assert.match(route, /if \(!understandAiBudget\(startedAt, Date\.now\(\)\)\) return nothing\(\);\n.*\n  if \(!\(await chargeGuestAi\(identity, GUEST_AI_UNITS\.assist, "understand"\)\)\) return nothing\(\);\n  const result = await understandIdea\(config, business, request\.signal, understandAiBudget\(startedAt, Date\.now\(\)\)\);/);
-  assert.match(route, /if \(!now \|\| now\.intake\.understood\) return nothing\(\);/, "다른 요청이 먼저 저장했으면 판을 또 올리지 않는다");
+  assert.match(route, /if \(!now \|\| now\.intake\.understood \|\| !understandStillUseful\(now\.intake\.answers, !!now\.coach\.design\)\) return nothing\(\);/, "다른 요청이 먼저 저장했으면 판을 또 올리지 않는다");
+  assert.match(route, /Object\.keys\(first\.plan\.sections\)\.length \|\| !understandStillUseful\(first\.intake\.answers, !!first\.coach\.design\)\) return nothing\(\);/, "대화가 진행된 뒤 다시 연 화면에서는 AI를 부르지 않는다");
   assert.match(route, /const late = !understandSaveOnTime\(startedAt, Date\.now\(\)\);[\s\S]*if \(result\.failure \|\| late\) return nothing\(\);\n  try \{\n    await saveIntakeCommand\(/, "늦은 읽기는 저장 앞에서 버린다");
 }
 

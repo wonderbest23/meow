@@ -39,3 +39,15 @@ export function understandAiBudget(startedAt: number, nowMs: number): number {
 export function understandSaveOnTime(startedAt: number, nowMs: number): boolean {
   return nowMs - startedAt <= UNDERSTAND_SAVE_BY_MS;
 }
+
+/*
+ * 첫 문장 읽기를 아직 할 때인지 — 손님이 다음 질문에 답했거나(직접 고른 값 · 적은 글을 읽은 값 · '잘 모르겠어요') 사업 방향이 나왔으면 하지 않는다.
+ * 읽기는 저장에 성공해야만 '읽었음'(intake.understood)이 남는다. 처음 읽기가 늦거나 실패하면 표시가 없어서,
+ * 예전엔 화면을 다시 열 때마다 AI를 다시 불렀다(Opus 두 번, 약 32원). 대화가 한참 지난 뒤 그 결과가 끼어들어 값이 바뀌고,
+ * 바로 누른 '사업 방향 정리하기'가 '다른 화면에서 수정됐어요'(409)로 막혔다(2026-11-18 운영, 준비 자금 · 주당 시간까지 답한 손님).
+ * 업종 기준값(:estimate · :guess:estimate)과 읽기가 넣은 값(:said)은 손님이 답한 것이 아니다. 사업 문장 · 업종 칸은 세지 않는다.
+ */
+export function understandStillUseful(answers: Record<string, { messageId: string } | undefined>, hasDesign: boolean): boolean {
+  if (hasDesign) return false;
+  return !Object.entries(answers).some(([id, answer]) => answer && id !== "business" && id !== "industry" && !answer.messageId.endsWith(":estimate") && !answer.messageId.endsWith(":said"));
+}
