@@ -36,21 +36,46 @@ const FEATURES = [
 
 /* 새 대화의 첫 선택지(생각한 사업이 있어요 · 사업을 운영 중이에요 · 아이디어를 찾고 있어요)를 카드가 미리 골라 준다(?entry=) */
 /*
- * 카드마다 설명 문장 대신 채팅 한 쌍(손님 한마디 → 오늘창업이 정리한 사업 방향 제목)을 보여 준다(2026-11-18 사장님: 글이 빽빽하다 · 구간을 나누지 말고 합치기).
- * 2026-11-17 AI 손님 점검(가상 손님 · 실제 AI)에서 나온 말이다. 가상 손님이라 실제 고객 사례가 아니다 — 구간 제목 아래 "예시 대화"라고 적는다.
- * 답 말풍선은 사업 방향 카드의 제목 · 이름 후보 · 바로 할 일 순서다. 손님 말과 바로 할 일은 짧게 줄였고 제목과 이름은 나온 그대로다.
- * 말풍선은 차례로 나타난다(구간이 화면에 보일 때만 · 움직임 줄이기나 스크립트가 없으면 처음부터 다 보인다 · 자리는 미리 잡아 두어 카드 높이가 변하지 않는다).
- * 숫자(가격·본전)는 넣지 않는다: 점검에서 카드 숫자는 대부분 지적을 받았다.
+ * '어떤 사업이든' 구간 — 한마디가 사업 방향 한 장이 되는 모습을 통째로 보여 준다(2026-11-18 사장님: 제목만 보여서는 좋은 점이 안 보인다 · 구간을 나누지 말고 합치기 · 채팅 모양 · 차례로 나타나게).
+ * 탭 세 개가 예전 시작 카드 세 장이다(처음 창업해요 · 이미 사업 중이에요 · 아이디어가 아직 없어요). 탭마다 손님 한마디 → 사업 방향 한 장(제목 · 소개 · 이름 후보 · 시작 순서 · 바로 쓸 글) → 시작 단추.
+ * 내용은 2026-11-17 AI 손님 점검(가상 손님 · 실제 AI)의 사업 방향 카드에서 왔다. 가상 손님이라 실제 고객 사례가 아니다 — "예시 대화"라고 적는다.
+ * 제목 · 소개 · 이름은 나온 그대로, 손님 말 · 시작 순서 · 바로 쓸 글은 줄였다. 본전 · 예산 같은 계산 숫자는 넣지 않는다(점검에서 지적이 많았다).
+ * 조각은 차례로 나타난다(구간이 보일 때만). 다 나오면 잠시 머물다 다음 탭으로 넘어가고, 탭을 직접 누르면 저절로 넘기지 않는다.
+ * 움직임 줄이기나 스크립트가 없으면 처음부터 다 보인다. 세 탭을 같은 칸에 겹쳐 두어 탭이 바뀌어도 높이가 변하지 않는다.
  */
-const STARTS: Array<{ title: string; said: string; headline: string; names: string; todo: string; action: string; entry: EntryMode }> = [
-  { title: "처음 창업해요", said: "겨울에 역앞에서 붕어빵 장사", headline: "추운 퇴근길, 역앞에서 갓 구운 붕어빵 한 봉지", names: "따끈붕어 · 역앞 붕어빵 · 퇴근붕어", todo: "관할 구청에 역 근처 영업 가능 장소부터 문의해 보세요.", action: "아이디어로 시작하기", entry: "startup" },
-  { title: "이미 사업 중이에요", said: "분식집 5년째인데 요즘 매출이 좀 줄었어요", headline: "단골이 배달앱 대신 가게로 직접 주문하는 동네 분식집", names: "우리동네 떡볶이 · 오년분식 · 골목떡볶이", todo: "배달 봉투에 넣을 전화·포장 주문 쿠폰을 2주 동안 시험해 보세요.", action: "내 사업 개선하기", entry: "operating" },
-  { title: "아이디어가 아직 없어요", said: "손재주는 좀 있어요. 집에서 하루 3시간쯤 할 수 있으면 좋겠어요", headline: "아이 낮잠 시간에 그린 그림이 스티커·메모지가 돼요", names: "오후세시 문방 · 세시의 종이 · 낮잠문구", todo: "스티커·메모지 시안을 만들고 인쇄소 2곳에 소량 견적을 요청해 보세요.", action: "사업안 추천받기", entry: "exploring" },
+const STARTS: Array<{ title: string; said: string; headline: string; pitch: string; extra: { label: string; value: string }; steps: string[]; text: { label: string; body: string }; action: string; entry: EntryMode }> = [
+  {
+    title: "처음 창업해요", entry: "startup", action: "아이디어로 시작하기",
+    said: "강아지 산책 알바 하고 있는데 이걸 사업으로 키워 보고 싶어요. 대학생이라 돈은 별로 없어요",
+    headline: "바쁜 날에도 우리 강아지는 매일 동네를 걸어요",
+    pitch: "바쁜 맞벌이·1인 가구 보호자에게 강아지 산책을 집 앞으로 찾아가 1시간 단위로 대신해 드리는 대학생 1인 방문 산책 서비스",
+    extra: { label: "이름 후보", value: "오늘산책 · 꼬리산책 · 동네산책친구" },
+    steps: ["당근에 소개 글 올리기", "첫 만남에서 강아지 성격·건강·주의사항 확인", "정해진 요일에 산책하고 사진·짧은 기록 보내기", "다음 예약 잡기"],
+    text: { label: "당근에 바로 올릴 글", body: "안녕하세요! 이 동네 사는 대학생이에요 🐶 지금 강아지 산책 알바를 하고 있는데, 직접 방문 산책을 시작해 보려고 미리 여쭤봐요.\n- 1회 1시간, 집 앞으로 찾아가요\n- 산책 후 사진과 짧은 기록을 보내 드려요 …" },
+  },
+  {
+    title: "이미 사업 중이에요", entry: "operating", action: "내 사업 개선하기",
+    said: "동네에서 분식집 5년째 하고 있어요. 요즘 매출이 좀 줄었네요",
+    headline: "단골이 배달앱 대신 가게로 직접 주문하는 동네 분식집",
+    pitch: "동네 가족·주부와 학원가 학생에게 떡볶이·김밥 분식을 매장·포장·전화 주문으로 더 자주 드리고, 배달앱 의존을 줄이는 5년 차 분식집 운영 개선",
+    extra: { label: "함께 본 다른 길", value: "떡볶이 가격 500원 조정 시험 · 배달앱 안에서 주문 늘리기" },
+    steps: ["메뉴판·전단에 포장·전화 주문 번호와 포장 혜택 크게 알리기", "배달 봉투에 '다음엔 전화로' 쿠폰 넣기", "하교 시간 세트·저녁 포장 세트 1~2개 정하기", "매달 판매를 경로별로 적어 비교하기"],
+    text: { label: "배달 봉투에 넣을 쿠폰 문구", body: "늘 찾아주셔서 감사해요! 다음엔 가게로 직접 주문해 주세요. 📞 전화 주문·포장 시 이 쿠폰을 보여 주시면 [혜택]을 드려요. 5년 동안 같은 자리에서 매일 아침 직접 만든 떡볶이·김밥으로 기다릴게요." },
+  },
+  {
+    title: "아이디어가 아직 없어요", entry: "exploring", action: "사업안 추천받기",
+    said: "잘 모르겠는데 손재주는 좀 있어요. 집에서 애 보면서 하루 3시간 정도 할 수 있으면 좋겠어요",
+    headline: "아이 낮잠 시간에 그린 그림이 스티커·메모지가 돼요",
+    pitch: "문구를 좋아하는 손님에게 직접 디자인한 스티커·메모지를 스마트스토어에서 소량으로 만들어 택배로 보내는 1인 문구 판매점",
+    extra: { label: "이름 후보", value: "오후세시 문방 · 세시의 종이 · 낮잠문구" },
+    steps: ["스티커 2~3종·메모지 1~2종 디자인", "인쇄소에 소량 제작 맡기기", "사진 찍고 상세 페이지 쓰기", "주문이 들어오면 포장해 택배 발송"],
+    text: { label: "인쇄소에 보낼 견적 문의", body: "안녕하세요, 소량으로 스티커와 메모지를 제작하려고 견적 문의드려요.\n1) 스티커: 크기 약 10x15cm, 반칼 커팅, 수량 50장·100장\n2) 메모지: 크기 약 9x9cm, 50매 묶음, 수량 30권·50권 …" },
+  },
 ];
-/* 채팅 말풍선 수(손님 말 1 + 답 3)와 차례로 나오는 박자 — 1초에 하나씩 다 나온 뒤 6초 머물고 처음부터 다시 */
-const CHAT_BUBBLES = 4;
-const CHAT_TICK_MS = 1000;
-const CHAT_CYCLE_TICKS = CHAT_BUBBLES + 6;
+/* 차례로 나오는 조각 수(손님 말 · 제목과 소개 · 이름 · 시작 순서 · 바로 쓸 글 · 시작 단추)와 박자 — 0.9초에 하나씩, 다 나온 뒤 7초쯤 머물고 다음 탭 */
+const DEMO_PARTS = 6;
+const DEMO_TICK_MS = 900;
+const DEMO_HOLD_TICKS = 8;
 
 /*
  * 결과물 그림 — 첫 화면 진열 띠와 같은 예시 사업('퇴근필라', 실제 AI로 만든 화면). 카드 그림 칸은 3:4.
@@ -94,25 +119,42 @@ function Arrow() {
 export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | null } = {}) {
   const root = useRef<HTMLDivElement>(null);
   const [armed, setArmed] = useState(false);
-  /* 시작 카드 채팅 — 지금까지 나온 말풍선 수(null 이면 움직이지 않고 다 보인다) */
+  /* 예시 화면 — 고른 탭과 지금까지 나온 조각 수(null 이면 움직이지 않고 다 보인다) */
   const who = useRef<HTMLElement>(null);
-  const [chatShown, setChatShown] = useState<number | null>(null);
+  const [tab, setTab] = useState(0);
+  const [shown, setShown] = useState<number | null>(null);
+  const demo = useRef({ tab: 0, shown: 1, hold: 0, auto: true, moving: false });
   useEffect(() => {
     const element = who.current;
     if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
-    let tick = 0;
+    const state = demo.current;
+    state.moving = true;
     let timer: number | undefined;
     const stop = () => { if (timer !== undefined) window.clearInterval(timer); timer = undefined; };
+    const step = () => {
+      if (state.shown < DEMO_PARTS) { state.shown += 1; setShown(state.shown); return; }
+      if (!state.auto) return;
+      state.hold += 1;
+      if (state.hold < DEMO_HOLD_TICKS) return;
+      state.hold = 0; state.shown = 1; state.tab = (state.tab + 1) % STARTS.length;
+      setTab(state.tab); setShown(1);
+    };
     const observer = new IntersectionObserver(([entry]) => {
       stop();
       if (!entry.isIntersecting) return;
-      setChatShown(Math.min(CHAT_BUBBLES, (tick % CHAT_CYCLE_TICKS) + 1));
-      timer = window.setInterval(() => { tick += 1; setChatShown(Math.min(CHAT_BUBBLES, (tick % CHAT_CYCLE_TICKS) + 1)); }, CHAT_TICK_MS);
-    }, { threshold: 0.3 });
+      setShown(state.shown);
+      timer = window.setInterval(step, DEMO_TICK_MS);
+    }, { threshold: 0.25 });
     observer.observe(element);
-    return () => { stop(); observer.disconnect(); };
+    return () => { stop(); state.moving = false; observer.disconnect(); };
   }, []);
-  const off = (index: number) => chatShown !== null && index > chatShown ? true : undefined;
+  const pickTab = (index: number) => {
+    const state = demo.current;
+    state.auto = false; state.tab = index; state.hold = 0;
+    setTab(index);
+    if (state.moving) { state.shown = 1; setShown(1); }
+  };
+  const off = (index: number) => shown !== null && index > shown ? true : undefined;
   useEffect(() => {
     const element = root.current;
     if (!element || window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) return;
@@ -156,19 +198,42 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
     <section id="who" ref={who} className={styles.section} aria-labelledby="home-who-title" data-reveal>
       <header className={`${styles.sectionHead} ${styles.center}`}>
         <h2 id="home-who-title" className={styles.heading}>어떤 사업이든 시작할 수 있어요</h2>
-        <p className={styles.headNote}>한마디면 돼요 <span>예시 대화</span></p>
+        <p className={styles.headNote}>한마디가 이렇게 정리돼요 <span>예시 대화</span></p>
       </header>
-      <div className={styles.grid3}>
-        {STARTS.map(card => <article key={card.title} className={styles.panel}>
-          <h3>{card.title}</h3>
-          <div className={styles.chat}>
-            <p className={styles.chatMe} data-off={off(1)}>{card.said}</p>
-            <p className={styles.chatAi} data-off={off(2)}><span>사업 방향</span><strong>{card.headline}</strong></p>
-            <p className={styles.chatAi} data-off={off(3)}><span>이름 후보</span>{card.names}</p>
-            <p className={styles.chatAi} data-off={off(4)}><span>바로 할 일</span>{card.todo}</p>
-          </div>
-          <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action}<ChevronRight size={18} aria-hidden="true" /></a>
-        </article>)}
+      <div className={styles.demoTabs} role="tablist" aria-label="내 상황 고르기">
+        {STARTS.map((card, index) => <button key={card.title} type="button" role="tab" id={`home-who-tab-${index}`} aria-selected={tab === index} aria-controls={`home-who-panel-${index}`} onClick={() => pickTab(index)}>{card.title}</button>)}
+      </div>
+      <div className={styles.demoStack}>
+        {STARTS.map((card, index) => {
+          const active = tab === index;
+          const hide = (part: number) => active ? off(part) : undefined;
+          return <div key={card.title} className={styles.demo} role="tabpanel" id={`home-who-panel-${index}`} aria-labelledby={`home-who-tab-${index}`} data-active={active || undefined} aria-hidden={!active} inert={!active}>
+            <div className={styles.demoChat}>
+              <p className={styles.chatMe} data-off={hide(1)}>{card.said}</p>
+              <p className={styles.chatAi} data-off={hide(2)}><span>오늘창업</span>말씀하신 내용으로 사업 방향을 한 장으로 정리했어요.</p>
+              <a className={styles.demoAction} data-off={hide(6)} href={newChatEntryHref(card.entry)}>{card.action}<ChevronRight size={18} aria-hidden="true" /></a>
+            </div>
+            <article className={styles.sheet}>
+              <div data-off={hide(2)}>
+                <span className={styles.sheetLabel}>사업 방향</span>
+                <h3>{card.headline}</h3>
+                <p>{card.pitch}</p>
+              </div>
+              <div data-off={hide(3)}>
+                <span className={styles.sheetLabel}>{card.extra.label}</span>
+                <p className={styles.sheetStrong}>{card.extra.value}</p>
+              </div>
+              <div data-off={hide(4)}>
+                <span className={styles.sheetLabel}>처음 시작하는 순서</span>
+                <ol>{card.steps.map(step => <li key={step}>{step}</li>)}</ol>
+              </div>
+              <div data-off={hide(5)}>
+                <span className={styles.sheetLabel}>{card.text.label}</span>
+                <p className={styles.sheetText}>{card.text.body}</p>
+              </div>
+            </article>
+          </div>;
+        })}
       </div>
     </section>
 
