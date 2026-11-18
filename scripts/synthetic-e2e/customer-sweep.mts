@@ -264,6 +264,16 @@ async function runPersona(p: Persona, index: number) {
       const target = (plan.questions ?? []).find((x: any) => x.label === a.field || x.id === a.field || (a.field && (x.label.includes(a.field) || a.field.includes(x.label))));
       if (!target) { transcript.push(`[도구] 고칠 칸 '${a.field}'을 찾지 못함`); continue; }
       const text = target.kind === "number" || target.id === "budget" || target.id === "hoursPerWeek" ? koreanNumeralsToDigits(a.text) : a.text;
+      /* 업종 고치기도 화면처럼 — 적은 말로 업종을 찾아 가장 가까운 것을 넣는다(2026-11-18: 이 길이 빠져 있어 '고쳤는데 저장이 안 된다'는 거짓 지적이 9번 나왔다) */
+      if (target.id === "industry" && plan.coach?.depth !== "expert" && a.text.trim()) {
+        const k = await req("GET", `/api/plan/chat?ksic=${encodeURIComponent(a.text.trim())}`);
+        const first = Array.isArray(k.json?.ksicCandidates) ? k.json.ksicCandidates[0] : null;
+        const other = target.options?.find((o: any) => o.label.includes("기타"));
+        if (first?.sector) await cmd({ action: "answer", questionId: "industry", value: first.sector, ksic: first.code, message: a.text.trim() });
+        else if (other) await cmd({ action: "answer", questionId: "industry", value: other.value, message: a.text.trim() });
+        else { hint = "업종을 찾지 못했어요. 아래 보기에서 골라 주세요."; mech.hints.push(hint); }
+        continue;
+      }
       const route = model.routeComposerInput(plan, target, text);
       if (await readTyped(target, a.text, route)) continue;
       if (route.kind === "answer") await cmd({ action: "answer", questionId: target.id, value: route.value, ...(route.unknown ? { unknown: true } : {}) });

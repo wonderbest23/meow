@@ -49,6 +49,12 @@ assert.deepEqual(guessedAnswers({ customer: "고양이를 좋아하는 20~30대"
   { questionId: "structure.unitCost", value: 400 }, { questionId: "structure.cost", value: 50000 },
 ], "말한 칸(가격)은 빼고, 여러 개 고르는 질문은 목록으로");
 assert.deepEqual(guessedAnswers(undefined, guessQ), []);
+// 업종 짐작(2026-11-18): 보기 값일 때만 받고 '기타'는 버린다. 답으로 옮길 때는 맨 앞에(업종이 바뀌면 다른 칸의 질문이 바뀐다), 이미 말한 업종이면 건너뛴다
+assert.equal(cleanGuess({ guessSector: "local_service" }).sector, "local_service");
+assert.equal(cleanGuess({ guessSector: "general" }).sector, undefined);
+assert.equal(cleanGuess({ guessSector: "필라테스" }).sector, undefined);
+assert.deepEqual(guessedAnswers({ sector: "local_service", price: 2500 }, guessQ)[0], { questionId: "industry", value: "local_service" });
+assert.ok(!guessedAnswers({ sector: "local_service" }, guessQ, new Set(["industry"])).some(item => item.questionId === "industry"));
 const source = readFileSync(new URL("../lib/plan-builder/idea-understanding.ts", import.meta.url), "utf8");
 assert.ok(source.includes("guessPrice") && source.includes("이 글에 적힌 바로 그 사업에 맞추세요"), "짐작 칸과 '업종 고정값이 아니라 이 사업' 규칙이 프롬프트에 있다");
 
