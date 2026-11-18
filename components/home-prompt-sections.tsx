@@ -151,10 +151,14 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
           <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action}<ChevronRight size={18} aria-hidden="true" /></a>
         </article>)}
       </div>
+      {/* 채팅 모양 예시 — 손님 말풍선(오른쪽)과 오늘창업 답 말풍선(왼쪽) 한 쌍씩. 옆으로 넘겨 본다(스크립트 없이 scroll-snap) */}
       <div className={styles.ideas}>
-        <p className={styles.ideasLabel}>한마디로 시작하면 이렇게 정리돼요 <span>예시</span></p>
-        <ul className={styles.ideaList}>
-          {IDEA_EXAMPLES.map(item => <li key={item.said}><span className={styles.ideaSaid}>“{item.said}”</span><strong>{item.headline}</strong></li>)}
+        <p className={styles.ideasLabel}>한마디면 돼요 <span>예시 대화</span></p>
+        <ul className={styles.ideaList} tabIndex={0} aria-label="예시 대화 — 옆으로 넘겨 볼 수 있어요">
+          {IDEA_EXAMPLES.map(item => <li key={item.said} className={styles.chat}>
+            <p className={styles.chatMe}>{item.said}</p>
+            <p className={styles.chatAi}><span>오늘창업</span><strong>{item.headline}</strong></p>
+          </li>)}
         </ul>
       </div>
     </section>

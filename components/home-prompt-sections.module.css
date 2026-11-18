@@ -76,14 +76,18 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 /* 카드 들림은 마우스 기기에서만 — 터치(태블릿·휴대폰)에서는 누른 뒤에도 들린 채 남았다(움직임 조사 2026-11-17) */
 @media (hover: hover) and (pointer: fine) { .panelAnchor:hover { box-shadow: 0 8px 28px rgba(25, 31, 40, .08); transform: translateY(-2px); } }
 
-/* 한마디 → 한 줄 방향 예시 — 카드 3장 아래, 같은 흰 바탕 한 판에 3열로 */
-.ideas { padding: 28px; border-radius: 16px; background: #fff; display: flex; flex-direction: column; gap: 20px; text-align: left; }
-.ideasLabel { margin: 0; color: #191f28; font-size: 1.0625rem; font-weight: 800; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.ideasLabel span { padding: 2px 8px; border-radius: 6px; background: #f2f4f6; color: #4e5968; font-size: .8125rem; font-weight: 700; }
-.ideaList { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 28px; }
-.ideaList li { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.ideaSaid { color: #6b7684; font-size: .875rem; line-height: 1.55; word-break: keep-all; }
-.ideaList strong { color: #191f28; font-size: 1.0625rem; line-height: 1.5; font-weight: 700; word-break: keep-all; text-wrap: balance; }
+/* 한마디 → 한 줄 방향 예시 — 채팅 모양 카드를 옆으로 넘겨 본다. 한 화면에 컴퓨터 3장, 휴대폰 1장 남짓(다음 장이 살짝 보인다) */
+.ideas { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ideasLabel { margin: 0; color: #191f28; font-size: 1.125rem; font-weight: 800; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.ideasLabel span { padding: 2px 8px; border-radius: 6px; background: #e5e8eb; color: #4e5968; font-size: .8125rem; font-weight: 700; }
+.ideaList { margin: 0; padding: 4px 0 12px; list-style: none; display: grid; grid-auto-flow: column; grid-auto-columns: calc((100% - 32px) / 3.15); gap: 16px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: thin; }
+.ideaList:focus-visible { outline: 2px solid #1b64da; outline-offset: 4px; border-radius: 16px; }
+.chat { scroll-snap-align: start; min-width: 0; min-height: 210px; padding: 20px; border-radius: 16px; background: #fff; display: flex; flex-direction: column; justify-content: space-between; gap: 16px; text-align: left; }
+.chat p { margin: 0; word-break: keep-all; }
+.chatMe { align-self: flex-end; max-width: 88%; padding: 10px 14px; border-radius: 18px 18px 4px 18px; background: #191f28; color: #fff; font-size: .9375rem; line-height: 1.5; }
+.chatAi { align-self: flex-start; max-width: 92%; padding: 12px 14px; border-radius: 18px 18px 18px 4px; background: #f2f4f6; display: flex; flex-direction: column; gap: 4px; }
+.chatAi span { color: #1b64da; font-size: .75rem; font-weight: 800; }
+.chatAi strong { color: #191f28; font-size: 1.0625rem; line-height: 1.45; font-weight: 800; text-wrap: balance; }
 
 .chips { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .chips a {
@@ -195,8 +199,7 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 @media (max-width: 900px) {
   .features { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .grid3 { grid-template-columns: minmax(0, 1fr); }
-  .ideaList { grid-template-columns: minmax(0, 1fr); gap: 18px; }
-  .ideas { padding: 22px; }
+  .ideaList { grid-auto-columns: 82%; gap: 12px; }
 }
 
 @media (max-width: 640px) {
