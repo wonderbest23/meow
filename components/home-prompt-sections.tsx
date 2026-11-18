@@ -40,38 +40,35 @@ const FEATURES = [
  * 다섯 단계: 대화 → 정리된 사업 정보 → 사업 방향(숫자 포함) → 다른 길과 확인할 것 → 바로 할 일.
  * 내용은 2026-11-17 AI 손님 점검(가상 손님 · 실제 AI)의 타로 상담 손님 기록 그대로다. 가상 손님이라 실제 고객 사례가 아니다 — "예시"라고 적는다.
  * 이 손님을 고른 까닭: 심사 점수가 가장 높고 카드 숫자가 서로 맞는다(15,000원 − 1,000원 = 14,000원, 30,000원 ÷ 14,000원 → 3명 · 직접 검산).
- * 점검에서 지적받은 값(업종 · 하루 10명 · 6개월 목표)과 그 값을 언급한 문장은 뺐고, 긴 글은 줄였다. 그 밖의 문장은 나온 그대로다.
+ * 점검에서 지적받은 값(업종 · 하루 10명 · 6개월 목표)과 그 값을 언급한 문장은 뺐다.
+ * 읽기 쉽게(2026-11-18 사장님: 토스페이먼츠 수준으로) 단계마다 큰 제목 한 줄 · 짧은 글 · 넓은 여백으로 줄였다. 제목 · 이름 · 숫자는 나온 그대로고, 나머지 문장은 뜻을 바꾸지 않고 짧게 고쳤다.
  * 단계는 7초마다 다음으로 넘어간다(구간이 보일 때만 · 단계를 직접 누르면 멈춘다). 움직임 줄이기면 넘기지 않는다. 다섯 단계를 같은 칸에 겹쳐 높이가 변하지 않는다.
  */
 const DEMO_STAGES = ["대화", "사업 정보 정리", "사업 방향", "다른 길 · 확인할 것", "바로 할 일"];
 const DEMO_STAGE_MS = 7000;
-const DEMO_TALK: Array<{ who: "me" | "ai"; label?: string; text: string }> = [
-  { who: "me", text: "저 타로 보는 사람인데요, 온라인으로 타로 상담 해 보고 싶어요!! 지금은 지인들 위주로만 봐 주고 있어요" },
-  { who: "ai", label: "오늘창업", text: "온라인 타로는 상담사가 많아서, 지인이 아닌 낯선 사람이 처음 믿고 돈을 내게 만드는 게 가장 어려울 수 있어요. 나머지는 이 사업에 맞춰 먼저 채웠어요." },
-  { who: "ai", label: "질문", text: "준비에 쓸 수 있는 돈은 얼마인가요?" },
-  { who: "me", text: "음 한 50만원 정도요? 타로카드랑 천은 이미 있어서 많이는 안 들 것 같아요" },
-  { who: "ai", label: "질문", text: "일주일에 몇 시간 쓸 수 있나요?" },
-  { who: "me", text: "평일 저녁이랑 주말에 할 수 있어서 한 20시간 정도요? 타로카페 알바도 하고 있어서요" },
+const DEMO_TALK: Array<{ who: "me" | "ai"; text: string }> = [
+  { who: "me", text: "저 타로 보는 사람인데요, 온라인으로 타로 상담 해 보고 싶어요!!" },
+  { who: "ai", text: "준비에 쓸 수 있는 돈은 얼마인가요?" },
+  { who: "me", text: "한 50만원 정도요? 타로카드랑 천은 이미 있어요" },
+  { who: "ai", text: "일주일에 몇 시간 쓸 수 있나요?" },
+  { who: "me", text: "평일 저녁이랑 주말에 한 20시간 정도요" },
 ];
 const DEMO_FIELDS: Array<{ label: string; value: string; mine?: boolean }> = [
   { label: "제공할 상품", value: "온라인 타로 상담", mine: true },
   { label: "주요 고객", value: "연애·진로 고민 있는 20~30대" },
-  { label: "해결할 문제", value: "고민을 털어놓고 조언받을 곳이 마땅치 않다" },
   { label: "고객을 만나는 곳", value: "인스타그램" },
   { label: "판매 가격", value: "15,000원" },
-  { label: "한 건당 비용", value: "1,000원" },
-  { label: "매달 나가는 비용", value: "30,000원" },
   { label: "준비 예산", value: "500,000원", mine: true },
   { label: "일주일에 쓸 시간", value: "20시간", mine: true },
 ];
+const DEMO_START = ["인스타그램으로 알리고 DM으로 예약받기", "채팅·통화로 20~30분 상담", "풀이 요약을 보내고 후기 받기"];
 const DEMO_ALTERNATIVES = [
-  { name: "상담 앱·플랫폼 입점", tradeoff: "고객을 직접 모으는 부담은 줄지만, 수수료를 떼면 한 건당 남는 돈이 줄어요. 단골을 내 계정으로 쌓기도 어려워요." },
-  { name: "평일 저녁 전체 + 주말 종일 운영", tradeoff: "상담 시간만 주 30시간이 넘어, 말씀하신 주 20시간을 10시간 넘게 초과해요. 알바와 함께 하기엔 지칠 수 있어요." },
+  { name: "상담 앱에 입점하기", tradeoff: "손님 모으기는 쉽지만 수수료만큼 남는 돈이 줄어요." },
+  { name: "평일 저녁마다 + 주말 종일", tradeoff: "주 20시간을 10시간 넘게 넘겨요. 알바와 함께 하기엔 지쳐요." },
 ];
 const DEMO_ASSUMPTIONS = [
-  { statement: "지인이 아닌 20~30대도 15,000원을 내고 예약할 거예요.", check: "인스타에 안내 글을 올리고, 지인이 아닌 분의 예약 의사가 몇 건인지 세어 봐요." },
-  { statement: "상담 1건을 30분 안에 끝낼 수 있어요.", check: "지인 상담 3~5건에서 예약 응대부터 풀이 요약 전송까지 걸린 시간을 재 봐요." },
-  { statement: "카드·간편결제 수수료를 빼도 한 건에 남는 돈이 충분해요.", check: "쓸 결제 방법의 수수료를 알아보고, 한 건에 남는 돈을 다시 계산해요." },
+  { statement: "모르는 사람도 15,000원을 낼까?", check: "인스타에 안내 글을 올려 지인이 아닌 분의 예약 의사를 세어 봐요." },
+  { statement: "상담 1건이 30분 안에 끝날까?", check: "지인 상담 3~5건의 시간을 재 봐요." },
 ];
 const STARTS: Array<{ title: string; action: string; entry: EntryMode }> = [
   { title: "처음 창업해요", action: "아이디어로 시작하기", entry: "startup" },
@@ -188,7 +185,7 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
     <section id="who" ref={who} className={styles.section} aria-labelledby="home-who-title" data-reveal>
       <header className={`${styles.sectionHead} ${styles.center}`}>
         <h2 id="home-who-title" className={styles.heading}>어떤 사업이든 시작할 수 있어요</h2>
-        <p className={styles.headNote}>한마디에서 실행 계획까지, 이렇게 진행돼요 <span>예시 · 온라인 타로 상담</span></p>
+        <p className={styles.headNote}>한마디에서 실행 계획까지 <span>예시 · 온라인 타로 상담</span></p>
       </header>
       <div className={styles.demo}>
         <ol className={styles.steps} role="tablist" aria-label="진행 단계">
@@ -196,66 +193,48 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
         </ol>
         <div className={styles.stages}>
           <div {...stageProps(0)}>
-            <p className={styles.stageLead}>한마디만 적으면 나머지는 AI가 먼저 채우고, 모자란 것만 물어봐요.</p>
+            <h3 className={styles.stageTitle}>한마디만 적으면 돼요<small>모자란 것만 물어봐요</small></h3>
             <div className={styles.talk}>
-              {DEMO_TALK.map(line => <p key={line.text} className={line.who === "me" ? styles.chatMe : styles.chatAi}>{line.label ? <span>{line.label}</span> : null}{line.text}</p>)}
+              {DEMO_TALK.map(line => <p key={line.text} className={line.who === "me" ? styles.chatMe : styles.chatAi}>{line.text}</p>)}
             </div>
           </div>
           <div {...stageProps(1)}>
-            <p className={styles.stageLead}>대화가 사업 정보 표로 정리돼요. 틀린 값은 눌러서 바로 고쳐요.</p>
+            <h3 className={styles.stageTitle}>대화가 표로 정리돼요<small>틀린 값은 눌러서 바로 고쳐요</small></h3>
             <dl className={styles.fields}>
-              {DEMO_FIELDS.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{field.value}<em data-mine={field.mine || undefined}>{field.mine ? "내가 말함" : "AI가 먼저 채움"}</em></dd></div>)}
+              {DEMO_FIELDS.map(field => <div key={field.label}><dt>{field.label}</dt><dd>{field.value}</dd><em data-mine={field.mine || undefined}>{field.mine ? "내가 말함" : "AI가 채움"}</em></div>)}
             </dl>
           </div>
           <div {...stageProps(2)}>
-            <div className={styles.sheetHead}>
-              <span className={styles.sheetLabel}>사업 방향</span>
-              <h3>잠들기 전, 연애·진로 고민을 카드로 풀어 보는 시간</h3>
-              <p>연애·진로 고민이 있는 20~30대에게 평일 저녁과 주말에 채팅·통화로 1:1 타로 상담을 해 드리는 온라인 상담 서비스</p>
-              <p className={styles.sheetStrong}>이름 후보 · 달빛타로 · 보라카드 · 오늘의 한 장</p>
-            </div>
-            <div className={styles.cols}>
-              <div>
-                <span className={styles.sheetLabel}>이렇게 시작해요</span>
-                <p>인스타그램 계정 하나로 알리고 DM으로 예약을 받아요. 상담 1건은 15,000원이고, 고민 1개를 주제로 채팅이나 통화로 20~30분 동안 풀이해 드려요. 순서는 예약 확인 → 상담 → 풀이 요약 메시지 전송 → 후기 요청이에요.</p>
-                <span className={styles.sheetLabel}>이번엔 빼 둔 것</span>
-                <p>자체 앱·홈페이지 제작 · 대면 상담실 · 구독형 상품 · 광고비를 쓰는 홍보</p>
-              </div>
-              <div>
-                <span className={styles.sheetLabel}>숫자로 따져 보면</span>
-                <ul className={styles.calc}>
-                  <li><span>한 건에 남는 돈</span><b>14,000원</b><small>15,000원 − 1,000원</small></li>
-                  <li><span>본전이 되는 상담 수</span><b>한 달 3명</b><small>매달 30,000원 ÷ 14,000원</small></li>
-                </ul>
-                <p>타로카드와 천을 이미 가지고 계셔서 준비 예산 50만 원 안에서 큰 지출 없이 시작할 수 있어요. 다만 이 숫자는 결제 수수료 등을 빼기 전 값이고, 실제로 그만큼 예약이 들어온다는 뜻은 아니에요.</p>
-              </div>
-            </div>
+            <h3 className={styles.stageTitle}>잠들기 전, 연애·진로 고민을<br />카드로 풀어 보는 시간<small>이름 후보 · 달빛타로 · 보라카드 · 오늘의 한 장</small></h3>
+            <ul className={styles.calc}>
+              <li><span>한 건에 남는 돈</span><b>14,000원</b><small>15,000원 − 1,000원</small></li>
+              <li><span>본전이 되는 상담 수</span><b>한 달 3명</b><small>매달 30,000원 ÷ 14,000원</small></li>
+            </ul>
+            <ol className={styles.startList}>{DEMO_START.map(item => <li key={item}>{item}</li>)}</ol>
+            <p className={styles.fine}>결제 수수료를 빼기 전 숫자예요.</p>
           </div>
           <div {...stageProps(3)}>
-            <p className={styles.stageLead}>한 가지 길만 권하지 않아요. 다른 길의 장단점과, 돈 쓰기 전에 확인할 것을 함께 짚어요.</p>
+            <h3 className={styles.stageTitle}>다른 길도 함께 따져요<small>돈 쓰기 전에 확인할 것까지</small></h3>
             <div className={styles.cols}>
               <div>
-                <span className={styles.sheetLabel}>함께 따져 본 다른 길</span>
-                {DEMO_ALTERNATIVES.map(item => <div key={item.name} className={styles.note}><b>{item.name}</b><p>{item.tradeoff}</p></div>)}
+                <span className={styles.sheetLabel}>다른 길</span>
+                {DEMO_ALTERNATIVES.map(item => <div key={item.name} className={styles.memo}><b>{item.name}</b><p>{item.tradeoff}</p></div>)}
               </div>
               <div>
-                <span className={styles.sheetLabel}>아직 모르는 것과 확인하는 방법</span>
-                {DEMO_ASSUMPTIONS.map(item => <div key={item.statement} className={styles.note}><b>{item.statement}</b><p>{item.check}</p></div>)}
+                <span className={styles.sheetLabel}>먼저 확인할 것</span>
+                {DEMO_ASSUMPTIONS.map(item => <div key={item.statement} className={styles.memo}><b>{item.statement}</b><p>{item.check}</p></div>)}
               </div>
             </div>
           </div>
           <div {...stageProps(4)}>
+            <h3 className={styles.stageTitle}>이번 주 할 일까지 정해요<small>그대로 올리면 되는 글도 써 드려요</small></h3>
             <div className={styles.cols}>
               <div>
-                <span className={styles.sheetLabel}>이번 주에 할 일</span>
-                <p className={styles.sheetStrong}>인스타그램에 &lsquo;첫 손님 상담 예약 조사&rsquo; 글을 올려서 언제, 몇 번 상담받고 싶은지 응답을 모아 봐요.</p>
-                <span className={styles.sheetLabel}>여기까지 하면 끝</span>
-                <p>2주 안에 날짜(요일)와 횟수를 남긴 응답을 6개 이상 모으고, 그중 지인이 아닌 분의 응답이 몇 개인지 따로 세어 두면 끝이에요.</p>
-                <p className={styles.chatMe}>우와 너무 좋아요ㅠㅠ 달빛타로 이름 완전 맘에 들어요. 인스타에 예약 조사 글부터 올려 볼게요!!</p>
+                <div className={styles.memo}><b>인스타그램에 예약 조사 글 올리기</b><p>2주 안에 응답 6개가 모이면 끝이에요.</p></div>
+                <p className={styles.chatMe}>달빛타로 이름 완전 맘에 들어요. 글부터 올려 볼게요!!</p>
               </div>
               <div>
-                <span className={styles.sheetLabel}>그대로 올리면 되는 글</span>
-                <p className={styles.sheetText}>{"온라인 1:1 타로 상담, 첫 손님을 찾고 있어요\n연애·진로 고민을 채팅이나 통화로 20~30분 동안 카드로 풀어 드려요. (1회 15,000원 예정)\n\n상담을 받아 보고 싶으시면 DM이나 댓글로 알려 주세요!\n1) 원하는 날짜·요일과 시간대\n2) 한 달에 몇 번 받고 싶으신지\n3) 궁금한 주제 (연애/진로/기타)\n4) 저와 아는 사이인지 (지인/처음)\n\n※ 아직 예약 의사만 여쭤보는 거라 지금 돈을 받지는 않아요"}</p>
+                <p className={styles.sheetText}>{"온라인 1:1 타로 상담, 첫 손님을 찾고 있어요\n\n연애·진로 고민을 20~30분 동안 카드로 풀어 드려요. (1회 15,000원 예정)\n\n원하는 날짜와 한 달에 몇 번 받고 싶은지 DM으로 알려 주세요!"}</p>
               </div>
             </div>
           </div>
