@@ -51,6 +51,12 @@ assert.deepEqual(guessedAnswers({ customer: "고양이를 좋아하는 20~30대"
 assert.deepEqual(guessedAnswers(undefined, guessQ), []);
 // 업종 짐작(2026-11-18): 보기 값일 때만 받고 '기타'는 버린다. 답으로 옮길 때는 맨 앞에(업종이 바뀌면 다른 칸의 질문이 바뀐다), 이미 말한 업종이면 건너뛴다
 assert.equal(cleanGuess({ guessSector: "local_service" }).sector, "local_service");
+// 이미 운영 중(2026-11-18): true 일 때만 표시하고, 답 목록에는 신호(__running)로 넣는다
+assert.equal(cleanGuess({ guessRunning: true }).running, true);
+assert.equal(cleanGuess({ guessRunning: false }).running, undefined);
+assert.equal(cleanGuess({ guessRunning: "yes" }).running, undefined);
+assert.ok(guessedAnswers({ running: true }, guessQ).some(item => item.questionId === "__running"));
+assert.ok(!guessedAnswers({ price: 1000 }, guessQ).some(item => item.questionId === "__running"));
 // 운영 범위 짐작(2026-11-18): 기간 · 수 · 세는 말. 수가 0이거나 기간이 보기 밖이면 버리고, 세는 말이 이상하면 '건'. 답으로 옮길 때 '누가'는 지금 값을 둔다
 assert.deepEqual(cleanGuess({ guessCountPeriod: "일주일", guessCountNumber: 10, guessCountUnit: "명" }).count, { period: "일주일", number: 10, unit: "명" });
 assert.equal(cleanGuess({ guessCountPeriod: "일주일", guessCountNumber: 0, guessCountUnit: "명" }).count, undefined);

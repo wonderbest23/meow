@@ -14,7 +14,7 @@ import { playbookForKsic, playbookForText, salesRoute } from "./industry-playboo
 import { businessTypeFor } from "./business-types";
 import { KSIC_SYNONYMS, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
 import { ksicSectorLabel } from "./ksic-hints";
-import { START_CONDITIONS } from "./intake-questions";
+import { START_CONDITIONS, operatingBudget } from "./intake-questions";
 import { CONDITION_DIFFERS_NOTE, candidateTemplateFacts, filterCandidateConditions, selectedStartConditions } from "./intake-candidate-constraints";
 import { capacityUnitOrder, licenseHint, revenueBasis, SECTOR_DEFAULT_STRUCTURE, STRUCTURE_AXES, STRUCTURE_LABELS, structureFieldLabels, structureSummary, type BusinessStructure, type StructureAxis } from "./business-structure";
 import { PROPOSAL_SECTORS, type ProposalSector } from "./proposal-blueprint";
@@ -209,6 +209,8 @@ export function intakeQuestions(intake: IntakeState, coach: CoachState, ideas = 
         const mapEmpty = Array.isArray(chosenConditions) && chosenConditions.length > 0 && !ideas.some(idea => idea.id.startsWith("ksic:"));
         return { ...question, options: ideas.map(idea => ({ value: idea.id, label: idea.title })), ...(!ideas.length ? { hint: "고르신 조건에 맞는 사업을 찾지 못했어요. 시작 조건을 바꾸거나 생각한 사업을 직접 적어 주세요." } : mapEmpty ? { hint: "고르신 조건에 딱 맞는 업종은 찾지 못했어요. 아래 예시 중 가까운 걸 고르거나 생각한 사업을 직접 적어 주세요." } : {}) };
       }
+      // 이미 운영 중인 가게로 읽혔으면 준비 예산을 창업 준비금이 아니라 '이번에 새로 해 볼 일에 쓸 돈'으로 묻는다
+      if (question.id === "budget" && intake.running && intake.mode === "startup") return { ...question, prompt: operatingBudget.prompt, hint: operatingBudget.hint };
       if (question.id === "industry") return { ...question, options: question.options?.map(option => ({ ...option, hint: INDUSTRY_HINTS[option.value as ProposalSector] ?? option.hint })) };
       if (question.id === "price") {
         // The pricing basis is wording only (spec §4-1): storage stays a coachAmount string under coach.fields.price.
@@ -967,6 +969,8 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   let filled = 0;
   for (const question of intakeQuestions(intake, coach)) {
     if (question.id === "industry" || question.id === "business" || !open(question.id)) continue;
+    // 이미 운영 중인 가게에 '6개월 안에 손익분기'를 목표로 채우지 않는다 — 묻는다
+    if (question.id === "goal" && intake.running) continue;
     const guess = answers[question.id];
     // 준비 예산·일할 시간은 짐작하지도, '모름'으로 넘기지도 않는다 — 그대로 묻는다(안 물으면 계획서가 '감당할 수 있는지 알 수 없다'로만 채워진다)
     if (!guess) continue;
@@ -1014,6 +1018,21 @@ export function applyUnderstood(coach: CoachState, intake: IntakeState, items: N
     } catch { /* 형식이 안 맞으면 버린다 — 기준값이 그대로 남는다 */ }
   }
   return applied;
+}
+
+/**
+ * 첫 문장 읽기가 '이미 운영 중인 가게'라고 읽었다(2026-11-18) — '생각한 사업' 흐름일 때만 표시하고, 기준표가 채운 목표('6개월 안에 손익분기 도달')를 걷어 내 묻게 한다.
+ * 손님이 말했거나 직접 답한 목표는 그대로 둔다.
+ */
+export function applyRunning(plan: Pick<ServerPlan, "sections">, coach: CoachState, intake: IntakeState): boolean {
+  if (intake.mode !== "startup" || intake.running || Object.keys(plan.sections).length) return false;
+  intake.running = true;
+  const goal = intakeQuestions(intake, coach).find(question => question.fieldKey === "goal"), now = goal ? intake.answers[goal.id] : undefined;
+  if (goal && now?.status === "answered" && now.messageId.endsWith(ESTIMATE_SUFFIX)) {
+    delete intake.answers[goal.id];
+    coach.fields = coach.fields.filter(field => !(field.key === "goal" && field.basis === "proposal"));
+  }
+  return true;
 }
 
 /**
