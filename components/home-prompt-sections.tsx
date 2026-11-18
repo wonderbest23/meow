@@ -35,6 +35,23 @@ const FEATURES = [
 ];
 
 /* 새 대화의 첫 선택지(생각한 사업이 있어요 · 사업을 운영 중이에요 · 아이디어를 찾고 있어요)를 카드가 미리 골라 준다(?entry=) */
+/*
+ * 한마디 → 한 줄 방향 예시(2026-11-18). 2026-11-17 AI 손님 점검(가상 손님 41명 · 실제 AI)에서 손님이 적은 첫마디와 AI가 정리한 사업 방향 제목이다.
+ * 가상 손님이라 실제 고객 사례가 아니다 — 화면에 "예시"라고 적는다. 첫마디는 짧게 줄였고, 제목은 나온 그대로다.
+ * 숫자(가격·본전)는 넣지 않는다: 점검에서 카드 숫자는 대부분 지적을 받았다.
+ */
+const IDEA_EXAMPLES: Array<{ said: string; headline: string }> = [
+  { said: "겨울에 역앞에서 붕어빵 장사", headline: "추운 퇴근길, 역앞에서 갓 구운 붕어빵 한 봉지" },
+  { said: "강아지 산책 알바를 사업으로 키워 보고 싶어요", headline: "바쁜 날에도 우리 강아지는 매일 동네를 걸어요" },
+  { said: "김치를 오십 년 넘게 담갔는데 인터넷으로 팔아 보고 싶어", headline: "오십 년 손맛 김치를 혼자 사는 집 식탁까지" },
+  { said: "제가 그린 그림으로 스티커랑 엽서를 팔아 보고 싶어요", headline: "내가 그린 그림이 누군가의 다이어리에 붙어요" },
+  { said: "부모님 감귤밭에서 못난이 귤이 매년 엄청 나와요", headline: "버려지던 부모님 밭 못난이 귤이 집으로 오는 귤청 한 병" },
+  { said: "어르신들께 스마트폰 쓰는 법을 가르쳐 드리는 일", headline: "카톡 사진 한 장, 이제 자녀에게 묻지 않고 보내요" },
+  { said: "아파트 단지 출장세차", headline: "퇴근 후 주차장에 세워 둔 차가 깨끗해져 있어요" },
+  { said: "애기들 생일파티에 가서 비눗방울쇼 하고 싶어요", headline: "아이 생일파티가 비눗방울로 가득 차는 날" },
+  { said: "중고책 파는 작은 책방에 커피도 같이 하는 공간", headline: "동네에서 커피 한 잔 놓고 헌책 읽다 가는 곳" },
+];
+
 const STARTS: Array<{ title: string; body: string; action: string; entry: EntryMode }> = [
   { title: "처음 창업해요", body: "관심 있는 일로 고객과 상품부터 정리해요.", action: "아이디어로 시작하기", entry: "startup" },
   { title: "이미 사업 중이에요", body: "실제 매출과 비용으로 다음 계획을 세워요.", action: "내 사업 개선하기", entry: "operating" },
@@ -133,6 +150,12 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
           <p>{card.body}</p>
           <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action}<ChevronRight size={18} aria-hidden="true" /></a>
         </article>)}
+      </div>
+      <div className={styles.ideas}>
+        <p className={styles.ideasLabel}>한마디로 시작하면 이렇게 정리돼요 <span>예시</span></p>
+        <ul className={styles.ideaList}>
+          {IDEA_EXAMPLES.map(item => <li key={item.said}><span className={styles.ideaSaid}>“{item.said}”</span><strong>{item.headline}</strong></li>)}
+        </ul>
       </div>
     </section>
 

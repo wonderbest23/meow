@@ -76,6 +76,15 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 /* 카드 들림은 마우스 기기에서만 — 터치(태블릿·휴대폰)에서는 누른 뒤에도 들린 채 남았다(움직임 조사 2026-11-17) */
 @media (hover: hover) and (pointer: fine) { .panelAnchor:hover { box-shadow: 0 8px 28px rgba(25, 31, 40, .08); transform: translateY(-2px); } }
 
+/* 한마디 → 한 줄 방향 예시 — 카드 3장 아래, 같은 흰 바탕 한 판에 3열로 */
+.ideas { padding: 28px; border-radius: 16px; background: #fff; display: flex; flex-direction: column; gap: 20px; text-align: left; }
+.ideasLabel { margin: 0; color: #191f28; font-size: 1.0625rem; font-weight: 800; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ideasLabel span { padding: 2px 8px; border-radius: 6px; background: #f2f4f6; color: #4e5968; font-size: .8125rem; font-weight: 700; }
+.ideaList { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 28px; }
+.ideaList li { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.ideaSaid { color: #6b7684; font-size: .875rem; line-height: 1.55; word-break: keep-all; }
+.ideaList strong { color: #191f28; font-size: 1.0625rem; line-height: 1.5; font-weight: 700; word-break: keep-all; text-wrap: balance; }
+
 .chips { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .chips a {
   min-height: 44px;
@@ -186,6 +195,8 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 @media (max-width: 900px) {
   .features { grid-template-columns: minmax(0, 1fr); gap: 28px; }
   .grid3 { grid-template-columns: minmax(0, 1fr); }
+  .ideaList { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .ideas { padding: 22px; }
 }
 
 @media (max-width: 640px) {
