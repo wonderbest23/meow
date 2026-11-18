@@ -9,7 +9,7 @@ export const intakeCommandSchema = z.object({
   depth: z.enum(["easy", "expert"]).optional(),
   understood: z.array(z.object({ questionId: z.string().max(100), value: z.union([z.string().max(1200), z.number().finite(), z.array(z.string().max(200)).max(12)]) }).strict()).max(16).optional(),
   guessed: z.array(z.object({ questionId: z.string().max(100), value: z.union([z.string().max(1200), z.number().finite(), z.array(z.string().max(200)).max(12)]) }).strict()).max(16).optional(),
-  read: z.object({ answers: z.array(z.object({ questionId: z.string().max(100), value: z.union([z.string().max(1200), z.number().finite(), z.array(z.string().max(200)).max(12)]), quote: z.string().max(1200) }).strict()).max(16), operatingDays: z.object({ days: z.number().int().min(1).max(7), quote: z.string().max(1200) }).strict().optional(), unknown: z.array(z.string().max(100)).max(16) }).strict().optional(),
+  read: z.object({ answers: z.array(z.object({ questionId: z.string().max(100), value: z.union([z.string().max(1200), z.number().finite(), z.array(z.string().max(200)).max(12)]), quote: z.string().max(1200) }).strict()).max(16), operatingDays: z.object({ days: z.number().int().min(1).max(7), quote: z.string().max(1200) }).strict().optional(), unknown: z.array(z.string().max(100)).max(16), doubted: z.array(z.string().max(100)).max(16).optional() }).strict().optional(),
   mode: z.enum(["exploring", "startup", "operating"]).optional(), questionId: z.string().max(100).optional(),
   value: z.union([z.string().max(1200), z.number().finite(), z.array(z.string().max(200)).max(12), z.null()]).optional(),
   unknown: z.boolean().optional(), confirmed: z.boolean().optional(), ksic: z.string().regex(/^\d{5}$/).optional(), message: z.string().trim().max(8000).optional(),

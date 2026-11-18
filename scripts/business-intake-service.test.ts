@@ -1032,6 +1032,18 @@ async function main() {
         await saveIntakeCommand(owner, { action: "read", planId: made.plan.id, revision: made.snapshot.coach.revision, requestId: randomUUID(), read: { answers: [{ questionId, value: answer.value, quote: "x" }], unknown: [] } }, { aiAvailable: false, aiAllowed: false });
         const kept = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!;
         assert.ok(String(readIntake(kept.answers)?.answers[questionId]?.messageId).endsWith(":estimate"), "repeating the service's own value does not turn it into the founder's answer");
+        // 손님이 아니라고 한 칸(doubted, 2026-11-18): 먼저 채운 값이면 걷어 내고 다시 묻는다 · 들었다고 한 줄 알린다. 손님이 직접 답한 값은 걷어 내지 않는다
+        const capacityId = made.snapshot.questions.find(question => question.fieldKey === "capacity")?.id;
+        if (capacityId && made.snapshot.intake.answers[capacityId]?.messageId.endsWith(":estimate")) {
+          const state = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!;
+          const doubted = await saveIntakeCommand(owner, { action: "read", planId: made.plan.id, revision: readCoach(state.answers)!.revision, requestId: randomUUID(), read: { answers: [], unknown: [], doubted: [capacityId, "no-such-question"] } }, { aiAvailable: false, aiAllowed: false });
+          assert.equal(doubted.snapshot.intake.answers[capacityId], undefined, "a doubted estimate is cleared so the question is asked");
+          assert.ok(!readCoach(doubted.plan.answers)!.fields.some(field => field.key === "capacity"), "the filled value leaves the table");
+          assert.ok(readCoach(doubted.plan.answers)!.messages.some(message => message.id.endsWith(":read-reopen") && /다시 여쭤볼게요/.test(message.text)), "the founder is told it will be asked again");
+          const answered = await saveIntakeCommand(owner, { action: "answer", planId: made.plan.id, revision: doubted.snapshot.coach.revision, requestId: randomUUID(), questionId: capacityId, value: "대표자 혼자 / 하루 10건" }, { aiAvailable: false, aiAllowed: false });
+          const again = await saveIntakeCommand(owner, { action: "read", planId: made.plan.id, revision: answered.snapshot.coach.revision, requestId: randomUUID(), read: { answers: [], unknown: [], doubted: [capacityId] } }, { aiAvailable: false, aiAllowed: false });
+          assert.equal(again.snapshot.intake.answers[capacityId]?.status, "answered", "a value the founder gave is never cleared by a doubt");
+        } else assert.fail("the estimate should fill capacity for this business");
       } finally { if (priorEstimate === undefined) delete process.env.INTAKE_ESTIMATE; else process.env.INTAKE_ESTIMATE = priorEstimate; }
     });
 

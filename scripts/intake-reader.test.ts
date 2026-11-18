@@ -43,6 +43,9 @@ const raw = (updates: unknown[], more: Record<string, unknown> = {}) => ({ inten
   assert.deepEqual(items.operatingDays, { days: 5, quote: "평일만" });
   assert.deepEqual(items.unknown, ["hoursPerWeek"], "질문이 없는 칸은 모름에도 넣지 않는다");
   assert.deepEqual(readerItems({ ...result, updates: [{ field: "capacityPerDay", value: 50, quote: "하루 50잔" }] }, questions, undefined).answers, [], "처리량의 지금 값이 없으면(누가 하는지 모름) 넣지 않는다");
+  // 되물을 칸(ask)은 '아니라고 한 칸'(doubted)으로 넘긴다 — 처리량은 운영 범위 질문으로. 새 값을 읽은 칸은 넣지 않는다(2026-11-18)
+  assert.deepEqual(readerItems({ intent: "answer", updates: [], unknown: [], ask: ["capacityPerDay", "capacityUnit"] }, questions, "대표자 혼자 / 하루 80건").doubted, [questions.find(item => item.fieldKey === "capacity")!.id]);
+  assert.deepEqual(readerItems({ intent: "answer", updates: [{ field: "capacityPerDay", value: 20, quote: "하루 20건" }], unknown: [], ask: ["capacityPerDay"] }, questions, "대표자 혼자 / 하루 80건").doubted, []);
 }
 // 5) 스위치는 기본이 꺼짐 · 서버 입구는 스위치부터 본다 · 화면은 규칙이 못 읽은 질문 답에만 부르고(손님 글을 대화에 남기는 show) 운영 설정에서 켠다(2026-11-17)
 {
