@@ -215,7 +215,11 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     else if (command.action === "read") {
       // 대화 중 적은 말에서 읽은 것 — 계획서를 만든 뒤에는 넣지 않는다(그때는 계획서에서 고친다)
       if (!Object.keys(plan.sections).length && command.read) {
+        const doubtedBefore = new Set((command.read.doubted ?? []).filter(id => intake.answers[id]?.status === "answered"));
         applyRead(coach, intake, command.read, command.requestId, at);
+        // 손님이 아니라고 해서 걷어 낸 칸 — 들었다는 것을 한 줄로 알린다(질문은 차례가 오면 다시 묻는다). 화면이 글을 함께 보내지 않은 조용한 읽기에서도 알린다
+        const reopened = intakeQuestions(intake, coach).filter(question => doubtedBefore.has(question.id) && !intake.answers[question.id]).map(question => question.label);
+        if (reopened.length) coach.messages.push({ id: `${command.requestId}:read-reopen`, role: "assistant", text: `${reopened.join(", ")}${topicParticle(reopened.at(-1)!)} 먼저 채운 값을 지웠어요. 조금 뒤에 다시 여쭤볼게요.`, at });
         /*
          * 화면이 질문 답으로 적은 글을 함께 보냈으면(규칙이 못 읽은 '하루8시간 주6일 48시간' 등) 대화에 그대로 남기고 메모로도 둔다 — 칸에 없는 말도
          * 사업 방향이 읽는다(ownerNotesContext). 그리고 무엇으로 넣었는지 한 줄로 알린다(AI가 잘못 읽었으면 손님이 바로 보고 고친다).

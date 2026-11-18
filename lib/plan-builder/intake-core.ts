@@ -1109,6 +1109,14 @@ export function applyRead(coach: CoachState, intake: IntakeState, items: NonNull
     setField(coach, "operatingDays", operatingDaysValue(items.operatingDays.days), messageId, items.operatingDays.quote, "user");
     applied += 1;
   }
+  // 손님이 아니라고 한 칸 — 서비스가 먼저 채운 값(:estimate · 짐작 포함)일 때만 걷어 낸다. 질문이 다시 열려 차례에 묻는다. 손님이 말했거나 직접 답한 값은 그대로 둔다
+  for (const id of items.doubted ?? []) {
+    const question = questions.find(candidate => candidate.id === id), now = intake.answers[id];
+    if (!question || question.id === "business" || question.id === "industry" || now?.status !== "answered" || !now.messageId.endsWith(ESTIMATE_SUFFIX)) continue;
+    delete intake.answers[id];
+    if (question.fieldKey) coach.fields = coach.fields.filter(field => !(field.key === question.fieldKey && field.basis === "proposal"));
+    applied += 1;
+  }
   for (const id of items.unknown) {
     const question = questions.find(candidate => candidate.id === id), now = intake.answers[id];
     if (!question || question.id === "business" || question.id === "industry" || now && now.status === "answered" && !now.messageId.endsWith(ESTIMATE_SUFFIX)) continue;

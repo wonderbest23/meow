@@ -38,7 +38,7 @@ export const READER_RULES = `당신은 창업을 준비하는 사람과 대화�
 3. 금액은 원 단위 정수로 바꿉니다. 한글 숫자도 읽습니다(삼백, 이천만원, 만오천원). 예산·월 비용처럼 큰돈을 묻는 맥락에서 단위 없이 "삼백", "오천"이라고 하면 만원 단위로 봅니다. 가격처럼 작은 돈은 적힌 그대로 봅니다.
 4. 지금 묻는 질문(asking)과 다른 내용을 분명히 말했으면 그 내용에 맞는 칸에 넣습니다. 지금 묻는 칸에 억지로 넣지 않고, 반대로 지금 묻는 칸의 답으로 한 말을 다른 칸에 넣지도 않습니다(매출을 물었는데 준비 예산에 넣지 않습니다).
 5. "몰라", "알아서 해줘", "아직 생각 안 해봤어"처럼 모른다·맡긴다는 뜻이면, 지금 묻는 칸(asking)을 unknown 에 넣습니다. 단, 같은 말 안에 실제 내용이 있으면("잘 모르겠는데 대충 직장인") 그 내용을 칸에 넣고 unknown 에는 넣지 않습니다.
-6. 사용자가 앞서 말한 것을 바꾸면 새 값으로 고칩니다. "10만원씩 안 나가요", "가게가 아니라 출장"처럼 아니라고 한 값은 적지 않고, 대신 말한 값을 적습니다. 표에 있는 값을 "많다", "적다", "무리다"라고 하면("하루 50건은 좀 많은 것 같아요") 그 숫자를 적지 않습니다. 대신 말한 숫자가 있으면 그 숫자를, 없으면 ask 에 넣습니다.
+6. 사용자가 앞서 말한 것을 바꾸면 새 값으로 고칩니다. "10만원씩 안 나가요", "가게가 아니라 출장"처럼 아니라고 한 값은 적지 않고, 대신 말한 값을 적습니다. 표에 있는 값을 "많다", "적다", "무리다", "말이 안 된다", "아니다"라고 하면("하루 50건은 좀 많은 것 같아요", "일주일 9건은 말이 안 됨", "한 달 20건은 무리예요") 그 숫자를 적지 않습니다. 대신 말한 숫자가 있으면 그 숫자를, 없으면 그 칸을 ask 에 넣습니다 — 지금 묻는 칸이 아니어도 넣습니다(하루 · 일주일 · 한 달 어느 단위든 처리량은 capacityPerDay 를 ask 에).
 7. 범위로 말하면(두세 시간, 20~30만원) 낮은 쪽 숫자로 적고 quote 에 원래 말을 남깁니다. 계산이 필요하면(평일 5일 × 하루 2시간) 계산한 값을 적습니다.
 8. 사용자가 되묻거나 궁금한 것만 물으면 intent 를 "question" 으로 하고 칸은 고치지 않습니다. 답과 질문이 섞였으면("한 200만원정도요? 근데 진짜 안돼요??", "주 50시간이요. 근데 업종은 왜 제조예요?") 답한 칸은 고치고 intent 는 "answer", asks 는 true 로 합니다(질문에는 따로 답합니다). 질문이 없으면 asks 는 false. 뜻 없는 짧은 말(ㅇㅇ, 음, ㅋㅋ)은 "none" 입니다.
 9. 말은 했지만 칸을 채우기에 정보가 모자라면 그 칸을 고치지 말고 ask 에 넣습니다. 예: "퇴근하고 두세시간씩"(며칠인지 몰라 주당 시간을 못 구함), "좀 있어"(금액 없음), "비싸게는 못 받지"(가격 없음). 모른다·맡긴다는 뜻(unknown)과 다릅니다. ask 에 넣은 칸은 unknown 에 넣지 않습니다.
@@ -120,7 +120,7 @@ export async function readIntakeMessage(config: LLMConfig, input: { asking: stri
 }
 
 /** 저장 명령에 싣는 모양 — 질문 번호로 옮긴 답 · 영업일 · 모른다고 한 질문 */
-export type ReadItems = { answers: Array<{ questionId: string; value: IntakeValue; quote: string }>; operatingDays?: { days: number; quote: string }; unknown: string[] };
+export type ReadItems = { answers: Array<{ questionId: string; value: IntakeValue; quote: string }>; operatingDays?: { days: number; quote: string }; unknown: string[]; doubted: string[] };
 /**
  * 읽은 칸을 지금 질문 목록의 답으로 옮긴다(순수 함수). 질문이 없는 칸은 버린다.
  *  - 손님 · 판매 경로처럼 여러 개 고르는 질문은 한 개짜리 목록으로
@@ -128,13 +128,15 @@ export type ReadItems = { answers: Array<{ questionId: string; value: IntakeValu
  */
 export function readerItems(result: ReaderResult, questions: IntakeQuestion[], capacityNow?: string): ReadItems {
   const byField = (key: string) => questions.find(question => question.fieldKey === key || question.id === key);
-  const out: ReadItems = { answers: [], unknown: [] };
+  const out: ReadItems = { answers: [], unknown: [], doubted: [] };
   const unit = result.updates.find(update => update.field === "capacityUnit");
   for (const update of result.updates) {
     if (update.field === "capacityUnit") continue;
     if (update.field === "operatingDays") { out.operatingDays = { days: Number(update.value), quote: update.quote }; continue; }
     if (update.field === "capacityPerDay") {
       const question = byField("capacity");
+      // 지금 값이 하루 단위가 아니면(일주일 9건 · 한 달 20건) 숫자를 끼워 넣을 수 없다 — 틀린 단위로 넣지 않고, 아니라고 한 칸으로 넘겨 다시 묻는다
+      if (question && capacityNow && !/하루\s*[\d,]+\s*[가-힣·]*/.test(capacityNow) && !out.doubted.includes(question.id)) out.doubted.push(question.id);
       if (!question || !capacityNow || !/하루\s*[\d,]+\s*[가-힣·]*/.test(capacityNow)) continue;
       const kept = capacityNow.match(/하루\s*[\d,]+\s*([가-힣·]*)/)?.[1] || "건";
       out.answers.push({ questionId: question.id, value: capacityNow.replace(/하루\s*[\d,]+\s*[가-힣·]*/, `하루 ${Number(update.value).toLocaleString("ko-KR")}${String(unit?.value ?? kept)}`), quote: update.quote });
@@ -145,6 +147,12 @@ export function readerItems(result: ReaderResult, questions: IntakeQuestion[], c
     out.answers.push({ questionId: question.id, value: question.kind === "multi" ? [String(update.value)] : question.kind === "number" ? Number(update.value) : String(update.value), quote: update.quote });
   }
   for (const field of result.unknown) { const question = byField(field === "capacityPerDay" || field === "capacityUnit" ? "capacity" : field); if (question && !out.unknown.includes(question.id)) out.unknown.push(question.id); }
+  /*
+   * 되물을 칸(ask) — 손님이 그 칸을 말했지만 값은 주지 않았다. 표의 값을 "많다 · 무리다"라고 한 경우가 여기 들어온다(규칙 6).
+   * 예전에는 이 표시를 버려서 먼저 채운 값이 그대로 남았다(2026-11-18 기록 분석: "하루 50건은 많아요"라고 했는데 운영 범위가 그대로 — 손님 10명쯤).
+   * 저장 쪽에서 그 칸이 서비스가 먼저 채운 값일 때만 걷어 내고, 질문을 다시 묻는다. 새 값을 읽은 칸은 넣지 않는다.
+   */
+  for (const field of result.ask) { const question = byField(field === "capacityPerDay" || field === "capacityUnit" ? "capacity" : field); if (question && !out.doubted.includes(question.id) && !out.answers.some(answer => answer.questionId === question.id)) out.doubted.push(question.id); }
   return out;
 }
 

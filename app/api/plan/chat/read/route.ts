@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   const now = await read();
   if (!now) return nothing();
   const items = readerItems(outcome.result, intakeQuestions(now.intake, now.coach), now.coach.fields.find(field => field.key === "capacity")?.value);
-  const count = items.answers.length + (items.operatingDays ? 1 : 0) + items.unknown.length;
+  const count = items.answers.length + (items.operatingDays ? 1 : 0) + items.unknown.length + items.doubted.length;
   console.log(`[intake-read] ${JSON.stringify({ model: outcome.model, totalMs: outcome.totalMs, intent: outcome.result.intent, items: count, ask: outcome.result.ask.length, failure: outcome.failure })}`);
   if (outcome.failure) return nothing();
   if (count) {

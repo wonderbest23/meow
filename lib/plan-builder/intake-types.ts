@@ -69,7 +69,7 @@ export type IntakeCommand = {
   /** 첫 문장 읽기에서 적히지 않은 칸을 이 사업에 맞게 짐작한 값 — 기준표 값만 바꾼다(제안) */
   guessed?: Array<{ questionId: string; value: IntakeValue }>;
   /** action "read": 대화 중 적은 말에서 AI가 읽은 것(intake-reader) — 질문의 답 · 주당 영업일 · 모른다고 한 질문. 서버가 읽어 넣는다(INTAKE_AI_READER) */
-  read?: { answers: Array<{ questionId: string; value: IntakeValue; quote: string }>; operatingDays?: { days: number; quote: string }; unknown: string[] };
+  read?: { answers: Array<{ questionId: string; value: IntakeValue; quote: string }>; operatingDays?: { days: number; quote: string }; unknown: string[]; /** 손님이 아니라고(많다 · 적다 · 무리다) 했지만 새 값은 말하지 않은 칸 — 먼저 채운 값이면 걷어 내고 다시 묻는다 */ doubted?: string[] };
   /** action "start"(새 대화) · "depth"(진행 중 바꾸기): 대화 방식 */
   depth?: "easy" | "expert";
   mode?: IntakeMode; questionId?: string; value?: IntakeValue; unknown?: boolean;
