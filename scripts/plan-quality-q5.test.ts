@@ -93,6 +93,10 @@ async function main() {
     assert.match(prompt("summary/roadmap"), /응답 수는 '계약·개업 전 판단' 줄의 '본전에 필요한 단골 수'\(한 사람이 사는 횟수는 가정으로 표시\)와 비교하고/);
     assert.match(BUSINESS_DESIGN_RULES, /usableText\(조사 글\)에 언제\(날짜·요일\) 몇 개\(수량\)를 사겠는지 묻는 질문을 꼭 넣고/);
     assert.match(BUSINESS_DESIGN_RULES, /'본전에 필요한 단골 수'가 있으면 모을 응답 수를 그보다 적게 잡지 않습니다/);
+    // 첫걸음은 작게(2026-11-18 카드 82장 점검: 응답 61개 이상을 첫걸음으로 준 카드 19장, 최대 190개) — 큰 수는 두 걸음으로 나누고 계획서는 전체 수로 비교한다
+    assert.match(BUSINESS_DESIGN_RULES, /20개를 넘으면 doneWhen을 두 걸음으로 나눠 씁니다/);
+    assert.match(BUSINESS_DESIGN_RULES, /action\(먼저 할 일\)에는 전체 수를 쓰지 않습니다/);
+    assert.match(system, /계약 통과 기준과 비교하는 수는 전체 수이고 첫 응답 수는 첫 1~2주에 할 일로만 씁니다/);
 
     // ── (3) 주당 시간과 영업시간, 계약 전 하루 시간표 확인 ──
     assert.match(onePlace, /- 주당 가능 시간과 영업시간의 차이: '12주 할 일과 매달 볼 숫자' 장\./);
