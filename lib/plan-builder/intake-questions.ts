@@ -75,7 +75,7 @@ const hours = fieldQuestion("hoursPerWeek", "일주일에 몇 시간 쓸 수 있
  * 예산은 준비 자금이 아니라 '이번 개선에 쓸 수 있는 돈' — 돈 장이 이 돈을 되찾는 때를 계산한다(cashflow-scenarios.ts).
  * 주당 시간 질문은 기본 질문 14개 상한(business-intake-questions.test.ts) 때문에 넣지 않았다 — 넣으려면 상한을 바꾸는 결정이 필요하다.
  */
-const operatingBudget: IntakeQuestion = { ...budget, prompt: "이번에 새로 해 볼 일(홍보·상품·도구 등)에 쓸 수 있는 돈은 얼마인가요?", hint: "매달 나가는 돈은 빼고, 이번 개선에 실제로 쓸 수 있는 금액이에요." };
+export const operatingBudget: IntakeQuestion = { ...budget, prompt: "이번에 새로 해 볼 일(홍보·상품·도구 등)에 쓸 수 있는 돈은 얼마인가요?", hint: "매달 나가는 돈은 빼고, 이번 개선에 실제로 쓸 수 있는 금액이에요." };
 const capacity = fieldQuestion("capacity", "처음에는 누가, 얼마나 감당하나요?", { hint: "누가 일하는지 고른 뒤 하루·주·월에 몇 건까지 할 수 있는지 정해요." });
 const goal = fieldQuestion("goal", "언제까지 무엇을 이루고 싶나요?", { hint: "목표는 현재 실적과 따로 기록돼요." });
 /*

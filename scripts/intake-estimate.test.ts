@@ -340,6 +340,25 @@ async function main() {
     assert.equal(chosen.snapshot.intake.sector, "food_beverage");
     assert.equal(kept.snapshot.intake.sector, "food_beverage", "사용자가 고른 업종은 짐작이 바꾸지 않는다");
   }
+  // 이미 운영 중인 가게(2026-11-18): '생각한 사업'으로 들어와도 글이 운영 중이면 목표를 '6개월 안에 손익분기'로 채우지 않고 묻고, 준비 예산은 '이번에 새로 해 볼 일에 쓸 돈'으로 묻는다
+  {
+    const owner = `intake-running-${randomUUID()}`;
+    const made = await saveIntakeCommand(owner, { action: "start", mode: "startup", questionId: "business", value: "미용실이요 요즘 손님이 너무 줄어서 계획 다시 세워보고 싶어요", revision: 0, requestId: randomUUID() }, off);
+    const next = async (command: Record<string, unknown>) => { const current = (await loadPlanState(owner)).plans.find(item => item.id === made.plan.id)!; return saveIntakeCommand(owner, { ...command, planId: made.plan.id, revision: readCoach(current.answers)!.revision, requestId: randomUUID() } as never, off); };
+    const goalId = made.snapshot.questions.find(question => question.fieldKey === "goal")!.id;
+    assert.match(String(made.snapshot.intake.answers[goalId]?.value), /손익분기/, "기준표는 목표를 채운다(고치기 전 동작)");
+    assert.match(made.snapshot.questions.find(question => question.id === "budget")!.prompt, /준비에 쓸 수 있는 돈/);
+    const running = await next({ action: "understand", understood: [], guessed: [{ questionId: "__running", value: "yes" }] });
+    assert.equal(running.snapshot.intake.running, true);
+    assert.equal(running.snapshot.intake.answers[goalId], undefined, "운영 중인 가게에 6개월 손익분기 목표를 채워 두지 않는다");
+    assert.ok(!readCoach(running.plan.answers)!.fields.some(field => field.key === "goal"), "채운 목표가 표에서 빠진다");
+    assert.match(running.snapshot.questions.find(question => question.id === "budget")!.prompt, /이번에 새로 해 볼 일/, "준비 예산 질문이 운영 중 말로 바뀐다");
+    const resector = await next({ action: "answer", questionId: "industry", value: "local_service" });
+    assert.equal(resector.snapshot.intake.answers[goalId], undefined, "업종을 다시 골라 기준표가 다시 채워도 목표는 넣지 않는다");
+    const said = await next({ action: "answer", questionId: goalId, value: "떠난 단골 다시 오게 하기" });
+    const again = await next({ action: "understand", understood: [], guessed: [{ questionId: "__running", value: "yes" }] }).catch(() => said);
+    assert.match(String(again.snapshot.intake.answers[goalId]?.value), /단골/, "직접 답한 목표는 그대로");
+  }
   // 운영 범위 짐작(2026-11-18): 기준표의 수('일주일 10건' 등)를 이 사업에 맞춘 수로 바꾼다. 직접 답한 운영 범위는 그대로
   {
     const owner = `intake-guess-capacity-${randomUUID()}`;

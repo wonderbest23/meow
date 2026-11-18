@@ -59,6 +59,11 @@ export type IntakeState = {
   depth?: "expert";
   /** 일반 모드에서 사업 문장을 AI로 한 번 읽었다(읽은 것이 없어도 켠다 — 사업마다 한 번만 부른다) */
   understood?: boolean;
+  /**
+   * '생각한 사업'으로 들어왔지만 글을 읽어 보니 이미 운영 중인 가게다(2026-11-18). 흐름(질문 수)은 그대로 두고 어긋나는 것만 고친다:
+   * 목표를 '6개월 안에 손익분기'로 채우지 않고 묻고, 준비 예산은 '이번에 새로 해 볼 일에 쓸 돈'으로 묻는다.
+   */
+  running?: boolean;
 };
 export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss", "sector-keep", "depth", "understand", "read"] as const;
 export type IntakeCommand = {
