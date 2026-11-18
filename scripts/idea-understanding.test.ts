@@ -51,6 +51,17 @@ assert.deepEqual(guessedAnswers({ customer: "고양이를 좋아하는 20~30대"
 assert.deepEqual(guessedAnswers(undefined, guessQ), []);
 // 업종 짐작(2026-11-18): 보기 값일 때만 받고 '기타'는 버린다. 답으로 옮길 때는 맨 앞에(업종이 바뀌면 다른 칸의 질문이 바뀐다), 이미 말한 업종이면 건너뛴다
 assert.equal(cleanGuess({ guessSector: "local_service" }).sector, "local_service");
+// 운영 범위 짐작(2026-11-18): 기간 · 수 · 세는 말. 수가 0이거나 기간이 보기 밖이면 버리고, 세는 말이 이상하면 '건'. 답으로 옮길 때 '누가'는 지금 값을 둔다
+assert.deepEqual(cleanGuess({ guessCountPeriod: "일주일", guessCountNumber: 10, guessCountUnit: "명" }).count, { period: "일주일", number: 10, unit: "명" });
+assert.equal(cleanGuess({ guessCountPeriod: "일주일", guessCountNumber: 0, guessCountUnit: "명" }).count, undefined);
+assert.equal(cleanGuess({ guessCountPeriod: "매일", guessCountNumber: 5, guessCountUnit: "명" }).count, undefined);
+assert.equal(cleanGuess({ guessCountPeriod: "한 달", guessCountNumber: 5, guessCountUnit: "pieces!" }).count?.unit, "건");
+{
+  const capQ = [...guessQ, { id: "capacity", fieldKey: "capacity", label: "운영 범위", prompt: "", kind: "text" }] as never;
+  assert.deepEqual(guessedAnswers({ count: { period: "일주일", number: 10, unit: "명" } }, capQ, new Set(), "대표자 혼자 · 주말만 / 하루 10명").find(item => item.questionId === "capacity"), { questionId: "capacity", value: "대표자 혼자 · 주말만 / 일주일 10명" });
+  assert.equal(guessedAnswers({ count: { period: "일주일", number: 10, unit: "명" } }, capQ).find(item => item.questionId === "capacity")?.value, "대표자 혼자 / 일주일 10명");
+  assert.ok(!guessedAnswers({ count: { period: "일주일", number: 10, unit: "명" } }, capQ, new Set(["capacity"])).some(item => item.questionId === "capacity"), "말한 운영 범위는 짐작이 덮지 않는다");
+}
 assert.equal(cleanGuess({ guessSector: "general" }).sector, undefined);
 assert.equal(cleanGuess({ guessSector: "필라테스" }).sector, undefined);
 assert.deepEqual(guessedAnswers({ sector: "local_service", price: 2500 }, guessQ)[0], { questionId: "industry", value: "local_service" });

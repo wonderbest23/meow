@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   const questions = intakeQuestions(now.intake, now.coach);
   const items = understoodAnswers(result.understood, questions, now.coach.fields.find(field => field.key === "capacity")?.value);
   // 적히지 않은 칸 — 이 사업에 맞춘 짐작(말한 칸은 빼고). 저장 쪽에서 기준표로 채운 칸만 바꾼다
-  const guessed = guessedAnswers(result.understood.guess, questions, new Set(items.map(item => item.questionId)));
+  const guessed = guessedAnswers(result.understood.guess, questions, new Set(items.map(item => item.questionId)), now.coach.fields.find(field => field.key === "capacity")?.value);
   // 화면은 이미 기다림을 끝내고 질문을 보였을 수 있다 — 늦은 읽기는 버린다(저장하면 화면이 모르는 새 판이 생겨 다음 답이 막힌다)
   const late = !understandSaveOnTime(startedAt, Date.now());
   console.log(`[intake-understand] ${JSON.stringify({ model: result.model, totalMs: result.totalMs, items: items.length, guessed: guessed.length, failure: result.failure, ...(late ? { late: Date.now() - startedAt } : {}) })}`);
