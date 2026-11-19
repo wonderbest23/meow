@@ -1,0 +1,798 @@
+[
+ {
+  "id": 1,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 2,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "budget",
+    "value": 2000000,
+    "quote": "이천만원"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 3,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 4,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "budget",
+    "value": 30000000,
+    "quote": "삼천만원 정도 있어"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 5,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 6,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 7,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 8,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 9,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 10,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 11,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 12,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "hoursPerWeek",
+    "value": 20,
+    "quote": "일주일에 이십 시간"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 13,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 14,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 15,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 16,
+  "intent": "question",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 17,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 18,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 19,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 20,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "price",
+    "value": 15000,
+    "quote": "한 만오천원쯤"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 21,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 22,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 23,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 24,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 25,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 26,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 27,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 28,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 29,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 30,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 31,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 32,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 33,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 34,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 35,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 36,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 37,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 38,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 39,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 40,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 41,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 42,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 43,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "channel",
+    "value": "배민, 쿠팡이츠",
+    "quote": "배민이랑 쿠팡이츠로만"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 44,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 45,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 46,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 47,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 48,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 49,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 50,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 51,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 52,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 53,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 54,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 55,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 56,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 57,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 58,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "price",
+    "value": 300000,
+    "quote": "한 달에 30"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 59,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 60,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 61,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 62,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 63,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 64,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 65,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "price",
+    "value": 60000,
+    "quote": "1회에 6만원"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 66,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "price",
+    "value": 25000,
+    "quote": "평균 2만 5천원 정도"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 67,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 68,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "cost",
+    "value": 2000000,
+    "quote": "한달에 고정으로 200쯤 나가"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 69,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 70,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 71,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 72,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "customer",
+    "value": "초등 고학년 학부모들",
+    "quote": "초등 고학년 학부모들"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 73,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 74,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 75,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 76,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 77,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 78,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 79,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 80,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 81,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "capacityPerDay",
+    "value": 8,
+    "quote": "하루에 손님 8명쯤 받을 수 있어"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 82,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 83,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 84,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 85,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "budget",
+    "value": 10000000,
+    "quote": "about 10 million won"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 86,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "price",
+    "value": 10000,
+    "quote": "만원에서 만오천원 사이"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 87,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 88,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "price",
+    "value": 3500,
+    "quote": "사천오백원"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 89,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 90,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 91,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 92,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 93,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 94,
+  "intent": "question",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 95,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 96,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 97,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "budget",
+    "value": 3000000,
+    "quote": "삼백만원에서 오백만원"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 98,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 99,
+  "intent": "answer",
+  "updates": [
+   {
+    "field": "budget",
+    "value": 2000000,
+    "quote": "2,000,000원"
+   }
+  ],
+  "unknown": [],
+  "ask": []
+ },
+ {
+  "id": 100,
+  "intent": "none",
+  "updates": [],
+  "unknown": [],
+  "ask": []
+ }
+]
