@@ -65,11 +65,15 @@ globalThis.fetch = async (input, init) => {
     await readDelay();
     return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(fake) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
   }
+  // 질문 답 읽기(intake-reader)는 '읽은 것 없음'으로 답한다 — 예전엔 틀에 맞춘 합성 답이 '사업 설명 모름' 같은 엉뚱한 값을 넣었다. 못 읽은 답의 화면 흐름(다시 묻기 → 넘어가기)을 0원으로 본다
+  if (schema?.properties?.intent && schema?.properties?.updates) {
+    return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify({ intent: "none", updates: [], unknown: [], ask: [], asks: false }) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
+  }
   // 사업이 아닌 말('돈 벌고 싶다')을 사업으로 잡는 짐작(idea-understanding guessBusiness) — 팔 것이 안 보이는 글에만 정해진 한 줄을 돌려줘 0원 미리보기에서 그 흐름을 본다
   if (schema?.properties?.guessShaped) {
-    const source = (() => { try { return JSON.parse(userText(body.messages?.[0]?.content)).text ?? ""; } catch { return ""; } })();
+    const input = (() => { try { return JSON.parse(userText(body.messages?.[0]?.content)); } catch { return {}; } })(), source = input.text ?? "";
     const shaped = !/팔|판매|가게|카페|식당|학원|공방|샵|숍|매장|서비스|대행|수업|과외|세차|미용|배달/.test(source);
-    const fake = { ...gen(schema), guessShaped: shaped, guessBusiness: shaped ? "집에서 만드는 수제 간식 온라인 판매(합성)" : "", ...(shaped ? { guessSector: "retail_commerce", guessOffer: "수제 간식 1봉지(합성)", guessPrice: 6000, guessUnitCost: 2000, guessMonthlyCost: 100000, guessCountPeriod: "일주일", guessCountNumber: 20, guessCountUnit: "봉지" } : {}) };
+    const fake = { ...gen(schema), guessShaped: shaped, guessBusiness: shaped ? input.fallback ?? "집에서 만드는 수제 간식 온라인 판매(합성)" : "", ...(shaped ? { guessSector: "retail_commerce", guessOffer: "수제 간식 1봉지(합성)", guessPrice: 6000, guessUnitCost: 2000, guessMonthlyCost: 100000, guessCountPeriod: "일주일", guessCountNumber: 20, guessCountUnit: "봉지" } : {}) };
     await readDelay();
     return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(fake) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
   }

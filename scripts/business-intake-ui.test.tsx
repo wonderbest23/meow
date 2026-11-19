@@ -877,6 +877,9 @@ async function main() {
     assert.equal(guestOwnerAdoptable({ action: "start", planId: "plan_1" }, false, false, guest), false);
     assert.equal(guestOwnerAdoptable({ action: "answer", planId: "plan_1" }, true, false, guest), false, "답을 보내던 중이면 멈춘다");
     assert.equal(guestOwnerAdoptable({ action: "start" }, false, false, { ...guest, ownerScope: null }), false);
+    // 같은 질문에 두 번 연속 못 읽는 말이면 '아직 미정'으로 넘긴다(되풀이하지 않는다)
+    assert.match(source, /if \(asked && times >= 2 && composerVisible\) \{[\s\S]{0,200}unknown: true, message: composerVisible/);
+    assert.equal((source.match(/repeatOrMoveOn\(question, target\)/g) ?? []).length, 2, "AI 읽기 뒤와 규칙 처리 뒤 두 곳 모두");
     assert.match(source, /if \(!guestOwnerAdoptable\(pending\.command, !!planRef\.current, signedInRef\.current, identity\)\) \{ freezeForOwnerChange\(\); return; \}/);
   }
   assert.ok(!source.includes("setInterval(() => void send"));
