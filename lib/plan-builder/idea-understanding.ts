@@ -19,7 +19,9 @@ import type { IntakeValue } from "./intake-types";
 export const UNDERSTAND_MAX_INPUT = 1200;
 /** 짐작 목록에 섞어 보내는 '이미 운영 중' 신호의 이름(질문 id 가 아니다) */
 export const RUNNING_SIGNAL = "__running";
-export type Guess = { /** 앞으로 시작할 사업이 아니라 이미 문을 열어 운영 중인 사업 */ running?: true; count?: { period: "하루" | "일주일" | "한 달"; number: number; unit: string }; sector?: string; customer?: string; problem?: string; offer?: string; channel?: string; price?: number; unitCost?: number; monthlyCost?: number };
+/** 짐작 목록에 섞어 보내는 '사업으로 잡은 한 줄'의 이름(질문 id 가 아니다) — 적은 말이 사업 설명이 아닐 때만 있다 */
+export const SHAPED_SIGNAL = "__business";
+export type Guess = { /** 적은 말이 사업 설명이 아니어서(바람 · 푸념 · 취미 · 장난) 그 말의 실마리로 잡은 사업 한 줄 */ business?: string; /** 앞으로 시작할 사업이 아니라 이미 문을 열어 운영 중인 사업 */ running?: true; count?: { period: "하루" | "일주일" | "한 달"; number: number; unit: string }; sector?: string; customer?: string; problem?: string; offer?: string; channel?: string; price?: number; unitCost?: number; monthlyCost?: number };
 export type Understood = {
   price?: string; unitCost?: string; monthlyCost?: string; budget?: string; hoursPerWeek?: string;
   channel?: string; channel2?: string; channel3?: string; customer?: string; problem?: string; offer?: string; prices?: string; goal?: string;
@@ -74,6 +76,13 @@ export const GUESS_RULES = [
   "업종의 흔한 값이 아니라 이 글에 적힌 바로 그 사업에 맞추세요(예: '길고양이 사진 엽서'면 사진관 촬영비가 아니라 엽서 한 장 값, '붕어빵 노점'이면 붕어빵 한 봉지 값, '중고 명품 가방 리셀'이면 가방 한 개 값).",
   "짐작이 어려운 칸은 비워 두세요(글자는 \"\", 숫자는 0).",
   /*
+   * 사업이 아닌 말도 사업으로 잡는다(2026-11-19 사장님: "어떻게 해서든 사업화시키는 보정을 — 바보처럼 대화를 그냥 돌리지 말고").
+   * 예전엔 "돈 벌고 싶다" · "고양이가 좋아" 같은 말이면 짐작할 사업이 없어 칸이 비고, 그 말이 그대로 사업 설명 · 제목이 된 채 질문만 이어졌다.
+   * 낱말 규칙을 덧붙이지 않고 AI가 글의 뜻으로 판단한다 — 코드는 형식만 보고, 처음 적은 말은 ideaOrigin 에 그대로 남는다.
+   */
+  "- guessShaped · guessBusiness: 가장 먼저 이 글에 팔 것(상품 · 서비스 · 가게)이 보이는지 봅니다. 오타 · 줄임말 · 반말 · 띄어쓰기 없는 글이어도 무엇을 팔려는지 알 수 있으면 사업 설명입니다 — guessShaped 는 false, guessBusiness 는 \"\"로 두고 글을 바꾸지 않습니다. 팔 것이 보이지 않는 말(돈을 벌고 싶다는 바람, 퇴사 · 처지에 대한 푸념, 좋아하는 것 · 취미 · 잘하는 것만 적은 말, 장난 · 엉뚱한 말, 뜻 없는 글자)이면 guessShaped 는 true 로 하고, 그 말에 담긴 실마리(좋아하는 것, 잘하는 것, 가진 것, 처지, 쓸 수 있는 시간)를 살려 한 사람이 적은 돈으로 바로 시작할 수 있는 가장 가까운 사업 하나를 정해 guessBusiness 에 한 줄로 적습니다. 무엇을 누구에게 파는지 보이게 40자 안의 명사구로 씁니다(예: '고양이가 좋아' → '집사를 위한 고양이 수제 간식 온라인 판매', '퇴사하고 싶다 돈 벌고 싶다' → '퇴근 뒤 집에서 하는 문서 · 자료 정리 대행', '게임만 함' → '게임 초보자 1:1 온라인 코칭'). 실마리가 전혀 없으면(ㅋㅋ, asdf, 인사말) 허가 · 신고 · 설비 없이 혼자 집에서 바로 시작할 수 있는 일 하나를 적습니다 — 먹는 것을 만들어 파는 일은 영업 신고와 시설이 필요하므로, 글에 요리 · 음식 이야기가 없으면 고르지 않습니다. 위의 예는 형식만 보여 주는 것이니 그대로 옮기지 말고 이 글에 맞는 사업을 정하세요. 법으로 할 수 없거나 남을 해치는 일을 적었을 때도 guessShaped 는 true 로 하고, 그 말에서 합법으로 할 수 있는 가장 가까운 일을 적습니다. 되묻거나 거절하지 않습니다.",
+  "guessShaped 가 true 이면 아래 칸은 모두 guessBusiness 에 적은 그 사업에 맞춰 채웁니다.",
+  /*
    * 업종도 짐작한다(2026-11-18 AI 손님 점검: 낱말 기준표가 '동네 헌책방 카페'를 유통 · 온라인 판매로, '필라테스 스튜디오'를 제조 · 제품으로 채웠고,
    * 답답해한 순간 234개 가운데 45개가 업종 때문이었다). 낱말이 아니라 글 전체의 뜻으로 고른다.
    */
@@ -96,8 +105,8 @@ export const GUESS_RULES = [
 ].join("\n");
 export const guessSchema = {
   type: "object", additionalProperties: false,
-  properties: { guessRunning: { type: "boolean" }, guessSector: { type: "string", enum: intakeSectorOptions.map(option => option.value) }, guessCountPeriod: { type: "string", enum: ["하루", "일주일", "한 달"] }, guessCountNumber: { type: "number" }, guessCountUnit: text, ...Object.fromEntries(GUESS_TEXT.map(key => [key, text])), ...Object.fromEntries(GUESS_NUMBER.map(key => [key, { type: "number" }])) },
-  required: ["guessRunning", "guessSector", "guessCountPeriod", "guessCountNumber", "guessCountUnit", ...GUESS_TEXT, ...GUESS_NUMBER],
+  properties: { guessShaped: { type: "boolean" }, guessBusiness: text, guessRunning: { type: "boolean" }, guessSector: { type: "string", enum: intakeSectorOptions.map(option => option.value) }, guessCountPeriod: { type: "string", enum: ["하루", "일주일", "한 달"] }, guessCountNumber: { type: "number" }, guessCountUnit: text, ...Object.fromEntries(GUESS_TEXT.map(key => [key, text])), ...Object.fromEntries(GUESS_NUMBER.map(key => [key, { type: "number" }])) },
+  required: ["guessShaped", "guessBusiness", "guessRunning", "guessSector", "guessCountPeriod", "guessCountNumber", "guessCountUnit", ...GUESS_TEXT, ...GUESS_NUMBER],
 };
 
 /** 모델 답에서 원문에 근거가 있는 것만 남긴다 */
@@ -129,6 +138,9 @@ export function cleanGuess(raw: Record<string, unknown> | null): Guess {
   if ((raw.guessCountPeriod === "하루" || raw.guessCountPeriod === "일주일" || raw.guessCountPeriod === "한 달") && typeof raw.guessCountNumber === "number" && raw.guessCountNumber >= 1 && raw.guessCountNumber < 100_000)
     out.count = { period: raw.guessCountPeriod, number: Math.round(raw.guessCountNumber), unit: typeof raw.guessCountUnit === "string" && /^[가-힣]{1,3}$/.test(raw.guessCountUnit.trim()) ? raw.guessCountUnit.trim() : "건" };
   if (raw.guessRunning === true) out.running = true;
+  // 사업으로 잡은 한 줄은 '사업 설명이 아니다'라고 판단했을 때만 받는다 — 멀쩡한 사업 문장을 AI가 고쳐 쓰지 않게
+  const business = raw.guessShaped === true ? line(raw.guessBusiness) : undefined;
+  if (business) out.business = business;
   if (customer) out.customer = customer;
   if (problem) out.problem = problem;
   if (offer) out.offer = offer;
@@ -149,6 +161,8 @@ export function guessedAnswers(guess: Guess | undefined, questions: IntakeQuesti
     if (!question || said.has(question.id) || value === undefined || value === "") return;
     out.push({ questionId: question.id, value: question.kind === "multi" && typeof value === "string" ? [value] : value });
   };
+  // 사업으로 잡은 한 줄 — 질문의 답이 아니라 저장 쪽이 읽는 신호다(SHAPED_SIGNAL). 다른 짐작이 모두 이 사업에 맞춘 값이라 맨 앞에 둔다
+  if (guess.business) out.push({ questionId: SHAPED_SIGNAL, value: guess.business });
   // 업종은 fieldKey 가 없는 질문이라 따로 — 맨 앞에 둔다(업종이 바뀌면 다른 칸의 질문 · 단위가 바뀐다)
   if (guess.sector && !said.has("industry")) out.push({ questionId: "industry", value: guess.sector });
   // 운영 중이라는 표시 — 질문의 답이 아니라 저장 쪽이 읽는 신호다(RUNNING_SIGNAL)
@@ -182,7 +196,7 @@ export async function understandIdea(config: LLMConfig, text: string, signal?: A
     completeJson(config, {
       kind: "intake-guess", system: GUESS_RULES, user: JSON.stringify({ text: input }),
       jsonSchema: { name: "guessed_idea", schema: guessSchema }, anthropicJsonSchema: true, effort: "low",
-      maxOutputTokens: 400, timeoutMs: wait, allowFallback: false, signal,
+      maxOutputTokens: 480, timeoutMs: wait, allowFallback: false, signal,
     }).catch(() => null),
   ]);
   const understood = cleanUnderstood(raw, input), guess = cleanGuess(rawGuess);

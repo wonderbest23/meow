@@ -12,9 +12,9 @@ import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
 import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyGuessed, applyGuessedSector, applyRunning, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote, intakeQuestions, displayIntakeValue, READ_SUFFIX } from "./intake-core";
+import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyGuessed, applyGuessedSector, applyShapedBusiness, applyRunning, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote, intakeQuestions, displayIntakeValue, READ_SUFFIX } from "./intake-core";
 import { ruleKind } from "./kind-rules";
-import { RUNNING_SIGNAL } from "./idea-understanding";
+import { RUNNING_SIGNAL, SHAPED_SIGNAL } from "./idea-understanding";
 import { adoptRenamedTitle } from "./business-name";
 import { estimateIntake } from "./intake-estimate";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "./coach-presentation";
@@ -206,6 +206,8 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       // 문장에서 읽은 답 — 계획서를 만든 뒤나 전문가 모드에서는 넣지 않는다(그때는 사용자가 직접 정한다)
       // 말한 값을 먼저 넣고, 적히지 않은 칸은 이 사업에 맞춘 짐작으로 기준표 값을 바꾼다(말한 값 · 직접 답한 값은 그대로)
       if (!Object.keys(plan.sections).length && intake.depth !== "expert") {
+        // 적은 말이 사업 설명이 아니었으면 그 말로 잡은 사업을 먼저 넣는다 — 뒤의 업종 · 짐작이 모두 이 사업에 맞춘 값이다
+        applyShapedBusiness(plan, coach, intake, command.guessed?.find(item => item.questionId === SHAPED_SIGNAL)?.value, command.requestId, at, ruleKind);
         // 이미 운영 중인 가게로 읽혔으면 먼저 표시한다 — 뒤의 다시 채우기가 목표를 넣지 않는다
         if (command.guessed?.some(item => item.questionId === RUNNING_SIGNAL)) applyRunning(plan, coach, intake);
         // 업종 짐작을 먼저 — 업종이 바뀌면 기준표 값이 새 업종으로 다시 채워지고, 그 위에 말한 값과 짐작이 얹힌다
