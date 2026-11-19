@@ -108,14 +108,16 @@ assert.deepEqual(understoodAnswers({ channel: "인스타", channel2: "플리마�
 assert.deepEqual(understoodAnswers({ budget: "300" }, questions), [{ questionId: "budget", value: 3_000_000 }]);
 assert.deepEqual(understoodAnswers({ budget: "3천만원" }, questions), [{ questionId: "budget", value: 30_000_000 }]);
 
-// 읽기 시간은 요청을 받은 때부터 잰다(2026-11-17 운영, 로그인 안 한 손님) — 화면은 8초에 요청을 끊고 질문을 보이지만 서버는 멈추지 않는다.
+// 읽기 시간은 요청을 받은 때부터 잰다(2026-11-17 운영, 로그인 안 한 손님) — 화면은 정해진 시간(UNDERSTAND_WAIT_MS)에 요청을 끊고 질문을 보이지만 서버는 멈추지 않는다.
 // 예전엔 AI 시간(7초)만 재서, AI 앞의 일(손님 AI 한도 세기 등)이 1초 넘게 걸리면 화면이 끊은 뒤에 저장해 판(revision)이 화면 몰래 올랐다.
 {
   assert.ok(UNDERSTAND_SAVE_BY_MS + 1_000 <= UNDERSTAND_WAIT_MS, "저장 시한은 화면이 기다리는 시간보다 넉넉히(저장 · 응답 몫) 앞선다");
   assert.equal(understandAiBudget(0, 0), UNDERSTAND_SAVE_BY_MS);
-  // 운영 그대로: AI 앞의 일 1.2초 + 예전 AI 시간 7초 = 8.2초 > 화면 8초 → 늦은 저장. 이제는 AI 시간이 남은 시간으로 줄어 시한 안에 끝난다
+  // AI 시간은 요청을 받은 때부터 잰 남은 시간으로 준다 — AI 앞의 일이 길어져도 저장은 시한 안에 끝난다
   const beforeAi = 1_200;
-  assert.ok(beforeAi + 7_000 > UNDERSTAND_WAIT_MS, "예전 계산은 화면이 끊은 뒤에 끝날 수 있었다");
+  // 2026-11-19 운영: AI 앞의 일이 3.9초 걸린 요청 — 예전 시한(6.5초)에서는 AI에 2.6초만 남아 읽기가 통째로 빠졌다. 이제는 AI가 6초 넘게 받는다
+  assert.ok(understandAiBudget(0, 3_900) >= 6_000, "AI 앞의 일이 3.9초 걸려도 AI가 읽을 시간이 남는다");
+  assert.ok(understandAiBudget(0, 3_500) >= 7_000, "AI 앞의 일이 3.5초까지는 AI가 제 시간(7초)을 다 받는다");
   const budget = understandAiBudget(0, beforeAi);
   assert.equal(budget, UNDERSTAND_SAVE_BY_MS - beforeAi, "AI 앞에 쓴 시간만큼 AI 시간이 준다");
   assert.ok(beforeAi + budget <= UNDERSTAND_SAVE_BY_MS);
@@ -132,7 +134,8 @@ assert.deepEqual(understoodAnswers({ budget: "3천만원" }, questions), [{ ques
   assert.equal(understandStillUseful({ ...start, hoursPerWeek: { messageId: "m4:read" } }, false), false, "적은 글을 읽어 넣은 답이 있어도 읽지 않는다");
   assert.equal(understandStillUseful({ ...start, price: { messageId: "m5:said" } }, false), true, "읽기가 넣은 값은 손님 답이 아니다");
   assert.equal(understandStillUseful(start, true), false, "사업 방향이 나왔으면 읽지 않는다");
-  assert.equal(understandSaveOnTime(0, beforeAi + 6_900), false, "화면이 끊었을 시각의 결과는 버린다");
+  assert.equal(understandSaveOnTime(0, UNDERSTAND_SAVE_BY_MS + 1), false, "시한을 넘긴 결과는 버린다");
+  assert.equal(understandSaveOnTime(0, UNDERSTAND_WAIT_MS), false, "화면이 끊었을 시각의 결과는 버린다");
   assert.equal(understandSaveOnTime(0, UNDERSTAND_WAIT_MS + 17_000), false);
 
   // 경로 배선 — 받은 때부터 재고, 한도 세기 전에 남은 시간을 보고, 다시 읽은 상태가 이미 읽었으면 · 늦었으면 저장하지 않는다

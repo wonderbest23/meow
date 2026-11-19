@@ -24,8 +24,14 @@ export function intakeJobExpired(job: IntakeJob | null | undefined, nowMs: numbe
  * 늦은 읽기를 저장하면 화면이 모르는 새 판(coach.revision)이 생겨 다음 답이 '다른 화면에서 수정됐어요'(409)로 막혔다(2026-11-17 운영, 로그인 안 한 손님).
  * 예전엔 AI 시간(7초)만 쟀는데, AI 앞의 일(로그인 확인 · 요청 제한 · 저장본 읽기 · 손님 AI 한도 세기)이 늘면서 전체가 8초를 넘었다.
  */
-export const UNDERSTAND_WAIT_MS = 8_000;
-export const UNDERSTAND_SAVE_BY_MS = 6_500;
+/*
+ * 2026-11-19 운영: AI 앞의 일에 3.9초가 걸려(배포 뒤 첫 요청) 시한 6.5초 중 AI에 2.6초만 남았고, 읽기가 시간 초과로 통째로 빠졌다 —
+ * 사업이 아닌 말("고양이가 좋아")을 사업으로 잡는 보정도 함께 빠져 그 말이 그대로 제목이 됐다. 기다림을 8초 → 12초, 저장 시한을 6.5초 → 10.5초로 늘린다.
+ * AI에 주는 시간은 그대로 최대 7초(idea-understanding)라, AI 앞의 일이 3.5초까지 걸려도 AI는 제 시간을 다 받는다.
+ * 보통은 읽기가 끝나는 대로(3~6초) 넘어가므로 달라지지 않고, 느릴 때만 '적은 글을 읽고 있어요'가 길어진다.
+ */
+export const UNDERSTAND_WAIT_MS = 12_000;
+export const UNDERSTAND_SAVE_BY_MS = 10_500;
 /** 남은 시간이 이보다 적으면 AI를 부르지 않는다 — 돈만 쓰고 저장하지 못한다 */
 export const UNDERSTAND_AI_MIN_MS = 2_000;
 

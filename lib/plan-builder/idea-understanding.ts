@@ -188,7 +188,7 @@ export async function understandIdea(config: LLMConfig, text: string, signal?: A
     completeJson(config, {
       kind: "intake-understand", system: RULES, user: JSON.stringify({ text: input }),
       jsonSchema: { name: "understood_idea", schema }, anthropicJsonSchema: true, effort: "low",
-      // 화면은 8초까지만 기다린다 — 서버가 그보다 먼저 포기해야 뒤늦게 저장해 사용자의 다음 답과 부딪히지 않는다(최대 7초, 보통은 남은 시간만큼)
+      // 화면은 정해진 시간(UNDERSTAND_WAIT_MS)까지만 기다린다 — 서버가 그보다 먼저 포기해야 뒤늦게 저장해 사용자의 다음 답과 부딪히지 않는다(최대 7초, 보통은 남은 시간만큼)
       maxOutputTokens: 500, timeoutMs: wait, allowFallback: false, signal,
       onFailure: event => { failure = event.code; },
     }),
