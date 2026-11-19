@@ -1188,6 +1188,32 @@ async function main() {
         assert.equal(replay.duplicate, true);
         assert.equal((await latestOf(session)).coach.revision, 3);
 
+        // 사업이 아닌 말(2026-11-19): 첫 문장 읽기가 그 말로 잡은 사업이 사업 설명 · 제목이 되고, 처음 적은 말은 그대로 남는다
+        const wish = "퇴사하고 싶다 돈 많이 벌고 싶다 ㅋㅋ", shaped = "퇴근 뒤 집에서 하는 문서 정리 대행";
+        const wishOwner = `intake-shaped-${randomUUID()}`;
+        const wishMade = await saveIntakeCommand(wishOwner, { action: "start", mode: "startup", questionId: "business", value: wish, revision: 0, requestId: randomUUID() });
+        const wishSession = { ownerHash: wishOwner, planId: wishMade.plan.id };
+        await saveIntakeCommand(wishOwner, { action: "understand", planId: wishMade.plan.id, revision: wishMade.snapshot.coach.revision, requestId: randomUUID(), understood: [], guessed: [
+          { questionId: "__business", value: shaped }, { questionId: "industry", value: "local_service" }, { questionId: "offer", value: "문서 정리 1건" }, { questionId: "price", value: 30_000 },
+        ] });
+        const wishNow = await load(wishSession);
+        const wishField = wishNow.coach.fields.find(field => field.key === "business");
+        assert.equal(wishField?.value, shaped, "사업 설명은 잡은 사업으로");
+        assert.equal(wishField?.basis, "user");
+        assert.equal(wishField?.quote, wish, "근거로 처음 적은 말을 남긴다");
+        assert.equal(wishNow.intake.answers.business?.value, shaped);
+        assert.equal(wishNow.coach.ideaOrigin?.text, wish, "처음 이야기한 아이디어는 지우지 않는다");
+        assert.equal(wishNow.coach.business.name, shaped, "제목도 잡은 사업으로(처음 적은 말이 제목으로 남지 않는다)");
+        assert.equal(wishNow.intake.sector, "local_service");
+        assert.equal(wishNow.coach.fields.find(field => field.key === "offer")?.value, "문서 정리 1건", "다른 짐작은 잡은 사업에 맞춰 들어간다");
+        assert.ok(wishNow.coach.messages.some(message => message.role === "assistant" && message.text.includes(shaped)), "무엇으로 잡았는지 대화에 알린다");
+        assert.ok(wishNow.coach.messages.some(message => message.role === "user" && message.text.includes("퇴사하고 싶다")), "처음 적은 말은 대화에 남는다");
+        assert.equal(wishNow.coach.ready, true);
+        // 멀쩡한 사업 문장은 신호가 없으니 그대로다
+        const plain = await opened();
+        await saveIntakeCommand(plain.session.ownerHash, { action: "understand", planId: plain.session.planId, revision: 1, requestId: randomUUID(), understood: [], guessed: [{ questionId: "industry", value: "food_beverage" }] });
+        assert.equal((await load(plain.session)).coach.fields.find(field => field.key === "business")?.value, sentence);
+
         // 읽은 값이 바로 그 칸을 채웠으면(문장에 예산이 있었다) 질문이 바뀌었으므로 덮어쓰지 않는다 — 자동 재시도 없이 사용자에게 맡긴다
         const said = await opened();
         await saveIntakeCommand(said.session.ownerHash, { action: "understand", planId: said.session.planId, revision: 1, requestId: randomUUID(), understood: [{ questionId: "budget", value: 10_000_000 }] });

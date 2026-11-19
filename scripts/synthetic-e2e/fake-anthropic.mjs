@@ -62,6 +62,13 @@ globalThis.fetch = async (input, init) => {
       staff: /혼자/.test(source) ? "solo" : "none", staffQuote: pick(/혼자[^.,]*/), days: /평일만/.test(source) ? "weekdays" : "none", daysQuote: pick(/평일만/), countPeriod: "none", countNumber: 0, countUnit: "", countQuote: "" };
     return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(fake) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
   }
+  // 사업이 아닌 말('돈 벌고 싶다')을 사업으로 잡는 짐작(idea-understanding guessBusiness) — 팔 것이 안 보이는 글에만 정해진 한 줄을 돌려줘 0원 미리보기에서 그 흐름을 본다
+  if (schema?.properties?.guessShaped) {
+    const source = (() => { try { return JSON.parse(userText(body.messages?.[0]?.content)).text ?? ""; } catch { return ""; } })();
+    const shaped = !/팔|판매|가게|카페|식당|학원|공방|샵|숍|매장|서비스|대행|수업|과외|세차|미용|배달/.test(source);
+    const fake = { ...gen(schema), guessShaped: shaped, guessBusiness: shaped ? "집에서 만드는 수제 간식 온라인 판매(합성)" : "", ...(shaped ? { guessSector: "retail_commerce", guessOffer: "수제 간식 1봉지(합성)", guessPrice: 6000, guessUnitCost: 2000, guessMonthlyCost: 100000, guessCountPeriod: "일주일", guessCountNumber: 20, guessCountUnit: "봉지" } : {}) };
+    return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(fake) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
+  }
   const text = schema ? JSON.stringify(gen(schema)) : wantsJson ? "{}" : markdown(userText(body.messages?.[0]?.content));
   console.log(`[fake-anthropic] ${schema ? "json" : wantsJson ? "json-noschema" : "text"} ${text.length}b`);
   // Optional pause so waiting screens (typing bubble, "정리 중") stay visible long enough to check.

@@ -49,6 +49,14 @@ assert.deepEqual(guessedAnswers({ customer: "고양이를 좋아하는 20~30대"
   { questionId: "structure.unitCost", value: 400 }, { questionId: "structure.cost", value: 50000 },
 ], "말한 칸(가격)은 빼고, 여러 개 고르는 질문은 목록으로");
 assert.deepEqual(guessedAnswers(undefined, guessQ), []);
+// 사업이 아닌 말(2026-11-19): '사업 설명이 아니다'라고 판단했을 때만 잡은 사업 한 줄을 받는다 — 멀쩡한 사업 문장을 AI가 고쳐 쓰지 않게
+assert.equal(cleanGuess({ guessShaped: true, guessBusiness: "집사를 위한 고양이 수제 간식 온라인 판매" }).business, "집사를 위한 고양이 수제 간식 온라인 판매");
+assert.equal(cleanGuess({ guessShaped: false, guessBusiness: "집사를 위한 고양이 수제 간식 온라인 판매" }).business, undefined, "사업 설명이면 글을 바꾸지 않는다");
+assert.equal(cleanGuess({ guessBusiness: "고양이 간식 판매" }).business, undefined, "판단이 없으면 받지 않는다");
+assert.equal(cleanGuess({ guessShaped: true, guessBusiness: "" }).business, undefined);
+assert.equal(cleanGuess({ guessShaped: true, guessBusiness: "가".repeat(61) }).business, undefined, "너무 긴 줄은 버린다");
+assert.equal(cleanGuess({ guessShaped: true, guessBusiness: "고양이 간식\n판매" }).business, undefined, "여러 줄은 버린다");
+assert.deepEqual(guessedAnswers({ business: "고양이 수제 간식 온라인 판매", sector: "retail_commerce", offer: "간식 1봉지" }, guessQ)[0], { questionId: "__business", value: "고양이 수제 간식 온라인 판매" }, "잡은 사업은 맨 앞에(다른 짐작이 모두 이 사업에 맞춘 값)");
 // 업종 짐작(2026-11-18): 보기 값일 때만 받고 '기타'는 버린다. 답으로 옮길 때는 맨 앞에(업종이 바뀌면 다른 칸의 질문이 바뀐다), 이미 말한 업종이면 건너뛴다
 // 월 비용을 단위 없이 말하면 만원(2026-11-18): '월세 350' → 3,500,000원. 단위가 있으면 적힌 대로
 {
