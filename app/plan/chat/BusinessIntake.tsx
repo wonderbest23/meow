@@ -18,7 +18,7 @@ import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
 import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
 import { useAnswerSuggestions } from "./intake-ui/AnswerSuggestions";
-import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, answerConflictRetry, clearConflictDraft, readIntakePayload, routeComposerInput, easyNumberRetryHint, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber, looseUnknownReply } from "./intake-ui/model";
+import { intakeNextStep, chatReflectStyle, choiceDraftSubmission, isHybridQuestion, COUNT_PREFIX, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, answerConflictRetry, guestOwnerAdoptable, clearConflictDraft, readIntakePayload, routeComposerInput, easyNumberRetryHint, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, withRo, answerCheckPrompt, type IntakeDraft, type PendingRequest, type SuggestedNumber, looseUnknownReply } from "./intake-ui/model";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import { sectorCheckPrompt } from "../../../lib/plan-builder/intake-core";
 import { UNDERSTAND_WAIT_MS, understandStillUseful } from "../../../lib/plan-builder/intake-timing";
@@ -682,7 +682,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     try {
       let identity = await getSnapshot(pending.command.planId, controller.signal);
       if (epoch !== routeEpoch.current) return;
-      if (identity.ownerScope !== ownerScope.current) { freezeForOwnerChange(); return; }
+      if (identity.ownerScope !== ownerScope.current) {
+        if (!guestOwnerAdoptable(pending.command, !!planRef.current, signedInRef.current, identity)) { freezeForOwnerChange(); return; }
+        // 새 손님의 새 대화 첫 전송 — 아직 저장한 것이 없으니 지금 신원으로 이어 간다(보내던 글도 새 신원 자리로 옮겨 보관)
+        ownerScope.current = identity.ownerScope!; storageKey.current = draftKey(null, identity.ownerScope!);
+        writeDraft({ ...draftRef.current, pending });
+      }
       const post = () => fetch("/api/plan/chat", { method: "POST", headers: { ...HEADERS, "Content-Type": "application/json", "x-business-intake-owner": ownerScope.current! }, body: JSON.stringify(pending.command), signal: controller.signal });
       let response = await post();
       let data: IntakePayload | null = null;
