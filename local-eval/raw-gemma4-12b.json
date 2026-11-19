@@ -1,0 +1,1640 @@
+[
+ {
+  "id": 1,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 3000000,
+     "quote": "한 삼백"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 2,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 20000000,
+     "quote": "이천만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 3,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 50000000,
+     "quote": "한 오천"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 4,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 30000000,
+     "quote": "삼천만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 5,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": "unknown",
+     "quote": "몰라 알아서 해줘"
+    }
+   ],
+   "unknown": [
+    "budget"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 6,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "hoursPerWeek",
+     "value": "unknown",
+     "quote": "아직 생각 안 해봤어"
+    }
+   ],
+   "unknown": [
+    "hoursPerWeek"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 7,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "hoursPerWeek",
+     "value": "unknown",
+     "quote": "상관없어"
+    }
+   ],
+   "unknown": [
+    "hoursPerWeek"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 8,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "customer",
+     "value": "직장인",
+     "quote": "대충 직장인?"
+    },
+    {
+     "field": "customer",
+     "value": "unknown",
+     "quote": "잘 모르겠는데"
+    }
+   ],
+   "unknown": [
+    "customer"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 9,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "customer",
+     "value": "대학생들",
+     "quote": "대학생들"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 10,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 2,
+     "quote": "주말에만"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 11,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "customer",
+     "value": "대학생",
+     "quote": "대학생이 주 고객"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 12,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "hoursPerWeek",
+     "value": 20,
+     "quote": "이십 시간"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 13,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "hoursPerWeek",
+     "value": "ask",
+     "quote": "퇴근하고 두세시간씩"
+    }
+   ],
+   "unknown": [],
+   "ask": [
+    "hoursPerWeek"
+   ]
+  }
+ },
+ {
+  "id": 14,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 2,
+     "quote": "주말에만"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 15,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 20000000,
+     "quote": "이천만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 16,
+  "raw": {
+   "intent": "question",
+   "updates": [],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 17,
+  "raw": {
+   "intent": "none",
+   "updates": [],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 18,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "business",
+     "value": "완전히 새로운사업",
+     "quote": "완전히 새로운사업"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 19,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "business",
+     "value": "네일샵",
+     "quote": "네일샵"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 20,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": 15000,
+     "quote": "만오천원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 21,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "capacityPerDay",
+     "value": 10,
+     "quote": "열 명"
+    },
+    {
+     "field": "capacityUnit",
+     "value": "명",
+     "quote": "명"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 22,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 5,
+     "quote": "평일만"
+    },
+    {
+     "field": "capacityPerDay",
+     "value": 50,
+     "quote": "하루 50잔"
+    },
+    {
+     "field": "capacityUnit",
+     "value": "잔",
+     "quote": "50잔"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 23,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "channel",
+     "value": "온라인",
+     "quote": "온라인으로만 팔 거야"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 24,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "cost",
+     "value": 150000,
+     "quote": "월세가 150"
+    },
+    {
+     "field": "cost",
+     "value": 150000,
+     "quote": "알바 한 명 쓸 거야"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 25,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 800000,
+     "quote": "300... 부모님이 500 더 빌려준대"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 26,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 10000000,
+     "quote": "천만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 27,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "business",
+     "value": "반찬가게",
+     "quote": "반찬가게"
+    },
+    {
+     "field": "customer",
+     "value": "직장인들",
+     "quote": "직장인들"
+    },
+    {
+     "field": "offer",
+     "value": "반찬",
+     "quote": "반찬가게"
+    },
+    {
+     "field": "price",
+     "value": 15000,
+     "quote": "한 팩에 만오천원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 28,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": "unknown",
+     "quote": "대충 니가 정해"
+    }
+   ],
+   "unknown": [
+    "price"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 29,
+  "raw": {
+   "intent": "none",
+   "updates": [],
+   "unknown": [
+    "budget"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 30,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 3,
+     "quote": "주 3일만 열 거야, 화목토"
+    },
+    {
+     "field": "hoursPerWeek",
+     "value": "ask",
+     "quote": "주 3일만 열 거야, 화목토"
+    }
+   ],
+   "unknown": [],
+   "ask": [
+    "hoursPerWeek"
+   ]
+  }
+ },
+ {
+  "id": 31,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": 20000,
+     "quote": "이만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 32,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 20000000,
+     "quote": "2천"
+    },
+    {
+     "field": "cost",
+     "value": 0,
+     "quote": "보증금"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 33,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "customer",
+     "value": "결혼 앞둔 예비부부랑 기념일 챙기는 직장인",
+     "quote": "결혼 앞둔 예비부부랑 기념일 챙기는 직장인"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 34,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 5,
+     "quote": "평일 저녁마다"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 35,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "hoursPerWeek",
+     "value": "ask",
+     "quote": "퇴근하고 두세시간씩"
+    }
+   ],
+   "unknown": [],
+   "ask": [
+    "hoursPerWeek"
+   ]
+  }
+ },
+ {
+  "id": 36,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": "ask",
+     "quote": "좀 있어"
+    }
+   ],
+   "unknown": [],
+   "ask": [
+    "budget"
+   ]
+  }
+ },
+ {
+  "id": 37,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": "ask",
+     "quote": "비싸게는 못 받지"
+    }
+   ],
+   "unknown": [],
+   "ask": [
+    "price"
+   ]
+  }
+ },
+ {
+  "id": 38,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "capacityPerDay",
+     "value": 20,
+     "quote": "한 타임에 4명, 하루 5타임"
+    },
+    {
+     "field": "capacityUnit",
+     "value": "명",
+     "quote": "4명"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 39,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "cost",
+     "value": 230000,
+     "quote": "월세 200 관리비 30"
+    },
+    {
+     "field": "cost",
+     "value": "unknown",
+     "quote": "전기세는 모름"
+    }
+   ],
+   "unknown": [
+    "cost"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 40,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 500000,
+     "quote": "5백에서 천 사이"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 41,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 1000000,
+     "quote": "백만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 42,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "customer",
+     "value": "20대 여자들",
+     "quote": "20대 여자들이 마니 올듯"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 43,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "channel",
+     "value": "배민이랑 쿠팡이츠",
+     "quote": "배민이랑 쿠팡이츠로만"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 44,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": 3500,
+     "quote": "아메리카노 3.5"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 45,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 120000000,
+     "quote": "1억 2천"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 46,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "unitCost",
+     "value": 5000,
+     "quote": "판매가의 삼분의 일"
+    },
+    {
+     "field": "price",
+     "value": 15000,
+     "quote": "15000"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 47,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 7,
+     "quote": "연중무휴"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 48,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "channel",
+     "value": "인스타로 주문받아",
+     "quote": "인스타로 주문받아"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 49,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 8000000,
+     "quote": "팔백"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 50,
+  "raw": {
+   "intent": "none",
+   "updates": [],
+   "unknown": [
+    "price"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 51,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "customer",
+     "value": "남녀노소 누구나",
+     "quote": "남녀노소 누구나"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 52,
+  "raw": {
+   "intent": "none",
+   "updates": [],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 53,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 5,
+     "quote": "주 5일"
+    },
+    {
+     "field": "hoursPerWeek",
+     "value": 40,
+     "quote": "주 5일 하루 8시간"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 54,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "capacityPerDay",
+     "value": 15,
+     "quote": "열다섯 대"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 55,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 5000000,
+     "quote": "500만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 56,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "business",
+     "value": "가죽으로 지갑 같은 거 만들어 팔아",
+     "quote": "가죽으로 지갑 같은 거 만들어 팔아"
+    },
+    {
+     "field": "offer",
+     "value": "지갑",
+     "quote": "지갑"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 57,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "cost",
+     "value": "unknown",
+     "quote": "아직 가게를 안 구해서 몰라"
+    }
+   ],
+   "unknown": [
+    "cost"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 58,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": 300000,
+     "quote": "한 달에 30"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 59,
+  "raw": {
+   "intent": "none",
+   "updates": [],
+   "unknown": [
+    "customer"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 60,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "business",
+     "value": "집 앞에 작은 꽃집",
+     "quote": "집 앞에 작은 꽃집"
+    },
+    {
+     "field": "budget",
+     "value": 20000000,
+     "quote": "2천"
+    },
+    {
+     "field": "operatingDays",
+     "value": 7,
+     "quote": "엄마가 주말엔 도와주신대요"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 61,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 5000000,
+     "quote": "오백"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 62,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 15000000,
+     "quote": "1500만"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 63,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 0,
+     "quote": "0원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 64,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": 4000,
+     "quote": "떡볶이 사천원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 65,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": 60000,
+     "quote": "1회에 6만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 66,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": 25000,
+     "quote": "평균 2만 5천원 정도"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 67,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "cost",
+     "value": 80000,
+     "quote": "월세 80"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 68,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "cost",
+     "value": 200000,
+     "quote": "200"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 69,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 2,
+     "quote": "주말 이틀"
+    },
+    {
+     "field": "hoursPerWeek",
+     "value": 20,
+     "quote": "하루 10시간씩"
+    },
+    {
+     "field": "capacityPerDay",
+     "value": "ask_note_needed",
+     "quote": "하루 10시간씩"
+    }
+   ],
+   "unknown": [],
+   "ask": [
+    "capacityPerDay"
+   ]
+  }
+ },
+ {
+  "id": 70,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "hoursPerWeek",
+     "value": 24,
+     "quote": "하루 4시간씩 주 6일"
+    },
+    {
+     "field": "operatingDays",
+     "value": 6,
+     "quote": "주 6일"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 71,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "hoursPerWeek",
+     "value": "unknown",
+     "quote": "시간은 많아"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 72,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "customer",
+     "value": "초등 고학년 학부모들",
+     "quote": "초등 고학년 학부모들"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 73,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "customer",
+     "value": "unknown",
+     "quote": "딱히 안 정했어"
+    }
+   ],
+   "unknown": [
+    "customer"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 74,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "channel",
+     "value": "스마트스토어랑 쿠팡",
+     "quote": "스마트스토어랑 쿠팡"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 75,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "offer",
+     "value": "원데이 클래스랑 완제품 판매",
+     "quote": "원데이 클래스랑 완제품 판매"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 76,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "business",
+     "value": "치킨집",
+     "quote": "치킨집"
+    },
+    {
+     "field": "budget",
+     "value": 30000000,
+     "quote": "퇴직금 3천"
+    },
+    {
+     "field": "channel",
+     "value": "배달",
+     "quote": "배달 위주"
+    },
+    {
+     "field": "price",
+     "value": 20000,
+     "quote": "한 마리 2만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 77,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": "unknown",
+     "quote": "아내랑 상의해봐야 알아"
+    }
+   ],
+   "unknown": [
+    "budget"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 78,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 7000000,
+     "quote": "대출 포함하면 5천, 내 돈은 2천"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 79,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": "unknown",
+     "quote": "아직 못 정했는데"
+    }
+   ],
+   "unknown": [
+    "price"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 80,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "capacityPerDay",
+     "value": 6,
+     "quote": "여섯 개"
+    },
+    {
+     "field": "capacityUnit",
+     "value": "개",
+     "quote": "케이크 여섯 개"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 81,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "capacityPerDay",
+     "value": 8,
+     "quote": "하루에 손님 8명쯤"
+    },
+    {
+     "field": "capacityUnit",
+     "value": "명",
+     "quote": "손님"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 82,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 700000,
+     "quote": "7백"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 83,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 2,
+     "quote": "화목"
+    },
+    {
+     "field": "hoursPerWeek",
+     "value": 4,
+     "quote": "두시간씩"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 84,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 7,
+     "quote": "매일매일 쉬는 날 없이"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 85,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 10000000,
+     "quote": "about 10 million won"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 86,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": 10000,
+     "quote": "만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 87,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 10000,
+     "quote": "천"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 88,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "price",
+     "value": 4500,
+     "quote": "사천오백원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 89,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "cost",
+     "value": 400000,
+     "quote": "한 달에 400"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 90,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "customer",
+     "value": "근처 사는 주부들",
+     "quote": "근처 사는 주부들"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 91,
+  "raw": {
+   "intent": "none",
+   "updates": [],
+   "unknown": [
+    "budget"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 92,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 20000000,
+     "quote": "2천만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 93,
+  "raw": {
+   "intent": "none",
+   "updates": [],
+   "unknown": [
+    "budget"
+   ],
+   "ask": []
+  }
+ },
+ {
+  "id": 94,
+  "raw": {
+   "intent": "question",
+   "updates": [],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 95,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "operatingDays",
+     "value": 7,
+     "quote": "일주일 내내"
+    },
+    {
+     "field": "hoursPerWeek",
+     "value": 84,
+     "quote": "하루 12시간"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 96,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "business",
+     "value": "집에서 수제 비누 만들어서 플리마켓에서 팔려고요",
+     "quote": "집에서 수제 비누 만들어서 플리마켓에서 팔려고요"
+    },
+    {
+     "field": "offer",
+     "value": "수제 비누",
+     "quote": "수제 비누"
+    },
+    {
+     "field": "channel",
+     "value": "플리마켓",
+     "quote": "플리마켓"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 97,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 3000000,
+     "quote": "삼백만원에서 오백만원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 98,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "capacityPerDay",
+     "value": 30,
+     "quote": "평일엔 30명"
+    },
+    {
+     "field": "capacityUnit",
+     "value": "명",
+     "quote": "30명"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 99,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "budget",
+     "value": 2000000,
+     "quote": "2,000,000원"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ },
+ {
+  "id": 100,
+  "raw": {
+   "intent": "none",
+   "updates": [
+    {
+     "field": "hoursPerWeek",
+     "value": 40,
+     "quote": "40"
+    }
+   ],
+   "unknown": [],
+   "ask": []
+  }
+ }
+]
