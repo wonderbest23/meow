@@ -54,12 +54,15 @@ globalThis.fetch = async (input, init) => {
   if (!schema) { const m = system.match(/출력 스키마: (\{[\s\S]*\})\s*$/); if (m) { try { schema = JSON.parse(m[1]); } catch {} } }
   const wantsJson = !!schema || /유효한 JSON 객체 하나만/.test(system);
   // 일반 모드의 '문장 읽기'(idea-understanding.ts)는 원문에 있는 구절만 받는다 — 가짜 답도 원문에서 뽑아 화면에 '이렇게 알아들었어요'가 보이게 한다
+  // 첫 문장 읽기 두 호출(말한 것 · 짐작)도 SYNTHETIC_AI_DELAY_MS 만큼 늦춘다 — 느린 읽기가 저장 시한 안팎에서 어떻게 되는지 0원으로 본다
+  const readDelay = () => { const ms = Number(process.env.SYNTHETIC_AI_DELAY_MS) || 0; return ms > 0 ? new Promise(resolve => setTimeout(resolve, ms)) : null; };
   const said = body.output_config?.format?.name === "understood_idea" || /countPeriod/.test(JSON.stringify(schema ?? {}));
   if (said) {
     const source = (() => { try { return JSON.parse(userText(body.messages?.[0]?.content)).text ?? ""; } catch { return ""; } })();
     const pick = re => source.match(re)?.[0] ?? "";
     const fake = { price: pick(/\d+[만천]\s?원/), unitCost: "", monthlyCost: "", budget: "", hoursPerWeek: "", channel: pick(/스마트스토어|인스타|플리마켓|아이디어스/), channel2: source.match(/스마트스토어|인스타|플리마켓|아이디어스/g)?.[1] ?? "", channel3: source.match(/스마트스토어|인스타|플리마켓|아이디어스/g)?.[2] ?? "", customer: "", offer: "", goal: "",
       staff: /혼자/.test(source) ? "solo" : "none", staffQuote: pick(/혼자[^.,]*/), days: /평일만/.test(source) ? "weekdays" : "none", daysQuote: pick(/평일만/), countPeriod: "none", countNumber: 0, countUnit: "", countQuote: "" };
+    await readDelay();
     return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(fake) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
   }
   // 사업이 아닌 말('돈 벌고 싶다')을 사업으로 잡는 짐작(idea-understanding guessBusiness) — 팔 것이 안 보이는 글에만 정해진 한 줄을 돌려줘 0원 미리보기에서 그 흐름을 본다
@@ -67,6 +70,7 @@ globalThis.fetch = async (input, init) => {
     const source = (() => { try { return JSON.parse(userText(body.messages?.[0]?.content)).text ?? ""; } catch { return ""; } })();
     const shaped = !/팔|판매|가게|카페|식당|학원|공방|샵|숍|매장|서비스|대행|수업|과외|세차|미용|배달/.test(source);
     const fake = { ...gen(schema), guessShaped: shaped, guessBusiness: shaped ? "집에서 만드는 수제 간식 온라인 판매(합성)" : "", ...(shaped ? { guessSector: "retail_commerce", guessOffer: "수제 간식 1봉지(합성)", guessPrice: 6000, guessUnitCost: 2000, guessMonthlyCost: 100000, guessCountPeriod: "일주일", guessCountNumber: 20, guessCountUnit: "봉지" } : {}) };
+    await readDelay();
     return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(fake) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
   }
   const text = schema ? JSON.stringify(gen(schema)) : wantsJson ? "{}" : markdown(userText(body.messages?.[0]?.content));

@@ -26,7 +26,7 @@ const nothing = () => new Response(null, { status: 204, headers: noStore });
  * 적히지 않은 칸(고객 · 문제 · 대표 상품 · 가격 · 한 번 비용 · 월 고정비 · 경로)도 같은 호출에서 이 사업에 맞게 짐작해 기준표 값 대신 넣는다(2026-11-17).
  * 저장된 내 사업의 문장만 읽고(화면이 보낸 글은 쓰지 않는다), 사업마다 한 번만 한다(intake.understood).
  * AI 연결이 없거나 실패하거나 늦으면 204로 조용히 끝난다 — 대화는 기준값으로 그대로 진행된다. INTAKE_UNDERSTAND=0 또는 INTAKE_BETA_SAFETY=1 로 끈다.
- * 시간은 요청을 받은 때부터 잰다(intake-timing UNDERSTAND_SAVE_BY_MS) — 화면이 기다림(8초)을 끝낸 뒤에는 저장하지 않는다.
+ * 시간은 요청을 받은 때부터 잰다(intake-timing UNDERSTAND_SAVE_BY_MS) — 화면이 기다림(UNDERSTAND_WAIT_MS)을 끝낸 뒤에는 저장하지 않는다.
  * 화면이 끊어도 서버는 끝까지 돌아서, 예전엔 늦은 저장이 화면 몰래 판(revision)을 올려 손님의 두 번째 답이 409로 막혔다(2026-11-17 운영).
  */
 export async function POST(request: Request) {

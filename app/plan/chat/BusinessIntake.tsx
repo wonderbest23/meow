@@ -1867,7 +1867,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const understandId = plan && !plan.hasDocuments && plan.intake.mode === "startup" && plan.intake.depth !== "expert" && !plan.intake.understood && plan.intake.answers.business?.status === "answered" && understandStillUseful(plan.intake.answers, !!plan.coach.design) ? plan.planId : "";
   /*
    * 읽는 동안에는 다음 질문을 보이지 않는다 — 준비금 질문을 먼저 띄웠더니 읽은 값(문장 속 준비금)이 도착하며 질문이 바뀌고,
-   * 그 순간 적은 답이 저장되지 않았다(실제 AI 점검 2026-11-14). 읽기가 끝나거나 8초가 지나면 진행한다.
+   * 그 순간 적은 답이 저장되지 않았다(실제 AI 점검 2026-11-14). 읽기가 끝나거나 기다림(UNDERSTAND_WAIT_MS)이 지나면 진행한다.
    * 화면이 요청을 끊어도 서버는 멈추지 않는다 — 서버는 요청을 받은 때부터 재서 시한(intake-timing UNDERSTAND_SAVE_BY_MS)이 지나면 저장하지 않고,
    * 화면은 읽기가 어떻게 끝나든(읽음 · 읽을 것 없음 · 끊김 · 실패) 저장본을 한 번 다시 받아 더 새 판(revision)이면 깐다(catchUpSnapshot).
    * 예전엔 200을 받았을 때만 다시 불러와, 끊긴 뒤 서버가 저장하면 화면은 옛 판으로 답을 보내 409로 막혔다(2026-11-17 운영, 로그인 안 한 손님).
