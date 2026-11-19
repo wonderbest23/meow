@@ -977,6 +977,22 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    */
   const [readingTyped, setReadingTyped] = useState(false);
   const readingTypedRef = useRef(false);
+  /*
+   * 일반 모드에서 질문에 적은 말을 규칙도 AI도 읽지 못했을 때(장난 · 딴소리 · 뜻 없는 글자) — 처음 한 번은 메모로 남기고 어떻게 답하면 되는지 알린다.
+   * 같은 질문에 두 번째로 또 못 읽으면 그 질문을 '아직 미정'으로 두고 다음으로 넘어간다(2026-11-19 사장님: "바보처럼 대화를 그냥 돌리지 말고").
+   * 예전엔 몇 번을 적어도 같은 질문이 그대로 남았고, 숫자 질문이 아니면 안내 한 줄도 없었다. 적은 말은 답과 함께 보내 대화와 메모에 남는다.
+   */
+  const stuckOn = useRef<{ id: string; times: number } | null>(null);
+  const repeatOrMoveOn = (asked: IntakeQuestion | null | undefined, hintFor: IntakeQuestion | null | undefined) => {
+    const times = asked && stuckOn.current?.id === asked.id ? stuckOn.current.times + 1 : 1;
+    stuckOn.current = asked ? { id: asked.id, times } : null;
+    if (asked && times >= 2 && composerVisible) {
+      stuckOn.current = null; follow.current = true;
+      void send({ action: "answer", questionId: asked.id, value: null, unknown: true, message: composerVisible }, { answer: draftRef.current.answers[asked.id] ?? emptyAnswer(), composer: captureComposer() });
+      return;
+    }
+    storeComposerNote("memo"); setInputHint(easyNumberRetryHint(hintFor) || (asked ? `적어 주신 말은 메모로 남겼어요. ${asked.label}에 맞는 답을 한 번 더 적어 주세요. 모르면 '잘 모르겠어요'를 눌러요.` : ""));
+  };
   const readTypedAnswer = (asked: IntakeQuestion, text: string, fallback: () => void, askedQuestion = false) => {
     const current = planRef.current;
     if (!current || readingTypedRef.current) return;
@@ -1073,7 +1089,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
         : route.kind === "invalid" ? () => setInputHint(route.hint)
         : route.kind === "note" ? () => storeComposerNote("question")
         : route.suggested ? () => void send({ action: "answer", questionId: question.id, value: route.suggested!.value, message: composerVisible }, { answer: questionDraft, composer: captureComposer() })
-        : () => { storeComposerNote("memo"); setInputHint(easyNumberRetryHint(target)); };
+        : () => repeatOrMoveOn(question, target);
       readTypedAnswer(question, composerVisible, fallback, route.kind === "note");
       return;
     }
@@ -1085,7 +1101,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     if (route.kind === "clarify" && depthNow === "easy") {
       if (route.suggested && question) void send({ action: "answer", questionId: question.id, value: route.suggested.value, message: composerVisible }, { answer: questionDraft, composer: captureComposer() });
       else if (question && looseUnknownReply(composerText)) void send({ action: "answer", questionId: question.id, value: null, unknown: true }, { answer: questionDraft, composer: captureComposer() });
-      else { storeComposerNote("memo"); setInputHint(easyNumberRetryHint(target)); }
+      else repeatOrMoveOn(question, target);
       return;
     }
     if (route.kind === "clarify") { setIntentPrompt({ text: composerText, questionId: question?.id ?? null, revision: plan.coach.revision, canAnswer: route.canAnswer, ...(route.suggested ? { suggested: route.suggested } : {}) }); follow.current = true; return; }

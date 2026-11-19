@@ -80,7 +80,7 @@ export const GUESS_RULES = [
    * 예전엔 "돈 벌고 싶다" · "고양이가 좋아" 같은 말이면 짐작할 사업이 없어 칸이 비고, 그 말이 그대로 사업 설명 · 제목이 된 채 질문만 이어졌다.
    * 낱말 규칙을 덧붙이지 않고 AI가 글의 뜻으로 판단한다 — 코드는 형식만 보고, 처음 적은 말은 ideaOrigin 에 그대로 남는다.
    */
-  "- guessShaped · guessBusiness: 가장 먼저 이 글에 팔 것(상품 · 서비스 · 가게)이 보이는지 봅니다. 오타 · 줄임말 · 반말 · 띄어쓰기 없는 글이어도 무엇을 팔려는지 알 수 있으면 사업 설명입니다 — guessShaped 는 false, guessBusiness 는 \"\"로 두고 글을 바꾸지 않습니다. 팔 것이 보이지 않는 말(돈을 벌고 싶다는 바람, 퇴사 · 처지에 대한 푸념, 좋아하는 것 · 취미 · 잘하는 것만 적은 말, 장난 · 엉뚱한 말, 뜻 없는 글자)이면 guessShaped 는 true 로 하고, 그 말에 담긴 실마리(좋아하는 것, 잘하는 것, 가진 것, 처지, 쓸 수 있는 시간)를 살려 한 사람이 적은 돈으로 바로 시작할 수 있는 가장 가까운 사업 하나를 정해 guessBusiness 에 한 줄로 적습니다. 무엇을 누구에게 파는지 보이게 40자 안의 명사구로 씁니다(예: '고양이가 좋아' → '집사를 위한 고양이 수제 간식 온라인 판매', '퇴사하고 싶다 돈 벌고 싶다' → '퇴근 뒤 집에서 하는 문서 · 자료 정리 대행', '게임만 함' → '게임 초보자 1:1 온라인 코칭'). 실마리가 전혀 없으면(ㅋㅋ, asdf, 인사말) 허가 · 신고 · 설비 없이 혼자 집에서 바로 시작할 수 있는 일 하나를 적습니다 — 먹는 것을 만들어 파는 일은 영업 신고와 시설이 필요하므로, 글에 요리 · 음식 이야기가 없으면 고르지 않습니다. 위의 예는 형식만 보여 주는 것이니 그대로 옮기지 말고 이 글에 맞는 사업을 정하세요. 법으로 할 수 없거나 남을 해치는 일을 적었을 때도 guessShaped 는 true 로 하고, 그 말에서 합법으로 할 수 있는 가장 가까운 일을 적습니다. 되묻거나 거절하지 않습니다.",
+  "- guessShaped · guessBusiness: 가장 먼저 이 글에 팔 것(상품 · 서비스 · 가게)이 보이는지 봅니다. 오타 · 줄임말 · 반말 · 띄어쓰기 없는 글이어도 무엇을 팔려는지 알 수 있으면 사업 설명입니다 — guessShaped 는 false, guessBusiness 는 \"\"로 두고 글을 바꾸지 않습니다. 팔 것이 보이지 않는 말(돈을 벌고 싶다는 바람, 퇴사 · 처지에 대한 푸념, 좋아하는 것 · 취미 · 잘하는 것만 적은 말, 장난 · 엉뚱한 말, 뜻 없는 글자)이면 guessShaped 는 true 로 하고, 그 말에 담긴 실마리(좋아하는 것, 잘하는 것, 가진 것, 처지, 쓸 수 있는 시간)를 살려 한 사람이 적은 돈으로 바로 시작할 수 있는 가장 가까운 사업 하나를 정해 guessBusiness 에 한 줄로 적습니다. 무엇을 누구에게 파는지 보이게 40자 안의 명사구로 씁니다(예: '고양이가 좋아' → '집사를 위한 고양이 수제 간식 온라인 판매', '차 한 대 있음' → '내 차로 하는 동네 소형 짐 운반 대행', '게임만 함' → '게임 초보자 1:1 온라인 코칭'). 글에 살릴 실마리가 전혀 없으면(ㅋㅋ, asdf, 인사말, 아무거나 해 달라는 말, 돈을 벌고 싶다 · 퇴사하고 싶다처럼 무엇을 할지는 없는 말) 스스로 고르지 말고 입력의 fallback 에 적힌 사업을 그대로 guessBusiness 에 적습니다. 먹는 것을 만들어 파는 일은 영업 신고와 시설이 필요하므로, 글에 요리 · 음식 이야기가 없으면 고르지 않습니다. 위의 예는 형식만 보여 주는 것이니 그대로 옮기지 말고 이 글에 맞는 사업을 정하세요. 법으로 할 수 없거나 남을 해치는 일을 적었을 때도 guessShaped 는 true 로 하고, 그 말에서 합법으로 할 수 있는 가장 가까운 일을 적습니다. 되묻거나 거절하지 않습니다.",
   "guessShaped 가 true 이면 아래 칸은 모두 guessBusiness 에 적은 그 사업에 맞춰 채웁니다.",
   /*
    * 업종도 짐작한다(2026-11-18 AI 손님 점검: 낱말 기준표가 '동네 헌책방 카페'를 유통 · 온라인 판매로, '필라테스 스튜디오'를 제조 · 제품으로 채웠고,
@@ -103,6 +103,24 @@ export const GUESS_RULES = [
   "- guessMonthlyCost: 처음 작게 시작할 때 매달 꼭 나가는 돈(원, 숫자만). 집이나 온라인에서 시작할 수 있는 일이면 작게 잡습니다.",
   "- guessChannel: 손님이 이 사업을 알게 되거나 주문하는 경로 이름 하나(예: '인스타그램', '플리마켓', '배달앱', '당근').",
 ].join("\n");
+/*
+ * 실마리가 전혀 없는 말에 쓸 시작 사업(2026-11-19 실제 AI 확인: 고르게 두면 10개 중 6개가 지시문 예시와 같은 '문서 · 엑셀 정리 대행'이 됐다).
+ * 허가 · 신고 · 설비 없이 혼자 바로 시작할 수 있는 일만 둔다. 어느 것을 쓸지는 글에서 정한다(같은 글이면 늘 같은 사업 — 다시 읽어도 바뀌지 않게).
+ * 사업마다의 규칙이 아니라 '아무 실마리도 없을 때'의 기본값 목록이다. 고객 · 가격 같은 나머지 칸은 AI가 이 사업에 맞춰 채운다.
+ */
+export const FALLBACK_BUSINESSES = [
+  "집에 안 쓰는 물건을 대신 팔아 주는 중고 판매 대행",
+  "동네 가게를 위한 인스타그램 게시물 제작 대행",
+  "소상공인을 위한 문서 · 엑셀 자료 정리 대행",
+  "바쁜 보호자를 위한 반려견 산책 대행",
+  "직접 만든 일정표 · 가계부 양식 온라인 판매",
+  "동네 심부름 · 줄서기 대행",
+] as const;
+export function fallbackBusiness(text: string): string {
+  let sum = 0;
+  for (const ch of text.trim()) sum = (sum + (ch.codePointAt(0) ?? 0)) % 9973;
+  return FALLBACK_BUSINESSES[sum % FALLBACK_BUSINESSES.length];
+}
 export const guessSchema = {
   type: "object", additionalProperties: false,
   properties: { guessShaped: { type: "boolean" }, guessBusiness: text, guessRunning: { type: "boolean" }, guessSector: { type: "string", enum: intakeSectorOptions.map(option => option.value) }, guessCountPeriod: { type: "string", enum: ["하루", "일주일", "한 달"] }, guessCountNumber: { type: "number" }, guessCountUnit: text, ...Object.fromEntries(GUESS_TEXT.map(key => [key, text])), ...Object.fromEntries(GUESS_NUMBER.map(key => [key, { type: "number" }])) },
@@ -194,7 +212,7 @@ export async function understandIdea(config: LLMConfig, text: string, signal?: A
     }),
     // 짐작이 실패하거나 늦으면 짐작만 빠진다 — '말한 것' 결과는 그대로 쓴다
     completeJson(config, {
-      kind: "intake-guess", system: GUESS_RULES, user: JSON.stringify({ text: input }),
+      kind: "intake-guess", system: GUESS_RULES, user: JSON.stringify({ text: input, fallback: fallbackBusiness(input) }),
       jsonSchema: { name: "guessed_idea", schema: guessSchema }, anthropicJsonSchema: true, effort: "low",
       maxOutputTokens: 480, timeoutMs: wait, allowFallback: false, signal,
     }).catch(() => null),

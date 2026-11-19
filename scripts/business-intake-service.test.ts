@@ -1214,6 +1214,19 @@ async function main() {
         const order = wishNow.coach.messages.filter(message => message.role === "assistant").map(message => message.text);
         assert.ok(order.findIndex(text => text.includes(shaped)) < order.findIndex(text => text.startsWith("나머지는")), "안내 순서: 잡은 사업 → 나머지를 채웠다");
         assert.deepEqual(wishNow.intake.shaped, { from: wish, to: shaped });
+        // 질문에 적은 말을 읽지 못해 '아직 미정'으로 넘긴 답(적은 말이 함께 온다)은 한 줄로 알리고 다음 질문으로 간다 — 같은 질문을 되풀이하지 않는다
+        const beforeSkip = await latestOf(wishSession);
+        assert.equal(beforeSkip.nextQuestion?.id, "budget");
+        const skipped = await saveIntakeCommand(wishOwner, { action: "answer", planId: wishMade.plan.id, revision: beforeSkip.coach.revision, requestId: randomUUID(), questionId: "budget", value: null, unknown: true, message: "ㅋㅋㅋ 몰라 그냥" });
+        assert.notEqual(skipped.snapshot.nextQuestion?.id, "budget", "다음 질문으로 넘어간다");
+        assert.equal(skipped.snapshot.intake.answers.budget?.status, "unknown");
+        const afterSkip = await load(wishSession);
+        assert.ok(afterSkip.coach.messages.some(message => message.role === "assistant" && /아직 미정으로 두고 넘어갈게요/.test(message.text)), "넘어간다고 알린다");
+        assert.ok(afterSkip.coach.messages.some(message => message.role === "user" && message.text.includes("ㅋㅋㅋ 몰라 그냥")), "적은 말은 대화에 남는다");
+        // '잘 모르겠어요'를 직접 누른 답(적은 말 없음)에는 안내를 붙이지 않는다
+        const pressed = await saveIntakeCommand(wishOwner, { action: "answer", planId: wishMade.plan.id, revision: skipped.snapshot.coach.revision, requestId: randomUUID(), questionId: skipped.snapshot.nextQuestion!.id, value: null, unknown: true });
+        assert.equal((await load(wishSession)).coach.messages.filter(message => /아직 미정으로 두고 넘어갈게요/.test(message.text)).length, 1);
+        assert.ok(pressed.snapshot);
         // 멀쩡한 사업 문장은 신호가 없으니 그대로다
         const plain = await opened();
         await saveIntakeCommand(plain.session.ownerHash, { action: "understand", planId: plain.session.planId, revision: 1, requestId: randomUUID(), understood: [], guessed: [{ questionId: "industry", value: "food_beverage" }] });

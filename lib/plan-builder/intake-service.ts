@@ -66,6 +66,9 @@ export function newIntakeJob(coach: CoachState, intake: IntakeState, kind: Intak
  * beforeAiJob: AI 작업을 만들기 바로 앞에서 한 번 부른다(손님 AI 하루 한도 — guest-ai-budget.ts). 검사 · 같은 요청 다시 보내기 · AI가 필요 없는 저장에서는 부르지 않는다.
  * false 면 이번 요청은 저장하지 않고 GUEST_AI_LIMIT_CODE 오류를 던진다. 저장 충돌로 다시 돌아도 한 번만 센다.
  */
+/** 못 읽은 답을 미정으로 두고 넘어갈 때의 안내 한 줄 */
+export const movedOnNotice = (label: string) => `${label}${topicParticle(label)} 아직 미정으로 두고 넘어갈게요. 정해지면 눌러서 고칠 수 있어요.`;
+
 export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand, options: { aiAvailable?: boolean; aiAllowed?: boolean; editRoute?: EditRoute; beforeAiJob?: (kind: IntakeJob["kind"]) => Promise<boolean> } = {}) {
   let aiJobAllowed: Promise<boolean> | undefined;
   const allowAiJob = async (kind: IntakeJob["kind"]) => {
@@ -152,6 +155,14 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       assertAmountConfirmed(intake, coach, command);
       const beforeAnswers = structuredClone(intake.answers);
       applyIntakeAnswer(plan, coach, intake, command, at);
+      /*
+       * 적은 말을 읽지 못해 화면이 '아직 미정'으로 넘긴 답(적은 말이 함께 온다, BusinessIntake repeatOrMoveOn) — 말없이 다음 질문으로 가지 않고 한 줄로 알린다.
+       * '잘 모르겠어요'를 직접 누른 답(적은 말 없음)과 전문가 모드에는 붙이지 않는다.
+       */
+      if (command.unknown && command.message?.trim() && intake.depth !== "expert") {
+        const label = intakeQuestions(intake, coach).find(question => question.id === command.questionId)?.label;
+        if (label) coach.messages.push({ id: `${command.requestId}:moved-on`, role: "assistant", text: movedOnNotice(label), at });
+      }
       if (process.env.INTAKE_ESTIMATE === "1" && intake.depth !== "expert" && (command.questionId === "business" || command.questionId === "industry" || command.questionId === "candidate") && !command.unknown) applyIntakeEstimates(plan, coach, intake, command.requestId, at, ruleKind);
       // 계획서가 있으면 고친 금액을 본문에 바로 바꿔 넣는다(AI 없음). 계산된 다른 값은 다시 작성하기로 맞춘다.
       patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);

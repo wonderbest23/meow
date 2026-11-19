@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { cleanGuess, cleanUnderstood, guessedAnswers, understandIdea, understoodAnswers } from "../lib/plan-builder/idea-understanding";
+import { cleanGuess, cleanUnderstood, FALLBACK_BUSINESSES, fallbackBusiness, GUESS_RULES, guessedAnswers, understandIdea, understoodAnswers } from "../lib/plan-builder/idea-understanding";
 import { UNDERSTAND_AI_MIN_MS, UNDERSTAND_SAVE_BY_MS, UNDERSTAND_WAIT_MS, understandAiBudget, understandSaveOnTime, understandStillUseful } from "../lib/plan-builder/intake-timing";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { capacityDaysDisplay, coachFieldDisplay } from "../lib/plan-builder/coach-presentation";
@@ -53,6 +53,12 @@ assert.deepEqual(guessedAnswers(undefined, guessQ), []);
 assert.equal(cleanGuess({ guessShaped: true, guessBusiness: "집사를 위한 고양이 수제 간식 온라인 판매" }).business, "집사를 위한 고양이 수제 간식 온라인 판매");
 assert.equal(cleanGuess({ guessShaped: false, guessBusiness: "집사를 위한 고양이 수제 간식 온라인 판매" }).business, undefined, "사업 설명이면 글을 바꾸지 않는다");
 assert.equal(cleanGuess({ guessBusiness: "고양이 간식 판매" }).business, undefined, "판단이 없으면 받지 않는다");
+// 실마리가 전혀 없는 말의 시작 사업 — 같은 글이면 늘 같고, 글이 다르면 여러 사업으로 나뉜다(한 사업으로 쏠리지 않게). 형식 검사를 통과하는 한 줄이어야 한다
+assert.equal(fallbackBusiness("ㅋㅋㅋㅋ"), fallbackBusiness(" ㅋㅋㅋㅋ "));
+assert.ok(new Set(["ㅋㅋㅋㅋ", "asdf", "안녕하세요", "아무거나 해줘", "심심해", "뭐하지", "돈 많이 벌고 싶다", "월 500 벌고 싶음", "로또 당첨되고 싶다", "퇴사하고 싶다"].map(fallbackBusiness)).size >= 4, "열 문장이 네 가지 넘는 사업으로 나뉜다");
+for (const line of FALLBACK_BUSINESSES) assert.equal(cleanGuess({ guessShaped: true, guessBusiness: line }).business, line);
+assert.ok(!FALLBACK_BUSINESSES.some(line => /반찬|도시락|간식|음식|요리|베이킹|카페/.test(line)), "먹는 것을 만들어 파는 일은 기본값에 두지 않는다(영업 신고 · 시설)");
+assert.match(GUESS_RULES, /입력의 fallback 에 적힌 사업을 그대로 guessBusiness 에 적습니다/);
 assert.equal(cleanGuess({ guessShaped: true, guessBusiness: "" }).business, undefined);
 assert.equal(cleanGuess({ guessShaped: true, guessBusiness: "가".repeat(61) }).business, undefined, "너무 긴 줄은 버린다");
 assert.equal(cleanGuess({ guessShaped: true, guessBusiness: "고양이 간식\n판매" }).business, undefined, "여러 줄은 버린다");
