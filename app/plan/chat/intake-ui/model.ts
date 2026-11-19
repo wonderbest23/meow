@@ -449,6 +449,17 @@ export function shouldAcceptSnapshot(current: IntakeSnapshot | null, incoming: I
  * 질문이 바뀌었으면(다른 화면에서 답했거나, 읽은 값이 그 칸을 채웠거나) 덮어쓰지 않고 지금처럼 사용자에게 맡긴다.
  * 2026-11-17 운영: 첫 메시지 뒤 서버가 판을 1→2로 올렸는데 화면은 1로 답을 보내 손님이 두 번째 질문에서 막혔다.
  */
+/**
+ * 새 대화의 첫 전송에서 손님 신원이 화면이 기억한 것과 달라졌을 때, 멈추지 않고 지금 신원으로 이어 가도 되는지(2026-11-19 운영).
+ * 쿠키가 없는 새 손님이 대화 화면을 바로 열면 '대화 불러오기'와 '방문 기록' 두 요청이 같은 때 서로 다른 손님 쿠키를 받아 온다.
+ * 화면은 먼저 온 쪽의 신원을 기억하고 브라우저에는 나중에 온 쿠키가 남아, 첫 문장을 보내자마자 '계정이 바뀌어 저장을 멈췄어요'로 막혔다.
+ * 아직 저장한 사업이 없는 새 대화의 첫 전송이고 앞뒤 모두 로그인하지 않은 손님이면 잃을 것이 없다 — 지금 신원으로 그대로 보낸다.
+ * 로그인해 쓰던 계정이 바뀌었거나(다시 로그인 안내가 필요하다) 이미 저장한 사업이 있으면 예전처럼 멈춘다.
+ */
+export function guestOwnerAdoptable(command: Pick<IntakeCommand, "action" | "planId">, hasPlan: boolean, wasSignedIn: boolean, identity: { authenticated?: boolean; loginRequired?: boolean; ownerScope?: string | null }): boolean {
+  return command.action === "start" && !command.planId && !hasPlan && !wasSignedIn && !identity.authenticated && !identity.loginRequired && !!identity.ownerScope;
+}
+
 export function answerConflictRetry(command: IntakeCommand, latest: IntakeSnapshot | null | undefined): number | null {
   if (command.action !== "answer" || !command.questionId || !latest || latest.planId !== command.planId) return null;
   if (latest.coach.revision <= command.revision) return null;

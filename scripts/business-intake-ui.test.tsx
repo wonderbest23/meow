@@ -18,7 +18,7 @@ import { readChatResponse } from "../lib/http/read-chat-response";
 import { generationEta } from "../lib/plan-builder/generation-progress";
 import { coachAmount } from "../lib/plan-builder/coach-feasibility";
 import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption, attachmentMessage, attachmentName, bulkCandidateIds } from "../app/plan/chat/intake-ui/model";
-import { answerConflictRetry, clearConflictDraft } from "../app/plan/chat/intake-ui/model";
+import { answerConflictRetry, clearConflictDraft, guestOwnerAdoptable } from "../app/plan/chat/intake-ui/model";
 
 const scope = "test-owner-guest";
 const id = "plan_ui-fixture";
@@ -867,6 +867,18 @@ async function main() {
   assert.match(source, /replaceState\(null, "", target\)/, "Next's URL wrapper must receive non-internal history state");
   assert.match(source, /if \(stored && previousKey !== storageKey.current\)/, "Keep the old backup if plan-scoped storage fails");
   assert.match(source, /freezeForOwnerChange = useCallback\(\(\) => \{\s*routeEpoch.current \+= 1/);
+  // 새 손님의 새 대화 첫 전송에서 손님 신원이 어긋나면 멈추지 않고 지금 신원으로 이어 간다(2026-11-19 운영: 첫 문장이 '계정이 바뀌어 저장을 멈췄어요'로 막혔다)
+  {
+    const guest = { authenticated: false, loginRequired: false, ownerScope: "scope-b" };
+    assert.equal(guestOwnerAdoptable({ action: "start" }, false, false, guest), true, "저장한 것이 없는 손님의 첫 전송은 이어 간다");
+    assert.equal(guestOwnerAdoptable({ action: "start" }, false, true, guest), false, "로그인해 쓰던 계정이 풀렸으면 멈추고 다시 로그인을 안내한다");
+    assert.equal(guestOwnerAdoptable({ action: "start" }, false, false, { ...guest, authenticated: true }), false, "다른 계정으로 로그인됐으면 멈춘다");
+    assert.equal(guestOwnerAdoptable({ action: "start" }, true, false, guest), false, "이미 저장한 사업이 있으면 멈춘다");
+    assert.equal(guestOwnerAdoptable({ action: "start", planId: "plan_1" }, false, false, guest), false);
+    assert.equal(guestOwnerAdoptable({ action: "answer", planId: "plan_1" }, true, false, guest), false, "답을 보내던 중이면 멈춘다");
+    assert.equal(guestOwnerAdoptable({ action: "start" }, false, false, { ...guest, ownerScope: null }), false);
+    assert.match(source, /if \(!guestOwnerAdoptable\(pending\.command, !!planRef\.current, signedInRef\.current, identity\)\) \{ freezeForOwnerChange\(\); return; \}/);
+  }
   assert.ok(!source.includes("setInterval(() => void send"));
   assert.match(source, /enterKeyHint="enter"/);
   assert.match(source, /composerEnterSends\(\{ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode \}, window.matchMedia\("\(pointer: coarse\)"\).matches\)/);
