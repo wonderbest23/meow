@@ -958,8 +958,8 @@ export function applyIntakeEstimates(plan: ServerPlan, coach: CoachState, intake
   const { sector, ksic, matched, word, answers } = free ? estimateIntake(business, undefined, rules) : estimateIntake(business, intake.sector, rules, intake.ksic);
   // 업종도 모르고 종류도 못 찾았으면 아무것도 채우지 않는다 — 업종 질문을 먼저 묻고, 고르면 그 업종으로 다시 채운다
   if (!picked && open("industry") && !matched) return;
-  // AI가 잡아 준 사업 한 줄(:shaped)은 그 줄이 제목이다 — 낱말 기준표의 짧은 이름으로 바꾸지 않는다
-  if (!picked && !intake.answers.business?.messageId.endsWith(SHAPED_SUFFIX)) nameFromKind(coach, business, word, answers.offer);
+  // AI가 잡아 준 사업 한 줄(intake.shaped)은 그 줄이 제목이다 — 낱말 기준표의 짧은 이름으로 바꾸지 않는다
+  if (!picked && intake.shaped?.to !== business) nameFromKind(coach, business, word, answers.offer);
   if (!picked && (open("industry") || free && matched)) {
     // 낱말 규칙으로 찾은 분류도 짐작이다 — 값·수량 이름(월 회비·프로젝트 1건)이 그 분류를 따르게 넣어 두고, 사용자가 업종을 고르면 그것으로 바뀐다
     intake.sector = sector; intake.ksic = ksic;
@@ -1068,17 +1068,22 @@ export function applyShapedBusiness(plan: ServerPlan, coach: CoachState, intake:
   const shaped = typeof value === "string" ? value.trim() : "", now = intake.answers.business;
   const field = coach.fields.find(item => item.key === "business" && item.basis === "user");
   if (shaped.length < 2 || shaped.length > 60 || /[\n\r]/.test(shaped) || intake.mode !== "startup" || intake.depth === "expert" || Object.keys(plan.sections).length) return false;
-  if (!field || now?.status !== "answered" || typeof now.value !== "string" || now.messageId.endsWith(SHAPED_SUFFIX)) return false;
+  if (!field || now?.status !== "answered" || typeof now.value !== "string" || intake.shaped) return false;
   const original = field.value.trim();
   if (!original || original === shaped) return false;
   const messageId = `${requestId}${SHAPED_SUFFIX}`;
-  intake.answers.business = { status: "answered", value: shaped, messageId, at, quote: original };
-  setField(coach, "business", shaped, messageId, original, "user");
+  // 답의 번호는 처음 적은 말풍선 그대로 둔다 — 번호를 바꾸면 화면이 그 말풍선을 '고친 예전 답'으로 보고 숨긴다(미리보기 확인 2026-11-19)
+  intake.answers.business = { ...now, value: shaped, quote: original };
+  setField(coach, "business", shaped, field.messageId, original, "user");
+  intake.shaped = { from: original, to: shaped };
   clearIntakeEstimates(coach, intake);
   if (process.env.INTAKE_ESTIMATE === "1") applyIntakeEstimates(plan, coach, intake, requestId, at, rules);
   // 제목은 잡은 사업 한 줄로 — 기준표를 다시 채운 뒤에 넣는다(낱말 기준표가 '집에서 하는 문서 정리'를 '집 정리'로 줄여 붙이지 않게). 직접 지은 이름은 그대로
   if (!coach.business.nameConfirmed) coach.business.name = draftNameFromIdea(shaped);
-  coach.messages.push({ id: messageId, role: "assistant", text: shapedNotice(shaped), at });
+  // 안내 순서: '이런 사업으로 잡았어요' 다음에 '나머지는 이 사업에 맞춰 채웠어요' — 채움 안내가 이미 있으면 그 앞에 넣는다
+  const notice = { id: messageId, role: "assistant" as const, text: shapedNotice(shaped), at };
+  const filled = coach.messages.findIndex(message => message.role === "assistant" && message.id.endsWith(ESTIMATE_SUFFIX));
+  if (filled >= 0) coach.messages.splice(filled, 0, notice); else coach.messages.push(notice);
   return true;
 }
 

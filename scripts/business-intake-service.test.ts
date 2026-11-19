@@ -1209,6 +1209,11 @@ async function main() {
         assert.ok(wishNow.coach.messages.some(message => message.role === "assistant" && message.text.includes(shaped)), "무엇으로 잡았는지 대화에 알린다");
         assert.ok(wishNow.coach.messages.some(message => message.role === "user" && message.text.includes("퇴사하고 싶다")), "처음 적은 말은 대화에 남는다");
         assert.equal(wishNow.coach.ready, true);
+        // 화면은 답의 번호로 말풍선을 찾는다 — 번호가 바뀌면 처음 적은 말풍선이 '고친 예전 답'으로 숨는다(미리보기에서 실제로 사라졌다)
+        assert.ok(wishNow.coach.messages.some(message => message.role === "user" && message.id === wishNow.intake.answers.business?.messageId), "사업 답의 번호는 처음 적은 말풍선 그대로");
+        const order = wishNow.coach.messages.filter(message => message.role === "assistant").map(message => message.text);
+        assert.ok(order.findIndex(text => text.includes(shaped)) < order.findIndex(text => text.startsWith("나머지는")), "안내 순서: 잡은 사업 → 나머지를 채웠다");
+        assert.deepEqual(wishNow.intake.shaped, { from: wish, to: shaped });
         // 멀쩡한 사업 문장은 신호가 없으니 그대로다
         const plain = await opened();
         await saveIntakeCommand(plain.session.ownerHash, { action: "understand", planId: plain.session.planId, revision: 1, requestId: randomUUID(), understood: [], guessed: [{ questionId: "industry", value: "food_beverage" }] });
