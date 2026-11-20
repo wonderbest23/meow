@@ -50,7 +50,7 @@ export function BusinessShop0_1102({ overrides, hidden, sectionOrder, onPick, de
     [CATEGORY]: () => {
       const cards = CARDS.filter(([title, value]) => text(title) || text(value));
       if (!cards.length) return null;
-      return <section key={CATEGORY} data-bw-node={CATEGORY} className={styles.cards}>
+      return <section key={CATEGORY} data-bw-node={CATEGORY} className={styles.cards} data-count={cards.length}>
         {cards.map(([title, value, imageId], index) => {
           const url = photo(imageId);
           return <article key={title} className={`${styles.card} ${url ? styles.cardWithPhoto : ""}`} {...revealProps(index % 3)}>

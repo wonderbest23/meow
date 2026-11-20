@@ -41,7 +41,7 @@
 
 /* 첫 화면 — 둥근 사진 판, 가운데 흰 큰 제목 */
 .heroWrap { padding: 0 12px; }
-.hero { position: relative; overflow: hidden; display: grid; align-content: center; min-height: 420px; border-radius: 12px; color: #fff; text-align: center; background: radial-gradient(90% 80% at 50% 0%, #3a2fd0 0%, rgba(58, 47, 208, 0) 60%), var(--ink); }
+.hero { position: relative; overflow: hidden; display: grid; align-content: center; min-height: 420px; border-radius: 12px; color: #fff; text-align: center; background: radial-gradient(90% 80% at 50% 0%, color-mix(in srgb, var(--accent) 85%, #000) 0%, transparent 60%), var(--ink); } /* 위쪽 빛은 분위기 색을 따른다 — 예전엔 늘 파란빛이라 따뜻한 갈색 페이지의 첫 화면에 파란 얼룩이 졌다(2026-11-20) */
 .heroImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .heroShade { position: absolute; inset: 0; pointer-events: none; }
 /* 사진이 복잡해도 글이 읽히게 — 가운데(글 자리)를 더 어둡게 */
@@ -108,6 +108,8 @@
 .desktop .heroCopy h1 { font-size: 64px; line-height: 1.12; }
 .desktop .heroLead { font-size: 24px; line-height: 1.5; }
 .desktop .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 1110px; margin: -110px auto 0; padding: 0 24px; }
+/* 카드 4장은 2장씩 두 줄 — 3칸에 놓으면 넷째 카드만 아랫줄에 혼자 남았다(AI 채우기는 카드를 4~6장 쓴다) */
+.desktop .cards[data-count="4"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .desktop .card { min-height: 180px; }
 .desktop .cardBody { padding: 28px 30px 32px; }
 .desktop .card h3 { font-size: 22px; }
@@ -119,6 +121,11 @@
 .desktop .violet { grid-template-columns: minmax(0, 1fr); padding: 110px max(32px, calc((100% - 1110px) / 2)); border-radius: 14px; }
 .desktop .violetWithPhoto { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 96px; align-items: center; }
 .desktop .violetCopy { max-width: 560px; }
+/* 사진이 없는 공개 화면: 글이 왼쪽 반에만 있고 오른쪽이 비어 보였다 — 띠 너비를 다 쓰고 이용 순서는 옆으로 나란히 */
+.desktop .violet:not(.violetWithPhoto) .violetCopy { max-width: none; }
+.desktop .violet:not(.violetWithPhoto) .violetSteps { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+.desktop .violet:not(.violetWithPhoto) .violetSteps li { padding: 22px 24px; }
+.desktop .violet:not(.violetWithPhoto) .violetLead { max-width: 760px; }
 .desktop .violetCopy h2 { font-size: 36px; line-height: 1.33; }
 .desktop .violetLead { font-size: 18px; }
 .desktop .reviewWrap { padding: 24px 24px 0; }
