@@ -17,7 +17,7 @@
 import { Children, cloneElement, isValidElement, useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { composerEnterSends } from "../app/plan/chat/intake-ui/guidance";
-import { newChatHref } from "../lib/plan-builder/studio";
+import { newChatEntryHref, newChatHref } from "../lib/plan-builder/studio";
 import { LANDING_IDEA_MAX, normalizeLandingIdea, stashLandingIdea } from "../lib/plan-builder/landing-idea";
 import { IphoneMockup } from "./iphone-mockup";
 import styles from "./home-prompt-hero.module.css";
@@ -32,11 +32,14 @@ const PROMPTS = [
   "아파트 상가에 초등 공부방을 열고 싶어요.",
 ];
 
-/** 입력 카드 아래 작은 단추 — 누르면 그 문장이 입력칸에 들어간다. 마지막은 아직 정한 사업이 없는 사람의 시작 문장 */
-const STARTERS: Array<[label: string, text: string]> = [
-  ["동네 가게", PROMPTS[0]],
-  ["온라인 판매", PROMPTS[2]],
-  ["아직 없어요", "돈을 벌고 싶은데 아직 뭘 할지 모르겠어요."],
+/*
+ * 입력 카드 아래 작은 단추 — 누르면 바로 대화를 시작한다(보내기를 한 번 더 누르지 않게, 2026-11-21 사장님).
+ * 앞의 둘은 예시 문장을 첫 말로 보내고, '아직 없어요'는 아래 구간의 '아이디어가 아직 없어요' 카드와 같은 입구(사업안 추천받기)로 간다.
+ */
+const STARTERS: Array<{ label: string; idea?: string }> = [
+  { label: "동네 가게", idea: PROMPTS[0] },
+  { label: "온라인 판매", idea: PROMPTS[2] },
+  { label: "아직 없어요" },
 ];
 
 /*
@@ -336,8 +339,9 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
   const motion = !mounted ? "idle" : reduced ? "static" : moving ? "run" : "pause";
   const advance = () => { if (!reduced) cutTo((tabRef.current + 1) % SHOWCASE.length); };
 
-  const submit = () => {
-    const idea = normalizeLandingIdea(text);
+  /* value — 시작 단추가 고른 문장. 없으면 입력칸에 적은 글 */
+  const submit = (value: string = text) => {
+    const idea = normalizeLandingIdea(value);
     if (idea) rememberLandingIdea(idea);
     router.push(landingIdeaHref(idea));
   };
@@ -394,7 +398,7 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
       </div>
       <div className={styles.actions}>
         <div className={styles.starters}>
-          {STARTERS.map(([label, value]) => <button key={label} type="button" className={styles.starter} onClick={() => { setText(value); textarea.current?.focus(); }}>{label}</button>)}
+          {STARTERS.map(({ label, idea }) => <button key={label} type="button" className={styles.starter} onClick={() => { if (idea) { setText(idea); submit(idea); } else router.push(newChatEntryHref("exploring")); }}>{label}</button>)}
         </div>
         <span className={styles.spacer} />
         <button type="submit" className={styles.send} aria-label="대화 시작하기">
