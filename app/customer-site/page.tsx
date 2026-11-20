@@ -6,7 +6,7 @@ import { loadBrainwavePageServer } from "../../lib/landing/brainwave/load";
 import { getPublishedLandingByCustomDomain } from "../../lib/landing/repository";
 import { landingLayoutHintFromHeaders } from "../../lib/landing/layout-hint";
 import { jsonLdText, landingLocalBusinessJsonLd } from "../../lib/landing/local-business-jsonld";
-import { landingShareMetadata } from "../../lib/landing/share-card";
+import { landingShareMetadata, SHARE_FALLBACK_ORIGIN } from "../../lib/landing/share-card";
 
 async function currentHostname() {
   const headerStore = await headers();
@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const published = await getPublishedLandingByCustomDomain(hostname);
   if (!published) return { title: "이 홈페이지는 지금 볼 수 없어요", description: "주소가 바뀌었거나 잠시 닫아 둔 홈페이지예요.", robots: { index: false }, openGraph: null };
   // /launch 주소와 같은 카톡·검색 카드(대표 사진·소개 문구) — 내 도메인으로 공유해도 사진이 보이게
-  return landingShareMetadata(published.config, `https://${hostname}`);
+  return landingShareMetadata(published.config, `https://${hostname}`, "/", SHARE_FALLBACK_ORIGIN);
 }
 
 export default async function CustomerSitePage() {
