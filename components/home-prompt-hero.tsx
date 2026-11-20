@@ -32,6 +32,19 @@ const PROMPTS = [
   "아파트 상가에 초등 공부방을 열고 싶어요.",
 ];
 
+/** 입력 카드 아래 작은 단추 — 누르면 그 문장이 입력칸에 들어간다. 마지막은 아직 정한 사업이 없는 사람의 시작 문장 */
+const STARTERS: Array<[label: string, text: string]> = [
+  ["동네 가게", PROMPTS[0]],
+  ["온라인 판매", PROMPTS[2]],
+  ["아직 없어요", "돈을 벌고 싶은데 아직 뭘 할지 모르겠어요."],
+];
+
+/*
+ * 첫 화면 배경 영상(2026-11-20) — 블랙홀 주위를 도는 시각화. 출처 NASA/JPL-Caltech/R. Hurt (IPAC), svs.gsfc.nasa.gov/14619.
+ * JPL 이용 정책: 출처를 적고, NASA·JPL·Caltech 이 우리를 보증하는 것처럼 보이게 쓰지 않는다. 원본 4K 를 1080p(3.9MB)·720p(1.6MB)로 줄였다.
+ */
+const SPACE_VIDEO = { wide: "/home/blackhole-1080.mp4", narrow: "/home/blackhole-720.mp4", poster: "/home/blackhole-poster.jpg" };
+
 /** 강조할 곳 — 그림 높이에 대한 위·아래 끝(%)과 가로 가운데(%, 기본 50) */
 type ShowcaseFocus = { top: number; bottom: number; x?: number };
 type ShowcaseItem = { src: string; alt: string; width: number; height: number; focus: ShowcaseFocus };
@@ -174,6 +187,8 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
   const [text, setText] = useState("");
   const [focused, setFocused] = useState(false);
   const [typed, setTyped] = useState("");
+  /* 배경 영상 주소 — 화면이 붙은 뒤에만 정한다(서버 화면·움직임 줄이기·데이터 절약에서는 멈춘 그림만) */
+  const [spaceVideo, setSpaceVideo] = useState("");
   const [tab, setTab] = useState(0);
   /* 탭을 직접 고른 뒤 — 저절로 넘기지 않고 그 탭의 움직임만 한 번 보여 준 뒤 끝 장면에 머문다 */
   const [manual, setManual] = useState(false);
@@ -197,6 +212,8 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     setMounted(true);
     setReduced(media.matches);
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData === true;
+    if (!media.matches && !saveData) setSpaceVideo(window.innerWidth < 700 ? SPACE_VIDEO.narrow : SPACE_VIDEO.wide);
     const onChange = () => setReduced(media.matches);
     media.addEventListener("change", onChange);
     const pending = timers.current;
@@ -345,13 +362,16 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
   const titleLines = title.split("\n");
   return <section className={styles.hero} data-sc-section="promptHome" aria-labelledby="home-hero-title">
     {/* 제목·입력 카드 묶음 — 휴대폰에서는 이 묶음만 첫 화면에 가운데 오고, 탭·진열은 내려야 보인다(lovable 휴대폰 홈과 같게, 2026-11-02) */}
-    <div className={styles.lead}>
+    <div className={styles.lead} data-home-space="">
+    {/* key — 주소가 정해지면 영상 요소를 새로 만들어 바로 재생한다(src 만 바꾸면 일부 브라우저가 다시 읽지 않는다) */}
+    <video key={spaceVideo} className={styles.space} src={spaceVideo || undefined} poster={SPACE_VIDEO.poster} autoPlay muted loop playsInline preload="auto" aria-hidden="true" tabIndex={-1} />
+    <div className={styles.spaceVeil} aria-hidden="true" />
     {/* 어드민에서 제목을 숨겨도 문서 제목(h1)은 화면 낭독기에 남긴다 */}
     <h1 id="home-hero-title" className={hidden.includes("promptHome.title") ? styles.srOnly : styles.title} data-sc-field="promptHome.title">
-      {titleLines.map((line, index) => <span key={index}>{accentLine(line, index === titleLines.findIndex(text => text.includes(ACCENT_WORD)))}{index < titleLines.length - 1 ? <br /> : null}</span>)}
+      {titleLines.map((line, index) => <span key={index}>{accentLine(line, index === titleLines.findIndex(text => text.includes(ACCENT_WORD)))}{index < titleLines.length - 1 ? <><br />{" "}</> : null}</span>)}
     </h1>
-    {hidden.includes("promptHome.subtitle") ? null : <p className={styles.subtitle} data-sc-field="promptHome.subtitle">{glueDots(subtitle)}</p>}
 
+    <div className={styles.below}>
     <form ref={form} className={styles.card} aria-label="사업 아이디어로 대화 시작" onSubmit={event => { event.preventDefault(); submit(); }}>
       <label htmlFor="home-idea" className={styles.srOnly}>어떤 사업을 생각하고 계세요?</label>
       <div className={styles.field}>
@@ -373,12 +393,18 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
         {overlay && <p className={styles.typing} aria-hidden="true">{typed}<span className={styles.caret} /></p>}
       </div>
       <div className={styles.actions}>
+        <div className={styles.starters}>
+          {STARTERS.map(([label, value]) => <button key={label} type="button" className={styles.starter} onClick={() => { setText(value); textarea.current?.focus(); }}>{label}</button>)}
+        </div>
         <span className={styles.spacer} />
         <button type="submit" className={styles.send} aria-label="대화 시작하기">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8" /></svg>
         </button>
       </div>
     </form>
+    {hidden.includes("promptHome.subtitle") ? null : <p className={styles.subtitle} data-sc-field="promptHome.subtitle">{glueDots(subtitle)}</p>}
+    </div>
+    <p className={styles.credit}>영상 NASA/JPL-Caltech/R. Hurt (IPAC)</p>
     </div>
 
     <div className={styles.tabsRow}>
