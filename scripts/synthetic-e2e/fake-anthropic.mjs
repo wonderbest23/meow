@@ -77,7 +77,17 @@ globalThis.fetch = async (input, init) => {
     await readDelay();
     return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(fake) }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
   }
-  const text = schema ? JSON.stringify(gen(schema)) : wantsJson ? "{}" : markdown(userText(body.messages?.[0]?.content));
+  // 홈페이지 글 채우기(landing/ai-fill) — 틀 없이 JSON 을 바라는 호출이라 예전엔 '{}'가 나가 늘 '계획서 답 그대로' 화면만 보였다. 칸이 모두 열린 모습(카드 · 이용 순서 · 숫자 · 메뉴 · 자주 묻는 질문)을 0원으로 본다
+  const homepageCopy = /홈페이지의 카피라이터/.test(system) ? JSON.stringify({
+    tagline: "집에서 쉬는 시간을 채우는 작은 가게(합성)", cardsTitle: "이렇게 준비했어요", cardsIntro: "처음 오신 분도 고르기 쉽게 정리했어요(합성).",
+    cards: [{ title: "대표 상품", body: "가장 많이 찾는 구성을 먼저 보여 드려요(합성)." }, { title: "손님이 얻는 것", body: "고르는 시간을 줄이고 바로 쓸 수 있어요(합성)." }, { title: "약속", body: "받으신 뒤 문제가 있으면 바로 도와 드려요(합성)." }, { title: "가격", body: "1개 22,000원(합성)" }],
+    process: { title: "이용 순서", steps: ["① 고르기 — 마음에 드는 상품을 골라요", "② 주문하기 — 스토어에서 결제해요", "③ 받기 — 포장해서 보내 드려요"] },
+    closing: "오늘 하나 골라 보세요(합성)", closingSub: "궁금한 점은 편하게 물어봐 주세요.", cta: "스토어에서 주문하기",
+    facts: [{ value: "22,000원", label: "1개 가격" }, { value: "3종", label: "고를 수 있는 구성" }],
+    menu: { title: "상품 안내", intro: "지금 준비된 상품이에요(합성).", items: [{ name: "기본 구성", price: "22,000원" }, { name: "선물 포장 구성", price: "문의" }] },
+    faq: [{ question: "주문은 어디서 하나요?", answer: "스토어에서 주문하실 수 있어요(합성)." }, { question: "선물 포장도 되나요?", answer: "문의 주시면 안내해 드려요(합성)." }],
+  }) : null;
+  const text = homepageCopy ?? (schema ? JSON.stringify(gen(schema)) : wantsJson ? "{}" : markdown(userText(body.messages?.[0]?.content)));
   console.log(`[fake-anthropic] ${schema ? "json" : wantsJson ? "json-noschema" : "text"} ${text.length}b`);
   // Optional pause so waiting screens (typing bubble, "정리 중") stay visible long enough to check.
   const delay = Number(process.env.SYNTHETIC_AI_DELAY_MS) || 0;
