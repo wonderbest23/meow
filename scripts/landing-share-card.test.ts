@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
+import { inflateSync } from "node:zlib";
+import { renderShareCardPng, wrapCardText, CARD_WIDTH, CARD_HEIGHT } from "../lib/landing/share-card-png";
 import assert from "node:assert/strict";
 import { landingDraftFromPlan } from "../lib/landing/from-plan";
-import { landingShareMetadata, shareImage, shareOrigin, SHARE_FALLBACK_ORIGIN } from "../lib/landing/share-card";
+import { landingShareMetadata, shareCardPath, shareCardView, shareImage, shareOrigin, SHARE_FALLBACK_ORIGIN } from "../lib/landing/share-card";
 import { BRAINWAVE_DEFAULT_FOR_TEMPLATE } from "../lib/landing/brainwave/catalog";
 import { BUSINESS_DESIGNED_PAGES } from "../lib/landing/brainwave/business-content";
 import { COACH_KEY, COACH_VERSION, type CoachState } from "../lib/plan-builder/coach";
@@ -68,7 +71,22 @@ assert.equal(shareImage(cafe), "https://files.example.com/my-cafe.jpg");
 for (const id of Object.keys(cafe.pageData!.brainwave!.images)) cafe.pageData!.brainwave!.images[id] = "/brainwave/0-2226/sample.jpg";
 cafe.heroImageUrl = "";
 assert.equal(shareImage(cafe), null);
-assert.equal((landingShareMetadata(cafe, "https://oneulstart.com").twitter as { card: string }).card, "summary");
+// 사진이 없으면 이름과 소개를 적은 카드 그림을 붙인다 — 카톡에 주소와 글만 뜨지 않게(2026-11-20)
+const drawn = landingShareMetadata(cafe, "https://oneulstart.com");
+assert.equal((drawn.twitter as { card: string }).card, "summary_large_image");
+const drawnImage = (drawn.openGraph as { images: Array<{ url: string; width?: number; height?: number }> }).images[0];
+assert.equal(drawnImage.url, `https://oneulstart.com${shareCardPath(cafe)}`);
+assert.match(drawnImage.url, /^https:\/\/oneulstart\.com\/api\/public\/share-card\/[^?]+\?v=[a-z0-9]+$/);
+assert.deepEqual([drawnImage.width, drawnImage.height], [1200, 630]);
+// 연결한 내 도메인에서도 그림은 오늘창업 주소에서 받는다
+assert.ok((landingShareMetadata(cafe, "https://shop.example.co.kr", "/", SHARE_FALLBACK_ORIGIN).openGraph as { images: Array<{ url: string }> }).images[0].url.startsWith("https://oneulstart.com/api/public/share-card/"));
+// 이름이 바뀌면 그림 주소도 바뀐다(카톡이 옛 그림을 붙들지 않게). 이름과 같은 소개는 두 번 적지 않는다
+assert.notEqual(shareCardPath(cafe), shareCardPath({ ...cafe, businessName: "한낮커피" }));
+assert.equal(shareCardView(cafe).name, "새벽커피");
+assert.ok(shareCardView(cafe).tagline.length > 0 && shareCardView(cafe).tagline.length <= 56);
+assert.match(shareCardView(cafe).accent, /^#[0-9a-fA-F]{6}$/);
+// 주소가 아직 없는 초안은 그림 없이
+assert.equal((landingShareMetadata({ ...cafe, slug: "" }, "https://oneulstart.com").twitter as { card: string }).card, "summary");
 
 // 주소: 연결한 도메인은 그대로 https, 이상한 값이면 오늘창업 주소
 assert.equal(shareOrigin("shop.example.co.kr", "https"), "https://shop.example.co.kr");
@@ -76,5 +94,27 @@ assert.equal(shareOrigin("oneulstart.com, proxy.internal", "https"), "https://on
 assert.equal(shareOrigin("evil.com/<script>", "https"), SHARE_FALLBACK_ORIGIN);
 assert.equal(shareOrigin(null, null), SHARE_FALLBACK_ORIGIN);
 assert.equal(shareOrigin("localhost:3000", "http"), "http://localhost:3000");
+
+// 카드 그림 — 글꼴 윤곽으로 직접 그린 1200×630 PNG. 글자가 실제로 칠해지고(잉크색 점), 글꼴에 없는 글자(이모지)에도 죽지 않는다
+{
+  const font = new Uint8Array(readFileSync("public/fonts/NanumGothic-Regular.ttf"));
+  const png = Buffer.from(renderShareCardPng({ name: "달빛 캔들 공방 🕯", tagline: "집에서 쉬는 시간을 향으로 채우는 수제 소이 캔들", ink: "#2b2118", accent: "#9a5b34", paper: "#fffaf4" }, font));
+  assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [CARD_WIDTH, CARD_HEIGHT]);
+  const idat = png.subarray(8 + 25 + 8, png.length - 12 - 4);
+  const raw = inflateSync(idat);
+  assert.equal(raw.length, (CARD_WIDTH * 3 + 1) * CARD_HEIGHT);
+  const pixel = (x: number, y: number) => [...raw.subarray(y * (CARD_WIDTH * 3 + 1) + 1 + x * 3, y * (CARD_WIDTH * 3 + 1) + 4 + x * 3)];
+  assert.deepEqual(pixel(10, 300), [0x9a, 0x5b, 0x34], "왼쪽 띠는 강조색");
+  assert.deepEqual(pixel(1150, 20), [0xff, 0xfa, 0xf4], "바탕은 종이색");
+  let inked = 0;
+  for (let y = 0; y < CARD_HEIGHT; y += 1) for (let x = 120; x < 1100; x += 1) { const [r, g, b] = pixel(x, y); if (r === 0x2b && g === 0x21 && b === 0x18) inked += 1; }
+  assert.ok(inked > 8_000, `이름 글자가 잉크색으로 칠해진다(${inked}점)`);
+  // 줄 나누기: 낱말 단위, 줄 수를 넘으면 마지막 줄 끝에 …
+  const measure = (text: string) => text.length * 10;
+  assert.deepEqual(wrapCardText(measure, "가나다 라마바 사아자", 70, 2), ["가나다 라마바", "사아자"]);
+  assert.deepEqual(wrapCardText(measure, "가나다 라마바 사아자 차카타 파하", 70, 2), ["가나다 라마바", "사아자 차카…"]);
+  assert.deepEqual(wrapCardText(measure, "가나다라마바사아자차", 50, 3), ["가나다라마", "바사아자차"]);
+}
 
 console.log("landing-share-card: designed defaults for every sector, share card title/description (no repeated tagline, no filler subheadline)/photo, origin");

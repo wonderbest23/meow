@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { BUSINESS_TEMPLATE_PROFILES } from "./brainwave/business-content";
 import { isFallbackSubheadline, isPlaceholderPhoto, type LandingDraft } from "./domain";
 import { PHOTO_SLOTS } from "./photo-library";
+import { LANDING_THEMES } from "./themes";
 
 /*
  * 공개 홈페이지를 카카오톡·문자·인스타그램에 붙였을 때 뜨는 미리보기 카드.
@@ -59,6 +60,33 @@ export function shareImage(config: LandingDraft): string | null {
 }
 
 /*
+ * 사진이 없는 홈페이지의 카드 그림(2026-11-20) — 꽃집·공방·온라인 판매처럼 업종 사진을 깔지 않는 사업은 사장님이 사진을 올리기 전까지
+ * 카톡 카드에 그림이 없어 주소와 글만 떴다. 그때는 가게 이름과 한 줄 소개를 적은 그림을 서버가 그려 준다(app/api/public/share-card).
+ * 색은 홈페이지에서 고른 분위기(없으면 강조색)를 따른다. 주소 끝의 v 는 이름·소개·색이 바뀌면 달라져, 카톡이 옛 그림을 붙들지 않게 한다.
+ */
+export const SHARE_CARD_SIZE = { width: 1200, height: 630 } as const;
+
+export function shareCardView(config: LandingDraft): { name: string; tagline: string; ink: string; accent: string; paper: string } {
+  const name = clip(config.businessName, 24);
+  const raw = shareTagline(config).trim();
+  const theme = LANDING_THEMES.find((item) => item.id === config.pageData?.theme)?.tokens;
+  return {
+    name,
+    tagline: raw && raw !== config.businessName.trim() ? clip(raw, 56) : "",
+    ink: theme?.ink ?? "#1c1c1c",
+    accent: theme?.accent ?? config.accentColor,
+    paper: theme?.paper ?? "#ffffff",
+  };
+}
+
+export function shareCardPath(config: LandingDraft): string {
+  const view = shareCardView(config);
+  let sum = 0;
+  for (const ch of `${view.name}|${view.tagline}|${view.accent}|${view.paper}`) sum = (sum * 31 + (ch.codePointAt(0) ?? 0)) % 2147483647;
+  return `/api/public/share-card/${encodeURIComponent(config.slug)}?v=${sum.toString(36)}`;
+}
+
+/*
  * 대표 주소(canonical) — 같은 홈페이지가 ?뒤에 붙은 값·www 주소로도 열려 검색에 여러 개로 잡히지 않게 한 주소를 알린다(점검 r42-B).
  * www.oneulstart.com 은 oneulstart.com 으로 모은다. 연결한 내 도메인은 들어온 그 도메인 그대로(그 주소가 손님에게 알린 주소다).
  */
@@ -67,7 +95,8 @@ export function landingCanonicalUrl(origin: string, path: string): string {
   return `${base}${path}`;
 }
 
-export function landingShareMetadata(config: LandingDraft, origin: string, path = "/"): Metadata {
+/** cardOrigin — 그려 주는 카드 그림을 받을 주소. 연결한 내 도메인에서는 오늘창업 주소로 받는다(그림 주소는 오늘창업 서버에 있다) */
+export function landingShareMetadata(config: LandingDraft, origin: string, path = "/", cardOrigin = origin): Metadata {
   const name = config.businessName.trim();
   const tagline = shareTagline(config);
   const lead = config.headline.trim() && config.headline.trim() !== name ? config.headline.trim() : tagline;
@@ -81,8 +110,10 @@ export function landingShareMetadata(config: LandingDraft, origin: string, path 
   const repeated = !!tagline && lead === tagline;
   const written = !!subheadline && subheadline !== tagline && !isFallbackSubheadline(subheadline);
   const description = clip(repeated && written ? subheadline : tagline || config.subheadline, 150);
-  const image = shareImage(config);
-  const sized = image?.startsWith("https://images.unsplash.com/") ? { width: 1200, height: 630 } : {};
+  const photo = shareImage(config);
+  // 사진이 없으면 이름과 소개를 적은 카드 그림 — 주소(slug)가 아직 없는 초안은 그림 없이
+  const image = photo ?? (config.slug ? `${cardOrigin}${shareCardPath(config)}` : null);
+  const sized = !photo || photo.startsWith("https://images.unsplash.com/") ? SHARE_CARD_SIZE : {};
   const images = image ? [{ url: image, ...sized, alt: name }] : undefined;
   const url = landingCanonicalUrl(origin, path);
   return {
