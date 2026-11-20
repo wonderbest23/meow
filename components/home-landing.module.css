@@ -217,3 +217,19 @@
 @media (max-width: 640px) {
   .page :global(.home-footer) { margin-top: 88px; padding: 28px 16px calc(96px + env(safe-area-inset-bottom)); }
 }
+
+/*
+ * 우주 첫 화면 위의 머리말(2026-11-20) — 맨 위(--frost 0)에서는 어두운 영상 위라 흰 글자·흰 로고·흰 단추,
+ * 우주 판을 지나 밝은 띠가 깔리면(--frost 1) 원래의 진한 글자·파란 로고·검정 단추로 돌아간다. 색은 --frost 로 섞는다.
+ */
+.headerShell :global(.site-header) { color: color-mix(in srgb, #191f28 calc(var(--frost) * 100%), #fff); }
+.headerShell :global(.site-header) :global(.brand-logo) { filter: brightness(var(--frost)) invert(calc(1 - var(--frost))); }
+.headerShell :global(.site-header) :global(.home-header-nav) a { color: color-mix(in srgb, #4e5968 calc(var(--frost) * 100%), #fff); }
+.headerShell :global(.site-header) :global(.home-header-nav) a:hover { color: color-mix(in srgb, #191f28 calc(var(--frost) * 100%), #fff); opacity: .78; }
+.headerShell :global(.site-header) :global(.header-login) { color: color-mix(in srgb, #191f28 calc(var(--frost) * 100%), #fff); }
+/* 전역 단추 규칙(!important)보다 세게 — 클래스를 겹쳐 쓴다 */
+.headerShell :global(.site-header) :global(.small-start.small-start) { border-radius: 999px !important; background: color-mix(in srgb, #191f28 calc(var(--frost) * 100%), #fff) !important; color: color-mix(in srgb, #fff calc(var(--frost) * 100%), #0b0b0d) !important; }
+.headerShell :global(.site-header) :global(.small-start):hover { background: color-mix(in srgb, #000 calc(var(--frost) * 100%), #e9e9ec) !important; }
+.headerShell :global(.site-header) :global(.home-menu-toggle) { color: color-mix(in srgb, #191f28 calc(var(--frost) * 100%), #fff); }
+.headerShell :global(.site-header) a:focus-visible,
+.headerShell :global(.site-header) button:focus-visible { outline-color: color-mix(in srgb, #1b64da calc(var(--frost) * 100%), #fff); }

@@ -114,7 +114,10 @@ function Home({
     let frame = 0;
     const apply = () => {
       frame = 0;
-      shell.style.setProperty("--frost", Math.min(1, Math.max(0, window.scrollY / 120)).toFixed(3));
+      /* 우주 첫 화면(data-home-space) 위에서는 머리말이 투명·흰 글자다 — 그 아래 끝이 머리말(64px)에 닿기 전 120px 동안 밝은 띠로 바뀐다 */
+      const space = document.querySelector<HTMLElement>("[data-home-space]");
+      const frost = space ? 1 - (space.getBoundingClientRect().bottom - 64) / 120 : window.scrollY / 120;
+      shell.style.setProperty("--frost", Math.min(1, Math.max(0, frost)).toFixed(3));
     };
     const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(apply); };
     apply();

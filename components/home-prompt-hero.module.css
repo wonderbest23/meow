@@ -351,3 +351,95 @@
 @media (prefers-reduced-motion: reduce) {
   .accent { animation: none; background-position: 30% 50%; }
 }
+
+/*
+ * 우주 첫 화면(2026-11-20 사장님 승인 시안) — 제목·입력 카드 묶음(.lead)을 화면 가득한 어두운 판으로 바꾸고 블랙홀 영상을 깐다.
+ * 제목은 블랙홀 위, 입력 카드는 원반 아래. 탭·진열 띠는 그 아래 밝은 바탕에 그대로 둔다.
+ * 규칙을 파일 끝에 둔 것은 위의 밝은 화면 규칙(휴대폰 포함)을 한꺼번에 덮기 위해서다.
+ */
+.hero { padding-top: 0; }
+.hero .lead {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  width: 100vw;
+  max-width: none;
+  /* 머리말(64px) 뒤까지 올라가 화면 맨 위부터 채운다 */
+  margin: calc(-64px - env(safe-area-inset-top, 0px)) calc(50% - 50vw) 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: calc(64px + env(safe-area-inset-top, 0px) + clamp(36px, 9vh, 96px)) max(20px, env(safe-area-inset-right, 0px)) clamp(28px, 5vh, 56px) max(20px, env(safe-area-inset-left, 0px));
+  /* 제목은 위, 입력 카드 묶음(.below)은 아래 끝으로(margin-top:auto) — 그 사이로 블랙홀이 보인다 */
+  justify-content: flex-start;
+  gap: 24px;
+  background: #06060a;
+  color: #fff;
+}
+.space { position: absolute; z-index: -2; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 46%; pointer-events: none; }
+/* 글자 자리(위·아래)만 살짝 어둡게 — 블랙홀이 있는 가운데는 그대로 */
+.spaceVeil { position: absolute; z-index: -1; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(4, 4, 8, .62) 0%, rgba(4, 4, 8, .18) 30%, rgba(4, 4, 8, 0) 44%, rgba(4, 4, 8, .2) 60%, rgba(4, 4, 8, .7) 100%); }
+.hero .lead .title { color: #fff; font-size: clamp(2rem, 3.7vw, 3.5rem); font-weight: 600; letter-spacing: -0.02em; line-height: 1.14; text-shadow: 0 2px 22px rgba(0, 0, 0, .3); }
+/* 넓은 화면에서는 제목을 한 줄로(줄바꿈 뒤의 빈칸이 낱말을 띄운다) */
+.hero .lead .title br { display: none; }
+.hero .lead .accent { background: none; color: inherit; -webkit-text-fill-color: currentColor; animation: none; }
+.below { width: 100%; margin-top: auto; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+.hero .lead .card {
+  max-width: 800px;
+  margin-top: 0;
+  padding: 24px 16px 14px 26px;
+  gap: 10px;
+  border-radius: 24px;
+  background: rgba(26, 25, 28, .78);
+  -webkit-backdrop-filter: blur(26px) saturate(112%);
+  backdrop-filter: blur(26px) saturate(112%);
+  box-shadow: inset 0 0 0 1px rgba(214, 228, 255, .14), 0 22px 60px rgba(0, 0, 0, .3);
+}
+.hero .lead .card:focus-within { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .5), 0 22px 60px rgba(0, 0, 0, .3); }
+.hero .lead .field, .hero .lead .textarea { min-height: 88px; }
+.hero .lead .textarea { color: #f1f1f3; caret-color: #fff; }
+.hero .lead .textarea::placeholder, .hero .lead .typing { color: #a3a4a8; }
+.hero .lead .caret { background: #fff; }
+.starters { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.hero .lead .starter.starter {
+  flex: 0 0 auto;
+  min-height: 0;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, .08) !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, .07) !important;
+  color: #b4b5b9 !important;
+  font: inherit;
+  font-size: .8125rem !important;
+  font-weight: 500 !important;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.hero .lead .starter.starter:hover { background: rgba(255, 255, 255, .13) !important; color: #e3e3e6 !important; }
+.hero .lead .starter:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* 보내기 — 흰 동그라미에 검은 화살표(단색) */
+.hero .lead .send.send { width: 44px; height: 44px; border-radius: 50% !important; background: #fff !important; color: #0b0b0d !important; }
+.hero .lead .send.send:hover { background: #e9e9ec !important; }
+.hero .lead .send:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.hero .lead .subtitle { max-width: 640px; color: rgba(255, 255, 255, .78); font-size: .9375rem; line-height: 1.5; text-shadow: 0 1px 12px rgba(0, 0, 0, .35); }
+/* 왼쪽 아래 — 오른쪽 아래에는 상담 단추가 떠 있다 */
+.credit { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 8px; margin: 0; color: rgba(255, 255, 255, .5); font-size: .625rem; }
+/* 우주 판과 아래 탭 줄 사이 숨 */
+.hero .tabsRow { margin-top: 36px; }
+@media (max-width: 640px) {
+  .hero { padding-top: 0; }
+  .hero .lead { padding-top: calc(64px + env(safe-area-inset-top, 0px) + clamp(28px, 8vh, 72px)); padding-bottom: 20px; gap: 16px; }
+  .hero .lead .title { font-size: clamp(1.9375rem, 8.6vw, 3.125rem); line-height: 1.16; }
+  .hero .lead .title br { display: inline; }
+  .hero .lead .card { padding: 18px 12px 12px 18px; border-radius: 22px; gap: 10px; }
+  .hero .lead .field, .hero .lead .textarea { min-height: 100px; }
+  /* 단추 셋이 360px 폭에서도 보내기 단추와 한 줄에 들어가게 */
+  .starters { gap: 5px; }
+  .hero .lead .starter.starter { height: 30px; padding: 0 9px; font-size: .75rem !important; }
+  .hero .lead .spacer { flex: 1 1 0; min-width: 0; }
+  .below { gap: 12px; }
+  /* 오른쪽 아래 상담 단추에 글 끝이 가리지 않게 폭을 줄여 두 줄로 */
+  .hero .lead .subtitle { max-width: calc(100% - 112px); font-size: .8125rem; }
+  .credit { position: static; margin: 0; text-align: center; }
+  .hero .tabsRow { margin-top: 24px; }
+}
