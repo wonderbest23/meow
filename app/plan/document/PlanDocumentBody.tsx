@@ -12,7 +12,7 @@ import { hydrateFromServer, lastHydrationFailed, assembleSections, activePlan, l
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import { coachDocumentSnapshot, completedDocumentKey } from "../../../lib/plan-builder/coach-document";
-import { documentContext, overviewFields } from "../../../lib/plan-builder/document-context";
+import { documentBusiness, documentContext, overviewFields } from "../../../lib/plan-builder/document-context";
 import { LISTED_SAMPLE_IDS, SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import { useDeckExport } from "./use-deck-export";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
@@ -182,7 +182,7 @@ export function PlanDocumentBody() {
         setIdentity(identityNow ? { headline: identityNow.headline, pitch: identityNow.pitch } : undefined);
         setPlanType(p.planType);
         /* 샘플은 내 사업 정보가 아니라 샘플이 가진 값만 */
-        setOverview(overviewFields(isSamplePlan(p.id) ? { name: p.title.replace(/^샘플\s*·\s*/, ""), industry: SAMPLE_DOCS.find(d => d.id === p.id)?.industry } : { ...documentContext(s, p.id)?.business, name: businessDisplayName(p.title) }, p.planType));
+        setOverview(overviewFields(isSamplePlan(p.id) ? { name: p.title.replace(/^샘플\s*·\s*/, ""), industry: SAMPLE_DOCS.find(d => d.id === p.id)?.industry } : { ...documentBusiness(p, documentContext(s, p.id)?.business ?? {}), name: businessDisplayName(p.title) }, p.planType));
         setIsSample(isSamplePlan(p.id));
         if (!isSamplePlan(p.id)) {
           fetch(`/api/plan/access?planType=${encodeURIComponent(p.planType)}&planId=${encodeURIComponent(p.id)}`)
