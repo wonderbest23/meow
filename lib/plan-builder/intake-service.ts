@@ -13,7 +13,6 @@ import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
 import { applyIntakeAnswer, applyIntakeEstimates, nameFromKind, applyUnderstood, applyGuessed, applyGuessedSector, applyShapedBusiness, applyRunning, applyRead, clearIntakeEstimates, assertAmountConfirmed, assertSectorChecked, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote, intakeQuestions, displayIntakeValue, READ_SUFFIX } from "./intake-core";
-import { ruleKind } from "./kind-rules";
 import { RUNNING_SIGNAL, SHAPED_SIGNAL } from "./idea-understanding";
 import { adoptRenamedTitle } from "./business-name";
 import { estimateIntake } from "./intake-estimate";
@@ -82,6 +81,11 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     throw parsed.error;
   }
   const command = parsed.data, signature = commandSignature(command);
+  /*
+   * 세부 업종 표(kind-rules, 1.8MB)는 필요할 때 불러온다(2026-11-20). 맨 위에서 import 하면 묶음 도구가 이 파일을 쓰는 길마다(대화 · 계획서 생성)
+   * 표를 한 벌씩 넣어 서버 묶음에 두 벌(gzip 약 510KiB씩)이 들어갔고, 묶음이 Cloudflare 한도(gzip 10MB)에 5KiB 앞까지 찼다.
+   */
+  const { ruleKind } = await import("./kind-rules");
   for (let attempt = 0; attempt < 5; attempt++) {
     const state = await loadPlanState(ownerHash);
     let plan = state.plans.find(item => item.id === (command.planId ?? `plan_${command.requestId}`));
