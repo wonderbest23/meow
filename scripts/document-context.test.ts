@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { documentContext } from "../lib/plan-builder/document-context";
+import { documentBusiness, documentContext } from "../lib/plan-builder/document-context";
 import { applyCoachReply, COACH_KEY } from "../lib/plan-builder/coach";
 
 async function main() {
@@ -27,6 +27,9 @@ async function main() {
   state.plans.find(plan => plan.id === first)!.answers[COACH_KEY] = { state: coach };
   state.business.name = "Unrelated active business";
   assert.equal(documentContext(state, first)?.business.name, coach.business.name);
+  // 업종: 구체 이름을 못 찾으면 넓은 업종 이름 그대로, 찾으면 화면 · 내려받기 모두 그 이름(같은 함수)
+  assert.equal(documentBusiness({ answers: {} }, { industry: "유통 · 온라인 판매", name: "A" }).industry, "유통 · 온라인 판매");
+  assert.equal(documentBusiness({ answers: {} }, { name: "A" } as { name: string; industry?: string }).name, "A");
   console.log("document context: passed (cross-tab targeting, missing plan, manual-edit protection, per-business export context)");
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

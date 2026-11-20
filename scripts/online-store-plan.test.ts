@@ -124,7 +124,10 @@ async function main() {
     assert.ok(ui.includes("에 더 가까워 보여요. {sectorCheckPrompt(sectorSuggestion)}") && ui.includes(">바꾸기</AppButton>") && ui.includes(">그대로 둘게요</AppButton>") && ui.includes('action: "sector-keep"'));
     // 표지: 사업 설명으로 찾은 업종 가이드 이름(넓은 업종 이름 대신)
     const route = readFileSync(new URL("../app/api/plan/document/route.ts", import.meta.url), "utf8");
-    assert.ok(route.includes("documentIndustryLabel(plan)"));
+    assert.ok(route.includes("documentBusiness(plan, snapshot.business)"));
+    // 화면의 일반 현황 표도 같은 함수 — 화면과 PDF 의 업종이 달리 나오지 않게
+    assert.ok(readFileSync(new URL("../app/plan/document/PlanDocumentBody.tsx", import.meta.url), "utf8").includes("documentBusiness(p, "));
+    assert.ok(readFileSync(new URL("../lib/plan-builder/document-context.ts", import.meta.url), "utf8").includes("documentIndustryLabel(plan) || business.industry"));
   }
 
   // ── 3. 홍보 키트: 걸린 말만 고치고, 성분 사실은 그대로, 안전·건강 주장은 뺀다 ──
