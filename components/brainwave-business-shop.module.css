@@ -182,9 +182,69 @@
 .mark { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 10px; color: #fff; background: var(--accent); font-size: 17px; font-weight: 800; line-height: 1; }
 .desktop .mark { flex-basis: 40px; width: 40px; height: 40px; border-radius: 12px; font-size: 20px; }
 .heroPattern { position: absolute; inset: -14% 0; pointer-events: none; background-image: var(--t-pattern, radial-gradient(circle, rgba(255, 255, 255, .18) 1.2px, transparent 1.7px)); background-size: var(--t-pattern-size, 22px 22px); -webkit-mask-image: radial-gradient(110% 85% at 50% 8%, #000 0%, transparent 80%); mask-image: radial-gradient(110% 85% at 50% 8%, #000 0%, transparent 80%); transform: translate3d(0, calc(var(--pass, 0) * 70px), 0); will-change: transform; }
-.heroMark { position: absolute; top: -6%; right: -4%; color: var(--mint); font-size: 260px; font-weight: 800; line-height: 1; opacity: .13; pointer-events: none; user-select: none; transform: translate3d(0, calc(var(--pass, 0) * -130px), 0) rotate(-8deg); will-change: transform; }
-.desktop .heroMark { top: 2%; right: 3%; font-size: 520px; }
 @media (prefers-reduced-motion: reduce) {
   .heroPattern { transform: none !important; }
-  .heroMark { transform: rotate(-8deg) !important; }
 }
+
+/*
+ * 요즘식 연출 묶음(2026-11-20 샘플) — 전부 사진이 없는 공개 화면에서, 움직임이 켜졌을 때만(data-motion="on").
+ * '움직임 줄이기'를 켠 기기·편집 화면·축소 미리보기에서는 멈춘 그림으로 남는다.
+ */
+/* 1. 흐르는 색 번짐 — 분위기 색 덩어리 셋이 천천히 떠다닌다(흐림 필터 없이 그라디언트만: 휴대전화에서 가볍다) */
+.aurora { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.aurora i { position: absolute; width: 78%; aspect-ratio: 1; border-radius: 50%; will-change: transform; }
+.aurora i:nth-child(1) { top: -42%; left: -22%; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 88%, #fff) 0%, transparent 100%); opacity: .8; }
+.aurora i:nth-child(2) { top: -18%; right: -30%; background: radial-gradient(closest-side, color-mix(in srgb, var(--mint) 75%, transparent) 0%, transparent 100%); opacity: .5; }
+.aurora i:nth-child(3) { bottom: -62%; left: 18%; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 70%, var(--mint)) 0%, transparent 100%); opacity: .55; }
+.page[data-motion="on"] .aurora i { animation: shopDrift 13s ease-in-out infinite alternate; }
+.page[data-motion="on"] .aurora i:nth-child(2) { animation-duration: 17s; animation-direction: alternate-reverse; }
+.page[data-motion="on"] .aurora i:nth-child(3) { animation-duration: 21s; }
+@keyframes shopDrift { from { transform: translate3d(-6%, -4%, 0) scale(1); } to { transform: translate3d(14%, 10%, 0) scale(1.28); } }
+/* 2. 마우스를 따라오는 빛 */
+.heroGlow { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(460px circle at var(--mx, 50%) var(--my, -30%), rgba(255, 255, 255, .16), transparent 70%); }
+/* 3. 입체 글자 — 같은 글자 12겹을 깊이 방향으로 쌓았다. 스크롤(--pass)에 따라 돌고, 가만히 있을 때는 천천히 떠 있다 */
+.mark3d { position: absolute; top: 34px; left: 50%; width: 150px; height: 150px; margin-left: -75px; perspective: 700px; pointer-events: none; }
+.markSolid { --d: 2.6px; position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transform: rotateX(12deg) rotateY(calc(-34deg + var(--pass, 0) * 96deg)); }
+.markSolid span { position: absolute; inset: 0; display: grid; place-items: center; color: color-mix(in srgb, var(--mint) 48%, #000); font-size: 124px; font-weight: 800; line-height: 1; transform: translateZ(calc((5.5 - var(--k)) * var(--d))); }
+.markSolid span:first-child { color: var(--mint); text-shadow: 0 0 34px color-mix(in srgb, var(--mint) 55%, transparent); }
+.page[data-motion="on"] .mark3d { animation: shopFloat 5.5s ease-in-out infinite alternate; }
+@keyframes shopFloat { from { translate: 0 -8px; } to { translate: 0 10px; } }
+.hero:not(.heroPhoto) .heroCopy { padding-top: 204px; }
+/* PC: 글은 왼쪽, 입체 글자는 오른쪽 — 사진 없는 첫 화면이 '글 + 물체' 두 칸으로 선다 */
+.desktop .hero:not(.heroPhoto) { text-align: left; }
+.desktop .hero:not(.heroPhoto) .heroCopy { justify-items: start; padding: 120px 44% 180px max(48px, 7%); }
+.desktop .mark3d { top: 50%; right: 11%; left: auto; width: 360px; height: 360px; margin: -250px 0 0; perspective: 1200px; }
+.desktop .markSolid { --d: 5.5px; }
+.desktop .markSolid span { font-size: 310px; }
+/* 4. 움직이는 제목 — 흰 글자 위로 분위기 색 빛이 지나간다 */
+.page[data-motion="on"] .hero:not(.heroPhoto) .heroCopy h1 { color: transparent; background: linear-gradient(100deg, #fff 0%, #fff 42%, var(--mint) 50%, #fff 58%, #fff 100%) 100% 0 / 300% 100%; -webkit-background-clip: text; background-clip: text; animation: shopShine 6.5s linear infinite; }
+@keyframes shopShine { from { background-position: 100% 0; } to { background-position: -50% 0; } }
+/* 5. 흐르는 띠 — 가게 이름과 한 줄 소개 */
+.marquee { overflow: hidden; margin: 0 -12px 44px; }
+.desktop .marquee { margin: 0 -24px 72px; }
+.marquee > div { display: flex; width: max-content; }
+.page[data-motion="on"] .marquee > div { animation: shopMarquee 46s linear infinite; }
+.marquee span { display: flex; flex: none; }
+.marquee b { padding: 0 22px; color: color-mix(in srgb, var(--ink) 13%, transparent); font-size: 40px; font-weight: 800; line-height: 1.3; white-space: nowrap; }
+.marquee b:nth-child(odd) { color: var(--accent); }
+.desktop .marquee b { padding: 0 34px; font-size: 76px; }
+@keyframes shopMarquee { to { transform: translate3d(-50%, 0, 0); } }
+/* 6. 붙어서 넘어가는 이용 순서 — .story 가 길어지고 띠가 화면에 붙는다. --pass 가 오를수록 단계가 하나씩 밝아진다 */
+.page[data-motion="on"] .story::after { content: ""; display: block; height: 110vh; }
+/* 붙어 있는 동안 띠가 화면을 채운다 — 낮은 띠만 붙으면 그 아래가 빈 화면으로 남았다 */
+.page[data-motion="on"] .story > .violet { position: sticky; top: 84px; min-height: calc(100vh - 108px); align-content: center; }
+.page[data-motion="on"] .story .violetCopy { gap: 28px; }
+.page[data-motion="on"] .story .violetCopy h2 { font-size: 34px; }
+.desktop.page[data-motion="on"] .story .violetCopy h2 { font-size: 56px; }
+.desktop.page[data-motion="on"] .story .violetSteps li { padding: 34px 30px; font-size: 21px; }
+.page[data-motion="on"] .story .violetSteps li[data-in] { --lit: clamp(0, calc((var(--pass, 1) - var(--i) * var(--gap, .16) + .012) * 16), 1); opacity: calc(.26 + var(--lit) * .74); transform: translate3d(0, calc((1 - var(--lit)) * 18px), 0) scale(calc(.96 + var(--lit) * .04)); background: rgba(255, 255, 255, calc(.08 + var(--lit) * .1)); transition: opacity .3s ease, transform .3s ease, background .3s ease; transition-delay: 0s; }
+/* 7. 카드 기울기 — 마우스 쪽으로(마우스 기기만) */
+@media (hover: hover) and (pointer: fine) {
+  .page[data-motion="on"] .card[data-in]:hover { transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(-6px); transition: transform .18s ease-out, box-shadow .5s ease; transition-delay: 0s; }
+}
+/* 8. 읽은 만큼 차오르는 줄 — 브라우저 기본 스크롤 연동 애니메이션(JS 없이). 지원하지 않는 브라우저에는 나오지 않는다 */
+.progress { display: none; }
+@supports (animation-timeline: scroll()) {
+  .page[data-motion="on"] .progress { display: block; position: fixed; top: 0; right: 0; left: 0; z-index: 7; height: 3px; background: var(--mint); transform-origin: 0 50%; animation: shopProgress linear both; animation-timeline: scroll(root block); }
+}
+@keyframes shopProgress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
