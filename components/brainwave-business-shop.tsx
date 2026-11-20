@@ -29,14 +29,23 @@ export function BusinessShop0_1102({ overrides, hidden, sectionOrder, onPick, de
   const { text, photo, lines, Text, Button, Photo, PhotoSlot, ordered } = kitPieces({ overrides, hidden, sectionOrder, onPick }, { button: styles.button, photoSlot: styles.photoSlot });
   const motionRef = useKitMotion(!onPick);
 
+  /* 가게 이름 첫 글자 — 머리글의 도장 모양 표시와 사진 없는 첫 화면의 큰 글자 장식에 같이 쓴다(로고 그림이 없어도 한 브랜드로 보이게) */
+  const mark = [...text("0:1361").trim()][0] ?? "";
+
   const sections: Record<string, () => ReactNode> = {
-    [HEADER]: () => <header key={HEADER} data-bw-node={HEADER} className={styles.header}>{Text({ id: "0:1361", as: "strong", className: styles.brand })}</header>,
+    [HEADER]: () => <header key={HEADER} data-bw-node={HEADER} className={styles.header}>
+      {mark ? <span className={styles.mark} aria-hidden>{mark}</span> : null}
+      {Text({ id: "0:1361", as: "strong", className: styles.brand })}
+    </header>,
     [HERO]: () => {
       const url = photo("0:1325/0/0");
       return <section key={HERO} data-bw-node={HERO} className={styles.heroWrap}>
         <div className={`${styles.hero} ${url ? styles.heroPhoto : ""}`} data-scroll>
           {url ? Photo({ id: "0:1325/0/0", url, className: styles.heroImage, kenburns: true }) : null}
           <div className={styles.heroShade} aria-hidden />
+          {/* 사진이 없을 때만 — 분위기 무늬와 가게 이름 첫 글자가 사진 자리를 채운다 */}
+          {!url ? <div className={styles.heroPattern} aria-hidden /> : null}
+          {!url && mark ? <span className={styles.heroMark} aria-hidden>{mark}</span> : null}
           <div className={styles.heroCopy}>
             {Text({ id: "0:1327", as: "h1", reveal: { order: 0, kind: "title" } })}
             {Text({ id: "0:1328", className: styles.heroLead, reveal: 2 })}

@@ -36,7 +36,7 @@
 .button:focus-visible, .linkButton:focus-visible, .greenButton:focus-visible, .heroButton:focus-visible { outline: 3px solid #b7b1ff; outline-offset: 3px; }
 
 /* 머리글 */
-.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; background: #fff; }
+.header { display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 18px 20px; background: #fff; }
 .brand { min-width: 0; overflow-wrap: anywhere; font-family: var(--bw-rubik), Pretendard, sans-serif; font-size: 20px; font-weight: 700; }
 
 /* 첫 화면 — 둥근 사진 판, 가운데 흰 큰 제목 */
@@ -174,3 +174,17 @@
 /* 편집 화면 전용 — 비어 있는 카드 사진·마무리 띠 사진 자리(공개 화면에는 없다) */
 .cardSlot { aspect-ratio: 16 / 10; border-width: 0 0 1.5px; border-radius: 0; }
 .ctaSlot { position: relative; z-index: 1; width: auto; min-height: 44px; padding: 8px 16px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }
+
+/*
+ * 사진·로고 없이도 꾸민 것처럼 — 분위기 무늬(--t-pattern, lib/landing/themes.ts)와 가게 이름 첫 글자.
+ * 둘 다 사진이 없는 첫 화면에만 그린다. 스크롤하면 무늬는 천천히 내려가고 큰 글자는 위로 빠져 깊이가 생긴다.
+ */
+.mark { display: grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 10px; color: #fff; background: var(--accent); font-size: 17px; font-weight: 800; line-height: 1; }
+.desktop .mark { flex-basis: 40px; width: 40px; height: 40px; border-radius: 12px; font-size: 20px; }
+.heroPattern { position: absolute; inset: -14% 0; pointer-events: none; background-image: var(--t-pattern, radial-gradient(circle, rgba(255, 255, 255, .18) 1.2px, transparent 1.7px)); background-size: var(--t-pattern-size, 22px 22px); -webkit-mask-image: radial-gradient(110% 85% at 50% 8%, #000 0%, transparent 80%); mask-image: radial-gradient(110% 85% at 50% 8%, #000 0%, transparent 80%); transform: translate3d(0, calc(var(--pass, 0) * 70px), 0); will-change: transform; }
+.heroMark { position: absolute; top: -6%; right: -4%; color: var(--mint); font-size: 260px; font-weight: 800; line-height: 1; opacity: .13; pointer-events: none; user-select: none; transform: translate3d(0, calc(var(--pass, 0) * -130px), 0) rotate(-8deg); will-change: transform; }
+.desktop .heroMark { top: 2%; right: 3%; font-size: 520px; }
+@media (prefers-reduced-motion: reduce) {
+  .heroPattern { transform: none !important; }
+  .heroMark { transform: rotate(-8deg) !important; }
+}

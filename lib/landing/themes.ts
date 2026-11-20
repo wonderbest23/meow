@@ -14,14 +14,17 @@ import { firstSectorMatch } from "../sector-match";
  *   highlight 보조 강조(작은 제목·아이콘·두 번째 버튼)
  *   soft      옅은 바탕 띠
  *   paper     페이지 바탕
+ *
+ * pattern 은 사진이 없는 진한 판(첫 화면)에 까는 무늬다 — 사진 대신 CSS 로 그려서 어떤 업종에 붙어도
+ * 남의 상품 사진처럼 보이지 않는다. 색처럼 분위기마다 하나씩 짝지어 두고 --t-pattern 으로 내려준다.
  */
 export const LANDING_THEMES = [
-  { id: "warm", label: "따뜻한", note: "카페·베이커리·공방", tokens: { ink: "#2b2118", accent: "#9a5b34", strong: "#7a4424", highlight: "#e0a458", soft: "#f6eee4", paper: "#fffaf4" } },
+  { id: "warm", label: "따뜻한", note: "카페·베이커리·공방", tokens: { ink: "#2b2118", accent: "#9a5b34", strong: "#7a4424", highlight: "#e0a458", soft: "#f6eee4", paper: "#fffaf4" }, pattern: { image: "radial-gradient(circle, rgba(255,255,255,.2) 1.2px, transparent 1.7px)", size: "22px 22px" } },
   /* 모던은 보조색이 회색이라, 사진 위 '문의하기'(보조색 바탕 + 진한 글씨)가 흐린 회색 단추로 보였다 — 그 단추만 흰 바탕·검은 글씨(pop) */
-  { id: "modern", label: "모던", note: "인테리어·사진·IT", tokens: { ink: "#141414", accent: "#141414", strong: "#141414", highlight: "#8a8a8a", soft: "#f2f2f0", paper: "#ffffff", pop: "#ffffff", onPop: "#141414" } },
-  { id: "fresh", label: "산뜻한", note: "병원·운동·청소", tokens: { ink: "#12302d", accent: "#0b7f72", strong: "#0b6f63", highlight: "#63c9b8", soft: "#ecf7f5", paper: "#ffffff" } },
-  { id: "luxe", label: "고급", note: "웨딩·숙박·전문직", tokens: { ink: "#1b2233", accent: "#1f2a44", strong: "#1f2a44", highlight: "#c9a86a", soft: "#f4f1ea", paper: "#fdfcf9" } },
-  { id: "vivid", label: "생기", note: "미용·반려동물·키즈", tokens: { ink: "#2a1c17", accent: "#e8603c", strong: "#c24a2a", highlight: "#ffb547", soft: "#fff1ea", paper: "#ffffff" } },
+  { id: "modern", label: "모던", note: "인테리어·사진·IT", tokens: { ink: "#141414", accent: "#141414", strong: "#141414", highlight: "#8a8a8a", soft: "#f2f2f0", paper: "#ffffff", pop: "#ffffff", onPop: "#141414" }, pattern: { image: "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)", size: "56px 56px" } },
+  { id: "fresh", label: "산뜻한", note: "병원·운동·청소", tokens: { ink: "#12302d", accent: "#0b7f72", strong: "#0b6f63", highlight: "#63c9b8", soft: "#ecf7f5", paper: "#ffffff" }, pattern: { image: "repeating-radial-gradient(circle at 50% 0%, rgba(255,255,255,.12) 0 1px, transparent 1px 44px)", size: "100% 100%" } },
+  { id: "luxe", label: "고급", note: "웨딩·숙박·전문직", tokens: { ink: "#1b2233", accent: "#1f2a44", strong: "#1f2a44", highlight: "#c9a86a", soft: "#f4f1ea", paper: "#fdfcf9" }, pattern: { image: "repeating-linear-gradient(45deg, rgba(201,168,106,.22) 0 1px, transparent 1px 26px), repeating-linear-gradient(-45deg, rgba(201,168,106,.22) 0 1px, transparent 1px 26px)", size: "100% 100%" } },
+  { id: "vivid", label: "생기", note: "미용·반려동물·키즈", tokens: { ink: "#2a1c17", accent: "#e8603c", strong: "#c24a2a", highlight: "#ffb547", soft: "#fff1ea", paper: "#ffffff" }, pattern: { image: "radial-gradient(circle, rgba(255,181,71,.4) 5px, transparent 5.5px), radial-gradient(circle, rgba(255,255,255,.16) 9px, transparent 9.5px)", size: "84px 84px, 132px 132px" } },
 ] as const;
 
 export type LandingThemeId = (typeof LANDING_THEMES)[number]["id"];
@@ -36,6 +39,7 @@ export function themeStyle(theme: string | undefined): CSSProperties | undefined
   const pop: Record<string, string> = "pop" in found.tokens ? { "--t-pop": found.tokens.pop, "--t-on-pop": found.tokens.onPop } : {};
   return {
     "--t-ink": ink, "--t-accent": accent, "--t-strong": strong, "--t-highlight": highlight, "--t-soft": soft, "--t-paper": paper, ...pop,
+    "--t-pattern": found.pattern.image, "--t-pattern-size": found.pattern.size,
     // 공개 페이지 아래 문의 양식·버튼 색도 같은 분위기로
     "--landing-accent": accent,
   } as CSSProperties;
