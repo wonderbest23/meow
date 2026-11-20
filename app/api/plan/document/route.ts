@@ -133,7 +133,7 @@ export async function POST(req: Request) {
     biz.industry ? { label: "업종", value: biz.industry } : null,
     biz.region ? { label: "지역", value: biz.region } : null,
     biz.stage ? { label: "진행 단계", value: biz.stage } : null,
-    { label: "구성", value: `${grouped.length}개 챕터 · ${sections.length}개 섹션` },
+    { label: "구성", value: `${grouped.length}개 장 · ${sections.length}개 항목` },
   ].filter((f): f is { label: string; value: string } => f !== null);
 
   const project: DocumentProjectMeta = {

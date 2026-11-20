@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import JSZip from "jszip";
 import { lexPlanMarkdown, renderPlanMarkdown, splitLeadLabel } from "../lib/plan-builder/markdown";
 import { overviewFields } from "../lib/plan-builder/document-context";
+import { officialDate } from "../lib/delivery/official-date";
 import { restoreRangeTildes } from "../lib/plan-builder/range-tildes";
 import { isAmountCell, isShortCell, tableHeaderLabels, withTableCellLabels } from "../lib/plan-builder/table-cells";
 import { splitCircledSteps } from "../lib/plan-builder/text-steps";
@@ -48,6 +49,11 @@ async function main() {
   assert.ok((await renderPdf([doc], project, font)).subarray(0, 5).toString() === "%PDF-", "PDF renders");
 
   // 1b. 공문서 양식: 일반 현황 표는 넘긴 값만, 첫 장 머리 아래 한 번. 굵은 머리말만 '□ 소제목'이 된다.
+  // 날짜는 정부 공문서 표기(연 · 월 · 일 글자 대신 온점), 한국 시각 기준 — 실행 환경에 따라 달라지지 않는다
+  assert.equal(officialDate("2026-11-20T03:00:00Z"), "2026. 11. 20.");
+  assert.equal(officialDate("2026-01-04T16:00:00Z"), "2026. 1. 5.", "한국 시각으로 날짜가 넘어간다");
+  assert.equal(officialDate("없는 날짜"), "");
+  assert.equal(overviewFields({ name: "아침 빵집" }, undefined, new Date("2026-11-20T03:00:00Z")).at(-1)?.value, "2026. 11. 20.");
   const overview = overviewFields({ name: "아침 빵집", industry: "빵집", region: " ", stage: "사업 기획" }, "일반 사업계획서");
   assert.deepEqual(overview.map(field => field.label), ["사업명", "업종", "진행 단계", "계획 유형"], "empty fields and the missing date are left out");
   const formDoc = { ...doc, markdown: "# 제목\n\n## 1. 사업 개요\n\n**핵심 고객.** 30대 직장인입니다.\n\n## 2. 시장\n\n본문 중 **굵은 말**은 그대로입니다." };
