@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { officialDate } from "./official-date";
 import {
   AlignmentType,
   BorderStyle,
@@ -398,7 +399,7 @@ function coverBlocks(document: BusinessDocument, project: DocumentProjectMeta, f
       children: [new TextRun({ text: document.type, color: colors.muted, size: 23, font: docxFont })],
       spacing: { after: 2000 },
     }),
-    fieldTable([...fields, { label: "작성일", value: new Date(project.generatedAt).toLocaleDateString("ko-KR") }], 1, 70),
+    fieldTable([...fields, { label: "작성일", value: officialDate(project.generatedAt) }], 1, 70),
     new Paragraph({
       children: [new TextRun({
         text: project.sample
@@ -436,7 +437,7 @@ function collectDeliveryText(documents: BusinessDocument[], project: DocumentPro
     project.customer,
     project.model,
     project.sector,
-    new Date(project.generatedAt).toLocaleDateString("ko-KR"),
+    officialDate(project.generatedAt),
     // 커스텀 표지 항목(라벨·값)도 서브셋 대상에 포함
     ...([...(project.coverFields ?? []), ...(project.overviewFields ?? [])].flatMap((f) => [f.label, f.value])),
   ];
@@ -475,7 +476,8 @@ export async function renderDocx(
     },
     sections: [{
       // 상세 문서는 표지에 머리말·쪽 번호를 찍지 않는다
-      properties: { titlePage: !onePage, page: { ...(onePage ? { size: { width: 11906, height: 16838 } } : {}), margin: { top: onePage ? 760 : 900, right: 900, bottom: onePage ? 760 : 900, left: 900 } } },
+      // 여백: 위 · 좌우 20mm(1134), 아래 15mm(850) — 정부 서식 설계기준(행정업무규정 시행규칙 별표: 위 · 좌우 20mm). 한 장 요약은 한 쪽에 담으려고 예전 값 그대로
+      properties: { titlePage: !onePage, page: { ...(onePage ? { size: { width: 11906, height: 16838 } } : {}), margin: onePage ? { top: 760, right: 900, bottom: 760, left: 900 } : { top: 1134, right: 1134, bottom: 850, left: 1134 } } },
       children,
       headers: onePage ? undefined : {
         default: new Header({ children: [new Paragraph({

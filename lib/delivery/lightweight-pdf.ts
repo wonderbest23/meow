@@ -3,6 +3,7 @@ import { lexPlanMarkdown, splitLeadLabel } from "../plan-builder/markdown";
 import { summaryBasisLabel, type ExecutiveSummary } from "../plan-builder/executive-summary";
 import { CHART_FENCE_LANG, parseChartSpec, chartScale, chartTicks, shortWon } from "../plan-builder/chart";
 import { subsetTrueType } from "./font-subset";
+import { officialDate } from "./official-date";
 
 type PdfDocumentInput = {
   title: string;
@@ -26,7 +27,8 @@ type PdfProjectInput = {
 
 const PAGE_WIDTH = 595.28;
 const PAGE_HEIGHT = 841.89;
-const LEFT = 54;
+/* 왼쪽 · 오른쪽 여백 20mm — 정부 서식 설계기준(행정업무규정 시행규칙 별표: 위 · 좌우 20mm) */
+const LEFT = 56.69;
 const CONTENT_WIDTH = PAGE_WIDTH - LEFT * 2;
 const BOTTOM = 72;
 const TOP = 62;
@@ -365,7 +367,7 @@ class PdfLayout {
     this.drawText(document.title, LEFT + 20, 218, { size: 26, color: INK, width: CONTENT_WIDTH - 40, bold: true, lineHeight: 36, align: "center" });
     this.drawText(document.type, LEFT, typeTop, { size: 12, color: MUTED, align: "center" });
     this.rule(typeTop + 46, INK, 2);
-    const date: [string, string] = ["작성일", new Date(project.generatedAt).toLocaleDateString("ko-KR")];
+    const date: [string, string] = ["작성일", officialDate(project.generatedAt)];
     const details: Array<[string, string]> = project.coverFields?.length
       ? [...project.coverFields.map((f) => [f.label, f.value] as [string, string]), date]
       : [["프로젝트", project.title], ["목표 고객", project.customer], ["수익 방식", project.model], ["문서 버전", document.versionLabel], date];
