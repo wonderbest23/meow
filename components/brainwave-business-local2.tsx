@@ -12,6 +12,7 @@ import styles from "./brainwave-business-local2.module.css";
  * 동네 가게 2(1-2226) — 킷 디자인이 아니라 직접 짠 화면. 동네 가게(0-2226)와 같은 손님 순서(무엇을·얼마에·어디서·언제)에
  * AI 가 쓴 글이 빠짐없이 보이도록 칸을 늘렸다: 소개 카드 여섯, 줄 메뉴 여섯, 사진 모음, 자주 묻는 질문 넷, 후기.
  * 구성은 HyperUI·Tailblocks·Meraki UI 블록(MIT, THIRD_PARTY_NOTICES.md)을 참고해 이 서비스의 색 변수로 다시 썼다.
+ * 겉모습(진한 판·알약 단추·진한 메뉴 카드)은 Oceanside Restaurant Free Website Template(CC BY 4.0, 같은 파일)의 규칙을 참고했다.
  * 글·사진 자리는 '1:번호' — 제목·내용처럼 짝인 칸은 번호가 나란하다(lib/landing/ai-fill.ts copyNodes 와 같은 번호).
  */
 
@@ -84,7 +85,7 @@ export function BusinessLocalTwo1_2226({ overrides, hidden, sectionOrder, onPick
     [CARDS]: () => {
       const cards = open(CARD_SLOTS);
       if (!cards.length && !text("1:31") && !text("1:32")) return null;
-      return <section key={CARDS} data-bw-node={CARDS} className={styles.band}>
+      return <section key={CARDS} data-bw-node={CARDS} className={`${styles.band} ${styles.split}`}>
         <div className={styles.head}>
           {Text({ id: "1:31", as: "h2", reveal: 0, placeholder: "소개 제목" })}
           {Text({ id: "1:32", className: styles.lead, reveal: 1, placeholder: "소개 글" })}
@@ -107,7 +108,7 @@ export function BusinessLocalTwo1_2226({ overrides, hidden, sectionOrder, onPick
       const photoCards = MENU_SLOTS.slice(0, 3).map(([name, price], index) => ({ name, price, imageId: MENU_PHOTOS[index], url: photo(MENU_PHOTOS[index]) }))
         .filter(item => text(item.name) && (item.url || editing));
       return <section key={MENU} data-bw-node={MENU} className={`${styles.band} ${styles.tinted}`}>
-        <div className={styles.head}>
+        <div className={`${styles.head} ${styles.center}`}>
           {Text({ id: "1:51", as: "h2", reveal: 0, placeholder: "메뉴·가격" })}
           {Text({ id: "1:52", className: styles.lead, reveal: 1, placeholder: "메뉴 소개" })}
         </div>
@@ -120,7 +121,6 @@ export function BusinessLocalTwo1_2226({ overrides, hidden, sectionOrder, onPick
         <ul className={styles.rows}>
           {rows.map(([name, price]) => <li key={name} className={styles.row}>
             {Text({ id: name, as: "span", className: styles.rowName, placeholder: "메뉴 이름" })}
-            <span className={styles.dots} aria-hidden />
             {Text({ id: price, as: "strong", className: styles.rowPrice, placeholder: "가격" })}
           </li>)}
         </ul>
@@ -154,7 +154,7 @@ export function BusinessLocalTwo1_2226({ overrides, hidden, sectionOrder, onPick
       const items = open(QUESTIONS);
       if (!items.length) return null;
       return <section key={FAQ} data-bw-node={FAQ} className={styles.band}>
-        <div className={styles.head}>{Text({ id: "1:91", as: "h2", reveal: 0 })}</div>
+        <div className={`${styles.head} ${styles.center}`}>{Text({ id: "1:91", as: "h2", reveal: 0 })}</div>
         <div className={styles.questions}>
           {/* 편집 화면은 답도 바로 고치게 모두 펼쳐 두고, 질문을 눌러도 접히지 않게 한다 */}
           {items.map(([question, answer], index) => <details key={question} className={styles.question} open={editing || index === 0}>
@@ -170,7 +170,7 @@ export function BusinessLocalTwo1_2226({ overrides, hidden, sectionOrder, onPick
       const none = !REVIEW_SLOTS.some(([id]) => text(id)) && (editing || text("1:105"));
       if (!reviews.length && !none) return null;
       return <section key={REVIEWS} data-bw-node={REVIEWS} className={`${styles.band} ${styles.tinted}`}>
-        <div className={styles.head}>{Text({ id: "1:101", as: "h2", reveal: 0 })}</div>
+        <div className={`${styles.head} ${styles.center}`}>{Text({ id: "1:101", as: "h2", reveal: 0 })}</div>
         {reviews.length ? <div className={styles.reviews}>
           {reviews.map(([id], index) => <figure key={id} className={styles.review} {...revealProps(index)}>
             <Quote size={22} aria-hidden />
