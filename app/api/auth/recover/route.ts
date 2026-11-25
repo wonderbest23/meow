@@ -17,7 +17,11 @@ export async function POST(request: Request) {
   try {
     const { email } = schema.parse(await request.json());
     const origin = new URL(request.url).origin;
-    const { error } = await createServerAuthClient().auth.resetPasswordForEmail(email, { redirectTo: `${origin}/account?mode=reset` });
+    /*
+     * 돌아올 주소에 ?mode=reset 같은 쿼리를 붙이지 않는다 — Supabase 가 허용 목록과 맞지 않는다고 보고 홈으로 보냈다(2026-11-25 제보).
+     * 재설정인지는 Supabase 가 붙여 주는 #type=recovery 로 /account 화면이 안다.
+     */
+    const { error } = await createServerAuthClient().auth.resetPasswordForEmail(email, { redirectTo: `${origin}/account` });
     if (error) throw error;
     return NextResponse.json({ sent: true });
   } catch (error) {
