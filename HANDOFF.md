@@ -70,7 +70,7 @@
    ```bash
    node --import tsx scripts/reliability-tests.mts
    ```
-   마지막 줄이 `183/183 reliability suites passed`처럼 전부 통과로 나오면 된다(이 문서 시점 183개).
+   마지막 줄이 `184/184 reliability suites passed`처럼 전부 통과로 나오면 된다(이 문서 시점 184개).
 
 ---
 

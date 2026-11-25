@@ -107,7 +107,7 @@ export function confirmedIntakeContext(answers: Answers): string {
   const details = Object.entries(answers["intake/details"] ?? {}).filter(([id]) => labels.has(id)).sort(([a], [b]) => a.localeCompare(b))
     .flatMap(([id, value]) => { const record = answerRecord(id, labels.get(id) ?? id, value, optionLabels.get(id)); return record ? [record] : []; });
   const periodInput = answers["intake/period"];
-  const reportingPeriod = periodInput?.basis === "user" ? answerRecord("period", "Operating reporting period", periodInput) : null;
+  const reportingPeriod = periodInput?.basis === "user" ? answerRecord("period", "실적 기간", periodInput) : null;
   const ksic = confirmedKsic(answers);
   // 업종 가이드(준비물·신고 순서·자주 놓치는 것) — 그 업종을 모르는 사람의 계획서가 시작 절차를 구체적으로 다루게 한다
   // 업종 코드가 없으면 사업 설명(무엇을 하는 사업인지, 팔 것)으로 찾는다 — 상담으로 시작한 사업은 대부분 코드가 없다.

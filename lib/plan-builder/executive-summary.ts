@@ -134,7 +134,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const goal = field("목표", "goal", context.goals.main, 100);
   if (goal.basis !== "missing") actionLines.push(goal);
   const unresolved = [customer, offer, price].filter(item => item.basis === "missing").map(item => item.label);
-  const attention = coach ? checkCoachFeasibility(coach.fields).filter(check => check.status === "attention").map(check => check.detail) : context.conflicts.map(conflict => conflict.detail);
+  const attention = coach ? checkCoachFeasibility(coach.fields, { operating: coach.stage === "operating" }).filter(check => check.status === "attention").map(check => check.detail) : context.conflicts.map(conflict => conflict.detail);
   /* 숫자 근거 고지는 한 문장으로(r37 글 점검 — 지우지 않는다). 비교 기간 길이가 다를 때만 그 경고를 덧붙인다 */
   const note = [
     "숫자는 계획 값이에요(실적 아님).",

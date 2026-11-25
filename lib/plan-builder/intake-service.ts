@@ -566,7 +566,8 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
       let raw: Record<string, unknown> | null = null;
       // 업종 가이드가 있으면 신고·등록 순서를 따로 넘긴다 — 가이드가 길이 때문에 맥락에서 빠져도 순서는 남게(2026-10-22 사업자등록 순서 어긋남)
       const guide = businessProfile(claimed.plan).playbook;
-      const stepOrder = guide ? `\n${JSON.stringify({ industryStepOrder: { name: guide.name, steps: playbookStepOrder(guide) } })}` : "";
+      // 이미 영업 중인 가게에는 신고·개업 순서를 넘기지 않는다(2026-11-25 0원 점검). 서비스 이름(오늘창업 홈페이지)은 장 작성 쪽처럼 '사업 홈페이지'로 넘긴다(계획서 품질 Q4)
+      const stepOrder = guide && claimed.intake.mode !== "operating" ? `\n${JSON.stringify({ industryStepOrder: { name: guide.name, steps: playbookStepOrder(guide) } }).replace(/오늘창업\s*홈페이지/g, "사업 홈페이지")}` : "";
       for (let designAttempt = 0; designAttempt < 2 && !raw; designAttempt++) {
         let designFailure: string | undefined;
         raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}${stepOrder}${ownerNotesContext(claimed.intake.notes)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => { const ok = normalizeGeneratedDesign(value) !== null; if (!ok) console.warn("[business-intake-job]", JSON.stringify({ event: "design-invalid", jobId: job.id, issues: designValidationIssues(value) })); return ok; }, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false , onFailure: event => { designFailure = event.code; } });

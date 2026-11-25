@@ -126,6 +126,8 @@ export type CashflowShape = {
 };
 const DEFAULT_SHAPE: CashflowShape = { premises: true, cycle: "weekly", vat: "general" };
 const FOOD_TEXT = /도시락|반찬|음식|식당|카페|커피|빵|베이커리|디저트|케이크|쿠키|김밥|분식|떡|밀키트|샐러드|주점|베이글|샌드위치/;
+/* 음식점을 돕는 사업(촬영 · 대행 · 앱 등)과 반려동물 먹거리는 음식 장사가 아니다 — 비용 표에 '포장·용기 · 폐기' 칸이 붙었다(2026-11-25 0원 점검: 음식점 메뉴 사진 출장 촬영) */
+const NOT_FOOD_TRADE = /촬영|사진|대행|컨설팅|마케팅|디자인|플랫폼|앱|소프트웨어|중개|교육|강의|인테리어|반려|애견|강아지|고양이|펫|사료/;
 const BEAUTY_TEXT = /네일|미용|헤어|속눈썹|왁싱|피부|메이크업|반영구|에스테틱|두피/;
 const EXEMPT_GOODS_TEXT = /농산물|채소|과일|정육|생선|수산물|쌀|미가공|도서|서점|책방|의원|병원|의료/;
 const MAKES_TEXT = /만드는|만들어|제작|제조|수제|공방/;
@@ -173,7 +175,7 @@ export function cashflowShapeFor(input: { typeId?: BusinessTypeId | null; struct
       : (typeId === "ship" || input.online) && structure?.offering !== "service" && revenue === "per_unit" ? "once"
         : "weekly";
   const vat: CashflowShape["vat"] = typeId === "lesson" || structure?.sector === "education" ? "exempt" : "general";
-  const trade: CashflowShape["trade"] = typeId === "lesson" || structure?.sector === "education" ? "lesson" : BEAUTY_TEXT.test(text) ? "beauty" : FOOD_TEXT.test(text) ? "food" : "other";
+  const trade: CashflowShape["trade"] = typeId === "lesson" || structure?.sector === "education" ? "lesson" : BEAUTY_TEXT.test(text) ? "beauty" : FOOD_TEXT.test(text) && !NOT_FOOD_TRADE.test(text) ? "food" : "other";
   const makesGoods = structure?.offering !== "service" && trade !== "food" && MAKES_TEXT.test(text);
   const vehicle = !premises && VEHICLE_TEXT.test(text);
   return { premises, cycle, vat, trade, exemptPossible: vat === "general" && EXEMPT_GOODS_TEXT.test(text), makesGoods, open: roadmapOpening(typeId, premises, vehicle), ...(typeId === "platform" ? { service: "connect" as const } : typeId === "app" ? { service: "app" as const } : {}), ...(subscription ? { subscription } : {}), ...(vehicle ? { vehicle } : {}) };
@@ -352,13 +354,15 @@ function goalMonths(goal: string | undefined): number {
  * '누적·총 ○명'처럼 쌓인 숫자, 자주 사는 상품의 '단골 ○명'은 한 달 판매량을 알 수 없어 바꾸지 않는다(없는 숫자를 만들지 않는다).
  */
 const VISIT_GOAL_WEEKS = 4;
-export function parseVolumeGoal(goal: string | undefined, monthDays = DEFAULT_DAYS_PER_MONTH, context: { cycle?: CashflowShape["cycle"]; unit?: string } = {}): { volume: number; months: number; label?: string } | null {
+export function parseVolumeGoal(goal: string | undefined, monthDays = DEFAULT_DAYS_PER_MONTH, context: { cycle?: CashflowShape["cycle"]; unit?: string; visitWeeks?: number } = {}): { volume: number; months: number; label?: string } | null {
   if (!goal) return null;
   // '6개월 안에'의 '월'을 월 판매량으로 읽지 않는다(앞 글자가 '개')
   const monthly = goal.match(/(?<!개)월\s*(?:[가-힣]+\s*){0,2}?([\d,]+)\s*(?:건|개(?!월)|잔|명|곳|회|벌|박|가구|팀|세트)/);
   const daily = goal.match(/하루\s*([\d,]+)\s*(?:건|개|잔|명|회|벌)/);
   const explicit = monthly ? Number(monthly[1].replace(/,/g, "")) : daily ? Number(daily[1].replace(/,/g, "")) * monthDays : 0;
-  if (explicit > 0) return { volume: explicit, months: goalMonths(goal) };
+  // 대표가 적은 말 그대로 표에 보인다 — 예전엔 '월 200개 판매'가 '대표 목표(월 매출 5,000,000원)'로 바뀌어 대표가 말한 적 없는 매출 목표처럼 읽혔다(2026-11-25 0원 점검)
+  const said = (monthly ?? daily)?.[0].trim();
+  if (explicit > 0) return { volume: explicit, months: goalMonths(goal), ...(said ? { label: said } : {}) };
   if (/누적|총\s|모두|합계|합쳐|매출|%/.test(goal)) return null;
   const counted = goal.match(/([\d,]+)\s*(명|가구|곳|팀|건|개(?!월)|세트)/);
   const n = counted ? Number(counted[1].replace(/,/g, "")) : 0;
@@ -368,10 +372,33 @@ export function parseVolumeGoal(goal: string | undefined, monthDays = DEFAULT_DA
   const people = /^(?:명|가구|곳|팀)$/.test(unit);
   if (context.cycle === "enroll" && people) return { volume: n, months: goalMonths(goal), label };
   if (context.cycle === "visits" && unit === "명") {
-    const volume = Math.ceil(n * WEEKS_PER_MONTH / VISIT_GOAL_WEEKS);
-    return { volume, months: goalMonths(goal), label: `${label} — 한 사람이 ${VISIT_GOAL_WEEKS}주에 1번 온다고 보면(가정) 월 약 ${volume.toLocaleString("ko-KR")}건` };
+    // 회당 수업(과외 · 레슨)은 학생이 보통 매주 온다 — 4주에 1번(미용 · 네일 기준)으로 보면 정기 학생 10명이 월 11회가 됐다(2026-11-25 0원 점검)
+    const weeks = context.visitWeeks ?? VISIT_GOAL_WEEKS;
+    const volume = Math.ceil(n * WEEKS_PER_MONTH / weeks);
+    return { volume, months: goalMonths(goal), label: `${label} — 한 사람이 ${weeks === 1 ? "일주일" : `${weeks}주`}에 1번 온다고 보면(가정) 월 약 ${volume.toLocaleString("ko-KR")}건` };
   }
   if (context.unit && people && unit === context.unit) return { volume: n, months: goalMonths(goal), label };
+  return null;
+}
+
+/*
+ * 판매량으로 바로 읽히지 않는 목표 두 가지를 판매량으로 바꾼다(2026-11-25 0원 점검: 이런 목표는 '목표 경우'가 통째로 빠졌다).
+ * - '예약률 60%' · '가동률 50%' 같은 이용률 목표: 처리량(월 환산) × 비율. 처리량을 모르면 만들지 않는다.
+ * - '3개월 안에 흑자' · '본전' 같은 목표: 본전 판매량.
+ * '재구매율 30%'처럼 판매량과 바로 이어지지 않는 비율은 바꾸지 않는다(없는 숫자를 만들지 않는다).
+ */
+function rateOrBreakEvenGoal(goal: string | undefined, capacityVolume: number | null, breakEven: number, unit: string): { volume: number; months: number; label: string } | null {
+  if (!goal) return null;
+  const rate = goal.match(/(예약률|가동률|이용률|점유율|객실\s*점유율|좌석\s*점유율)\s*([\d.]+)\s*%/);
+  if (rate && capacityVolume && capacityVolume > 0) {
+    const percent = Number(rate[2]);
+    if (!(percent > 0 && percent <= 100)) return null;
+    const volume = Math.round(capacityVolume * percent / 100);
+    return volume > 0 ? { volume, months: goalMonths(goal), label: `${rate[1]} ${rate[2]}% — 처리량 월 ${capacityVolume.toLocaleString("ko-KR")}${unit} × ${rate[2]}% = 월 약 ${volume.toLocaleString("ko-KR")}${unit}` } : null;
+  }
+  if (/흑자|본전|손익\s*분기|적자\s*(?:벗어|탈출|면하)/.test(goal) && breakEven > 0) {
+    return { volume: breakEven, months: goalMonths(goal), label: `흑자(본전 월 ${breakEven.toLocaleString("ko-KR")}${unit} 넘기기)` };
+  }
   return null;
 }
 
@@ -388,7 +415,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
    * 월 등록 사업(과외·구독)은 '일주일 6명'이 한 달 26명이 아니라 동시에 맡는 6명이다 — 4.3을 곱하지 않는다(Q7).
    * 등록 인원이 아닌 단위(회·시간)로 답했으면 등록 인원과 비교할 수 없어 상한으로 쓰지 않는다.
    */
-  const enrollCapacity = shape.cycle === "enroll" && capacityParsed ? (capacityParsed.unit === "명" || capacityParsed.unit === shape.subscription ? Number(input.capacity!.match(/(?:하루|일주일|한 달)\s*([\d,]+)/)![1].replace(/,/g, "")) : null) : undefined;
+  const enrollCapacity = shape.cycle === "enroll" && capacityParsed ? (capacityParsed.unit === "명" || capacityParsed.unit === shape.subscription ? capacityParsed.count : null) : undefined;
   const capacity = enrollCapacity !== undefined
     ? (enrollCapacity ? { volume: enrollCapacity, note: shape.subscription ? `맡을 수 있는 구독 ${enrollCapacity.toLocaleString("ko-KR")}${shape.subscription}` : `동시에 맡을 수 있는 인원 ${enrollCapacity.toLocaleString("ko-KR")}명` } : null)
     : capacityParsed && capacityParsed.volume > 0 ? { volume: capacityParsed.volume, note: capacityParsed.note } : null;
@@ -404,7 +431,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   // 운영 중인 사업은 이미 팔고 있다 — 조심스러운 경우는 본전의 절반이 아니라 '지금 실적이 그대로(개선 효과 없음)'
   const operating = input.operating ? { actualVolume: input.operating.actualVolume != null && input.operating.actualVolume > 0 ? Math.round(input.operating.actualVolume) : null } : null;
   const careful = operating?.actualVolume != null ? cap(operating.actualVolume) : cap(breakEven <= 1 ? 0 : Math.ceil(breakEven / 2));
-  const revenueGoal = parseRevenueGoal(input.goal), volumeGoal = revenueGoal ? null : parseVolumeGoal(input.goal, monthDays, { cycle: shape.cycle, unit });
+  const revenueGoal = parseRevenueGoal(input.goal), volumeGoal = revenueGoal ? null : parseVolumeGoal(input.goal, monthDays, { cycle: shape.cycle, unit, visitWeeks: shape.trade === "lesson" ? 1 : undefined }) ?? rateOrBreakEvenGoal(input.goal, capacity?.volume ?? null, breakEven, unit);
   // 판매량·인원 목표는 매출로 바꿔 같은 계산을 쓴다(인원 목표는 표 근거 칸에 그 말을 그대로 보인다)
   const goal = revenueGoal ?? (volumeGoal ? { revenue: volumeGoal.volume * input.unitPrice, months: volumeGoal.months, ...(volumeGoal.label ? { label: volumeGoal.label } : {}) } : null);
   const make = (key: Scenario["key"], label: string, volumes: number[]): Scenario => {

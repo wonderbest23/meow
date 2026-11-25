@@ -118,8 +118,8 @@ assert.equal(fixedCostAssumptionsFromFields([{ key: "price", value: "9,000원" }
 
 // 목표 읽기: 매출·판매량 목표만 숫자로 바꾸고, 판매량이 아닌 목표는 바꾸지 않는다
 assert.deepEqual(parseRevenueGoal("6개월 안에 월 매출 1,200만원"), { revenue: 12_000_000, months: 6 });
-assert.deepEqual(parseVolumeGoal("3개월 안에 하루 150잔"), { volume: 3900, months: 3 });
-assert.deepEqual(parseVolumeGoal("1년 안에 월 40건"), { volume: 40, months: 12 });
+assert.deepEqual(parseVolumeGoal("3개월 안에 하루 150잔"), { volume: 3900, months: 3, label: "하루 150잔" }, "대표가 적은 목표 말을 그대로 보인다(매출로 바꾸지 않음)");
+assert.deepEqual(parseVolumeGoal("1년 안에 월 40건"), { volume: 40, months: 12, label: "월 40건" });
 assert.equal(parseVolumeGoal("6개월 안에 재방문 고객 100명"), null);
 assert.equal(parseRevenueGoal("3개월 안에 흑자"), null);
 

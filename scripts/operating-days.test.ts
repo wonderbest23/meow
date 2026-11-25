@@ -19,10 +19,16 @@ assert.equal(monthDaysFromFields([{ key: "operatingDays", value: "주 2일" }]),
 assert.equal(monthDaysFromFields([{ key: "operatingDays", value: "모름" }]), 26, "읽을 수 없는 칸 값은 기본값");
 
 // 2) 한 달 환산 — 기본은 예전 문구 그대로
-assert.deepEqual(monthlyVolumeFromCapacity("대표자 혼자 / 하루 80잔"), { volume: 2080, unit: "잔", note: "하루 80잔 × 월 26일 영업 = 월 2,080잔" });
-assert.deepEqual(monthlyVolumeFromCapacity("대표자 혼자 / 하루 80잔", 9), { volume: 720, unit: "잔", note: "하루 80잔 × 월 9일 영업 = 월 720잔" });
+assert.deepEqual(monthlyVolumeFromCapacity("대표자 혼자 / 하루 80잔"), { volume: 2080, unit: "잔", count: 80, period: "하루", note: "하루 80잔 × 월 26일 영업 = 월 2,080잔" });
+assert.deepEqual(monthlyVolumeFromCapacity("대표자 혼자 / 하루 80잔", 9), { volume: 720, unit: "잔", count: 80, period: "하루", note: "하루 80잔 × 월 9일 영업 = 월 720잔" });
 assert.equal(monthlyVolumeFromCapacity("일주일 20명", 9)?.volume, 86, "주 단위 답은 영업일과 무관(월 4.3주)");
 assert.equal(monthlyVolumeFromCapacity("한 달 100건", 9)?.volume, 100);
+// 줄여 적은 기간도 읽는다(2026-11-25 0원 점검: '주 40개'·'월 40명'을 못 읽어 처리량 상한이 빠졌다)
+assert.equal(monthlyVolumeFromCapacity("대표자 혼자 / 주 40개")?.volume, 172, "주 40개 × 4.3주");
+assert.equal(monthlyVolumeFromCapacity("대표자 혼자 / 월 40명")?.volume, 40);
+assert.equal(monthlyVolumeFromCapacity("대표자 부부 / 월 50박")?.unit, "박");
+assert.equal(monthlyVolumeFromCapacity("대표자 혼자 / 매주 8건")?.volume, 34);
+assert.equal(monthlyVolumeFromCapacity("주말에만 20건"), null, "'주말'의 '주'를 기간으로 읽지 않는다");
 assert.equal(parseVolumeGoal("3개월 안에 하루 50잔")?.volume, 1300); assert.equal(parseVolumeGoal("3개월 안에 하루 50잔", 9)?.volume, 450);
 
 // 3) 현금흐름 — 같은 사업, 영업일만 다르게
