@@ -260,6 +260,12 @@ const FOOD_GUIDE = /음식|도시락|반찬|카페|빵|제과|식품|분식|푸�
 /* 사업 설명의 음식 낱말 — 음식을 직접 만들어 파는 사업만. 음식점을 돕는 사업(컨설팅·앱·교육 등)은 업종 칸을 따른다 */
 const FOOD_WORDS = /도시락|반찬|김밥|분식|떡볶이|베이커리|빵집|제과|디저트|케이크|카페|커피|식당|음식점|밀키트|푸드트럭|케이터링|수제\s*(?:잼|청|간식|버거)/;
 const NOT_FOOD_MAKER = /컨설팅|대행|교육|강의|강좌|클래스|학원|플랫폼|앱|소프트웨어|중개|마케팅|디자인|촬영|인테리어/;
+/*
+ * 반려동물 먹거리(사료 · 간식)는 사람 음식이 아니다 — 식품위생법(영업 신고 · 원산지 표시) 대신 사료관리법(사료 제조업 등록)을 따른다.
+ * 2026-11-25 0원 점검: '반려견 수제간식'이 '수제 간식' 낱말과 사료 제조 분류(108)로 음식 묶음에 들어가 휴게음식점 · 식품표시광고법 안내를 받았다.
+ */
+const PET_FOOD = /반려|애견|애묘|강아지|고양이|펫|사료/;
+const PET_FOOD_KSIC = /^108/;
 /* 미용·이용업(공중위생관리법) — 표준산업분류 9611과 업종 가이드(미용실·네일·피부관리, 이용업). 청소·이사·수리와 같은 '동네 서비스'에서 떼어 낸다 */
 const BEAUTY_KSIC = /^9611/;
 const BEAUTY_GUIDE = /미용|네일|피부\s*관리|이용업/;
@@ -320,7 +326,8 @@ export function essentialGroup(input: { intakeContext?: string; documentSector: 
   try { data = JSON.parse(input.intakeContext ?? "") as IntakeData; } catch { /* 작성 자료가 없으면 문서 업종으로 */ }
   const sector = data.sector ?? null, ksic = data.ksic?.code ?? "", guide = data.industryGuide?.name ?? "";
   const description = input.description ?? "";
-  const base: EssentialBase = FOOD_KSIC.test(ksic) || FOOD_GUIDE.test(guide) || (!ksic && FOOD_WORDS.test(description) && !NOT_FOOD_MAKER.test(description)) ? "food"
+  const petFood = PET_FOOD_KSIC.test(ksic) || PET_FOOD.test(`${guide} ${description}`);
+  const base: EssentialBase = !petFood && (FOOD_KSIC.test(ksic) || FOOD_GUIDE.test(guide) || (!ksic && FOOD_WORDS.test(description) && !NOT_FOOD_MAKER.test(description))) ? "food"
     : BEAUTY_KSIC.test(ksic) || BEAUTY_GUIDE.test(guide) ? "beauty"
     : sector && sector in SECTOR_GROUPS && sector !== "general" ? SECTOR_GROUPS[sector as ProposalSector]
     : DOCUMENT_GROUPS[input.documentSector];
@@ -335,10 +342,12 @@ export function essentialGroup(input: { intakeContext?: string; documentSector: 
 }
 
 /** 이 장이 맡는 필수 항목 — 항목 종류마다 계획서에 있는 첫 장이 맡고, 맡을 장이 없으면 실행 요약이 맡는다 */
-export function essentialsForChapter(key: string, group: EssentialGroup, presentKeys: ReadonlySet<string>): string[] {
+/* 창업 전에만 필요한 항목 — 이미 영업 중인 가게에는 넘기지 않는다(2026-11-25 0원 점검: 3년째 김밥집에 '보증금·권리금·인테리어', 계약 전 서류가 들어감) */
+const STARTUP_ONLY_KINDS = new Set<EssentialKind>(["setup", "lease", "precontract"]);
+export function essentialsForChapter(key: string, group: EssentialGroup, presentKeys: ReadonlySet<string>, options: { operating?: boolean } = {}): string[] {
   const { base, setting } = parseGroup(group);
   const items = essentials(base, setting);
-  return (Object.keys(KIND_OWNERS) as EssentialKind[]).flatMap(kind => {
+  return (Object.keys(KIND_OWNERS) as EssentialKind[]).filter(kind => !(options.operating && STARTUP_ONLY_KINDS.has(kind))).flatMap(kind => {
     const owner = KIND_OWNERS[kind].find(candidate => presentKeys.has(candidate)) ?? "summary/executive";
     return owner === key ? items[kind] : [];
   });

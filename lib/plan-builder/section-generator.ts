@@ -347,6 +347,9 @@ function evidenceDataV3(evidence?: PromptEvidence[]): string {
  */
 const GOAL_PERIOD_RULE = "대표가 답한 목표 기간(coach.fields의 goal, 예: '3개월 안에')이 있으면, 12주 표의 개업(첫 판매) 주차와 실행 요약의 '지금 정할 것'이 그 기간과 같은 시점을 말하게 씁니다. 목표 기간이 개업까지를 뜻하는지 개업 뒤 목표 달성까지를 뜻하는지 자료에 없으면 한 가지로 정해 '(가정)'으로 밝히고, 12주 순서로는 그 기간 안에 개업할 수 없으면 그 사실과 몇 주가 더 필요한지를 한 번 밝힙니다. 두 장이 다른 시점을 말하면 대표가 언제 문을 여는지 알 수 없기 때문입니다. 계산 자료에 '개업(첫 판매) 주차' 줄이 있으면 12주 표의 개업(첫 판매)과 계약은 그 주차에 두고, 실행 요약도 같은 주차를 씁니다. 돈 계산의 준비 기간 고정비가 그 주차에서 나왔기 때문입니다.";
 
+/* 이미 영업 중인 가게는 개업·계약 주차가 없다 — 목표 기간은 12주 개선 표와 실행 요약이 같은 시점을 말하게만 한다(2026-11-25 0원 점검) */
+const OPERATING_GOAL_PERIOD_RULE = "대표가 답한 목표 기간(coach.fields의 goal, 예: '6개월 안에')이 있으면, 12주 표의 개선 할 일과 실행 요약의 '지금 정할 것'이 그 기간과 같은 시점을 말하게 씁니다. 이미 영업 중인 가게라 개업·계약·신고 주차는 쓰지 않습니다. 두 장이 다른 시점을 말하면 대표가 언제까지 무엇을 바꿔야 하는지 알 수 없기 때문입니다.";
+
 /*
  * 희망적으로 말하기(2026-11-17, 실제 AI 계획서 9개 점검) — 요약 장이 '가장 큰 위험은…'·'처음에 쓸 수 있는 돈은 738,208원뿐입니다'로 시작해
  * 대표가 결론을 찾지 못했다. 같은 진짜 숫자로 '해 볼 만한 조건'을 맨 앞 한 줄에, 위험은 '지켜야 할 선'으로 뒤에 둔다. 보장하는 말은 쓰지 않는다.
@@ -380,13 +383,13 @@ function buildUserPromptV3(input: SectionGenInput): string {
   // 업종별 필수 항목 — 이 장이 맡는 것만(industry-essentials.ts). 업종 묶음은 작성 자료의 업종·분류 코드·업종 가이드로 고른다
   const group = essentialGroup({ intakeContext: input.intakeContext, documentSector: documentSector(input), description: [input.business?.name, input.business?.description, ...coachFieldValues(input.coachContext, ["business", "offer"])].filter(Boolean).join(" ") });
   const presentKeys = new Set(chaptersForType(input.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`)));
-  const essentials = essentialsForChapter(key, group, presentKeys);
-  const notes = onePlaceNotes({ chapters: [...presentKeys].map(item => ({ key: item })), financialOwner: financialTableOwner(input.planType) ?? undefined, executionChapter: hasRoadmap(input.planType) });
+  const essentials = essentialsForChapter(key, group, presentKeys, { operating });
+  const notes = onePlaceNotes({ chapters: [...presentKeys].map(item => ({ key: item })), financialOwner: financialTableOwner(input.planType) ?? undefined, executionChapter: hasRoadmap(input.planType), operating });
   const ownedNotes = notes.filter(note => note.owner === key), otherNotes = notes.filter(note => note.owner !== key);
   const data = [
     tag("coach", input.coachContext && compactCoachContext(input.coachContext).replace(/오늘창업\s*홈페이지/g, "사업 홈페이지")),
     // 업종 가이드·설계의 '오늘창업 홈페이지'(서비스 기능 이름)는 계획서 본문에 들어가지 않게 '사업 홈페이지'로 넘긴다(계획서 품질 Q4)
-    tag("intake", intake && intakeDataOnly(intake, input.coachContext).replace(/오늘창업\s*홈페이지/g, "사업 홈페이지")),
+    tag("intake", intake && intakeDataOnly(intake, input.coachContext, { operating }).replace(/오늘창업\s*홈페이지/g, "사업 홈페이지")),
     tag("operating", input.operatingContext),
     tag("section_answers", answered.length ? formatAnswers(input.answers) : ""),
     tag("financials", md, ' role="이 장이 싣는 계산 결과"'),
@@ -411,7 +414,7 @@ function buildUserPromptV3(input: SectionGenInput): string {
     overview || executive ? HOPE_FIRST_LINE : "",
     quoteCandidateLines(sectionQuoteCandidates(input)),
     executive && !hasRoadmap(input.planType) ? "첫 소제목과 첫 문단에서 이 사업의 결론(누구에게 무엇을 얼마에 팔고, 숫자로 보면 어떤지)을 말합니다. 끝에 '## 실행 전 확인 목록' 표를 하나 만들고, 앞 장들이 (확인 필요)로 남긴 것과 시작 전에 확인할 일을 겹치지 않게 5~8개로 모읍니다. 항목마다 어디서 어떻게 확인하는지 한 줄을 붙입니다." : "",
-    executive && hasRoadmap(input.planType) ? "첫 소제목과 첫 문단에서 이 계획의 결론과 첫걸음을 말합니다. 가장 큰 위험은 빼지 않되 첫 문단이 아니라 '## 지금 정할 것' 안의 지켜야 할 선으로 씁니다. '## 지금 정할 것'에 가장 큰 위험 2~3개(지켜야 할 선)와 대표가 지금 정해야 할 결정을 쓰고, 마지막에 가장 먼저 할 행동 하나를 걸리는 시간과 함께 씁니다. 이 행동은 '12주 할 일과 매달 볼 숫자' 장의 1주차 할 일과 같은 일로 씁니다. 장마다 첫 행동이 다르면 대표가 무엇부터 할지 헷갈리기 때문입니다. " + GOAL_PERIOD_RULE + " 결정과 판단 뒤에 할 행동도 그 장의 기준·행동과 같게 쓰고, 그 시점에 할 수 없는 행동(계약 뒤에 공간을 줄이는 것 등)은 쓰지 않습니다. 확인할 일, 12주 할 일, 매달 볼 숫자는 '12주 할 일과 매달 볼 숫자' 장이 맡으므로 표로 다시 만들지 않고 그 장을 가리킵니다. 같은 표가 두 장에 나오면 대표가 같은 내용을 두 번 읽기 때문입니다." : "",
+    executive && hasRoadmap(input.planType) ? "첫 소제목과 첫 문단에서 이 계획의 결론과 첫걸음을 말합니다. 가장 큰 위험은 빼지 않되 첫 문단이 아니라 '## 지금 정할 것' 안의 지켜야 할 선으로 씁니다. '## 지금 정할 것'에 가장 큰 위험 2~3개(지켜야 할 선)와 대표가 지금 정해야 할 결정을 쓰고, 마지막에 가장 먼저 할 행동 하나를 걸리는 시간과 함께 씁니다. 이 행동은 '12주 할 일과 매달 볼 숫자' 장의 1주차 할 일과 같은 일로 씁니다. 장마다 첫 행동이 다르면 대표가 무엇부터 할지 헷갈리기 때문입니다. " + (operating ? OPERATING_GOAL_PERIOD_RULE : GOAL_PERIOD_RULE) + " 결정과 판단 뒤에 할 행동도 그 장의 기준·행동과 같게 쓰고, 그 시점에 할 수 없는 행동(계약 뒤에 공간을 줄이는 것 등)은 쓰지 않습니다. 확인할 일, 12주 할 일, 매달 볼 숫자는 '12주 할 일과 매달 볼 숫자' 장이 맡으므로 표로 다시 만들지 않고 그 장을 가리킵니다. 같은 표가 두 장에 나오면 대표가 같은 내용을 두 번 읽기 때문입니다." : "",
     roadmap && operating ? [
       "이 장은 운영 중인 대표가 앞으로 12주 동안 실제로 할 개선을 정하는 장입니다. 원인은 짐작이라 틀릴 수 있으므로, 돈과 시간을 많이 쓰기 전에 원인 가설을 싸게 확인하고 매달 숫자를 보며 고치게 하려는 것입니다. 다음 세 부분을 이 순서로 씁니다.",
       "1) '## 먼저 확인할 원인 가설' — 지금 문제의 원인 가설 3개를 표(가설 | 싸게 확인하는 방법 | 이 결과면 바꾼다)로 씁니다. 기준은 자료에 있는 실적·계산 숫자로 세우고, 같은 기간끼리 비교합니다.",

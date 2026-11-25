@@ -47,6 +47,24 @@ export const CHAPTER_ROLES: Record<string, string> = {
 };
 
 /*
+ * 이미 영업 중인 가게의 장 역할 — 창업용 역할(문 연 첫 주, 초기 지출 한도, 개업)을 운영 중인 가게에 맞게 바꾼다(2026-11-25 0원 점검).
+ * 목차에 없는 장을 가리키지 않게, 남은 상품 처리를 맡는 장이 없으면 가격 장이 함께 정한다.
+ */
+const OPERATING_ROLES: Record<string, string> = {
+  "overview/summary": "맨 앞 한 줄 결론(지금 문제를 이렇게 바꾸면 목표에 닿는 조건), 지금 실적과 목표, 핵심 숫자 3개(가격, 본전 판매량, 지금 실적), 가장 먼저 할 일 하나(무엇을 하는지 한두 문장. 자세한 방법은 다른 장이 맡는다)",
+  "strategy/promotion": "바로 쓸 문구, 채널별 할 일, 돈이 드는 일과 안 드는 일, 다음 4주 동안 해 볼 홍보 실험과 지금 실적과 비교하는 방법, 손님이 어느 채널을 보고 왔는지 세는 방법",
+  "financials/expenses": "돈 숫자(한 건에 실제 남는 돈, 본전, 지금 실적과 목표의 통장 흐름)를 풀어 설명하는 유일한 장. 개선에 쓸 예산이 있으면 그 안에서 무엇에 쓰는지와 그 돈이 돌아오는 판매량. 이미 영업 중이라 시작 자금·초기 지출 한도·문 열기 전 고정비는 쓰지 않는다",
+  "summary/roadmap": "먼저 확인할 원인 가설과 판단 기준, 12주 개선 할 일(다른 장의 확인할 일을 모두 여기 주차에 넣는다), 매달 볼 숫자와 목표선",
+  "summary/executive": "맨 앞 한 줄 결론(이렇게 바꾸면 목표에 닿는 조건), 그 뒤에 지켜야 할 선으로 가장 큰 위험 2~3개와 지금 정해야 할 결정, 가장 먼저 할 행동 하나(한 줄, 걸리는 시간과 함께). 이미 영업 중이라 개업·계약·신고 일정은 쓰지 않는다",
+};
+function chapterRole(key: string, operating: boolean, chapters?: Array<{ key: string }>): string | undefined {
+  const role = (operating ? OPERATING_ROLES[key] : undefined) ?? CHAPTER_ROLES[key];
+  if (key === "strategy/price" && role && chapters && !chapters.some(chapter => chapter.key === "strategy/distribution")) return role.replace(/\(남은 상품 처리는 [^)]*\)/, "(남은 상품 처리도 이 장이 정한다)");
+  return role;
+}
+const OPERATING_FACTS = "- 이미 영업 중인 가게입니다. 신고 전 판매 금지 · 돈을 받지 않는 관심 조사 · 개업 준비 같은 창업 전 절차는 쓰지 않습니다. 바꿀 것은 지금 손님에게 작게 바로 시험하고, 같은 기간의 지금 실적과 비교해 숫자로 판단합니다. 이미 갖춘 신고·설비·매장은 다시 갖추라고 쓰지 않기 때문입니다.";
+
+/*
  * 문서 전체에서 한 장에만 쓸 말(계획서 품질 Q4, 2026-10-28 재측정 3.6/5): '저녁 예약을 처음부터 함께 할지는 대표가 정합니다' 6번,
  * '5,500원은 용기·라벨값을 넣으면 줄어듭니다' 4번, 구청 전화 안내 3번, 통화 문구 2번. '앞 장에 나온 것은 한 줄로 가리킨다'(Q2)만으로는
  * 장마다 같은 말이 다시 나왔다 — 말마다 맡을 장을 하나로 정해 시스템 지시문(<one_place>)과 장마다의 작업 줄에 함께 적는다.
@@ -55,10 +73,16 @@ export const CHAPTER_ROLES: Record<string, string> = {
  * 관심 조사 방법·목표 응답 수(12주 장), 부가세·과세 유형 안내(돈 숫자를 맡은 장), 주당 시간과 영업시간의 차이(12주 장)를 더했다.
  */
 export type OnePlaceNote = { owner: string; label: string; detail: string };
-export function onePlaceNotes(input: { chapters?: Array<{ key: string }>; financialOwner?: string; executionChapter?: boolean }): OnePlaceNote[] {
+export function onePlaceNotes(input: { chapters?: Array<{ key: string }>; financialOwner?: string; executionChapter?: boolean; operating?: boolean }): OnePlaceNote[] {
   const present = new Set(input.chapters?.map(chapter => chapter.key) ?? []);
   const pick = (...keys: Array<string | undefined>) => keys.find(key => key && present.has(key)) ?? "summary/executive";
   const decide = input.executionChapter ? `${chapterRef("summary/executive")}의 '지금 정할 것'` : `${chapterRef("summary/executive")}의 '지금 정해야 할 결정'`;
+  // 이미 영업 중인 가게에는 창업 전 일(관할 기관 신고 문의 · 돈을 받지 않는 관심 조사 · 신고 전 판매 금지)을 맡기지 않는다(2026-11-25 0원 점검)
+  const startupOnly = new Set(["관할 기관 문의 안내", "관심 조사 방법과 목표 응답 수", "신고 전에 팔면 안 되는 이유"]);
+  return notesFor(input, present, pick, decide).filter(note => !(input.operating && startupOnly.has(note.label)));
+}
+
+function notesFor(input: { financialOwner?: string; executionChapter?: boolean }, present: Set<string>, pick: (...keys: Array<string | undefined>) => string, decide: string): OnePlaceNote[] {
   return [
     { owner: "summary/executive", label: "대표가 정할 일", detail: `'~할지는 대표가 정합니다'처럼 결정을 대표에게 넘기는 문장은 ${decide}에만 한 번씩 씁니다. 다른 장은 정하지 않은 일을 대표에게 넘기는 문장을 쓰지 않고, 그 장에 필요한 안을 하나 골라 '(제안)'으로 쓰거나 아예 쓰지 않습니다` },
     { owner: pick("strategy/price", input.financialOwner), label: "한 건당 남는 돈에 대한 주의", detail: "포장 용기·라벨·폐기·수수료를 넣으면 한 건당 남는 돈이 줄어든다는 주의" },
@@ -114,9 +138,9 @@ ${order}
 - 진행·축소·변경을 가르는 판단 기준은 계산 자료의 '판단 기준' 줄에 있는 숫자를 그대로 쓰고, 판매 수는 같은 기간끼리(하루는 하루, 일주일은 일주일) 비교합니다. 출시 전에 아직 돈을 받고 팔 수 없으면 '출시 전 판단' 줄의 방법(잰 비율·닿아야 하는 사람 수·경쟁 자료)을 씁니다. 장마다 기준이 다르거나 기간이 섞이면 대표가 어느 숫자로 결정할지 헷갈리기 때문입니다. 관심 조사 결과로 계약·개업을 판단할 때는 '계약·개업 전 판단' 줄대로, 응답자가 적은 수량을 그대로 쓰지 않고 할인 원칙을 곱한 예상 구매를 처리량(하루에 만들 수 있는 양)이 아니라 본전 판매량과 같은 기간끼리 비교하고, 그 줄의 할인 원칙과 통과 기준('(제안)')을 그대로 씁니다. 할인 원칙은 모든 장이 그 줄의 문구(배수 포함)를 그대로 인용하고 '절반 이하'처럼 다른 말로 바꾸지 않습니다. 장마다 할인 문구가 다르면 대표가 응답을 어떻게 셀지 정할 수 없기 때문입니다. 처리량은 만들 수 있는 최대치일 뿐이라, 처리량을 채울 만큼 관심이 모여도 본전에 못 미치면 매달 적자이기 때문입니다.${input.executionChapter ? " 판단 기준을 표로 정하는 곳은 '12주 할 일과 매달 볼 숫자' 장이고, 다른 장은 같은 숫자를 쓰기만 합니다." : ""}
 - 실제 실적, 사용자 목표, AI 제안, 계산 결과를 서로 다른 말로 부릅니다('실적', '목표', '제안', '계산'). 섞이면 대표가 아직 없는 매출을 이미 번 돈으로 착각할 수 있기 때문입니다. 이 말은 처음 나올 때나 헷갈릴 수 있을 때만 밝히고, 같은 표시를 문장마다 괄호로 붙이지 않습니다.
 - 확인할 일만 늘어놓는 대신, 무엇을 누구에게 어떻게 팔고 어떤 순서로 할지 실제 안을 씁니다. 숫자를 쓸 수 없는 자리에는 실행할 수 있는 다른 방법을 제안합니다. 홍보 문구나 상품 구성처럼 바로 쓸 수 있는 결과물은 본문에 직접 씁니다.
-- 인허가·신고가 필요한 업종이면, 돈을 받고 파는 시범 판매나 예약 결제는 신고·등록을 마친 뒤의 일로 씁니다. 그 전에는 돈을 받지 않고 관심과 예약 의사(수량)만 모읍니다. 신고 전에 팔면 법을 어길 수 있고, 장마다 방법이 다르면 대표가 무엇을 해야 할지 헷갈리기 때문입니다. 그래서 가장 먼저 할 일은 돈이 들지 않는 확인(관할 기관 문의, 관심 조사 등)으로 씁니다. 모든 장이 이 순서를 따르되, 신고 전에 팔면 안 되는 이유는 ${input.executionChapter ? chapterRef("summary/roadmap") : "신고 순서를 정하는 장"} 한 곳에서만 설명합니다. 다른 장은 돈을 받지 않는 방법으로 쓰기만 하고 같은 주의를 다시 쓰지 않습니다. 같은 주의가 장마다 나오면 대표가 지나쳐 읽기 때문입니다.
+${input.operating ? OPERATING_FACTS : `- 인허가·신고가 필요한 업종이면, 돈을 받고 파는 시범 판매나 예약 결제는 신고·등록을 마친 뒤의 일로 씁니다. 그 전에는 돈을 받지 않고 관심과 예약 의사(수량)만 모읍니다. 신고 전에 팔면 법을 어길 수 있고, 장마다 방법이 다르면 대표가 무엇을 해야 할지 헷갈리기 때문입니다. 그래서 가장 먼저 할 일은 돈이 들지 않는 확인(관할 기관 문의, 관심 조사 등)으로 씁니다. 모든 장이 이 순서를 따르되, 신고 전에 팔면 안 되는 이유는 ${input.executionChapter ? chapterRef("summary/roadmap") : "신고 순서를 정하는 장"} 한 곳에서만 설명합니다. 다른 장은 돈을 받지 않는 방법으로 쓰기만 하고 같은 주의를 다시 쓰지 않습니다. 같은 주의가 장마다 나오면 대표가 지나쳐 읽기 때문입니다.
 - 돈을 받지 않는 관심 조사(관심 등록·예약 의사 모으기 등)의 성공 기준은 하나입니다. coach.userEditedAction이 있으면 그 doneWhen, 없으면 coach.design.nextAction.doneWhen에 적힌 기준을 모든 장이 그대로 씁니다. 다른 사람 수·비율·기간으로 바꾸거나 장마다 새 기준을 만들지 않고, 기준이 없을 때만 ${input.executionChapter ? `${chapterRef("summary/roadmap")}의 '먼저 확인할 가정' 표` : "한 장"}에서 '(제안)'으로 한 번 정합니다. 장마다 기준이 다르면 대표가 조사 결과를 보고 무엇을 정할지 알 수 없기 때문입니다. 그 doneWhen이 '먼저 모을 첫 응답 수'와 '개업·계약을 정하기 전까지 채울 전체 수' 두 걸음으로 적혀 있으면, 계약 통과 기준과 비교하는 수는 전체 수이고 첫 응답 수는 첫 1~2주에 할 일로만 씁니다(둘을 섞어 '응답이 모자라다'고 쓰지 않습니다). 그 기준의 응답 수가 계산 자료의 '본전에 필요한 단골 수'보다 적으면, 기준은 그대로 두되 그 응답을 모두 받아도 계약 통과 기준에 닿을 수 없다는 점과 다시 잡을 응답 수('(제안)', 쓴 횟수 가정 함께)를 관심 조사 방법을 맡은 장에서 한 번 밝힙니다. 채울 수 없는 기준으로 조사하면 결과가 좋아도 계약할지 정할 수 없기 때문입니다.
-- 관심 조사 글(질문 문구)을 쓸 때는 언제(날짜·요일) 몇 개(수량)를 사겠는지 묻는 칸을 꼭 넣습니다. 날짜·수량을 남긴 응답만 세는 할인 원칙은 조사 글이 그것을 물어야 쓸 수 있기 때문입니다. 한 사람이 일주일(또는 한 달)에 몇 번 살지처럼 자료에 없는 값은 '(가정)'으로 표시합니다.
+- 관심 조사 글(질문 문구)을 쓸 때는 언제(날짜·요일) 몇 개(수량)를 사겠는지 묻는 칸을 꼭 넣습니다. 날짜·수량을 남긴 응답만 세는 할인 원칙은 조사 글이 그것을 물어야 쓸 수 있기 때문입니다. 한 사람이 일주일(또는 한 달)에 몇 번 살지처럼 자료에 없는 값은 '(가정)'으로 표시합니다.`}
 - 수요는 대표 손님이 실제로 살 요일·시간대 조건에서 확인합니다. 예를 들어 출근길 손님이 핵심이면 평일 아침에 확인합니다. 다른 조건에서 센 숫자는 실제 수요와 다를 수 있기 때문입니다.
 - 영업시간·시간대(점심과 저녁 등)를 정할 때는 준비·판매·정리에 드는 시간을 더한 주당 시간이 대표의 주당 가능 시간(coach.fields의 hoursPerWeek) 안에 들게 합니다. 넘는 안을 쓰면 넘는 시간을 숫자로 밝히고 시간대를 줄인 안을 함께 씁니다. 대표가 혼자 일하면 시간이 곧 처리량이고, 계약 뒤에 시간이 모자란다는 것을 알면 이미 월세를 내고 있기 때문입니다.
 - 결제 수단은 ${input.chapters?.some(chapter => chapter.key === "strategy/distribution") ? chapterRef("strategy/distribution") : "파는 방법을 정하는 장"}에서 정한 것 하나를 모든 장이 따릅니다. 다른 장에서 결제 수수료를 말할 때는 '카드·간편결제로 받는다면'처럼 조건을 붙이고, 받지 않기로 한 결제 수단의 비용을 뺀 것처럼 쓰지 않습니다. 장마다 받는 방법이 다르면 대표가 어느 쪽으로 준비할지 헷갈리기 때문입니다.
@@ -156,7 +180,7 @@ ${input.financialOwner ? `
 ` : ""}
 ${input.chapters?.length ? `<chapter_roles>
 이 계획서의 장과 장마다 맡을 일입니다. 지금 쓰는 장은 맡은 일을 빠짐없이 하고, 다른 장이 맡은 내용(특히 숫자)은 다시 풀지 않고 결론 한 줄과 장 이름만 씁니다. 다른 장을 가리킬 때는 아래 줄 맨 앞의 이름을 글자 그대로 '○○' 장 형태로만 씁니다(예: ${chapterRef("financials/expenses")}, ${chapterRef("strategy/distribution")}). '돈 장', '실행 장', '재무 장', '비용 장'처럼 따옴표를 빼거나 줄이거나 바꾼 이름은 쓰지 않고, 같은 장을 가리키는 말은 한 장에 한 번만 씁니다. 장마다 같은 설명이 반복되면 대표가 어디를 믿을지 헷갈리고, 문서에 보이는 장 제목과 다른 이름이나 없는 장을 가리키면 찾을 수 없기 때문입니다.
-${input.chapters.map(chapter => { const focus = businessTypeFocus(input.businessTypeId, chapter.key); return `- ${chapterRef(chapter.key)}(${chapter.title}): ${CHAPTER_ROLES[chapter.key] ?? chapter.summary}${focus ? `. 이 사업 유형에서는 ${focus}도 이 장이 다룬다` : ""}`; }).join("\n")}
+${input.chapters.map(chapter => { const focus = businessTypeFocus(input.businessTypeId, chapter.key); return `- ${chapterRef(chapter.key)}(${chapter.title}): ${chapterRole(chapter.key, input.operating, input.chapters) ?? chapter.summary}${focus ? `. 이 사업 유형에서는 ${focus}도 이 장이 다룬다` : ""}`; }).join("\n")}
 </chapter_roles>
 ` : ""}
 ${input.chapters?.length ? `<one_place>
@@ -296,9 +320,34 @@ export const SECTION_PROMPT_V3_EXAMPLES = `<examples>
 </examples>`;
 
 /** 업종 자료(JSON)에서 영어 규칙 문단(guidance)을 뺀다 — 같은 규칙을 <sources>에 한국어로 옮겼다 */
-export function intakeDataOnly(intakeContext: string, coachContext?: string): string {
+/*
+ * 이미 영업 중인 가게에는 창업 준비 단계(공사 · 신고 · 계약 · 개업 순서, 시작 자금 계획, 인허가 목록)를 넘기지 않는다.
+ * 2026-11-25 0원 점검: 3년째 하는 김밥집 계획서 자료에 '공사·설비 → 신고·등록 → 개업과 시범 판매', '보증금·권리금·인테리어'가 그대로 들어가
+ * 운영 중인 대표에게 '개업 주차' · '신고 전에 팔지 마세요'가 나올 수 있었다. 업종 이름 · 조심할 점 · 사업 유형 이름은 그대로 둔다.
+ */
+function stripStartupSteps(rest: Record<string, unknown>) {
+  const done = "이미 영업 중이라 창업 준비 단계(공사·신고·등록·개업)는 지났습니다. 이 순서로 할 일을 만들지 않습니다.";
+  const structure = rest.structure as Record<string, unknown> | undefined;
+  if (structure && typeof structure === "object") {
+    const { capitalPlan: _capital, licenseChecklist: _license, ...others } = structure;
+    rest.structure = others;
+  }
+  const guide = rest.industryGuide as Record<string, unknown> | undefined;
+  if (guide && typeof guide === "object") {
+    const { steps: _steps, needs: _needs, ...others } = guide;
+    rest.industryGuide = { ...others, steps: done };
+  }
+  const type = rest.businessType as Record<string, unknown> | undefined;
+  if (type && typeof type === "object") {
+    const { roadmap: _roadmap, assumptions: _assumptions, ...others } = type;
+    rest.businessType = { ...others, roadmap: done };
+  }
+}
+
+export function intakeDataOnly(intakeContext: string, coachContext?: string, options: { operating?: boolean } = {}): string {
   try {
     const { guidance: _guidance, ...rest } = JSON.parse(intakeContext) as Record<string, unknown>;
+    if (options.operating) stripStartupSteps(rest);
     // 같은 돈 계산(financialScenario)이 공통 사업 정보에도 있으면 업종 자료 쪽은 뺀다 — 장마다 약 2,000자가 두 번 들어가고,
     // 검토 단계도 같은 자료를 받아 계획서 하나에 수만 자가 겹쳤다(2026-10-11 사전 점검). 내용이 다르면 둘 다 둔다
     const structure = rest.structure as Record<string, unknown> | null | undefined;

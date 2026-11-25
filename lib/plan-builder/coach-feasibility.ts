@@ -1,3 +1,4 @@
+import { withEul } from "../josa";
 import type { CoachField } from "./coach";
 import { DEFAULT_DAYS_PER_MONTH, monthDaysFromFields } from "./operating-days";
 import { parseWonAmount, rangeLowerText } from "./answer-number";
@@ -43,18 +44,20 @@ export function coachAmountLower(value: string | undefined): number | undefined 
 }
 
 /** 처리량 답변("대표자 혼자 / 하루 20건")을 월 판매량으로 환산한다. 하루는 한 달 영업일(기본 월 26일 — operating-days.ts), 일주일은 4.3주 가정이며 기간이 없으면 환산하지 않는다. */
-export function monthlyVolumeFromCapacity(text: string | null | undefined, monthDays = DEFAULT_DAYS_PER_MONTH): { volume: number; unit: string; note: string } | null {
-  const match = text?.match(/(하루|일주일|한 달)\s*([\d,]+)\s*([가-힣·]*)/);
+export function monthlyVolumeFromCapacity(text: string | null | undefined, monthDays = DEFAULT_DAYS_PER_MONTH): { volume: number; unit: string; note: string; count: number; period: "하루" | "일주일" | "한 달" } | null {
+  // '주 40개' · '월 40명' · '매주 8건'처럼 줄여 적은 기간도 읽는다 — 예전엔 '하루·일주일·한 달'만 읽어 처리량 상한과 작업량 검사가 빠졌다(2026-11-25 0원 점검: 캔들 목표가 처리량을 넘어도 그대로 계산)
+  const match = text?.match(/(?<![가-힣])(하루|매일|일주일|한 주|매주|주|한 달|매달|월)\s*([\d,]+)\s*([가-힣·]*)/);
   if (!match) return null;
   const count = Number(match[2].replace(/,/g, ""));
   if (!Number.isFinite(count) || count < 0) return null;
-  const factor = match[1] === "하루" ? monthDays : match[1] === "일주일" ? 4.3 : 1, unit = match[3] || "건", volume = Math.round(count * factor);
+  const period = ["하루", "매일"].includes(match[1]) ? "하루" : ["일주일", "한 주", "매주", "주"].includes(match[1]) ? "일주일" : "한 달";
+  const factor = period === "하루" ? monthDays : period === "일주일" ? 4.3 : 1, unit = match[3] || "건", volume = Math.round(count * factor);
   const shown = (n: number) => n.toLocaleString("ko-KR");
-  return { volume, unit, note: match[1] === "한 달" ? `월 ${shown(count)}${unit} 감당 기준` : `${match[1]} ${shown(count)}${unit} × ${match[1] === "하루" ? `월 ${monthDays}일 영업` : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
+  return { volume, unit, count, period, note: period === "한 달" ? `월 ${shown(count)}${unit} 감당 기준` : `${period} ${shown(count)}${unit} × ${period === "하루" ? `월 ${monthDays}일 영업` : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
 }
 
 /** These are arithmetic checks on supplied/proposed inputs, not a business viability score. */
-export function checkCoachFeasibility(fields: CoachField[]): FeasibilityCheck[] {
+export function checkCoachFeasibility(fields: CoachField[], options: { operating?: boolean } = {}): FeasibilityCheck[] {
   const map = new Map(fields.map(f => [f.key, f]));
   const money = (key: CoachField["key"]) => coachAmount(map.get(key)?.value);
   const inputs = (...keys: CoachField["key"][]) => keys.flatMap(key => map.has(key) ? [map.get(key)!] : []);
@@ -74,7 +77,13 @@ export function checkCoachFeasibility(fields: CoachField[]): FeasibilityCheck[] 
     code: "startup-budget", inputs: inputs("budget", "setupCost"), status: "unknown",
     detail: "초기 지출과 예산이 함께 정해지면 비교합니다. 미입력 비용을 0원으로 보지 않습니다.",
   };
-  if (budget != null && setup == null && fixed != null && fixed > 0) {
+  if (options.operating) {
+    // 이미 영업 중인 가게의 예산은 '새로 해 볼 일에 쓸 돈'이다(#435) — 창업 준비 예산처럼 월 고정비 몇 달분인지로 '시작 규모를 작게' 판단하지 않는다(2026-11-25 0원 점검)
+    budgetCheck.inputs = inputs("budget");
+    budgetCheck.detail = budget != null
+      ? `개선에 쓸 예산은 ${format(budget)}원입니다. 이미 영업 중인 가게라, 새로 해 볼 일의 비용이 이 안에 드는지와 그 돈이 돌아오는 판매량으로 봅니다.`
+      : "개선에 쓸 예산이 정해지면 새로 해 볼 일의 비용과 비교합니다. 미입력 비용을 0원으로 보지 않습니다.";
+  } else if (budget != null && setup == null && fixed != null && fixed > 0) {
     // 초기 지출을 묻지 않는 흐름에서도 예산이 쓰이도록: 매출이 늦게 붙는 동안 월 고정비를 몇 달 버틸 수 있는지 본다.
     const reserve = fixed * 3, months = budget / fixed;
     budgetCheck.inputs = inputs("budget", "cost");
@@ -108,7 +117,7 @@ export function checkCoachFeasibility(fields: CoachField[]): FeasibilityCheck[] 
       const perSale = hours * 52 / 12 * 60 / capacity.volume;
       workloadCheck.inputs = inputs("hoursPerWeek", "capacity");
       // 2026-10-10 진단: '포함 전'이 장마다 다르게 읽혔다 — 이 값은 주당 시간 전부를 처리량으로 나눈 것이라 판매·정리 시간까지 들어 있다
-      workloadCheck.detail = `주 ${format(hours)}시간을 모두 쓴다고 보면 처리량 월 ${format(capacity.volume)}${capacity.unit}의 1${capacity.unit}에 쓸 수 있는 시간은 평균 ${format(perSale)}분입니다. 이 시간 안에 만들기뿐 아니라 판매·정리·장보기까지 들어가야 하므로, 만드는 데 쓸 시간은 이보다 짧습니다. 실제로 1${capacity.unit}을 만드는 시간을 재서 비교합니다.`;
+      workloadCheck.detail = `주 ${format(hours)}시간을 모두 쓴다고 보면 처리량 월 ${format(capacity.volume)}${capacity.unit}의 1${capacity.unit}에 쓸 수 있는 시간은 평균 ${format(perSale)}분입니다. 이 시간 안에 만들기뿐 아니라 판매·정리·장보기까지 들어가야 하므로, 만드는 데 쓸 시간은 이보다 짧습니다. 실제로 ${withEul(`1${capacity.unit}`)} 만드는 시간을 재서 비교합니다.`;
     }
   } else if (volume != null && hours != null && minutes != null && Number.isSafeInteger(volume * minutes)) {
     const required = volume * minutes / 60, available = hours * 52 / 12;

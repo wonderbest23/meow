@@ -312,12 +312,30 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
   };
 }
 
+/*
+ * 대표가 상품·가격을 말한 방식이 업종 기본 청구 방식과 다르면 대표 말을 따른다(대표가 구조를 직접 고르면 그것이 더 앞선다).
+ * 2026-11-25 0원 점검: 과외(교육 기본값 '월 정기 결제')에 '1:1 회화 60분 / 40,000원'이라고 답했는데 월 이용료 4만원으로 계산돼 매출이 약 4배 작게 잡혔다.
+ * 콘텐츠 대행(기본값 '프로젝트')에 '월 12회 게시물 / 30만원'이라고 답했는데 건당 판매처럼 계산됐다.
+ * - 한 번(회 · 분 · 시간) 단위로 말했으면 월 정기 결제 대신 건당 결제
+ * - 한 달 단위(월 ○회 · 매달 · 월 계약 · 구독)로 말했으면 건당 · 프로젝트 대신 월 정기 결제
+ * 플랫폼 · 앱 청구 방식(수수료 · 광고 등)은 건드리지 않는다.
+ */
+export function revenueFromFounderWords(base: BusinessStructure["revenue"], answers: IntakeState["answers"] | undefined): BusinessStructure["revenue"] {
+  const text = (["offer", "price"] as const).map(id => { const answer = answers?.[id]; return answer?.status === "answered" ? `${answer.quote ?? ""} ${typeof answer.value === "string" ? answer.value : ""}` : ""; }).join(" ");
+  if (!text.trim()) return base;
+  const monthly = /(?:월|매달|한\s*달)\s*\d+\s*(?:회|번|건|개)|월\s*(?:정기|계약|구독|관리)|매달|구독|정기\s*(?:결제|관리|계약)/.test(text);
+  const perSession = /\d+\s*분(?!기)|회당|1\s*회\b|시간당|\d+\s*시간\s*(?:수업|레슨|강의|상담|촬영)|1\s*:\s*1\s*[가-힣]*\s*\d+\s*분/.test(text);
+  if (base === "subscription" && perSession && !monthly) return "per_unit";
+  if ((base === "project" || base === "per_unit") && monthly && !perSession) return "subscription";
+  return base;
+}
+
 /** KSIC 기본값 → 없으면 11업종 기본값 → 사용자 수정을 얹는다. 축별로 어디서 왔는지 함께 돌려준다. */
-export function effectiveStructure(intake: Pick<IntakeState, "ksic" | "sector" | "structure">): { values: BusinessStructure; basis: Record<StructureAxis, "user" | "ksic" | "sector"> } {
+export function effectiveStructure(intake: Pick<IntakeState, "ksic" | "sector" | "structure"> & { answers?: IntakeState["answers"] }): { values: BusinessStructure; basis: Record<StructureAxis, "user" | "ksic" | "sector"> } {
   const fromKsic = intake.ksic ? ksicStructure(intake.ksic) : undefined;
   const base = fromKsic ?? SECTOR_DEFAULT_STRUCTURE[intake.sector] ?? SECTOR_DEFAULT_STRUCTURE.general;
   // 시장 구조(sides)는 분류 기본값에 거의 없다 — 없으면 한쪽 고객으로 본다
-  const values: BusinessStructure = { ...base, sides: base.sides ?? "one" };
+  const values: BusinessStructure = { ...base, sides: base.sides ?? "one", revenue: revenueFromFounderWords(base.revenue, intake.answers) };
   const basis = Object.fromEntries(STRUCTURE_AXES.map(axis => [axis, fromKsic ? "ksic" : "sector"])) as Record<StructureAxis, "user" | "ksic" | "sector">;
   for (const axis of STRUCTURE_AXES) {
     const override = intake.structure?.[axis];
