@@ -5,6 +5,7 @@ import "./puck-inter-font.css";
 import "./release-20260916.css";
 /* 상담 단추·로그인 팝업 틀은 바로 그리고, 상담 창·로그인 폼 코드는 필요할 때 받는다(점검 r42-B 결정 1) */
 import { LoginDialogHost } from "../components/login-dialog-host";
+import { AuthLinkRescue } from "../components/auth-link-rescue";
 import { SupportChatLauncher } from "../components/support-chat-launcher";
 import { sharedOpenGraph } from "./site-metadata";
 
@@ -28,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     /* 로그인 뒤 화면은 그리기 전에 <html data-app-theme> 를 붙인다(components/app-theme.tsx) — 이 한 단계의 속성 차이만 넘긴다 */
     <html lang="ko" suppressHydrationWarning>
-      <body>{children}<SupportChatLauncher /><LoginDialogHost /></body>
+      <body>{children}<SupportChatLauncher /><LoginDialogHost /><AuthLinkRescue /></body>
     </html>
   );
 }
