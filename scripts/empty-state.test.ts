@@ -89,7 +89,7 @@ for (const path of ["app/plan/PlanList.tsx", "app/plan/chat/page.tsx"]) assert.m
 const copies: [string, RegExp][] = [
   ["app/plan/inquiries/page.tsx", /published === 0 \? "아직 공개한 홈페이지가 없어요" : "아직 들어온 문의가 없어요"[\s\S]*홈페이지 만들기[\s\S]*#hk-leads`\}>알림 번호 설정[\s\S]*onClick=\{\(\) => refresh\(true\)\}><RefreshCw size=\{14\} aria-hidden \/> 새로 확인/],
   // 만들기 전 계획서 탭 — '아직 만들기 전이에요 · 만들기'(점검 2026-11-16: 쉽게 보기가 '다 만들어졌어요'로 보였다)
-  ["app/plan/document/DocumentWorkspace.tsx", /title="아직 만들기 전이에요" description=\{pane \? undefined : "대화를 마치면 계획서를 만들 수 있어요\."\}[\s\S]*href=\{coachHref \?\? back\}>만들기[\s\S]*href=\{coachHref \?\? back\}>사업안으로 돌아가기/],
+  ["app/plan/document/DocumentWorkspace.tsx", /title="아직 만들기 전이에요" description=\{pane \? "대화에서 ‘사업계획서 만들기’를 누르면 첫 항목부터 써요\." : "대화를 마치면 계획서를 만들 수 있어요\."\}[\s\S]*href=\{coachHref \?\? back\}>대화로 가기[\s\S]*href=\{coachHref \?\? back\}>사업안으로 돌아가기/],
   ["app/plan/workspace/OperatingWorkspace.tsx", /title="아직 기간 기록이 없어요"[\s\S]*대화에서 말한 실적으로 첫 기록 만들기[\s\S]*기간 기록 추가[\s\S]*저장 전에 고칠 수 있어요<\/small>\}\s*<\/EmptyState>/],
   ["app/plan/workspace/OperatingWorkspace.tsx", /title="보관한 리포트가 없어요" description="기간 기록에서 다음 개선 행동을 정한 뒤 보관하세요"/],
   ["app/account/support/SupportCenter.tsx", /title="로그인 후 문의를 남겨 주세요" actions=\{<AppButton variant="primary" href=\{loginHref\}>/],

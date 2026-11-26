@@ -340,14 +340,15 @@ export default function DocumentWorkspace(props: Props) {
   const steps = useMemo(() => { for (const [, list] of grouped) for (const section of list) { const found = firstSteps(section.html); if (found.length) return found; } return []; }, [grouped]);
   const easyShown = useRef(false);
   useEffect(() => {
-    if (easyShown.current || !ready || !grouped.length || props.writing || !props.summary?.easy || isSample || !planId) return;
+    /* 안 쓴 항목이 남았으면(결제 전 첫 항목만 · 건너뜀) 띄우지 않는다 — 요약이 먼저 떠서 문서 끝 '남은 항목 · 전체 받기'가 가려졌다(운영 점검 2026-11-26) */
+    if (easyShown.current || !ready || !grouped.length || props.writing || !props.summary?.easy || isSample || !planId || props.lockedOutline || props.missing?.length) return;
     easyShown.current = true;
     try {
       const key = `easy-view-seen:${planId}`;
       if (localStorage.getItem(key) || location.hash.startsWith("#sec-")) return;
       localStorage.setItem(key, "1"); setSummaryMode(true);
     } catch { /* 저장소를 못 쓰면 지금처럼 전체 문서로 둔다 */ }
-  }, [ready, grouped.length, props.summary, props.writing, isSample, planId]);
+  }, [ready, grouped.length, props.summary, props.writing, isSample, planId, props.lockedOutline, props.missing?.length]);
   /*
    * 작업실 안에서는 이 칸으로 오는 링크마다(이동 번호 paneNav) 주소의 #sec- 를 다시 읽어 그 장을 열고 옮긴다 — 칸이 이미 보여도.
    * 같은 번호로는 한 번만(칸을 오갈 때마다 끌려가지 않게). 요약·이어 읽기 중이었으면 그 장 보기로 돌아온다.
@@ -603,9 +604,9 @@ export default function DocumentWorkspace(props: Props) {
             {!summaryMode && !factMode && grouped.length > 0 && <div className={styles.emphasisBar}><button type="button" aria-pressed={emphasis} onClick={() => { const next = !emphasis; setEmphasis(next); try { localStorage.setItem("oneul-plan-emphasis", next ? "on" : "off"); } catch { /* 못 적어도 이번에는 바뀐다 */ } }}><Highlighter size={15} aria-hidden="true" />숫자 강조</button></div>}
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
             {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong>{planId && !studioHeader && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
-            {notMade && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : notMade ? <EmptyState className={styles.empty} data-pane={pane ? "" : undefined} data-not-made="" icon={FileText} heading={pane ? "h2" : "h1"} title="아직 만들기 전이에요" description={pane ? undefined : "대화를 마치면 계획서를 만들 수 있어요."}
+            {notMade && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : notMade ? <EmptyState className={styles.empty} data-pane={pane ? "" : undefined} data-not-made="" icon={FileText} heading={pane ? "h2" : "h1"} title="아직 만들기 전이에요" description={pane ? "대화에서 ‘사업계획서 만들기’를 누르면 첫 항목부터 써요." : "대화를 마치면 계획서를 만들 수 있어요."}
               /* 작업실 안은 대화 칸에 있는 '사업계획서 만들기'로 — 예전 '사업안으로 돌아가기'는 어디로 가는지 몰랐다(r37 점검) */
-              actions={pane || coachHref ? <AppButton variant="primary" href={coachHref ?? back}>만들기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <AppButton variant="secondary" href={coachHref ?? back}>사업안으로 돌아가기</AppButton>} /> : <article className={styles.article}>
+              actions={pane || coachHref ? <AppButton variant="primary" href={coachHref ?? back}>대화로 가기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <AppButton variant="secondary" href={coachHref ?? back}>사업안으로 돌아가기</AppButton>} /> : <article className={styles.article}>
               {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} pc={studioPc} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length && !nav?.toolbarTools ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
@@ -616,7 +617,7 @@ export default function DocumentWorkspace(props: Props) {
                 ? <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" size="small" className={styles.noticeAction} onConfirm={() => void reflectFacts()} />
                 : factEditable ? <AppButton type="button" variant="primary" size="small" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>직접 고치기</AppButton> : coachHref && <AppButton variant="primary" size="small" className={styles.noticeAction} href={coachHref}>대화로 고치기</AppButton>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}{facts.error.retry && <AppButton type="button" variant="secondary" size="small" className={styles.factRetry} disabled={facts.busy} onClick={retryReflect}><RefreshCw size={15} aria-hidden="true" />다시 시도</AppButton>}</span>}</div>}
               {summaryMode && props.summary ? props.summary.easy
-                ? <><EasyView easy={props.summary.easy} chapters={grouped.map(([name]) => name)} steps={steps} planId={planId} onDownload={canDownloadDoc && !isSample ? () => setModal("download") : undefined} /><details className={styles.summaryMore}><summary>자세한 요약</summary><ExecutiveSummaryView summary={props.summary} /></details></>
+                ? <><EasyView easy={props.summary.easy} chapters={grouped.map(([name]) => name)} steps={steps} planId={planId} remaining={props.lockedOutline?.count ?? props.missing?.length ?? 0} onDownload={canDownloadDoc && !isSample ? () => setModal("download") : undefined} /><details className={styles.summaryMore}><summary>자세한 요약</summary><ExecutiveSummaryView summary={props.summary} /></details></>
                 : <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter} data-changing={(studioPc && list.some(section => previews.has(section.key))) || undefined}>
                 <DocumentChapterHeading number={index + 1} title={name} pc={studioPc} lead={studioPc && index === 0 ? props.identity : undefined}
                   actions={studioPc && list.some(section => previews.has(section.key)) ? <><StatusBadge tone="info">대화로 고치는 중</StatusBadge>{chapterActions(index, name)}</> : chapterActions(index, name)} />
@@ -638,7 +639,7 @@ export default function DocumentWorkspace(props: Props) {
                   {!factMode && !isSample && planId && props.reviewSource?.sections[section.key] && props.onReviewed && <DocumentSourceReview key={`${section.key}:${props.reviewSource.revision}:${props.reviewSource.sections[section.key]}`} planId={planId} sectionKey={section.key} source={props.reviewSource} disabled={editing || ["saving", "failed"].includes(props.editStates[section.key]?.status ?? "")} onReviewed={props.onReviewed} />}
                 </section>)}
               </div>)}
-              {props.lockedOutline && !props.writing && !factMode && !summaryMode && <section className={styles.lockedOutline} aria-labelledby="locked-outline-title" data-locked-outline>
+              {props.lockedOutline && !props.writing && !factMode && <section className={styles.lockedOutline} aria-labelledby="locked-outline-title" data-locked-outline>
                 <h2 id="locked-outline-title">남은 {props.lockedOutline.count}개 항목</h2>
                 <p>지금까지는 첫 항목이에요. 전체를 받으면 아래 항목을 같은 사업 내용으로 이어서 써요.</p>
                 <ol>{props.lockedOutline.chapters.map(chapter => <li key={chapter.name}><span><Lock size={14} aria-hidden="true" />{chapter.number}장 {chapter.name}</span><small>{chapter.items.join(" · ")}</small></li>)}</ol>
@@ -655,7 +656,7 @@ export default function DocumentWorkspace(props: Props) {
               ? <button type="button" className={styles.pagerNext} onClick={() => selectChapter(chapter + 1)} aria-label={`다음 장: ${chapter + 2}장 ${grouped[chapter + 1][0]}`}><span>{chapter + 2}장 {grouped[chapter + 1][0]}</span><ChevronRight size={16} aria-hidden="true" /></button>
               : <button type="button" className={styles.pagerNext} onClick={readAll}><span>전체 이어 읽기</span></button>}
           </nav>}
-          {hasActions && <footer className={styles.actions} data-download={barDownload && !factMode || undefined} data-next={showNext || undefined} data-single={singleAction || undefined} data-fact-mode={factMode || undefined}>{actionButtons()}</footer>}
+          {hasActions && !notMade && <footer className={styles.actions} data-download={barDownload && !factMode || undefined} data-next={showNext || undefined} data-single={singleAction || undefined} data-fact-mode={factMode || undefined}>{actionButtons()}</footer>}
         </div>
       </div>}
     </BusinessAppChrome>
