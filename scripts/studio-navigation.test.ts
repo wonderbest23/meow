@@ -195,6 +195,22 @@ assert.equal("launch" in STUDIO_TAB_LABELS, false, "개업 준비는 따로 탭�
 assert.equal(journeyPrepLabel(), "개업·운영", "휴대폰 넷째 탭은 개업 준비와 유지보수를 함께 담는다");
 assert.equal(journeyPrepLabel(true), "운영");
 assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
+{
+  /* 왼쪽 메뉴에서 사업을 누르면 바로 그 사업의 대화로 들어간다 — 단계 목록만 펼치는 단추가 아니다(대표 지적 2026-11-26) */
+  const railSource = readFileSync(new URL("../app/plan/BusinessRailTree.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(railSource, /setOpenId|aria-expanded=\{open\}/, "사업 줄은 펼치기 단추가 아니다");
+  assert.equal([...railSource.matchAll(/<Link className=\{styles\.planRow\}[^>]*href=\{planOpenHref\(plan\.id\)\}/g)].length, 2, "사업 줄은 그 사업의 대화로 가는 링크(두 모양 모두)");
+  assert.match(railSource, /planOpenHref = \(id: string\) => \(STUDIO_REDIRECT \|\| pathname\.startsWith\(STUDIO_PATH\) \? studioHref\(id, "chat"\) : businessChatHref\(id\)\)/);
+  /* 작업실 로딩은 화면 가운데 하나 — 칸마다 따로 그리지 않는다 */
+  const studioSource = readFileSync(new URL("../app/plan/studio/Studio.tsx", import.meta.url), "utf8");
+  assert.equal([...studioSource.matchAll(/<PlanLoading\b/g)].length, 1, "작업실은 로딩을 한 곳에서만 그린다");
+  assert.match(studioSource, /\{studioLoading && <PlanLoading fill note="사업을 불러오고 있어요" \/>\}/);
+  assert.match(studioSource, /const studioLoading = \(!ready && !fresh\) \|\| chatLoading;/);
+  assert.match(readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8"), /\(onLoadingChange \? null : <PlanLoading fill=\{!embedded\} note="대화를 불러오고 있어요" \/>\)/, "작업실 안의 대화 칸은 로딩을 따로 그리지 않는다");
+  const studioCss = readFileSync(new URL("../app/plan/studio/Studio.module.css", import.meta.url), "utf8");
+  assert.match(studioCss, /\.studio\[data-loading\] > \* \{ opacity:0; pointer-events:none; \}/, "불러오는 동안 칸을 숨긴다");
+  assert.match(studioCss, /@media \(prefers-reduced-motion:reduce\) \{ \.studio > \* \{ transition:none; \} \.pane\[data-visible\] \{ animation:none; \} \}/, "움직임 줄이기면 바로 나타난다");
+}
 /* 넷째 칸 이름 — 홈페이지를 공개하기 전에는 그 칸에 개업 준비 할 일만 있어 '개업 준비'(운영 중이면 '운영 개선'), 공개하면 '유지보수' */
 assert.equal(studioTabLabel("operations", { open: false }), "개업 준비", "공개 전 넷째 칸은 개업 준비");
 assert.equal(studioTabLabel("operations", { open: false, operating: true }), "운영 개선", "운영 중인 사업의 공개 전 넷째 칸은 운영 개선");

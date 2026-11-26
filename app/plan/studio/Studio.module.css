@@ -328,6 +328,15 @@
   .studio[data-opened] .chatCol > .paneBody { width:100%; max-width:704px; margin-inline:auto; }
   .topBar[data-opened] .toolbar { animation:studioBarIn .36s cubic-bezier(.2,.8,.2,1); }
 }
+/*
+ * 불러오는 동안은 칸을 숨기고(가운데 로딩 하나만 보인다) 다 불러오면 칸들이 함께 서서히 나타난다 — 예전엔 칸마다 원이 따로 돌고
+ * 내용이 칸마다 툭툭 끼어들어 버벅이는 것처럼 보였다(대표 지적 2026-11-26). 페이지를 바꿀 때 새로 보이는 칸도 서서히 나타난다.
+ */
+.studio > * { transition:opacity .28s ease; }
+.studio[data-loading] > * { opacity:0; pointer-events:none; }
+.pane[data-visible] { animation:studioPaneFade .22s ease both; }
+@keyframes studioPaneFade { from { opacity:0; } }
+@media (prefers-reduced-motion:reduce) { .studio > * { transition:none; } .pane[data-visible] { animation:none; } }
 @keyframes studioPaneIn { from { transform:translateX(100%); } }
 /* 끝 값도 길이로 적는다 — 적지 않으면(auto) 사이 값을 만들지 못해 절반에서 한 번에 바뀐다 */
 @keyframes studioChatIn { from { width:100vw; } to { width:var(--studio-chat-w, 430px); } }
