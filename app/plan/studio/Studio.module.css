@@ -188,6 +188,8 @@
 @media (max-width:420px) { .viewSeg { padding:2px; } .viewSeg button { padding:0 9px; font-size:.8125rem; } }
 @media (max-width:359px) { .viewSeg button { padding:0 6px; font-size:.75rem; } }
 .primary44:hover:not(:disabled) { background:var(--app-cta-hover); }
+/* 주 단추가 없을 때의 빈자리 — 가운데 페이지 알약이 한쪽으로 쏠리지 않게 돌아가기 단추와 같은 너비 */
+.mHeadSpace { flex:none; width:44px; height:44px; }
 .primary44:disabled { background:var(--app-line-strong); box-shadow:none; cursor:default; }
 @media (max-width:359px) { .primary44 { padding:10px 12px; } }
 
