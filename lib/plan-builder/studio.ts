@@ -32,6 +32,15 @@ export const STUDIO_TAB_LABELS: Record<StudioTab, string> = {
   operations: JOURNEY_LABELS.care,
 };
 
+/**
+ * 지금 보여 줄 칸 이름 — 넷째 칸은 홈페이지를 공개하기 전에는 개업 준비 할 일만 담는다(BusinessWorkspace 의 careOpen 과 같은 조건).
+ * 그동안은 이름도 '개업 준비'(운영 중이면 '운영 개선')로 부른다. 예전엔 홈페이지(3)가 잠겨 있는데 '유지보수'(4)가 열려 있어
+ * 순서가 깨져 보였고, 돌볼 것이 아직 없는데 유지보수라고 불렀다(대표 지적 2026-11-26). 공개하면 '유지보수'.
+ */
+export function studioTabLabel(tab: StudioTab, care: { open: boolean; operating?: boolean }): string {
+  return tab === "operations" && !care.open ? journeyLabel("launch", !!care.operating) : STUDIO_TAB_LABELS[tab];
+}
+
 export function isStudioTab(value: unknown): value is StudioTab {
   return typeof value === "string" && (STUDIO_TABS as readonly string[]).includes(value);
 }
