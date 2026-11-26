@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Download, MessageSquare, PenLine, Highlighter } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, List, Lock, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Download, MessageSquare, PenLine, Highlighter } from "lucide-react";
 import { highlightAmounts } from "../../../lib/client/amount-highlight";
 import BusinessAppChrome from "../BusinessAppChrome";
 import InlineDocEditor, { withBodyHeadingLevels } from "../InlineDocEditor";
@@ -70,6 +70,8 @@ type Props = {
   onSave: (key: string, html: string) => void;
   onDraft: (key: string, html: string) => void;
   exporting: Format | null; locked: boolean; accessPending: boolean; error: string | null;
+  /** 결제 전 첫 항목만 있는 문서 끝에 붙이는 '남은 항목' 목차 — 무엇이 더 들어 있는지 보여 주고 결제로 잇는다 */
+  lockedOutline?: { chapters: Array<{ number: number; name: string; items: string[] }>; count: number; price: number; onPay: () => void } | null;
   accessError: boolean; onRetryAccess: () => void;
   deckStatus?: string; deckLabel?: string;
   /** 내려받기 — 파일을 받았으면 true(창을 닫고 '내려받았어요'를 잠깐 보인다) */
@@ -417,6 +419,12 @@ export default function DocumentWorkspace(props: Props) {
     {chatEdit && <AppButton type="button" variant="text" size="small" className={`${styles.chapterAction} ${styles.chapterChatAction}`} aria-label={`${index + 1}장 ${name} — 대화로 고치기`} onClick={() => askChatEdit(index)}><MessageSquare size={14} aria-hidden="true" />대화로 고치기</AppButton>}
     {directInChapter && <AppButton type="button" variant="text" size="small" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 직접 고치기`} onClick={directEdit}><PenLine size={14} aria-hidden="true" />직접 고치기</AppButton>}
   </>;
+  /*
+   * 휴대폰 작업실: 아래 단추 줄에 '내려받기'를 둔다 — 위 막대 도구(toolbarTools)가 내려받기를 맡으면 문서 머리 칩이 빠지는데,
+   * 휴대폰에서는 그 도구가 '사업계획서 ⌄' 메뉴 안에만 있어 결제한 사람이 파일 받는 길을 찾기 어려웠다(흐름 점검 2026-11-26).
+   * 결제 전(locked)에는 문서 끝 '남은 항목'의 '전체 받기'가 그 자리라 두지 않는다. PC 는 이 줄 자체가 없다(.actions 901px 이상 숨김).
+   */
+  const barDownload = grouped.length > 0 && !!nav?.toolbarTools && !props.locked && !props.accessPending && !props.writing && !summaryMode;
   const actionButtons = (size: AppButtonSize = "default") => factMode ? <>
     <AppButton variant="secondary" size={size} className={styles.secondary} onClick={async () => {
       if (factsUnapplied && factSavedHere && !await askConfirm({ message: "고친 내용을 아직 계획서에 반영하지 않았어요. 반영하지 않고 마칠까요?", confirmLabel: "그냥 마치기", cancelLabel: "계속 고치기" })) return;
@@ -426,6 +434,7 @@ export default function DocumentWorkspace(props: Props) {
     {factsUnapplied && facts.snapshot && <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" size={size} className={styles.primary} onConfirm={() => void reflectFacts()} />}
   </> : isSample ? null /* 예시에는 단추 없음 — 내 사업 시작은 대화 칸·첫 화면에 있어 여기서는 헷갈리기만 했다(2026-11-10 사장님) */ : <>
     {/* 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다 · 내려받기는 문서 위 '작성 완료' 옆으로 옮겼다(대표 요청 2026-10-17) */}
+    {barDownload && <AppButton type="button" variant="secondary" size={size} className={`${styles.secondary} ${styles.barDownload}`} onClick={() => setModal("download")}><Download size={16} aria-hidden="true" />내려받기</AppButton>}
     {editButton(size)}
     {showNext && planId && <NextStepButton planId={planId} homepage={homepage} size={size} />}
   </>;
@@ -629,6 +638,13 @@ export default function DocumentWorkspace(props: Props) {
                   {!factMode && !isSample && planId && props.reviewSource?.sections[section.key] && props.onReviewed && <DocumentSourceReview key={`${section.key}:${props.reviewSource.revision}:${props.reviewSource.sections[section.key]}`} planId={planId} sectionKey={section.key} source={props.reviewSource} disabled={editing || ["saving", "failed"].includes(props.editStates[section.key]?.status ?? "")} onReviewed={props.onReviewed} />}
                 </section>)}
               </div>)}
+              {props.lockedOutline && !props.writing && !factMode && !summaryMode && <section className={styles.lockedOutline} aria-labelledby="locked-outline-title" data-locked-outline>
+                <h2 id="locked-outline-title">남은 {props.lockedOutline.count}개 항목</h2>
+                <p>지금까지는 첫 항목이에요. 전체를 받으면 아래 항목을 같은 사업 내용으로 이어서 써요.</p>
+                <ol>{props.lockedOutline.chapters.map(chapter => <li key={chapter.name}><span><Lock size={14} aria-hidden="true" />{chapter.number}장 {chapter.name}</span><small>{chapter.items.join(" · ")}</small></li>)}</ol>
+                <AppButton type="button" variant="primary" className={styles.lockedOutlinePay} onClick={props.lockedOutline.onPay}>전체 받기 →</AppButton>
+                <small className={styles.lockedOutlineNote}>{props.lockedOutline.price.toLocaleString("ko-KR")}원 · 결제하면 바로 이어서 써요(몇 분). PDF·Word·발표자료 PPT로 내려받을 수 있어요.</small>
+              </section>}
               {!summaryMode && !continuous && !studioPc && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
                           </article>}
           </div>
@@ -639,7 +655,7 @@ export default function DocumentWorkspace(props: Props) {
               ? <button type="button" className={styles.pagerNext} onClick={() => selectChapter(chapter + 1)} aria-label={`다음 장: ${chapter + 2}장 ${grouped[chapter + 1][0]}`}><span>{chapter + 2}장 {grouped[chapter + 1][0]}</span><ChevronRight size={16} aria-hidden="true" /></button>
               : <button type="button" className={styles.pagerNext} onClick={readAll}><span>전체 이어 읽기</span></button>}
           </nav>}
-          {hasActions && <footer className={styles.actions} data-next={showNext || undefined} data-single={singleAction || undefined} data-fact-mode={factMode || undefined}>{actionButtons()}</footer>}
+          {hasActions && <footer className={styles.actions} data-download={barDownload && !factMode || undefined} data-next={showNext || undefined} data-single={singleAction || undefined} data-fact-mode={factMode || undefined}>{actionButtons()}</footer>}
         </div>
       </div>}
     </BusinessAppChrome>

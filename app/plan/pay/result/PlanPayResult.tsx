@@ -1,7 +1,7 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, AlertTriangle, ChevronRight, Clock3, RefreshCw } from "lucide-react";
 import styles from "../PlanCheckout.module.css";
@@ -64,6 +64,19 @@ export default function PlanPayResult() {
    */
   const startHref = startsDocument ? (STUDIO_REDIRECT ? studioHref(planId!, "chat", { start: "1" }) : `/plan/chat?${new URLSearchParams({ planId: planId!, start: "1" }).toString()}`) : null;
   const doneHref = startHref ?? (homepageProduct ? siteHref : planHref);
+  /*
+   * 계획서·묶음 결제가 승인되면 누르지 않아도 작성 화면으로 넘어간다(거기서 ?start=1 이 작성을 시작한다).
+   * 예전엔 '사업계획서 작성 시작하기'를 한 번 더 눌러야 해서, 이 화면에서 창을 닫으면 결제만 되고 계획서는 안 써졌다 —
+   * 결제 동의 문구('결제가 끝나면 작성이 바로 시작돼요')와도 달랐다(흐름 점검 2026-11-26). 단추는 그대로 둔다(바로 가거나, 이동이 막혔을 때).
+   * replace — 뒤로 가기로 이 화면에 돌아와 다시 넘어가지 않게.
+   */
+  const router = useRouter();
+  const autoStart = ok && !!startHref;
+  useEffect(() => {
+    if (!autoStart || !startHref) return;
+    const timer = window.setTimeout(() => router.replace(startHref), 1500);
+    return () => window.clearTimeout(timer);
+  }, [autoStart, startHref, router]);
   const doneLabel = startsDocument ? "사업계획서 작성 시작하기" : product === "homepage" ? "홈페이지 고치러 가기" : product === "domain" ? "도메인 연결하러 가기" : product === "domain-purchase" ? "진행 상황 보기" : product === "tokens" ? "AI 수정 쓰러 가기" : "사업계획서로 가기";
   const doneDesc = product === "homepage" ? "홈페이지 편집과 공개가 열렸어요." : product === "domain" ? "1년 동안 내 도메인을 연결해 쓸 수 있어요." : product === "domain-purchase" ? ".com 주소는 몇 분 안에 사장님 명의로 등록하고 홈페이지 연결까지 자동으로 해 드려요(끝나면 문자·메일). .kr·.co.kr\u00a0은 영업일 1~2일 안에 등록하고 연결 준비를 마쳐 드려요." : product === "tokens" ? "AI 수정 토큰 20만이 충전됐어요." : product === "regen" ? "다시 생성 10회가 추가됐어요." : product === "bundle" ? "사업계획서 작성과 홈페이지 편집·공개가 함께 열렸어요. 이제 사업계획서를 작성해요(몇 분 걸려요)." : "사업계획서 전체 항목이 열렸어요. 이제 사업계획서를 작성해요(몇 분 걸려요).";
 
@@ -78,7 +91,8 @@ export default function PlanPayResult() {
         </p>
         {pending && orderId && <p className={styles.desc} style={{ overflowWrap: "anywhere" }}>주문번호 {orderId}</p>}
         {ok ? (
-          <AppButton href={doneHref} variant="primary" className={`${styles.primary} ${styles.nav}`}>{doneLabel}<ChevronRight size={18} aria-hidden="true" /></AppButton>
+          <><AppButton href={doneHref} variant="primary" className={`${styles.primary} ${styles.nav}`}>{doneLabel}<ChevronRight size={18} aria-hidden="true" /></AppButton>
+            {autoStart && <p className={styles.autoNote} role="status">잠시 뒤 작성 화면으로 넘어가요.</p>}</>
         ) : pending ? (
           loginRequired ? <AppButton href={`/account?next=${encodeURIComponent(`/plan/pay/result?${params.toString()}`)}`} variant="primary" className={`${styles.primary} ${styles.nav}`}>로그인하고 결과 확인<ChevronRight size={18} aria-hidden="true" /></AppButton>
             : <AppButton type="button" onClick={checkPayment} disabled={checking || !orderId} variant="primary" className={`${styles.primary} ${styles.statusAction}`}><RefreshCw size={18} aria-hidden="true" />{checking ? "확인 중" : "결제 결과 확인"}</AppButton>
