@@ -605,8 +605,12 @@ export default function DocumentWorkspace(props: Props) {
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
             {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong>{planId && !studioHeader && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
             {notMade && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : notMade ? <EmptyState className={styles.empty} data-pane={pane ? "" : undefined} data-not-made="" icon={FileText} heading={pane ? "h2" : "h1"} title="아직 만들기 전이에요"
-              /* 작업실 안은 대화 칸에 있는 '사업계획서 만들기'로 — 예전 '사업안으로 돌아가기'는 어디로 가는지 몰랐다(r37 점검). 빈 화면은 제목과 단추만(대표 결정 2026-11-26) */
-              actions={pane || coachHref ? <AppButton variant="primary" href={coachHref ?? back}>대화로 가기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <AppButton variant="secondary" href={coachHref ?? back}>사업안으로 돌아가기</AppButton>} /> : <article className={styles.article}>
+              /*
+               * 빈 화면은 제목과 단추만(대표 결정 2026-11-26). 단추는 '사업계획서 만들기' — 대화 칸으로 가서 그 칸의 같은 단추를 누른 것처럼
+               * 바로 쓰기 시작한다(?start=1, BusinessIntake: 로그인 전이면 로그인 창, 결제 전이면 첫 항목부터). 예전 '만들기'·'대화로 가기'는
+               * 대화로 데려가기만 해서 한 번 더 눌러야 했다. 대화 없이 만든 예전 사업(coachHref 없음)만 돌아가는 단추.
+               */
+              actions={coachHref ? <AppButton variant="primary" href={`${coachHref}&start=1`}>사업계획서 만들기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <AppButton variant={pane ? "primary" : "secondary"} href={back}>{pane ? "대화로 가기" : "사업안으로 돌아가기"}</AppButton>} /> : <article className={styles.article}>
               {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} pc={studioPc} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length && !nav?.toolbarTools ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
