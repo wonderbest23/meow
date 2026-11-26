@@ -216,6 +216,8 @@ export default function Studio() {
 
   /* ── 사업 불러오기 — 작업실이 한 번 불러온 뒤에 오른쪽 칸을 만든다(동시에 부르면 먼저 부른 칸이 옛 저장본을 받는다) ── */
   const [ready, setReady] = useState(false);
+  /* 대화 칸이 불러오는 중인지(BusinessIntake 가 알려 준다) — 작업실 로딩을 하나로 그리는 데 쓴다 */
+  const [chatLoading, setChatLoading] = useState(false);
   const [plan, setPlan] = useState<Plan | null>(null);
   const planNow = useRef<Plan | null>(null);
   planNow.current = plan;
@@ -735,6 +737,8 @@ export default function Studio() {
   /* PC 는 대화 열과 미리보기 판이 늘 함께(대화 열을 접으면 판만), 휴대폰은 대화 화면 ↔ 미리보기 화면 */
   const chatVisible = (wide && (!chatCollapsed || focus)) || (!wide && (tab === "chat" || chatOnly));
   const rightVisible = wide ? !focus : tab !== "chat" && !chatOnly;
+  /* 작업실 로딩 — 사업을 아직 못 불러왔거나(새 대화는 불러올 사업이 없다) 대화 칸이 불러오는 중. 화면 가운데에 하나만 그린다 */
+  const studioLoading = (!ready && !fresh) || chatLoading;
   /* 예시 사업 이름은 목록용 꼬리표 '샘플 · '로 저장돼 있다 — 화면에서는 다른 곳과 같게 '예시 · '로 부른다 */
   const businessTitle = sampleTitle(planId, shownTitle || (fresh && newIntent ? "새 대화" : "사업 작업실"));
   const headingRef = (id: StudioTab) => (node: HTMLHeadingElement | null) => { headings.current[id] = node; };
@@ -742,7 +746,8 @@ export default function Studio() {
 
   const rightBody = (id: RightTab): ReactNode => {
     const lock = locks[id];
-    if (!ready && !(fresh && lock)) return <PlanLoading variant="compact" note="사업을 불러오고 있어요" />;
+    /* 불러오는 동안은 칸마다 따로 그리지 않는다 — 작업실이 화면 가운데에 하나만 그린다(아래 studioLoading) */
+    if (!ready && !(fresh && lock)) return null;
     if (!mounted.includes(id)) {
       /* PC 에서 대화가 끝나기 전 — 대화는 바로 왼쪽에 있으니 '대화로 가기' 대신 지금까지 답한 내용을 보여 준다 */
       if (lock && wide && !chatComplete) return <StudioIntakeSummary snapshot={plan ? intakeSnapshot : null} />;
@@ -932,7 +937,13 @@ export default function Studio() {
         {/* 로그인이 안 돼 못 찾았으면 '로그인하기'(팝업, 끝나면 이 주소로 돌아온다) — 처음 온 사람도 이 화면을 보므로 '풀렸어요'라고 하지 않는다(2026-11-14) */}
         {missing ? <div className={styles.missingNote}><div className={hub.content}>{signedOut
           ? <MissingBusinessBody title="로그인이 필요해요" detail="로그인하면 이 사업을 볼 수 있어요." action={<AppButton type="button" variant="primary" className={hub.primary} onClick={() => openLogin()}>로그인하기</AppButton>} />
-          : <MissingBusinessBody />}</div></div> : <div className={styles.studio} data-wide={wide || undefined} data-collapsed={wide && chatCollapsed && !focus || undefined} data-focus={focus || undefined} data-sample={isSamplePlan(planId) || undefined} data-opened={slidIn || undefined}>
+          : <MissingBusinessBody />}</div></div> : <>
+          {/*
+            * 불러오는 표시는 작업실에 하나 — 예전엔 대화 칸('대화를 불러오고 있어요')과 오른쪽 칸('사업을 불러오고 있어요')에서
+            * 원이 따로 돌았다(대표 지적 2026-11-26). 화면 한가운데 하나만 그리고, 다 불러오면 칸들이 함께 서서히 나타난다(Studio.module.css).
+            */}
+          {studioLoading && <PlanLoading fill note="사업을 불러오고 있어요" />}
+          <div className={styles.studio} data-loading={studioLoading || undefined} data-wide={wide || undefined} data-collapsed={wide && chatCollapsed && !focus || undefined} data-focus={focus || undefined} data-sample={isSamplePlan(planId) || undefined} data-opened={slidIn || undefined}>
           <Pane id="chat" label={tabLabel("chat")} planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} refresh={refreshSeq.chat ?? 0} className={styles.chatCol} headingRef={headingRef("chat")}>
             {/* PC 에서 오른쪽에 보이는 열린 칸 — 대화 칸이 '홈페이지를 대화로 고치기' 같은 제안을 고른다(막힌 칸이면 null) */}
             {/* 예시 사업은 서버에 대화가 없어 대화 칸이 '사업을 찾지 못했어요 · 내 사업으로'를 보였다(감사 2026-10-23) — 읽기 전용 안내와 새 대화 길로 */}
@@ -973,7 +984,7 @@ export default function Studio() {
                 ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
                   <h2>대화 기록이 없는 사업이에요</h2>
                 </section>{noteGuideTurn}</div></div>
-                : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !focus && !locks[rightTab] ? rightTab : null} focus={focus} />}
+                : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !focus && !locks[rightTab] ? rightTab : null} focus={focus} onLoadingChange={setChatLoading} />}
           </Pane>
 
           {/* 미리보기 판 — PC 는 r16 흰 판(대화 열 오른쪽), 휴대폰은 머리 아래 전체 화면 */}
@@ -985,7 +996,7 @@ export default function Studio() {
               </Pane>)}
             </div>
           </div>
-        </div>}
+        </div></>}
       </BusinessAppChrome>
     </main>
   </StudioNavContext.Provider>;

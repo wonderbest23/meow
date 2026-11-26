@@ -9,7 +9,7 @@ import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscrib
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
 import { stepForStudioTab, studioHref, studioTabForStep, studioTabParam, STUDIO_PATH, STUDIO_REDIRECT } from "../../lib/plan-builder/studio";
-import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
+import { businessChatHref, shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
 import { planDisplayName } from "../../lib/plan-builder/business-name";
 import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
@@ -202,8 +202,11 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
   const mounted = useSyncExternalStore(noSubscribe, onClient, onServer);
   const [tick, setTick] = useState(0);
   const [listOpen, setListOpen] = useState(true);
-  /* 한 번에 한 사업만 펼친다(소유자 피드백 2026-10-07: 여러 개가 열려 헷갈림). undefined = 지금 보는 사업 */
-  const [openId, setOpenId] = useState<string | null | undefined>(undefined);
+  /*
+   * 사업을 누르면 바로 그 사업의 대화로 들어간다 — 예전엔 누르면 단계 목록만 펼쳐져 한 번 더 눌러야 했다(대표 지적 2026-11-26).
+   * 단계 목록은 지금 열려 있는 사업 아래에만 보인다(다른 화면으로 옮겨 가는 목차).
+   */
+  const planOpenHref = (id: string) => (STUDIO_REDIRECT || pathname.startsWith(STUDIO_PATH) ? studioHref(id, "chat") : businessChatHref(id));
   const [watchedPlanId, setUrlPlanId] = useState<string | null | undefined>(undefined);
   const livePlanId = useSyncExternalStore(noSubscribe, readPlanId, noPlanId);
   const urlPlanId = watchedPlanId === undefined ? livePlanId : watchedPlanId;
@@ -292,8 +295,6 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
   }, [mounted, currentId, plans]);
   // 못 불러왔으면 화면을 옮길 때 다시 읽는다
   useEffect(() => { if (remoteFailed) setRemoteTick(n => n + 1); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
-  // 다른 사업 화면으로 옮기면 그 사업만 펼친 상태로 돌아간다.
-  useEffect(() => { setOpenId(undefined); }, [currentId]);
 
   function toggleList() {
     const next = !listOpen;
@@ -310,14 +311,13 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
         {checked && !remoteFailed && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요</p>}
         {plans.map(plan => {
           const isCurrent = plan.id === currentId;
-          const open = openId === undefined ? isCurrent : openId === plan.id;
           const display = planDisplayName(plan);
           return <div key={plan.id} className={styles.plan}>
-            <button type="button" className={styles.planRow} data-current={isCurrent || undefined} aria-expanded={open} title={display} onClick={() => setOpenId(open ? null : plan.id)}>
+            <Link className={styles.planRow} data-current={isCurrent || undefined} aria-current={isCurrent ? "true" : undefined} title={display} href={planOpenHref(plan.id)} onClick={() => setActivePlan(plan.id)}>
               <b className={styles.letter} aria-hidden="true">{display.trim().charAt(0) || "사"}</b>
               <span>{planDisplayName(plan)}</span>
-            </button>
-            {open && <PlanBranch plan={plan} here={isCurrent ? step : null} documentToc={documentToc} pathname={pathname} />}
+            </Link>
+            {isCurrent && <PlanBranch plan={plan} here={isCurrent ? step : null} documentToc={documentToc} pathname={pathname} />}
           </div>;
         })}
       </div>}
@@ -343,13 +343,12 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
       {remoteFailed && plans.length === 0 && <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>}
       {plans.map(plan => {
         const isCurrent = plan.id === currentId;
-        const open = openId === undefined ? isCurrent : openId === plan.id;
         return <div key={plan.id} className={styles.plan}>
-          <button type="button" className={styles.planRow} data-current={isCurrent || undefined} aria-expanded={open} title={planDisplayName(plan)} onClick={() => setOpenId(open ? null : plan.id)}>
-            <ChevronRight className={styles.caret} data-open={open || undefined} aria-hidden="true" />
+          <Link className={styles.planRow} data-current={isCurrent || undefined} aria-current={isCurrent ? "true" : undefined} title={planDisplayName(plan)} href={planOpenHref(plan.id)} onClick={() => setActivePlan(plan.id)}>
+            <ChevronRight className={styles.caret} data-open={isCurrent || undefined} aria-hidden="true" />
             <span>{planDisplayName(plan)}</span>
-          </button>
-          {open && <PlanBranch plan={plan} here={isCurrent ? step : null} documentToc={documentToc} pathname={pathname} />}
+          </Link>
+          {isCurrent && <PlanBranch plan={plan} here={isCurrent ? step : null} documentToc={documentToc} pathname={pathname} />}
         </div>;
       })}
     </div>}

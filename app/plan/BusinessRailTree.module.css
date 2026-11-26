@@ -16,7 +16,7 @@
 .empty { margin:4px 8px 8px; color:var(--app-muted); font-size:.75rem; line-height:1.5; text-wrap:balance; }
 
 .plan { display:flex; flex-direction:column; }
-.tree .planRow { display:flex; align-items:center; gap:6px; width:100%; min-height:36px; padding:0 8px; border:0; border-radius:8px; background:transparent; color:var(--app-body); font:inherit; font-size:.8125rem; font-weight:600; text-align:left; cursor:pointer; }
+.tree .planRow { display:flex; align-items:center; gap:6px; width:100%; min-height:36px; padding:0 8px; border:0; border-radius:8px; background:transparent; color:var(--app-body); font:inherit; font-size:.8125rem; font-weight:600; text-align:left; cursor:pointer;  text-decoration:none; box-sizing:border-box;}
 .tree .planRow:hover { background:var(--app-fill); color:var(--app-text); }
 .tree .planRow[data-current] { color:var(--app-text); }
 .planRow > span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
