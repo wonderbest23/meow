@@ -24,8 +24,9 @@
   .button[data-variant][data-size=mini]::before { inset:-8px 0; }
 }
 .button[data-variant] > svg { flex:none; }
-.button[data-variant=primary] { background:var(--app-primary); border-color:var(--app-primary); color:var(--app-on-primary); }
-.button[data-variant=primary]:hover:not(:disabled) { background:var(--app-primary-hover); border-color:var(--app-primary-hover); }
+/* 주 단추는 파란 그라데이션(--app-cta) — 테두리 자리까지 한 번에 칠해(border-box) 가장자리에 이음매가 생기지 않게 한다 */
+.button[data-variant=primary] { background:var(--app-cta); background-origin:border-box; border-color:transparent; color:var(--app-on-cta); box-shadow:var(--app-cta-shadow); }
+.button[data-variant=primary]:hover:not(:disabled) { background:var(--app-cta-hover); background-origin:border-box; }
 .button[data-variant=secondary] { background:var(--app-surface); border-color:var(--app-line-strong); color:var(--app-text); }
 .button[data-variant=secondary]:hover:not(:disabled) { background:var(--app-raised); }
 /* 글자 단추는 본문색 — 파란 링크색이면 '취소'·'대화로 고치기'가 링크처럼 보였다(lovable 의 ghost 단추는 무채색, 2026-11-02) */

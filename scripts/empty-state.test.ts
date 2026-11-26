@@ -84,12 +84,19 @@ for (const [path, count] of users) {
     assert.doesNotMatch(block, /<AppButton\s[^>]*className=/, `${path}: 빈 화면 안 버튼에 자리 클래스를 붙였다 — 줄 맞춤은 EmptyState 가 한다`);
   }
 }
+/* 빈 화면은 제목과 단추만 — 단추가 있는 빈 화면에는 설명 줄을 두지 않는다(대표 결정 2026-11-26) */
+for (const path of ["app/plan/PlanList.tsx", "app/plan/inquiries/page.tsx", "app/plan/document/DocumentWorkspace.tsx", "app/plan/BusinessEmptyState.tsx", "app/account/support/SupportCenter.tsx", "app/plan/me/page.tsx"]) {
+  for (const tag of read(path).split("<EmptyState").slice(1)) {
+    const head = tag.slice(0, tag.search(/\bactions=/) + 1 || 0);
+    if (head) assert.doesNotMatch(head, /\bdescription=/, `${path}: 단추가 있는 빈 화면에 설명 줄이 있다`);
+  }
+}
 for (const path of ["app/plan/PlanList.tsx", "app/plan/chat/page.tsx"]) assert.match(read(path), /<BusinessEmptyState\b/, `${path}: 내 사업·대화 빈 화면은 BusinessEmptyState`);
 // 문구·링크는 그대로
 const copies: [string, RegExp][] = [
   ["app/plan/inquiries/page.tsx", /published === 0 \? "아직 공개한 홈페이지가 없어요" : "아직 들어온 문의가 없어요"[\s\S]*홈페이지 만들기[\s\S]*#hk-leads`\}>알림 번호 설정[\s\S]*onClick=\{\(\) => refresh\(true\)\}><RefreshCw size=\{14\} aria-hidden \/> 새로 확인/],
   // 만들기 전 계획서 탭 — '아직 만들기 전이에요 · 만들기'(점검 2026-11-16: 쉽게 보기가 '다 만들어졌어요'로 보였다)
-  ["app/plan/document/DocumentWorkspace.tsx", /title="아직 만들기 전이에요" description=\{pane \? undefined : "대화를 마치면 계획서를 만들 수 있어요\."\}[\s\S]*href=\{coachHref \?\? back\}>만들기[\s\S]*href=\{coachHref \?\? back\}>사업안으로 돌아가기/],
+  ["app/plan/document/DocumentWorkspace.tsx", /title="아직 만들기 전이에요"\s[\s\S]*href=\{`\$\{coachHref\}&start=1`\}>사업계획서 만들기[\s\S]*href=\{back\}>\{pane \? "대화로 가기" : "사업안으로 돌아가기"\}/],
   ["app/plan/workspace/OperatingWorkspace.tsx", /title="아직 기간 기록이 없어요"[\s\S]*대화에서 말한 실적으로 첫 기록 만들기[\s\S]*기간 기록 추가[\s\S]*저장 전에 고칠 수 있어요<\/small>\}\s*<\/EmptyState>/],
   ["app/plan/workspace/OperatingWorkspace.tsx", /title="보관한 리포트가 없어요" description="기간 기록에서 다음 개선 행동을 정한 뒤 보관하세요"/],
   ["app/account/support/SupportCenter.tsx", /title="로그인 후 문의를 남겨 주세요" actions=\{<AppButton variant="primary" href=\{loginHref\}>/],
