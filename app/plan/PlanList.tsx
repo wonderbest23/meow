@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronRight, ArrowUp, MoreHorizontal, Plus, Search } from "lucide-react";
+import { ChevronRight, ArrowUp, FolderOpen, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, readAuthFlag, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
@@ -18,7 +18,7 @@ import { openLogin } from "../../components/login-dialog";
 import { GUEST_NEXT_KEY } from "./studio/StudioContext";
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
-import BusinessEmptyState from "./BusinessEmptyState";
+import BusinessEmptyState, { EmptyState } from "./BusinessEmptyState";
 import PlanLoading from "./PlanLoading";
 import frame from "./chat/page.module.css";
 import styles from "./BusinessHub.module.css";
@@ -248,6 +248,25 @@ export default function PlanList() {
           </div>
         </div>
         {list}
+      </section>}
+      {/*
+        * 로그인 전 '내 사업'(?view=all) — 예전엔 목록 칸 자체를 그리지 않아 '새 대화' 알약만 떠 있는 빈 화면이었다(PC · 태블릿 · 휴대폰 모두, 2026-11-26 사장님).
+        * 사업이 왜 없는지(로그인 전)와 다음에 할 일 두 가지(로그인 · 새 대화)를 말한다. 이 브라우저에서 하던 사업이 있으면 이어서 하기를 먼저 보인다.
+        */}
+      {guest && listOnly && <section className={home.listCard} data-list-only="" aria-label="내 사업 목록" id="businesses" data-guest-list>
+        <div className={home.listHead}><h1 className={home.listTitle}>내 사업</h1></div>
+        <div className={home.listBody} data-empty-list="">
+          {resume && <div className={home.resume} data-guest-resume>
+            <Link href={openHref(resume)} className={home.resumeLink}><span>이어서 하기</span><strong>{planDisplayName(resume)}</strong><ChevronRight size={16} aria-hidden="true" /></Link>
+          </div>}
+          <EmptyState as="section" className={styles.emptyPlace} data-business-empty="guest" icon={FolderOpen} heading="h2"
+            title={resume ? "로그인하면 사업이 저장돼요" : "아직 저장된 사업이 없어요"}
+            description={resume ? "지금 하던 사업은 이 브라우저에만 있어요. 로그인하면 여기에 모아 두고 다른 기기에서도 이어서 할 수 있어요." : "로그인하면 만든 사업이 여기에 모여요. 처음이라면 새 대화로 바로 시작할 수 있어요."}
+            actions={<>
+              <AppButton type="button" variant="primary" onClick={() => openLogin(resume ? openHref(resume) : `/plan?view=${PLAN_VIEW_ALL}`)}>로그인</AppButton>
+              <AppButton variant="secondary" href="/plan" className={home.guestStart}>새 대화 시작하기<ChevronRight size={18} aria-hidden="true" /></AppButton>
+            </>} />
+        </div>
       </section>}
       {/* 휴대폰 '내 사업' — 아래 탭 막대 위에 떠 있는 '새 사업' 알약(lovable '새 프로젝트' 142×44) */}
       {listOnly && <Link href="/plan" className={home.newFloat}><Plus size={20} aria-hidden="true" />새 대화</Link>}
