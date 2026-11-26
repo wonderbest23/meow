@@ -1222,6 +1222,11 @@ button.workLogRow { min-height: 32px; }
 .page[data-embedded]:not([data-studio-pro]) .paneBar { border-bottom: 0; background: transparent; }
 .page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] > .sendButton:disabled { display: none; }
 .page[data-embedded]:not([data-studio-pro]) .composerRow textarea { min-height: 39px; }
+/*
+ * 입력한 글이 상자 왼쪽 둥근 모서리에 붙어 쏠려 보였다(대표 지적 2026-11-26 — PC 는 가장자리에서 12px, 휴대폰은 16px 인데 모서리 반지름이 26px).
+ * 글자 칸 양옆을 8px 로 맞춰 가장자리에서 20px 띄운다(첫 화면 입력 상자와 같은 여백). 아래 단추 줄은 그대로.
+ */
+.page[data-embedded][data-studio-pro] .composerRow textarea, .page[data-embedded]:not([data-studio-pro]) .composerRow textarea { padding-inline: 8px; }
 .page[data-embedded]:not([data-studio-pro]) .composerShell, .page[data-embedded]:not([data-studio-pro]) .composerShell:focus-within { padding-bottom: 8px; }
 .page[data-embedded]:not([data-studio-pro]) .composer { gap: 8px; }
 .page[data-embedded]:not([data-studio-pro]) .composerBar[data-studio-bar] { margin-top: 0; }
