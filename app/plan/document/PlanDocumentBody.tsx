@@ -327,6 +327,17 @@ export function PlanDocumentBody() {
     router.push(`/plan/pay?planId=${encodeURIComponent(documentPlanId)}&planType=${encodeURIComponent(planType)}`);
   }
 
+  /* 결제 전인데 아직 안 쓴 항목 — 문서 끝에 목차로 보여 준다(작성 중 · 예시 · 결제 확인 전에는 없다) */
+  const lockedOutline = useMemo(() => {
+    if (!locked || writing || !sections.length) return null;
+    const written = new Set(sections.map(section => section.key));
+    const chapters = chaptersForType(planType).map((chapter, index) => ({ number: index + 1, name: chapter.title, items: chapter.sections.filter(section => !written.has(`${chapter.id}/${section.id}`)).map(section => section.title) })).filter(chapter => chapter.items.length);
+    const count = chapters.reduce((sum, chapter) => sum + chapter.items.length, 0);
+    return count ? { chapters, count, price: access?.price ?? PACKAGE_AMOUNT, onPay: goPay } : null;
+    // goPay 는 사업 번호·종류만 본다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locked, writing, sections, planType, access?.price, documentPlanId]);
+
   async function retryAccess() {
     if (!documentPlanId) return;
     setAccessError(false);
@@ -431,7 +442,7 @@ export function PlanDocumentBody() {
     grouped={grouped} numbering={numbering} isSample={isSample} coachHref={coachHref}
     notice={contextNotice} editStates={edits.states} onSave={saveEdit} onDraft={edits.stage}
     restoreKeys={edits.restoreKeys} onRestore={edits.restore} onRetrySave={edits.retry} onDiscardDraft={edits.discard}
-    exporting={exporting} locked={locked} accessPending={!isSample && access === null}
+    exporting={exporting} locked={locked} lockedOutline={lockedOutline} accessPending={!isSample && access === null}
     accessError={accessError} onRetryAccess={() => void retryAccess()}
     deckStatus={isSample ? "" : deck.message} deckLabel={isSample ? "PPT 샘플 내려받기" : deck.label}
     error={deckError || deck.error} onDownload={async (format, view) => {

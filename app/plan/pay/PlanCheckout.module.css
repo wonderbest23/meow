@@ -202,3 +202,6 @@
 .blockedBack { margin-top: 14px; }
 /* 판매자·사업자 정보 — 글줄 안 링크, 누르는 자리만 위아래로 넓힌다 */
 .disclaimer .infoLink { display: inline-block; padding: 12px 4px; margin: -12px -4px; }
+
+/* 결제 완료 뒤 자동 이동 안내 — 단추 아래 옅은 한 줄 */
+.autoNote { margin:10px 0 0; text-align:center; font-size:.8125rem; line-height:1.6; color:var(--text-muted, var(--app-muted)); }

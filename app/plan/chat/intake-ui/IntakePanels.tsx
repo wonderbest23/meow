@@ -567,13 +567,26 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss, p
  * 바꿀 내용·궁금한 점을 바로 적으면 되고, 예전 화면에서는 대화로 고치기 화면으로 보낸다.
  * 고치는 길의 이름은 '대화로 고치기' · '직접 고치기' 두 가지로만 부른다(계획서 칸과 같다).
  */
-export function DocumentLockedTurn({ planId, chatEdit, onChatEdit, pro = false }: { planId: string; chatEdit: boolean; onChatEdit?: () => void;
+export function DocumentLockedTurn({ planId, chatEdit, onChatEdit, pro = false, partial, remaining, onPlan }: { planId: string; chatEdit: boolean; onChatEdit?: () => void;
+  /** 아직 안 쓴 항목이 남았다 — preview: 결제 전 첫 항목만 씀, missing: 작성 중 건너뜀. '완성됐어요'라고 하지 않고 남은 수를 말한다(바로 아래 '전체 받기 →'·'이어서 작성하기' 단추가 붙는다) */
+  partial?: "preview" | "missing"; remaining?: number;
+  /** 작업실에서 방금 끝난 차례: '계획서 보기'를 링크 대신 칸 전환으로 */
+  onPlan?: () => void;
   /** 작업실 PC: 안내 아래 복사 줄만 두고 단추 줄은 뺀다 — 계획서 보기는 칸 탭, 대화로 고치기는 늘 열린 입력창, 직접 고치기는 계획서 칸에 있다 */
   pro?: boolean }) {
   const id = encodeURIComponent(planId);
   /* 여기가 마지막 단계다 — 끝났다는 느낌이 들게 축하 말을 앞에 두고 단추는 오른쪽 끝에(대표 요청 2026-11-13). 무엇을 할지는 따로 말하지 않는다(r37 글 점검) */
-  const text = "축하합니다! 사업계획서가 완성됐어요.";
-  const message = <p><strong>축하합니다!</strong> 사업계획서가 완성됐어요.</p>;
+  const left = remaining ? `남은 ${remaining}개 항목` : "남은 항목";
+  const text = partial === "preview" ? `첫 항목을 먼저 써 봤어요. 읽어 보시고 괜찮으면 ${left}도 이어서 써 드려요.` : partial === "missing" ? `${left}을 아직 쓰지 못했어요. 아래에서 이어서 쓸 수 있어요.` : "축하합니다! 사업계획서가 완성됐어요.";
+  const message = partial ? <p>{text}</p> : <p><strong>축하합니다!</strong> 사업계획서가 완성됐어요.</p>;
+  if (partial) return <section className={styles.lockedTurn} aria-label={partial === "preview" ? "첫 항목 작성 완료" : "사업계획서 일부 작성"} data-document-locked data-partial={partial}>
+    <div className={styles.assistantMessage}>{message}</div>
+    <MessageMeta text={text} />
+    <div className={styles.chipRow}>
+      {onPlan ? <button type="button" className={`${styles.chip} ${styles.chipStrong}`} onClick={onPlan}>{partial === "preview" ? "첫 항목 보기" : "계획서 보기"}</button>
+        : <Link className={`${styles.chip} ${styles.chipStrong}`} href={`/plan/document?planId=${id}`}>{partial === "preview" ? "첫 항목 보기" : "계획서 보기"}<ChevronRight size={16} aria-hidden="true" /></Link>}
+    </div>
+  </section>;
   if (pro) return <section className={styles.lockedTurn} aria-label="사업계획서 완성" data-document-locked>
     <div className={styles.assistantMessage}>{message}</div>
     <MessageMeta text={text} />
