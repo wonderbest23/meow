@@ -225,3 +225,7 @@
 .resumeLink:hover { border-color:var(--app-line-strong); }
 .resumeNote { margin:0; color:var(--app-muted); font-size:.8125rem; }
 .resumeNote button { min-height:32px; padding:0 2px; border:0; background:none; color:var(--app-text); font:inherit; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+
+/* 로그인 전 '내 사업' — 좁은 화면에서도 '로그인' 단추는 남긴다(위 규칙은 '시작하기'가 떠 있는 '새 대화' 알약과 겹쳐 단추 줄을 통째로 숨긴다). 같은 이유로 '새 대화 시작하기'만 좁은 화면에서 뺀다 */
+.listCard[data-list-only] [data-business-empty="guest"] [data-empty-part=actions] { display:flex; }
+@media (max-width:900px) { .listCard[data-list-only] [data-business-empty="guest"] .guestStart { display:none; } }
