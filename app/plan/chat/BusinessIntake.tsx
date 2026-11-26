@@ -13,7 +13,7 @@ import { getIntakeQuestion, type IntakeQuestion } from "../../../lib/plan-builde
 import { ksicSectorLabel } from "../../../lib/plan-builder/ksic-hints";
 import { announcePlanTitle, handlePlanRename, loadState, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { loadAuthSession } from "../../../lib/client/auth-session";
-import { ThinkingLine, AnswerHistory, BusinessIdentityHero, DesignProgress, DesignResult, DocumentLockedTurn, EditChatTurn, GenerationFinishedTurn, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, currentIdentity, DesignDirection, EntryChoices, ExtractionReview, isDesignReplyText, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
+import { ThinkingLine, AnswerHistory, BusinessIdentityHero, DesignProgress, DesignResult, DirectionEditConfirm, DocumentLockedTurn, EditChatTurn, GenerationFinishedTurn, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, currentIdentity, DesignDirection, EntryChoices, ExtractionReview, isDesignReplyText, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
 import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
 import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
@@ -2134,6 +2134,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
                 </>}
                 {(nextStep === "prepare" || nextStep === "open") && !(coach && currentIdentity(plan)) && <DesignDirection snapshot={plan} continued={!!currentIdentity(plan)} />}
                 {!nextStep && refinement && <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "살펴볼 사업 정하기" : "사업 소개 정하기"}<ChevronRight size={17} aria-hidden="true" /></AppButton>}
+                {/* 계획서 전 채팅 수정 — 바꿀 내용을 먼저 보여 주고 확인을 받는다(바꾸기 · 그대로 두기). '바꾸기'를 눌러야 값이 바뀌고 방향을 다시 정리한다 */}
+                {!plan.hasDocuments && <DirectionEditConfirm snapshot={plan} disabled={blocked || aiBusy} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />}
                 {/* 작업실 안: 작성 중이면 진행 카드, 방금 끝났으면 마무리 말이 다음 단계 단추 자리를 대신한다 */}
                 {studioTurn ?? <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} loginNote={prepareLoginNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce minimal={coach && !!currentIdentity(plan)} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}
                 {/* 사업 방향을 정리한 직후 한 번 — 다음 할 일을 카카오톡으로 받을지 권한다(계정에 한 번만) */}

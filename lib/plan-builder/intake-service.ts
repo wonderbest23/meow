@@ -133,6 +133,8 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       intake.notes = intake.notes.map(note => intake.job!.noteIds.includes(note.id) ? { ...note, status: "failed" } : note);
     }
     let created: IntakeJob | null = null;
+    /** 계획서 전 채팅 수정에서 '바꾸기'를 눌렀다 — 값이 안 바뀌었어도 사업 방향을 옛 기준으로 표시해 다시 정리하게 한다 */
+    let redoDirection = false;
     if (command.action === "start") {
       if (savedIntake && command.mode && command.mode !== intake.mode) throw new IntakeError("mode_conflict", "진행 중인 사업 유형은 새 대화에서 선택해 주세요", 409);
       if (command.message && (savedIntake || command.questionId !== undefined || command.value !== undefined)) throw new IntakeError("invalid_start", "처음 남긴 이야기와 답변은 구분해 저장해 주세요");
@@ -175,7 +177,8 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       // 채팅 수정. 범위 밖 요청은 AI 없이 정해진 답으로 끝내고, 사실 변경 요청만 AI 작업으로 넘긴다.
       /*
        * 계획서 전이라도 사업 방향을 정리했으면 받는다(2026-11-17 사장님: 방향을 본 뒤 적은 말이 메모로만 남고 아무 대답도, 반영도 없었다).
-       * 계획서 전에는 묻지 않고 바로 넣은 뒤 사업 방향을 다시 정리한다(아래 edit 작업 끝 · 사장님 결정 '바로 반영').
+       * 계획서 전에도 바꿀 내용을 먼저 보여 주고 '바꾸기 · 그대로 두기'를 묻는다(대표 결정 2026-11-26) — 예전 '바로 반영'(2026-11-17)은
+       * 실수로 적은 한 줄에도 값이 바뀌고 사업 방향을 통째로 다시 정리했다(되돌릴 길도 없었다).
        */
       const beforeDocument = !Object.keys(plan.sections).length;
       if (beforeDocument && !coach.design) throw new IntakeError("edit_requires_document", "사업 방향을 정리한 뒤에 채팅으로 고칠 수 있어요", 409);
@@ -196,14 +199,26 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       }
     } else if (command.action === "edit-apply" || command.action === "edit-dismiss") {
       const job = intake.job;
-      if (!job || job.kind !== "edit" || job.status !== "complete" || !job.proposal?.length || job.proposalStatus) throw new IntakeError("edit_missing", "바꿀 내용을 다시 요청해 주세요", 409);
+      if (!job || job.kind !== "edit" || job.status !== "complete" || !(job.proposal?.length || job.rethink) || job.proposalStatus) throw new IntakeError("edit_missing", "바꿀 내용을 다시 요청해 주세요", 409);
       if (command.action === "edit-apply") {
         // Each change goes through the same validation as a typed answer; one invalid value stops the whole set.
         const beforeAnswers = structuredClone(intake.answers);
-        job.proposal.forEach((change, index) => applyIntakeAnswer(plan!, coach, intake, { ...command, action: "answer", questionId: change.questionId, value: change.value, unknown: false, requestId: `${command.requestId}:${index}` }, at));
+        const proposal = job.proposal ?? [];
+        proposal.forEach((change, index) => applyIntakeAnswer(plan!, coach, intake, { ...command, action: "answer", questionId: change.questionId, value: change.value, unknown: false, requestId: `${command.requestId}:${index}` }, at));
         patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);
         job.proposalStatus = "applied";
-        coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "바꿨어요. \"계획서에 반영하기\"를 누르면 바뀐 내용으로 다시 써요.", at });
+        if (!Object.keys(plan.sections).length) {
+          /*
+           * 계획서 전 — 값을 넣고 사업 방향을 다시 정리한다. 적은 말은 메모로도 남겨 칸으로 옮기지 못한 내용('정기구독도 하고 싶어요')까지
+           * 방향 정리가 읽게 한다(ownerNotesContext). 값이 하나도 안 바뀌어도(rethink 뿐) 방향은 옛 기준으로 표시한다(아래 redoDirection).
+           */
+          const said = (job.request ?? "").trim().slice(0, 4000);
+          if (said && intake.notes.length < 64 && intake.notes.reduce((total, note) => total + note.text.length, 0) + said.length <= 100_000) intake.notes.push({ id: `${job.id}:memo`, text: said, at, status: "stored", intent: "memo" });
+          redoDirection = true;
+          const questions = intakeQuestions(intake, coach);
+          const labels = proposal.map(change => questions.find(question => question.id === change.questionId)?.label).filter((label): label is string => !!label);
+          coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: labels.length ? `말씀하신 대로 ${labels.join(", ")}${objectParticle(labels.at(-1)!)} 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.` : "말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.", at });
+        } else coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "바꿨어요. \"계획서에 반영하기\"를 누르면 바뀐 내용으로 다시 써요.", at });
       } else {
         job.proposalStatus = "dismissed";
         coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "그대로 둘게요. 다른 바꿀 내용이 있으면 말씀해 주세요.", at });
@@ -327,7 +342,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         coach.messages.push({id:command.requestId,role:"user",text:command.message!,at});
       }
     } else if (command.action === "prepare") throw new IntakeError("prepare_handler", "문서 생성 경로에서 처리해야 하는 요청이에요");
-    finishIntakeMutation(coach, before, plan.answers, intake);
+    if (!finishIntakeMutation(coach, before, plan.answers, intake) && redoDirection) coach.documentRevision = coachDocumentRevision(coach) + 1;
     if (beforeIdeas !== ideaInputFingerprint(coach, intake)) intake.ideaInputRevision = (intake.ideaInputRevision ?? 0) + 1;
     if (created) created.baseDocumentRevision = coachDocumentRevision(coach);
     intake.receipts.push({ id: command.requestId, signature });
@@ -500,9 +515,8 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         current.proposal = proposal; current.status = "complete";
         const id = `${current.id}:reply`;
         /*
-         * 계획서 전(사업 방향만 정리한 상태) — 묻지 않고 바로 넣는다(2026-11-17 사장님 결정 '바로 반영'). 적은 말은 메모로도 남겨
-         * 칸으로 옮기지 못한 내용('정기구독도 하고 싶어요')까지 방향 정리가 읽게 한다(ownerNotesContext). 그리고 방향을 옛 기준으로 표시해
-         * 화면이 사업 방향을 다시 정리하게 한다(intakeNextStep → design · 화면의 자동 시작).
+         * 계획서 전(사업 방향만 정리한 상태) — 바꿀 내용을 먼저 보여 주고 확인을 기다린다(대표 결정 2026-11-26, 예전 '바로 반영'을 바꿨다).
+         * 묻는 말 · 인사뿐이면 답만 한다.
          */
         if (!Object.keys(_plan.sections).length && !coach.messages.some(message => message.id === id)) {
           const at = new Date().toISOString();
@@ -516,15 +530,11 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
             coach.revision += 1;
             return;
           }
-          const before = intakeBusinessFingerprint(coach, _plan.answers, _intake);
-          proposal.forEach((change, index) => applyIntakeAnswer(_plan, coach, _intake, { action: "answer", revision: 0, requestId: `${current.id}:apply:${index}`, questionId: change.questionId, value: change.value, unknown: false }, at));
-          if (proposal.length) current.proposalStatus = "applied";
-          const said = (job.request ?? "").trim().slice(0, 4000);
-          if (said && _intake.notes.length < 64 && _intake.notes.reduce((total, note) => total + note.text.length, 0) + said.length <= 100_000) _intake.notes.push({ id: `${current.id}:memo`, text: said, at, status: "stored", intent: "memo" });
-          if (!finishIntakeMutation(coach, before, _plan.answers, _intake)) coach.documentRevision = coachDocumentRevision(coach) + 1;
-          const labels = proposal.map(change => questions.find(question => question.id === change.questionId)?.label).filter((label): label is string => !!label);
-          const done = labels.length ? `말씀하신 대로 ${labels.join(", ")}${objectParticle(labels.at(-1)!)} 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.` : "말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.";
-          coach.messages.push({ id, role: "assistant", text: `${chat?.answer ? `${chat.answer}\n\n${done}` : done}${guide}`, at });
+          // 바꿀 값이 있거나 방향을 다시 정리할 말이면 — 넣지 않고 확인(바꾸기 · 그대로 두기)을 기다린다. '바꾸기'를 누르면 위 edit-apply 가 넣는다
+          if (!proposal.length) current.rethink = true;
+          const ask = proposal.length ? "바꿀 내용을 정리했어요. 아래에서 확인해 주세요." : "말씀하신 내용을 넣어 사업 방향을 다시 정리할 수 있어요. 아래에서 골라 주세요.";
+          coach.messages.push({ id, role: "assistant", text: `${chat?.answer ? `${chat.answer}\n\n${ask}` : ask}${guide}`, at });
+          coach.revision += 1;
           return;
         }
         if (!coach.messages.some(message => message.id === id)) {

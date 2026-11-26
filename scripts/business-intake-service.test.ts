@@ -914,7 +914,7 @@ async function main() {
       assert.equal(calls.length, 0, "filtered requests never reach the provider");
     });
 
-    await check("before the plan, a change typed after the direction goes in without asking, is kept as a memo, and the direction is redone with it", async () => {
+    await check("before the plan, a change typed after the direction waits for 바꾸기, then is kept as a memo and the direction is redone with it", async () => {
       configureAI(true);
       const DESIGN = { identity: { headline: "출근길 커피, 한 달에 한 번 결제로 끝", pitch: "동네 직장인에게 월 구독 커피 패스를 파는 원두 카페", names: [{ name: "커피패스", why: "구독형이라는 게 바로 보임" }, { name: "단골원두", why: "동네 단골 느낌" }] }, approach: "known-business", startingPlan: { scope: "월 구독 커피 패스 50명으로 시작", connectionToVision: "동네 단골 기반 구독 카페", whyThis: "고정 매출을 먼저 확인", notIncluded: ["배달"] },
         alternatives: [{ name: "테이크아웃 전용", scope: "매장 없이 픽업만", tradeoff: "체류 고객을 포기" }], assumptions: [{ statement: "직장인이 월 3만원을 낸다", howToCheck: "사전 예약 20명 모집" }],
@@ -937,27 +937,51 @@ async function main() {
       const thanks = await send(session, { action: "edit", message: "고마워요" }, true);
       assert.equal(thanks.job, null, "small talk needs no AI");
       assert.equal(calls.length, quiet);
-      assert.match((await load(session)).coach.messages.at(-1)?.text ?? "", /사업 방향에 바로 넣을게요/, "before the plan the fixed reply talks about the direction, not the plan");
+      assert.match((await load(session)).coach.messages.at(-1)?.text ?? "", /바꿀 내용을 먼저 보여 드릴게요/, "before the plan the fixed reply promises a confirm step, not an instant change");
 
       respond = () => completion({ answer: "대학생 손님이면 시험 기간 아침이 기회예요.", changes: [{ questionId: "customer", value: "근처 대학생" }], rethink: true });
       const changed = await send(session, { action: "edit", message: "고객은 근처 대학생으로 할래요" }, true);
       assert.equal(changed.job?.kind, "edit");
       assert.deepEqual(await executeIntakeJob(jobRequest(session, changed)), { ok: true });
+      // 계획서 전에도 바로 넣지 않는다 — 바꿀 내용을 보여 주고 '바꾸기 · 그대로 두기'를 기다린다(대표 결정 2026-11-26)
+      const proposed = await load(session);
+      assert.equal(proposed.intake.answers.customer.value, "근처 직장인", "nothing changes before the owner confirms");
+      assert.deepEqual(proposed.intake.job?.proposal, [{ questionId: "customer", value: "근처 대학생" }]);
+      assert.equal(proposed.intake.job?.proposalStatus, undefined, "waiting for the owner");
+      assert.equal(proposed.coach.design?.sourceRevision, proposed.coach.documentRevision, "the direction stays current until the owner confirms");
+      assert.ok(!proposed.intake.notes.some(note => note.text === "고객은 근처 대학생으로 할래요"), "a typed line is not kept as a memo before it is confirmed");
+      assert.equal(proposed.coach.messages.at(-1)?.text, "대학생 손님이면 시험 기간 아침이 기회예요.\n\n바꿀 내용을 정리했어요. 아래에서 확인해 주세요.", "the AI's words first, then the ask");
+      // 그대로 두기 — 값도 방향도 그대로
+      const leftAlone = await send(session, { action: "edit-dismiss" });
+      assert.equal(leftAlone.snapshot.intake.job?.proposalStatus, "dismissed");
+      const untouched = await load(session);
+      assert.equal(untouched.intake.answers.customer.value, "근처 직장인", "a dismissed change leaves the answer alone");
+      assert.equal(untouched.coach.design?.sourceRevision, untouched.coach.documentRevision, "and the direction is not redone");
+      // 다시 요청하고 바꾸기 — 이때 값이 바뀌고 방향을 다시 정리한다
+      const again = await send(session, { action: "edit", message: "고객은 근처 대학생으로 할래요" }, true);
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, again)), { ok: true });
+      await send(session, { action: "edit-apply" });
       const applied = await load(session);
-      assert.equal(applied.intake.answers.customer.value, "근처 대학생", "applied right away, no confirm step");
+      assert.equal(applied.intake.answers.customer.value, "근처 대학생", "applied once the owner pressed 바꾸기");
       assert.equal(applied.intake.job?.proposalStatus, "applied");
       assert.notEqual(applied.coach.design?.sourceRevision, applied.coach.documentRevision, "the direction is out of date, so the screen redoes it");
       assert.ok(applied.intake.notes.some(note => note.text === "고객은 근처 대학생으로 할래요" && note.intent === "memo"), "the words are kept for the next direction");
-      assert.equal(applied.coach.messages.at(-1)?.text, "대학생 손님이면 시험 기간 아침이 기회예요.\n\n말씀하신 대로 주요 고객을 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.", "the AI's words first, then what changed");
+      assert.equal(applied.coach.messages.at(-1)?.text, "말씀하신 대로 주요 고객을 바꿨어요. 이 기준으로 사업 방향을 다시 정리할게요.", "what changed, then the redo");
+      await assert.rejects(send(session, { action: "edit-apply" }), (error: unknown) => error instanceof IntakeError && error.code === "edit_missing", "a proposal applies once");
 
       respond = () => completion(DESIGN);
       await direction();
       respond = () => completion({ answer: "정기배송은 단골을 만드는 좋은 길이에요.", changes: [], rethink: true });
       const wish = await send(session, { action: "edit", message: "원두 정기배송도 같이 하고 싶어요" }, true);
       assert.deepEqual(await executeIntakeJob(jobRequest(session, wish)), { ok: true });
+      const wished = await load(session);
+      assert.equal(wished.intake.job?.rethink, true, "nothing maps to a fact, so the ask is about redoing the direction");
+      assert.equal(wished.coach.design?.sourceRevision, wished.coach.documentRevision, "the direction is not redone before the owner confirms");
+      assert.equal(wished.coach.messages.at(-1)?.text, "정기배송은 단골을 만드는 좋은 길이에요.\n\n말씀하신 내용을 넣어 사업 방향을 다시 정리할 수 있어요. 아래에서 골라 주세요.");
+      await send(session, { action: "edit-apply" });
       const kept = await load(session);
-      assert.notEqual(kept.coach.design?.sourceRevision, kept.coach.documentRevision, "nothing maps to a fact, yet the direction is still redone");
-      assert.equal(kept.coach.messages.at(-1)?.text, "정기배송은 단골을 만드는 좋은 길이에요.\n\n말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.");
+      assert.notEqual(kept.coach.design?.sourceRevision, kept.coach.documentRevision, "nothing maps to a fact, yet the direction is redone once confirmed");
+      assert.equal(kept.coach.messages.at(-1)?.text, "말씀하신 내용을 넣어 사업 방향을 다시 정리할게요.");
       respond = body => {
         assert.ok(JSON.stringify(body).includes("원두 정기배송도 같이 하고 싶어요"), "the redone direction reads the words");
         return completion(DESIGN);
@@ -977,10 +1001,12 @@ async function main() {
       assert.equal(answered.coach.design?.sourceRevision, answered.coach.documentRevision, "a question does not redo the direction");
       assert.equal(answered.intake.notes.length, notesBefore, "a question is not kept as a business memo");
 
-      // 부탁을 물음으로 해도("~해 주실 수 있나요?") 바꿀 말이면 넣는다
+      // 부탁을 물음으로 해도("~해 주실 수 있나요?") 바꿀 말이면 바꿀 내용으로 보여 주고, 바꾸기를 누르면 넣는다
       respond = () => completion({ answer: "네, 그렇게 할게요.", changes: [{ questionId: "price", value: "15,000원" }], rethink: true });
       const polite = await send(session, { action: "edit", message: "가격을 만오천원으로 넣어 주실 수 있나요?" }, true);
       assert.deepEqual(await executeIntakeJob(jobRequest(session, polite)), { ok: true });
+      assert.deepEqual((await load(session)).intake.job?.proposal, [{ questionId: "price", value: "15,000원" }], "shown as a change to confirm");
+      await send(session, { action: "edit-apply" });
       const politeDone = await load(session);
       assert.equal(politeDone.intake.answers.price.value, 15000);
       assert.match(politeDone.coach.messages.at(-1)?.text ?? "", /판매 가격을 바꿨어요/);
@@ -995,6 +1021,8 @@ async function main() {
         assert.equal(style.job?.kind, "edit", `before the plan ${why} reaches the AI`);
         assert.deepEqual(await executeIntakeJob(jobRequest(session, style)), { ok: true });
         assert.equal(calls.length, quietStyle + 1);
+        assert.equal((await load(session)).intake.job?.rethink, true, "asks before redoing the direction");
+        await send(session, { action: "edit-apply" });
       }
 
       // 대화로 못 바꾸는 항목(업종)은 AI가 표시만 하고, 바꾸는 방법은 서비스가 정해진 말로 붙인다
