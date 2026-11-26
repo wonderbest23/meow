@@ -28,6 +28,11 @@ export type IntakeJob = {
   /** kind "edit": the fact changes the AI proposed (validated), and what the owner did with them. */
   proposal?: Array<{ questionId: string; value: IntakeValue }>;
   proposalStatus?: "applied" | "dismissed";
+  /**
+   * kind "edit" · 계획서 전: 칸으로 옮길 값은 없지만 적은 말을 넣어 사업 방향을 다시 정리하자는 제안('정기배송도 하고 싶어요').
+   * proposal 이 비어도 이 값이 있으면 확인(바꾸기 · 그대로 두기)을 기다린다.
+   */
+  rethink?: boolean;
 };
 export type IntakeState = {
   version: 1; stateRevision?: number; packVersion: string; mode: IntakeMode; sector: ProposalSector;

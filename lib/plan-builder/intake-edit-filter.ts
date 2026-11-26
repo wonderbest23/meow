@@ -34,8 +34,8 @@ export const EDIT_REPLIES: Record<Exclude<EditRoute, "in_scope">, string> = {
 export const EDIT_REPLIES_BEFORE_DOCUMENT: Record<Exclude<EditRoute, "in_scope">, string> = {
   empty: "바꾸고 싶은 내용을 적어 주세요. 예: 주 고객을 대학생으로, 가격을 2만원으로",
   new_business: "지금 대화는 이 사업 기준이에요. 다른 사업은 왼쪽 위 \"새 대화\"에서 따로 시작할 수 있어요.",
-  style: "말투나 문체는 바꾸지 않아요. 가격·고객·상품처럼 바꾸고 싶은 내용을 말씀해 주시면 사업 방향에 바로 넣을게요.",
-  off_topic: "가격·고객·상품처럼 바꾸고 싶은 내용이 있으면 말씀해 주세요. 사업 방향에 바로 넣을게요.",
+  style: "말투나 문체는 바꾸지 않아요. 가격·고객·상품처럼 바꾸고 싶은 내용을 말씀해 주시면 바꿀 내용을 먼저 보여 드릴게요.",
+  off_topic: "가격·고객·상품처럼 바꾸고 싶은 내용이 있으면 말씀해 주세요. 바꿀 내용을 먼저 보여 드릴게요.",
 };
 
 /** 목적격 조사 — 받침이 있으면 '을', 없으면 '를'(한글이 아닌 끝 글자는 '을') */
