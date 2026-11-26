@@ -78,6 +78,12 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
   const toStudio = inStudio || STUDIO_REDIRECT;
   /* 작업실에서는 개업 준비가 유지보수 안의 할 일이라 따로 두지 않는다(같은 곳으로 가는 줄이 둘이 된다 · 2026-11-10) */
   const steps = useMemo(() => allSteps.filter(step => step.id !== "launch" || (workspaceOpen && !toStudio)), [allSteps, workspaceOpen, toStudio]);
+  /*
+   * 작업실에서는 넷째 줄이 개업 준비를 담는다 — 홈페이지를 공개하기 전에는 그 안에 개업 준비 할 일만 있어 이름도 '개업 준비'로 보인다
+   * (작업실 칸 이름 studioTabLabel 과 같은 규칙 · 대표 지적 2026-11-26: 홈페이지가 잠겼는데 '유지보수'가 열려 있어 헷갈렸다).
+   */
+  const careAsLaunch = toStudio && homepage !== "published" && !isSamplePlan(plan.id);
+  const launchLabel = allSteps.find(step => step.id === "launch")?.label ?? JOURNEY_LABELS.launch;
   const [locked, setLocked] = useState<{ message: string; href: string; label: string } | null>(null);
   // 앱에서는 홈페이지 화면에 '내 도메인 연결' 칸이 없다(웹 전용 상품) — 목차에서도 뺀다
   const [inApp, setInApp] = useState(false);
@@ -94,7 +100,7 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
     if (id === "chat") return;
     // 홈페이지 공개 여부를 아직 모르면(불러오는 중·실패) 막혔다고 말하지 않는다
     if (id === "care" && homepage === null) return;
-    const guide = lockedGuide(id, allSteps.find(step => step.id === "launch")?.label === OPERATING_LAUNCH_LABEL);
+    const guide = lockedGuide(id === "care" && careAsLaunch ? "launch" : id, launchLabel === OPERATING_LAUNCH_LABEL);
     setLocked({ message: guide.message, href: stepHref(JOURNEY_ORDER[guide.back], allSteps[guide.back].href), label: guide.label });
   };
   return <><ol className={styles.steps}>
@@ -104,7 +110,7 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
       const reachable = step.id === "care" || step.id === "launch" ? workspaceOpen : step.state !== "todo" || index === 0 || steps[index - 1].state === "done";
       const body = <>
         <i aria-hidden="true" data-state={step.state}>{step.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>
-        <span>{step.label}</span>
+        <span>{step.id === "care" && careAsLaunch ? launchLabel : step.label}</span>
       </>;
       return <Fragment key={step.id}>
         <li>

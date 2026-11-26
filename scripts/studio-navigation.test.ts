@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { STUDIO_TABS, STUDIO_TAB_LABELS, isEntryMode, isStudioTab, newChatEntryHref, newChatHref, stepForStudioTab, studioChatComplete, studioChips, studioEntryHref, studioHref, studioLockedStep, studioNewHref, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTabParam, studioTarget } from "../lib/plan-builder/studio";
+import { STUDIO_TABS, STUDIO_TAB_LABELS, studioTabLabel, isEntryMode, isStudioTab, newChatEntryHref, newChatHref, stepForStudioTab, studioChatComplete, studioChips, studioEntryHref, studioHref, studioLockedStep, studioNewHref, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTabParam, studioTarget } from "../lib/plan-builder/studio";
 import { businessChatHref, documentHref, workspaceHref } from "../lib/plan-builder/business-hub";
 import { careHref, homepageHref, launchHref } from "../lib/plan-builder/journey";
 import { JOURNEY_ORDER, journeyPrepLabel } from "../lib/plan-builder/journey-steps";
@@ -195,6 +195,19 @@ assert.equal("launch" in STUDIO_TAB_LABELS, false, "개업 준비는 따로 탭�
 assert.equal(journeyPrepLabel(), "개업·운영", "휴대폰 넷째 탭은 개업 준비와 유지보수를 함께 담는다");
 assert.equal(journeyPrepLabel(true), "운영");
 assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
+/* 넷째 칸 이름 — 홈페이지를 공개하기 전에는 그 칸에 개업 준비 할 일만 있어 '개업 준비'(운영 중이면 '운영 개선'), 공개하면 '유지보수' */
+assert.equal(studioTabLabel("operations", { open: false }), "개업 준비", "공개 전 넷째 칸은 개업 준비");
+assert.equal(studioTabLabel("operations", { open: false, operating: true }), "운영 개선", "운영 중인 사업의 공개 전 넷째 칸은 운영 개선");
+assert.equal(studioTabLabel("operations", { open: true }), "유지보수", "공개한 뒤 넷째 칸은 유지보수");
+assert.equal(studioTabLabel("plan", { open: false }), "사업계획서", "다른 칸 이름은 그대로");
+{
+  // 왼쪽 메뉴와 작업실이 같은 규칙을 쓴다 — 한쪽만 '유지보수'로 남으면 다시 헷갈린다
+  const rail = readFileSync(new URL("../app/plan/BusinessRailTree.tsx", import.meta.url), "utf8");
+  const studioSource = readFileSync(new URL("../app/plan/studio/Studio.tsx", import.meta.url), "utf8");
+  assert.match(rail, /careAsLaunch = toStudio && homepage !== "published" && !isSamplePlan\(plan\.id\)/, "왼쪽 메뉴: 공개 전에는 넷째 줄을 개업 준비로");
+  assert.match(studioSource, /careOpen = homepage === "published" \|\| isSamplePlan\(planId\)/, "작업실: 공개 전에는 넷째 칸을 개업 준비로");
+  assert.doesNotMatch(studioSource, /STUDIO_TAB_LABELS/, "작업실 칸 이름은 studioTabLabel 한 곳에서");
+}
 
 /* 2단계: 머리줄 진행 단계 칩 · 부제 */
 {
@@ -319,7 +332,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   // 대화 완료는 작업실 기준(studioChatComplete)으로 — 칩 · 휴대폰 ✓ · 부제 · 질문 수 묻기 · 오른쪽 탭 잠김이 같은 값을 쓴다
   assert.match(studio, /const chatComplete = !!plan && studioChatComplete\(\{ design: !!hubState\?\.coach\?\.design,/);
   assert.match(studio, /return studioSteps\(journeySteps\(plan, homepage,/);
-  assert.match(studio, /result\[id\] = lockFor\(id, plan, steps, chatComplete, pending\);/);
+  assert.match(studio, /result\[id\] = lockFor\(id, plan, steps, chatComplete, pending, careOpen\);/);
   assert.match(studio, /const workspaceOpen = !shouldResumeBusinessChat\(plan\) && \(chatComplete \|\| !readCoach\(plan\.answers\)\);/);
   assert.match(studio, /if \(!planId \|\| !ready \|\| !watchIntake \|\| !intakeV2\) return;/, "대화가 끝나기 전까지(사업 방향을 정리하는 동안도) 질문 수를 묻는다");
   assert.match(studio, /const watchIntake = !chatDone \|\| designPending;/);
