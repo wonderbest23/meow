@@ -1301,7 +1301,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 사업이 바뀌거나 단계가 보일 때만
   }, [prepareVisible, resumeVisible, plan?.planId]);
-  /* 결제 직후(?start=1)에는 손님이 다시 누르지 않아도 사업계획서 작성을 한 번 시작한다 — 결제 결과 화면이 여기로 보낸다 */
+  /*
+   * 주소에 ?start=1 이 있으면 손님이 다시 누르지 않아도 사업계획서 작성을 한 번 시작한다 — 결제 결과 화면과
+   * 계획서 칸의 '아직 만들기 전이에요 · 사업계획서 만들기'가 여기로 보낸다. 아래 '사업계획서 만들기' 단추와 같은 길(startPrepare)이라
+   * 로그인 전이면 로그인 창이 뜨고, 결제 전이면 첫 항목부터 쓴다.
+   */
   const autoStarted = useRef(false);
   useEffect(() => {
     if (autoStarted.current || !plan || !loaded || blocked || aiBusy) return;
@@ -1310,7 +1314,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     autoStarted.current = true;
     url.searchParams.delete("start");
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-    if (nextStep === "prepare" && url.searchParams.get("planId") === plan.planId) void send({ action: "prepare" });
+    if (nextStep === "prepare" && url.searchParams.get("planId") === plan.planId) startPrepare();
   });
   const updateNotice = savedPlan ? resultUpdateNotice(savedPlan) : null;
   const refinement = plan ? nextRefinementQuestion(plan, draft.refinementSeen) : null;

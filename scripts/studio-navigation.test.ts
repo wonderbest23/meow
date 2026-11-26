@@ -375,7 +375,14 @@ assert.equal(studioTabLabel("plan", { open: false }), "사업계획서", "다른
     assert.doesNotMatch(workspace, /autoSummary/, "만들기 전에 요약을 저절로 띄우지 않는다");
     assert.match(workspace, /\{notMade && props\.writing \? <article[\s\S]*: notMade \? <EmptyState [^>]*title="아직 만들기 전이에요"/);
     // 휴대폰 작업실 머리의 '내려받기'는 계획서가 있어야 눌린다(만들기 전에는 눌러도 반응이 없었다)
-    assert.match(read("../app/plan/studio/Studio.tsx"), /disabled=\{!!locks\[rightTab\] \|\| rightTab === "plan" && !planTools\}/);
+    /* 아직 쓸 수 없는 주 단추(없는 홈페이지의 공개하기 · 쓰기 전 계획서의 내려받기)는 꺼서 보이지 않고 자리만 둔다 */
+    assert.match(read("../app/plan/studio/Studio.tsx"), /locks\[rightTab\] \|\| rightTab === "plan" && !planTools\s+\/\*[^*]*\*\/\s+\? <span className=\{styles\.mHeadSpace\} aria-hidden="true" \/>/);
+    /* 안 쓴 항목이 남은 계획서 — 쉽게 보기가 '다 만들어졌어요'라고 하지 않고, 저절로 먼저 뜨지 않고, 남은 항목 목차는 쉽게 보기에서도 보인다 */
+    assert.match(read("../app/plan/document/EasyView.tsx"), /remaining > 0 \? `지금까지 쓴 항목으로 정리했어요\. 남은 \$\{remaining\}개 항목은 아직 쓰기 전이에요` : "계획서와 준비물이 다 만들어졌어요"/);
+    assert.match(read("../app/plan/document/DocumentWorkspace.tsx"), /isSample \|\| !planId \|\| props\.lockedOutline \|\| props\.missing\?\.length\) return;/);
+    assert.match(read("../app/plan/document/DocumentWorkspace.tsx"), /props\.lockedOutline && !props\.writing && !factMode && <section className=\{styles\.lockedOutline\}/);
+    /* 계획서를 쓰기 전에는 페이지 메뉴에 꺼진 계획서 도구(목차 · 내려받기 · 직접 고치기)를 두지 않는다 */
+    assert.match(read("../app/plan/studio/Studio.tsx"), /\.\.\.\(rightTab === "plan" && planTools \? \[/);
   }
   // 사업을 못 찾았으면 위 막대의 미리보기 도구(페이지 선택 · 진행 점)를 그리지 않는다
   /* 한 칸 대화(계획서를 쓰기 전, 대표 승인 2026-11-14)에서는 계획서가 있어야 쓰는 위 막대 도구를 그리지 않는다 */

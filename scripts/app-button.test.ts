@@ -82,6 +82,13 @@ for (const [text, background] of [["surface", "primary"], ["surface", "primary-h
   assert.ok(ratio >= 4.5, `--app-${text} / --app-${background} 대비 ${ratio.toFixed(2)} — 4.5:1 미만`);
 }
 assert.ok(contrast("focus-ring", "surface") >= 3, "포커스 선이 흰 바탕에서 3:1 미만이다");
+/* 주 단추는 파란 그라데이션(대표 결정 2026-11-26) — 흰 글자가 그라데이션 양 끝 · 누른 색 모두에서 4.5:1 이상 */
+assert.match(rule(css, ".button[data-variant=primary]"), /background:var\(--app-cta\); background-origin:border-box; border-color:transparent; color:var\(--app-on-cta\);/, "주 단추는 --app-cta 그라데이션에 흰 글자");
+assert.equal(raw("cta"), "linear-gradient(135deg, var(--app-cta-from), var(--app-cta-to))");
+for (const stop of ["cta-from", "cta-to", "cta-hover-from", "cta-hover-to"]) {
+  const ratio = contrast("on-cta", stop);
+  assert.ok(ratio >= 4.5, `--app-on-cta / --app-${stop} 대비 ${ratio.toFixed(2)} — 4.5:1 미만`);
+}
 
 // 3) 바꾼 화면 — 공통 버튼을 쓴다
 const users = [

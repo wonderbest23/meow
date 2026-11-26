@@ -35,7 +35,9 @@ export function GoodPoints({ easy }: { easy: EasySummary }) {
   </aside>;
 }
 
-export default function EasyView({ easy, chapters, steps = [], planId, onDownload }: { easy: EasySummary; chapters: string[]; steps?: FirstStep[]; planId?: string | null; onDownload?: () => void }) {
+export default function EasyView({ easy, chapters, steps = [], planId, onDownload, remaining = 0 }: { easy: EasySummary; chapters: string[]; steps?: FirstStep[]; planId?: string | null; onDownload?: () => void;
+  /** 아직 안 쓴 항목 수(결제 전 첫 항목만 씀 · 작성 중 건너뜀) — 0 이 아니면 '다 만들어졌어요'라고 하지 않는다 */
+  remaining?: number }) {
   // shortcut: 끝낸 첫걸음은 이 기기에만 기억한다(localStorage), 기기 사이에 이어져야 하면 서버 저장으로 올린다
   const stepsKey = planId ? `easy-steps:${planId}` : null;
   const [doneSteps, setDoneSteps] = useState<number[]>([]);
@@ -63,7 +65,8 @@ export default function EasyView({ easy, chapters, steps = [], planId, onDownloa
   return <div className={styles.easy} aria-label="쉽게 보기">
     <div className={styles.hello}>
       <h2>{far ? "시작 전에 볼 숫자가 정리됐어요" : short ? "조금만 더 준비하면 시작할 수 있어요" : "시작할 수 있어요"}</h2>
-      <p>계획서와 준비물이 다 만들어졌어요</p>
+      {/* 1개 항목만 쓴 결제 전 계획서에도 '다 만들어졌어요'가 보였다(운영 점검 2026-11-26) */}
+      <p>{remaining > 0 ? `지금까지 쓴 항목으로 정리했어요. 남은 ${remaining}개 항목은 아직 쓰기 전이에요` : "계획서와 준비물이 다 만들어졌어요"}</p>
     </div>
     {reachable && <section className={styles.goal}>
       <h3>목표</h3>

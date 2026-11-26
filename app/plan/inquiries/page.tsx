@@ -85,7 +85,6 @@ export default function InquiriesPage() {
         {/* 빈 화면 단추는 하나 — 공개한 홈페이지가 없으면 '홈페이지 만들기', 있으면 '알림 번호 설정'(단추 셋이 헷갈렸다, 2026-11-04 사장님) */}
         {items === null ? null : shown.length === 0 ? <EmptyState icon={Inbox} heading="p"
           title={filter === "open" && items?.length ? "답할 문의가 없어요" : published === 0 ? "아직 공개한 홈페이지가 없어요" : "아직 들어온 문의가 없어요"}
-          description={published === 0 ? "홈페이지를 공개하면 손님 문의가 여기로 모여요" : "홈페이지를 공개하면 여기로 모여요"}
           actions={items.length === 0 ? (published === 0
             ? <AppButton variant="primary" href={recentPlanId ? homepageHref(recentPlanId) : "/plan/chat?new=1"}>홈페이지 만들기<ChevronRight size={18} aria-hidden="true" /></AppButton>
             : recentPlanId ? <AppButton variant="primary" href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정<ChevronRight size={18} aria-hidden="true" /></AppButton>

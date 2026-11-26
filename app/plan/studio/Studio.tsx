@@ -820,7 +820,8 @@ export default function Studio() {
     /* 휴대폰 홈페이지 — 칸 위 '저장 · 공개하기' 줄을 접었으니 저장은 여기서(공개하기는 위 막대 주 단추) */
     ...(!wide && rightTab === "homepage" && !locks.homepage ? [{ key: "save", label: "홈페이지 저장", icon: <Save />, onSelect: () => sendStudioCommand("homepage-save") }] : []),
     /* 휴대폰 미리보기는 계획서 칸의 위 줄이 없다 — 목차 · 한 장 요약은 여기서. 내려받기(위 막대 주 단추) · 실적 기록(위 '유지보수')은 겹쳐서 뺐다 */
-    ...(rightTab === "plan" ? [
+    /* 계획서를 쓰기 전에는 이 도구들을 두지 않는다 — 꺼진 이유가 마우스를 올려야 뜨는 글에만 있어 휴대폰에서는 눌러도 설명이 없었다(점검 2026-11-26) */
+    ...(rightTab === "plan" && planTools ? [
       { key: "toc", label: "목차", icon: <List />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-toc") },
       ...(wide ? [{ key: "summary", label: "쉽게 보기", icon: <FileText />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 볼 수 있어요", onSelect: () => sendStudioCommand("plan-summary") }]
         : [{ key: "download", label: "내려받기", icon: <Download />, disabled: !planTools, title: planTools ? undefined : "계획서를 쓰면 내려받을 수 있어요", onSelect: () => runPlan("plan-download") }]),
@@ -918,7 +919,10 @@ export default function Studio() {
     {rightTab === "plan" && planView && !locks.plan ? <div className={styles.viewSeg} role="group" aria-label="문서 보기 방식">
       <button type="button" aria-pressed={planView === "easy"} onClick={() => { if (planView !== "easy") sendStudioCommand("plan-summary"); }}>쉽게 보기</button>
       <button type="button" aria-pressed={planView === "work"} onClick={() => { if (planView !== "work") sendStudioCommand("plan-summary"); }}>전체 문서</button>
-    </div> : <button type="button" className={styles.primary44} disabled={!!locks[rightTab] || rightTab === "plan" && !planTools} title={locks[rightTab]?.message ?? (rightTab === "plan" && !planTools ? "계획서를 쓰면 내려받을 수 있어요" : undefined)} onClick={() => sendStudioCommand(primary.command)}>{primary.label}</button>}
+    </div> : locks[rightTab] || rightTab === "plan" && !planTools
+      /* 아직 쓸 수 없는 주 단추(없는 홈페이지의 '공개하기' · 쓰기 전 계획서의 '내려받기')는 꺼서 보이지 않고 자리만 둔다 — 칸 안 안내가 갈 곳을 말한다 */
+      ? <span className={styles.mHeadSpace} aria-hidden="true" />
+      : <button type="button" className={styles.primary44} onClick={() => sendStudioCommand(primary.command)}>{primary.label}</button>}
   </header>;
 
   /* 예시 사업 · 대화 없는 사업의 대화 칸 안내 아래 — 대화 칸(BusinessIntake)이 없어 여기서 같은 말풍선을 그린다 */

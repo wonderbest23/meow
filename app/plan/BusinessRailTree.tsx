@@ -4,7 +4,7 @@ import { Fragment, Suspense, useEffect, useMemo, useRef, useState, useSyncExtern
 import { nativePlatform } from "../../lib/native-app";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Check, ChevronRight, FolderClosed } from "lucide-react";
+import { ChevronRight, FolderClosed, ListChecks, Wrench } from "lucide-react";
 import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan, type PlanTitleNotice } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
@@ -108,12 +108,22 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
       const current = here === step.id;
       /* 개업 준비·유지보수는 홈페이지 없이도 쓸 수 있다(사업 관리 화면과 같은 규칙) */
       const reachable = step.id === "care" || step.id === "launch" ? workspaceOpen : step.state !== "todo" || index === 0 || steps[index - 1].state === "done";
+      /*
+       * 넷째 줄(개업 준비 · 유지보수)은 1→2→3 순서에 들지 않는다 — 대화를 마치면 열리고 끝나는 단계도 아니다.
+       * 번호를 붙이면 '3 이 잠겼는데 4 가 열렸다'로 읽혀서(대표 지적 2026-11-26) 번호 대신 아이콘을 두고 가는 선으로 띄운다.
+       * 상태는 글자로 말한다(완료 · 진행 중 · 잠김) — 체크 표시는 눌러서 고르는 칸처럼 보였고, 흐린 글씨만으로는 왜 안 눌리는지 몰랐다.
+       * 공개 전의 넷째 줄은 개업 준비의 진행(launch)을 말한다. 유지보수는 끝나는 단계가 아니라 상태 글자가 없다.
+       */
+      const side = step.id === "care";
+      const shown = side ? (careAsLaunch ? allSteps.find(item => item.id === "launch")?.state ?? "todo" : "todo") : step.state;
+      const status = !reachable ? "잠김" : shown === "done" ? "완료" : shown === "active" ? "진행 중" : null;
       const body = <>
-        <i aria-hidden="true" data-state={step.state}>{step.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>
+        <i aria-hidden="true" data-state={step.state} data-side={side || undefined}>{side ? (careAsLaunch ? <ListChecks /> : <Wrench />) : index + 1}</i>
         <span>{step.id === "care" && careAsLaunch ? launchLabel : step.label}</span>
+        {status && <em className={styles.stateTag} data-tone={!reachable ? "locked" : shown}>{status}</em>}
       </>;
       return <Fragment key={step.id}>
-        <li>
+        <li data-side={side || undefined}>
         {reachable
           ? <Link className={styles.step} href={stepHref(step.id, step.href)} aria-current={current ? "page" : undefined} onClick={event => { setActivePlan(plan.id); if (toStudio) return; if (step.id === "care") sameWorkspaceTab(event, plan.id, "operations"); else if (step.id === "launch") sameWorkspaceTab(event, plan.id, "launch"); }}>{body}</Link>
           : <button type="button" className={styles.step} aria-disabled="true" title="앞 단계를 마치면 열려요" onClick={() => openLocked(step.id)}>{body}</button>}
