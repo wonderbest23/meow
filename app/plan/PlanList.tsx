@@ -261,7 +261,6 @@ export default function PlanList() {
           </div>}
           <EmptyState as="section" className={styles.emptyPlace} data-business-empty="guest" icon={FolderOpen} heading="h2"
             title={resume ? "로그인하면 사업이 저장돼요" : "아직 저장된 사업이 없어요"}
-            description={resume ? "지금 하던 사업은 이 브라우저에만 있어요. 로그인하면 여기에 모아 두고 다른 기기에서도 이어서 할 수 있어요." : "로그인하면 만든 사업이 여기에 모여요. 처음이라면 새 대화로 바로 시작할 수 있어요."}
             actions={<>
               <AppButton type="button" variant="primary" onClick={() => openLogin(resume ? openHref(resume) : `/plan?view=${PLAN_VIEW_ALL}`)}>로그인</AppButton>
               <AppButton variant="secondary" href="/plan" className={home.guestStart}>새 대화 시작하기<ChevronRight size={18} aria-hidden="true" /></AppButton>
