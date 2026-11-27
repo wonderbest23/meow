@@ -16,3 +16,12 @@
 .actions[data-empty-part][data-empty-part] { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; margin:16px 0 0; }
 /* 파란 단추는 화면마다 같은 너비(--app-state-button, 좁으면 줄 너비까지) */
 .actions[data-empty-part][data-empty-part] > [data-variant=primary] { width:var(--app-state-button); max-width:100%; }
+
+/* 아이콘 '띠링': 상자가 통 튀어 오르고 → 테두리 물결이 한 번 퍼지고 → 그림이 종처럼 살짝 흔들린다 */
+@keyframes state-icon-pop { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: none; opacity: 1; } }
+@keyframes state-icon-ring { 0% { opacity: .4; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes state-icon-ding { 0%, 100% { rotate: 0deg; } 20% { rotate: -14deg; } 40% { rotate: 11deg; } 60% { rotate: -7deg; } 80% { rotate: 3deg; } }
+.icon[data-empty-part][data-empty-part] { position: relative; animation: state-icon-pop .5s cubic-bezier(.2, .9, .3, 1.25) both; }
+.icon[data-empty-part][data-empty-part]::after { content: ""; position: absolute; inset: 0; border: 2px solid var(--app-primary); border-radius: inherit; opacity: 0; pointer-events: none; animation: state-icon-ring .7s ease-out .3s; }
+.icon[data-empty-part][data-empty-part] > svg { transform-origin: 50% 15%; animation: state-icon-ding .65s ease-in-out .35s both; }
+@media (prefers-reduced-motion: reduce) { .icon[data-empty-part][data-empty-part], .icon[data-empty-part][data-empty-part]::after, .icon[data-empty-part][data-empty-part] > svg { animation: none; } }

@@ -109,19 +109,6 @@
 /* '← 나중에 하기' 같은 돌아가는 길 — 글자 버튼(누르는 자리 44px) */
 .back { margin-top: 4px; }
 
-/* 결제 완료 순간 — 체크가 살짝 튀어오르며 확정감을 준다 */
-@keyframes payPop {
-  0% { transform: scale(0.4); opacity: 0; }
-  60% { transform: scale(1.12); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-.iconPop {
-  animation: payPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .iconPop { animation: none; }
-}
-
 /* 결제 전 필수 확인: 제공 시점·동의·면책(계좌이체 결제 화면과 같은 항목) */
 .terms { margin: 4px 0 18px; text-align: left; display: grid; gap: 10px; }
 .supply { margin: 0; padding: 12px 14px; border-radius: 10px; background: var(--surface-muted, var(--app-raised)); color: var(--text-body, var(--app-body)); font-size: .8125rem; line-height: 1.6; }
@@ -233,3 +220,12 @@
   .card:has(> .terms) .upsell { justify-content: flex-start; }
   .card:has(> .terms) .consentList { margin: 0; }
 }
+
+/* 아이콘 '띠링': 상자가 통 튀어 오르고 → 테두리 물결이 한 번 퍼지고 → 그림이 종처럼 살짝 흔들린다 */
+@keyframes state-icon-pop { 0% { transform: scale(.5); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: none; opacity: 1; } }
+@keyframes state-icon-ring { 0% { opacity: .4; transform: scale(1); } 100% { opacity: 0; transform: scale(1.5); } }
+@keyframes state-icon-ding { 0%, 100% { rotate: 0deg; } 20% { rotate: -14deg; } 40% { rotate: 11deg; } 60% { rotate: -7deg; } 80% { rotate: 3deg; } }
+.card .icon { position: relative; animation: state-icon-pop .5s cubic-bezier(.2, .9, .3, 1.25) both; }
+.card .icon::after { content: ""; position: absolute; inset: 0; border: 2px solid var(--app-primary); border-radius: inherit; opacity: 0; pointer-events: none; animation: state-icon-ring .7s ease-out .3s; }
+.card .icon > svg { transform-origin: 50% 15%; animation: state-icon-ding .65s ease-in-out .35s both; }
+@media (prefers-reduced-motion: reduce) { .card .icon, .card .icon::after, .card .icon > svg { animation: none; } }

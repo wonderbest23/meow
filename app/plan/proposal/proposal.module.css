@@ -52,8 +52,8 @@
 .versions button { width: 100%; display: flex; align-items: center; gap: 10px; border: 0; background: var(--app-bg); padding: 10px; margin-top: 6px; border-radius: 4px; text-align: left; }
 .versions button span { flex: 1; font-size: .75rem; }
 .versions small { display: block; font-size: .625rem; color: var(--app-muted); margin-top: 4px; }
-.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; min-height: 60dvh; padding: 32px 24px; text-align: center; }
-.empty h2 { font-size: 1.625rem; margin: 0; }
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; min-height: 60dvh; padding: 32px 24px; text-align: center; }
+.empty h2 { font-size: var(--app-state-title); font-weight: 700; margin: 0; }
 .empty p { color: var(--app-muted); font-size: .9375rem; line-height: 1.8; max-width: 520px; margin: 0; }
 /* 도는 표시는 PlanLoading 의 키프레임 하나로(움직임 줄이기도 거기서) */
 .spin { composes: spin from "../PlanLoading.module.css"; }

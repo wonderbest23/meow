@@ -3,6 +3,7 @@
 import { capacityDaysDisplay } from "../../../lib/plan-builder/coach-presentation";
 import { useEffect, useRef, useState } from "react";
 import { ListChecks } from "lucide-react";
+import { EmptyIcon } from "../BusinessEmptyState";
 import type { IntakeSnapshot } from "../../../lib/plan-builder/intake-types";
 import type { IntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { wonLabel } from "../../../lib/plan-builder/intake-options";
@@ -170,7 +171,7 @@ export default function StudioIntakeSummary({ snapshot, onClose }: { snapshot: I
           </div>}
           {numberRows.length > 0 && <dl>{numberRows.map(summaryRow)}</dl>}
         </div>}
-      </> : <div className={styles.liveSummaryEmpty}><ListChecks size={26} aria-hidden="true" /><p>아직 정한 내용이 없어요</p></div>}
+      </> : <div className={styles.liveSummaryEmpty}><EmptyIcon icon={ListChecks} /><p>아직 정한 내용이 없어요</p></div>}
       {remaining.length > 0 && <div className={styles.sumGroup}>
         <h4>남은 질문</h4>
         <ol className={styles.sumTodo}>

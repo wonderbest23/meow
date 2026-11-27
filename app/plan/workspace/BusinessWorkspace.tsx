@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { AlertCircle, ChevronRight, FolderOpen, FolderSearch, MessageSquareText } from "lucide-react";
+import { EmptyIcon } from "../BusinessEmptyState";
 import { useRouter } from "next/navigation";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
@@ -230,9 +231,9 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
     void confirmLeave(EXPERT_LEAVE).then(ok => { if (ok) { leavingExpert.current = true; anchor.click(); } });
   }}><BusinessAppChrome title="내 사업" titleHeading={false}>
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : embedded && resumeChat ? <div className={styles.scroll}><div className={styles.content}>
-      <section className={styles.empty}><h2>사업 이야기를 먼저 마쳐 주세요</h2><p>대화에서 사업안을 정하면 여기서 이어서 준비할 수 있어요.</p><AppButton variant="primary" className={styles.primary} href={resumeChat}>대화로 가기<ChevronRight size={18} aria-hidden="true" /></AppButton></section>
+      <section className={styles.empty}><EmptyIcon icon={MessageSquareText} /><h2>사업 이야기를 먼저 마쳐 주세요</h2><p>대화에서 사업안을 정하면 여기서 이어서 준비할 수 있어요.</p><AppButton variant="primary" className={styles.primary} href={resumeChat}>대화로 가기<ChevronRight size={18} aria-hidden="true" /></AppButton></section>
     </div></div> : <div className={styles.scroll}><div className={styles.content}>
-      {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : requested ? "사업을 찾지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : requested ? "지웠거나 다른 계정에서 만든 사업일 수 있어요. 내 사업 목록에서 다시 골라 주세요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{loadError && !signedOut ? <AppButton type="button" variant="primary" className={styles.primary} onClick={() => window.location.reload()}>다시 시도</AppButton> : signedOut ? <AppButton variant="primary" className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <AppButton variant="primary" className={styles.primary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton>}<AppButton variant="text" className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</AppButton></section> : <>
+      {!plan || !hub ? <section className={styles.empty}><EmptyIcon icon={loadError ? AlertCircle : requested ? FolderSearch : FolderOpen} /><h1>{loadError ? "사업을 불러오지 못했어요" : requested ? "사업을 찾지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : requested ? "지웠거나 다른 계정에서 만든 사업일 수 있어요. 내 사업 목록에서 다시 골라 주세요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{loadError && !signedOut ? <AppButton type="button" variant="primary" className={styles.primary} onClick={() => window.location.reload()}>다시 시도</AppButton> : signedOut ? <AppButton variant="primary" className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기<ChevronRight size={18} aria-hidden="true" /></AppButton> : <AppButton variant="primary" className={styles.primary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton>}<AppButton variant="text" className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</AppButton></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인할게요.</p>}
         {/* 유지보수 화면에는 유지보수만 — 사업 요약·내 자료 탭과 '대화 이어가기'는 헷갈린다(소유자 지적 2026-10-07). 대화는 왼쪽 목록의 '대화'로 */}
         {!embedded && <WorkspaceIdentity title={businessDisplayName(plan.title)} status={hub.status} tone={hub.statusTone} action={view === "operations" ? undefined : hub.coach ? <Link className={styles.titleAction} href={chat}>대화 이어가기</Link> : <button type="button" className={styles.titleAction} onClick={openLegacy}>사업계획서 열기</button>} />}

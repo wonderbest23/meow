@@ -4,7 +4,8 @@ import { settleTransition } from "../../../lib/client/view-transition";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode, useLayoutEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Download, ExternalLink, FileText, History, Layers, List, LayoutGrid, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, SquarePen, X } from "lucide-react";
+import { EmptyIcon } from "../BusinessEmptyState";
+import { ChevronDown, ChevronLeft, MessageSquareText, ChevronRight, ClipboardList, Download, ExternalLink, FileText, History, Layers, List, LayoutGrid, PanelLeftClose, PanelLeftOpen, PenLine, RotateCw, Save, Share2, SquarePen, X } from "lucide-react";
 import BusinessAppChrome, { type ChromeMenu } from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -982,6 +983,7 @@ export default function Studio() {
               </div>
               : noChat
                 ? <div className={styles.chatNote}><div className={hub.content}><section className={hub.empty}>
+                  <EmptyIcon icon={MessageSquareText} />
                   <h2>대화 기록이 없는 사업이에요</h2>
                 </section>{noteGuideTurn}</div></div>
                 : <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !focus && !locks[rightTab] ? rightTab : null} focus={focus} onLoadingChange={setChatLoading} />}

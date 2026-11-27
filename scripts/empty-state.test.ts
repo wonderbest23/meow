@@ -35,7 +35,8 @@ assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i, "빈 화면 색을
 for (const [, value] of css.matchAll(/(?:^|[\s;{])(?:color|background|border-color)\s*:\s*([^;}]+)/g)) {
   assert.match(value.trim(), /^var\(--app-[a-z-]+\)$/, `빈 화면 색이 --app-* 토큰이 아니다: ${value.trim()}`);
 }
-assert.doesNotMatch(css, /@media/, "PC·모바일 모양이 갈린다 — 빈 화면은 한 규격");
+assert.doesNotMatch(css, /@media(?!\s*\(prefers-reduced-motion)/, "PC·모바일 모양이 갈린다 — 빈 화면은 한 규격(움직임 줄이기 설정만 예외)");
+assert.match(css, /prefers-reduced-motion[^{]*\{[^}]*animation:\s*none/, "아이콘 띠링 움직임은 '움직임 줄이기' 설정에서 꺼진다");
 assert.match(css, /:where\(\.root\) \{[^}]*\}/, "자리(너비·바깥 여백)는 :where() 로 — 쓰는 쪽 className 이 바꿀 수 있게");
 assert.doesNotMatch(rule(css, ".root[data-empty-state][data-empty-state]"), /(?:^|[\s;{])(?:margin|min-height|height|width)\s*:/, "공통 빈 화면이 자리(높이·너비·바깥 여백)를 정했다 — 쓰는 쪽이 정한다");
 

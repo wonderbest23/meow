@@ -10,21 +10,13 @@
   margin: 12px auto;
 }
 
-.icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 14px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--wz-brand-soft, var(--app-soft));
-  color: var(--wz-brand, var(--app-accent));
-}
+/* 아이콘은 공통 EmptyIcon(60px 둥근 네모 · 띠링). 여기서는 가운데 자리만 */
+.wrap > [data-empty-part][data-empty-part][data-empty-part] { margin: 0 auto 14px; }
 
 .title {
   margin: 0 0 10px;
-  font-size: 1.1875rem;
-  font-weight: 800;
+  font-size: var(--app-state-title);
+  font-weight: 700;
   letter-spacing: 0;
   color: var(--wz-ink, var(--app-text));
 }
@@ -58,7 +50,7 @@
 }
 
 /* 버튼은 세로 스택 — 나란히 두면 좁은 폭에서 겹치거나 어색하게 감겼다. 모양은 공통 버튼, 여기는 폭·간격만(가운데 정렬은 .wrap 의 text-align) */
-.primary { width: 100%; max-width: 300px; }
+.primary { width: var(--app-state-button); max-width: 100%; }
 
 
 .note {

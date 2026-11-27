@@ -83,7 +83,7 @@ export default function PlanPayResult() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={`${styles.icon} ${ok ? styles.iconPop : ""}`} aria-hidden="true">{ok ? <CheckCircle2 size={30} strokeWidth={1.8} /> : pending ? <Clock3 size={30} strokeWidth={1.8} /> : <AlertTriangle size={30} strokeWidth={1.8} />}</div>
+        <div className={styles.icon} aria-hidden="true">{ok ? <CheckCircle2 size={30} strokeWidth={1.8} /> : pending ? <Clock3 size={30} strokeWidth={1.8} /> : <AlertTriangle size={30} strokeWidth={1.8} />}</div>
         <h1 className={styles.title}>{ok ? "결제가 끝났어요" : pending ? "결제 결과를 확인하고 있어요" : "결제를 마치지 못했어요"}</h1>
         <p className={styles.desc} aria-live="polite">
           {/* 빈 사유(reason=)는 없는 것으로 — 빈 문단이 제목 아래를 24px 로 벌렸다(점검 r38) */}

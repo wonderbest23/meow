@@ -4,7 +4,7 @@ import PlanLoading from "../PlanLoading";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowUp, ChevronRight, FileCheck2, Check, Lightbulb, FileText, Store } from "lucide-react";
+import { AlertCircle, ArrowUp, ChevronRight, FileCheck2, Check, Lightbulb, FileText, Store } from "lucide-react";
 import { useChatSplit } from "./useChatSplit";
 import { readCoach, type CoachField, type CoachState } from "../../../lib/plan-builder/coach";
 import type { BriefPatch } from "./BriefEditor";
@@ -15,7 +15,7 @@ import BusinessBrief from "./BusinessBrief";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { businessChatHref, chatEntryIntent } from "../../../lib/plan-builder/business-hub";
 import { businessDisplayName } from "../../../lib/plan-builder/business-name";
-import BusinessEmptyState from "../BusinessEmptyState";
+import BusinessEmptyState, { EmptyIcon } from "../BusinessEmptyState";
 import hubStyles from "../BusinessHub.module.css";
 import ChatLoading from "./loading";
 import styles from "./page.module.css";
@@ -288,7 +288,7 @@ function BusinessCoach() {
       {hasBrief && <div {...split.separator} aria-controls="business-chat-pane" className={styles.splitHandle} title="드래그로 너비 조절 · 두 번 클릭하면 기본 너비"><span /></div>}
       {hasBrief && plan && <aside className={`${styles.briefPane} ${view !== "brief" ? styles.mobileHidden : ""}`} aria-label="내 사업안 결과"><BusinessBrief coach={plan.coach} changed={changed} onEdit={edit} onSave={saveBrief} onDirty={setEditDirty} disabled={blocked} actions={actions} />{error && view === "brief" && <p className={styles.error} role="alert">{error}</p>}</aside>}
     </div> : <div className={hubStyles.scroll}><div className={hubStyles.content}>
-      {loadFailed ? <section className={hubStyles.empty}><h1>기획을 불러오지 못했어요</h1><p role="alert">{error}</p><AppButton variant="secondary" className={hubStyles.secondary} onClick={() => { setLoaded(false); void refresh(searchParams.get("planId") ?? undefined).catch(e => setError(e.message)).finally(() => setLoaded(true)); }}>다시 불러오기</AppButton><AppButton variant="text" className={hubStyles.textButton} href="/plan">내 사업 목록으로</AppButton></section> : <BusinessEmptyState kind={searchParams.get("planId") ? "missing" : "planning"} />}
+      {loadFailed ? <section className={hubStyles.empty}><EmptyIcon icon={AlertCircle} /><h1>기획을 불러오지 못했어요</h1><p role="alert">{error}</p><AppButton variant="secondary" className={hubStyles.secondary} onClick={() => { setLoaded(false); void refresh(searchParams.get("planId") ?? undefined).catch(e => setError(e.message)).finally(() => setLoaded(true)); }}>다시 불러오기</AppButton><AppButton variant="text" className={hubStyles.textButton} href="/plan">내 사업 목록으로</AppButton></section> : <BusinessEmptyState kind={searchParams.get("planId") ? "missing" : "planning"} />}
     </div></div>}
     </BusinessAppChrome>
   </main>;
