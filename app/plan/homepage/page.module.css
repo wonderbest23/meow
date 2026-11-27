@@ -19,7 +19,7 @@
 
 .centerTitle {
   margin: 0;
-  font-size: 1.0625rem;
+  font-size: var(--app-state-title);
   font-weight: 700;
   letter-spacing: 0;
   color: var(--text, var(--app-text));
@@ -54,6 +54,7 @@
 
 /* 막힘 화면의 행동 단추 — 모양은 공통 버튼(<button>·<a> 모두 같은 모양), 여기는 위 여백만 */
 .cta { margin-top: 16px; }
+.center > .cta { width: var(--app-state-button); max-width: 100%; }
 
 
 /* 초안을 만드는 동안 도는 점 */

@@ -6,7 +6,8 @@ import { apiMessage, fetchWithTimeout, isTimeoutError, koreanText, userErrorMess
 import { loadAuthSession } from "../../../lib/client/auth-session";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { LayoutTemplate, Maximize2, ChevronRight } from "lucide-react";
+import { LayoutTemplate, Maximize2, ChevronRight, AlertCircle, FileText, FolderSearch, Lock, LogIn } from "lucide-react";
+import { EmptyIcon } from "../BusinessEmptyState";
 import dynamic from "next/dynamic";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
 import { HomepageKitPanel, homepageMissingInfo, withBusinessName } from "../../../components/homepage-kit-panel";
@@ -26,7 +27,7 @@ import styles from "./page.module.css";
 import { StatusBadge } from "../../../components/status-badge";
 import PlanLoading, { Spinner } from "../PlanLoading";
 import BusinessAppChrome from "../BusinessAppChrome";
-import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
+import { MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
 import { homepageHref, journeyLabel, journeyNext, launchHref } from "../../../lib/plan-builder/journey";
 import { readCoach } from "../../../lib/plan-builder/coach";
@@ -212,12 +213,12 @@ export function HomepageScreen() {
       requestRef.current = null;
       setBuilderOpen(false); setFullscreen(false); setEditable(false);
       setDraft(null); setSite(null); setProjectId(null); setAction("idle"); setMessage("");
-      setBlocked({ title: "계정이 바뀌었어요", detail: "지금 계정으로 홈페이지를 다시 열어 주세요.", missing: [], cta: "login" });
+      setBlocked({ title: "계정이 바뀌었어요", detail: "", missing: [], cta: "login" });
       setPhase("blocked");
       /* 로그인이 풀린 것이면(세션 만료·다른 탭에서 로그아웃) 그렇게 알린다 — 편집기에서 고친 내용은 이 탭에 보관돼 다시 로그인하면 복구할 수 있다 */
       void loadAuthSession().then(session => {
         if (!mounted.current || session.authenticated) return;
-        setBlocked({ title: "로그인이 풀렸어요", detail: "다시 로그인하면 이어서 할 수 있어요. 편집기에서 고친 내용은 이 탭에 보관해 뒀어요.", missing: [], cta: "login" });
+        setBlocked({ title: "로그인이 풀렸어요", detail: "고친 내용은 이 탭에 보관해 뒀어요.", missing: [], cta: "login" });
       }).catch(() => {});
     };
     const unsubscribe = subscribePlanOwnerChange(invalidate);
@@ -267,7 +268,7 @@ export function HomepageScreen() {
          */
         if (!alive) return;
         // 다른 화면과 같은 말(MissingBusiness) — 갈 곳은 새 대화가 아니라 내 사업 목록
-        setBlocked(lastHydrationFailed() ? { title: "사업을 불러오지 못했어요", detail: "연결을 확인하고 다시 시도해 주세요.", missing: [], cta: "retry" } : { title: MISSING_BUSINESS_TITLE, detail: MISSING_BUSINESS_DETAIL, missing: [], cta: "list" });
+        setBlocked(lastHydrationFailed() ? { title: "사업을 불러오지 못했어요", detail: "", missing: [], cta: "retry" } : { title: MISSING_BUSINESS_TITLE, detail: "", missing: [], cta: "list" });
         setPhase("blocked");
         return;
       }
@@ -275,7 +276,7 @@ export function HomepageScreen() {
       if (!alive) return;
       setScreenPlanId(plan?.id ?? null);
       if (!plan) {
-        setBlocked({ title: "먼저 사업계획서를 만들어 주세요", detail: "홈페이지는 계획서에 답한 내용으로 만들어요.", missing: [], cta: "plan" });
+        setBlocked({ title: "먼저 사업계획서를 만들어 주세요", detail: "", missing: [], cta: "plan" });
         setPhase("blocked");
         return;
       }
@@ -375,7 +376,7 @@ export function HomepageScreen() {
       const errorMessage = error.message ?? (typeof error.error === "object" ? error.error?.message : undefined);
       if (!alive || epoch !== planOwnerEpoch()) return;
       if (res.status === 401) {
-        setBlocked({ title: "로그인이 필요해요", detail: "홈페이지는 내 계정에 저장돼요. 로그인하면 이어서 할 수 있어요.", missing: [], cta: "login" });
+        setBlocked({ title: "로그인이 필요해요", detail: "", missing: [], cta: "login" });
       } else if (res.status === 402) {
         setBlocked({ title: "결제 후 이용할 수 있어요", detail: "사업계획서를 결제했다면 홈페이지만, 아직이라면 사업계획서 + 홈페이지로 함께 결제할 수 있어요.", missing: [], cta: "pay" });
       } else if (error.error === "plan_incomplete") {
@@ -1051,8 +1052,9 @@ export function HomepageScreen() {
 
       {phase === "blocked" && (
         <div className={styles.center}>
+          <EmptyIcon icon={blocked.cta === "login" ? LogIn : blocked.cta === "pay" ? Lock : blocked.cta === "list" ? FolderSearch : blocked.cta === "plan" ? FileText : AlertCircle} />
           <p className={styles.centerTitle}>{blocked.title}</p>
-          <p className={styles.centerNote}>{blocked.detail}</p>
+          {blocked.detail && <p className={styles.centerNote}>{blocked.detail}</p>}
           {blocked.missing.length > 0 && (
             <ul className={styles.missing}>
               {blocked.missing.map((item) => (

@@ -21,3 +21,12 @@
 .none { margin:8px; color:var(--app-muted); font-size:.875rem; line-height:1.5; }
 .menu :is(a, input):focus-visible { outline:2px solid var(--app-primary); outline-offset:-2px; }
 @media (pointer:coarse) { .item, .back { min-height:44px; height:auto; } }
+
+/* 왼쪽 메뉴(RailMenu)와 같은 넉넉한 규격(2026-11-27) — 칸 36 · 글씨 15 · 아이콘↔글자 12 · 안쪽 10, 묶음 제목 13px 회색(위 24) */
+.back { height:40px; padding:0 10px; font-size:.9375rem; }
+.search input { font-size:.9375rem; }
+.grp { margin:24px 10px 4px; font-size:.8125rem; }
+.item { height:36px; gap:12px; padding:0 10px; font-size:.9375rem; }
+.ava { width:22px; height:22px; }
+.none { margin:8px 10px; font-size:.9375rem; }
+@media (pointer:coarse) { .item, .back { min-height:44px; height:auto; } }

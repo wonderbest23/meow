@@ -62,3 +62,13 @@
 @keyframes rise { from { transform:translateY(100%); } to { transform:none; } }
 @keyframes fade { from { opacity:0; } to { opacity:1; } }
 @media (prefers-reduced-motion:reduce) { .scrim, .sheet { animation:none; } }
+
+/* PC 작은 창도 왼쪽 메뉴와 같은 규격(2026-11-27) — 메뉴 폭(272 − 안쪽 16)과 같은 너비, 행 36 · 15px · 아이콘 18, 아래 계정 줄(44) 위에 띄운다 */
+.sheet:is([data-anchor=top], [data-anchor=bottom]) { width:256px; padding:6px; }
+.sheet[data-anchor=bottom] { bottom:64px; }
+.sheet:is([data-anchor=top], [data-anchor=bottom]) .row { height:36px; gap:12px; padding:0 10px; font-size:.9375rem; }
+.sheet:is([data-anchor=top], [data-anchor=bottom]) .row > svg { width:18px; height:18px; }
+.sheet:is([data-anchor=top], [data-anchor=bottom]) .who { padding:6px 10px 10px; gap:10px; }
+.sheet:is([data-anchor=top], [data-anchor=bottom]) .name { font-size:.9375rem; }
+.sheet:is([data-anchor=top], [data-anchor=bottom]) .mail { font-size:.8125rem; }
+@media (pointer:coarse) { .sheet:is([data-anchor=top], [data-anchor=bottom]) .row { height:auto; min-height:44px; } }

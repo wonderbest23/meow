@@ -15,6 +15,9 @@ import "./account-auth-form.module.css";
 import styles from "./login-dialog.module.css";
 import accountStyles from "../app/account/Account.module.css";
 
+/* 팝업 로그인 창 로고 아래 한 줄 — 왜 로그인하는지(인수인계 7장 알려진 문제, 2026-11-27) */
+const LOGIN_REASON = { login: "로그인하면 지금 하던 내용 그대로 이어서 할 수 있어요.", register: "가입하면 지금 하던 내용 그대로 이어서 할 수 있어요." };
+
 /*
  * 로그인 팝업 틀 — 모든 화면(app/layout.tsx)에 붙는다. 열기는 openLogin()(login-dialog-core).
  *
@@ -121,7 +124,7 @@ export function LoginDialogHost() {
         <div className={`${accountStyles.page} ${styles.scope}`}>
           <button type="button" className={styles.close} onClick={close} aria-label="로그인 닫기"><X size={20} /></button>
           {/* 열 때마다 새 폼 — 이전 입력·메시지를 남기지 않는다 */}
-          <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm key={opened} next={next} initialMode={mode} titleId="login-dialog-title" /></div>
+          <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm key={opened} next={next} initialMode={mode} titleId="login-dialog-title" reason={LOGIN_REASON} /></div>
         </div>
       )}
     </dialog>

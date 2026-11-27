@@ -83,13 +83,12 @@ export default function PlanPayResult() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={`${styles.icon} ${ok ? styles.iconPop : ""}`} aria-hidden="true">{ok ? <CheckCircle2 size={30} strokeWidth={1.8} /> : pending ? <Clock3 size={30} strokeWidth={1.8} /> : <AlertTriangle size={30} strokeWidth={1.8} />}</div>
+        <div className={styles.icon} aria-hidden="true">{ok ? <CheckCircle2 size={30} strokeWidth={1.8} /> : pending ? <Clock3 size={30} strokeWidth={1.8} /> : <AlertTriangle size={30} strokeWidth={1.8} />}</div>
         <h1 className={styles.title}>{ok ? "결제가 끝났어요" : pending ? "결제 결과를 확인하고 있어요" : "결제를 마치지 못했어요"}</h1>
         <p className={styles.desc} aria-live="polite">
           {/* 빈 사유(reason=)는 없는 것으로 — 빈 문단이 제목 아래를 24px 로 벌렸다(점검 r38) */}
-          {ok ? doneDesc : pending ? (reason || "승인 결과 확인이 늦어지고 있어요. 다시 결제하지 말고 이 주문의 결과를 확인해 주세요.") : (reason || "결제가 취소됐거나 승인되지 않았어요.")}
+          {ok ? doneDesc : pending ? (reason || "다시 결제하지 말고 결과를 확인해 주세요.") : (reason || "결제가 취소됐거나 승인되지 않았어요.")}
         </p>
-        {pending && orderId && <p className={styles.desc} style={{ overflowWrap: "anywhere" }}>주문번호 {orderId}</p>}
         {ok ? (
           <><AppButton href={doneHref} variant="primary" className={`${styles.primary} ${styles.nav}`}>{doneLabel}<ChevronRight size={18} aria-hidden="true" /></AppButton>
             {autoStart && <p className={styles.autoNote} role="status">잠시 뒤 작성 화면으로 넘어가요.</p>}</>
@@ -100,7 +99,6 @@ export default function PlanPayResult() {
           <AppButton href={retryHref} variant="primary" className={`${styles.primary} ${styles.nav}`}>{planId ? "다시 시도하기" : "내 사업으로 가기"}<ChevronRight size={18} aria-hidden="true" /></AppButton>
         )}
         {/* 큰 단추와 같은 곳으로 가는 작은 링크는 두지 않는다 — 다음 할 일은 단추 하나 */}
-        {!ok && (pending || planId) && <AppButton href={homepageProduct ? siteHref : planHref} variant="text" className={styles.back}>← {homepageProduct ? "홈페이지로" : planId ? "사업계획서로" : "내 사업으로"} 돌아가기</AppButton>}
       </div>
     </div>
   );

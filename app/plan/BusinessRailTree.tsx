@@ -4,7 +4,7 @@ import { Fragment, Suspense, useEffect, useMemo, useRef, useState, useSyncExtern
 import { nativePlatform } from "../../lib/native-app";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronRight, FolderClosed, ListChecks, Wrench } from "lucide-react";
+import { ChevronDown, ChevronRight, FolderClosed, ListChecks, Wrench } from "lucide-react";
 import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan, type PlanTitleNotice } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
@@ -185,9 +185,10 @@ const sameWorkspaceTab = (event: { preventDefault: () => void }, planId: string,
   window.dispatchEvent(new CustomEvent(WORKSPACE_TAB_REQUEST, { detail: tab }));
 };
 
-export default function BusinessRailTree({ documentToc, onPlanCount, grouped = false, open = true }: {
-  /** 묶음 모양(grouped)에서 목록을 펼칠지 — 왼쪽 메뉴의 '내 사업'을 누르면 열린다 */
+export default function BusinessRailTree({ documentToc, onPlanCount, grouped = false, open = true, onToggle }: {
+  /** 묶음 모양(grouped)에서 목록을 펼칠지 — 묶음 제목 '사업'을 누르면 접고 편다 */
   open?: boolean;
+  onToggle?: () => void;
   documentToc?: DocumentToc;
   /** 사업이 몇 개인지 확인되면 알려 준다(못 불러왔으면 부르지 않는다) — 사업이 없으면 메뉴가 '내 문의'를 막는다 */
   onPlanCount?: (count: number) => void;
@@ -303,18 +304,19 @@ export default function BusinessRailTree({ documentToc, onPlanCount, grouped = f
   }
 
   if (grouped) {
+    /* 묶음 제목('사업')만 접기 단추다 — 사업 줄은 누르면 그 사업으로 간다 */
+    const groupShown = open;
     return <div className={`${styles.tree} ${styles.grouped}`}>
       <Suspense fallback={null}><UrlPlanWatcher onChange={setUrlPlanId} /></Suspense>
-      {/* '내 사업' 접기 단추는 뺐다(2026-11-15 사장님) — 왼쪽 메뉴의 '내 사업'을 누르면 이 목록이 나온다 */}
+      {/* Claude 의 '최근 항목'처럼 작은 회색 묶음 제목 + 이름만 있는 줄(2026-11-27 사장님). 제목을 누르면 접힌다 */}
+      {mounted && plans.length > 0 && <button type="button" className={styles.group} aria-expanded={groupShown} aria-controls="rail-plan-list" onClick={onToggle}>사업<ChevronDown className={styles.groupCaret} data-open={groupShown || undefined} aria-hidden="true" /></button>}
       {open && mounted && <div className={styles.list} id="rail-plan-list">
         {remoteFailed && plans.length === 0 && <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>}
-        {checked && !remoteFailed && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요</p>}
         {plans.map(plan => {
           const isCurrent = plan.id === currentId;
           const display = planDisplayName(plan);
           return <div key={plan.id} className={styles.plan}>
             <Link className={styles.planRow} data-current={isCurrent || undefined} aria-current={isCurrent ? "true" : undefined} title={display} href={planOpenHref(plan.id)} onClick={() => setActivePlan(plan.id)}>
-              <b className={styles.letter} aria-hidden="true">{display.trim().charAt(0) || "사"}</b>
               <span>{planDisplayName(plan)}</span>
             </Link>
             {isCurrent && <PlanBranch plan={plan} here={isCurrent ? step : null} documentToc={documentToc} pathname={pathname} />}

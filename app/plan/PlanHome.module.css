@@ -88,7 +88,6 @@
 .skeleton > span i:first-child { background:var(--app-soft); }
 .skeleton > span i:nth-child(2) { background:var(--app-danger-bg); }
 .meta { display:flex; align-items:flex-start; gap:8px; margin-top:12px; min-width:0; }
-.avatar { display:inline-grid; place-items:center; flex:none; width:36px; height:36px; border-radius:50%; background:var(--app-primary); color:var(--app-on-primary); font-size:1rem; font-weight:400; }
 .metaText { display:grid; min-width:0; padding-right:36px; }
 .metaText > strong { font-size:.875rem; font-weight:450; line-height:19.6px; }
 .metaText > span { flex-wrap:nowrap; height:16px; margin-top:0; overflow:visible; font-size:.875rem; line-height:16px; }
@@ -161,7 +160,6 @@
   .listCard[data-list-only] .skeleton { inset:8px; gap:4px; }
   .listCard[data-list-only] .skeleton > span { display:none; }
   .listCard[data-list-only] .meta { flex:1; margin:0; }
-  .listCard[data-list-only] .avatar { display:none; }
   .listCard[data-list-only] .metaText { padding-right:0; }
   .listCard[data-list-only] .metaText > strong { font-size:1rem; font-weight:400; line-height:24px; }
   .listCard[data-list-only] .metaText > span { font-size:1rem; line-height:24px; }
@@ -229,3 +227,16 @@
 /* 로그인 전 '내 사업' — 좁은 화면에서도 '로그인' 단추는 남긴다(위 규칙은 '시작하기'가 떠 있는 '새 대화' 알약과 겹쳐 단추 줄을 통째로 숨긴다). 같은 이유로 '새 대화 시작하기'만 좁은 화면에서 뺀다 */
 .listCard[data-list-only] [data-business-empty="guest"] [data-empty-part=actions] { display:flex; }
 @media (max-width:900px) { .listCard[data-list-only] [data-business-empty="guest"] .guestStart { display:none; } }
+
+/*
+ * 내 사업 목록이 비었을 때 — 목록 카드가 내용 높이만큼만 생겨 PC 에서는 빈 블록이 위쪽에 붙고,
+ * 휴대폰에서는 빈 블록의 화면 높이 기준 최소 높이 + 아래 여백 때문에 내용 없이 85px 쯤 스크롤됐다(2026-11-27 점검).
+ * 카드를 남은 높이만큼 늘리고 빈 블록은 그 안에서 세로 가운데에 둔다.
+ */
+.scroll:has(.listBody[data-empty-list]) { display:flex; flex-direction:column; }
+.listCard:has(> .listBody[data-empty-list]) { flex:1 0 auto; display:flex; flex-direction:column; margin-bottom:32px; }
+.listCard > .listBody[data-empty-list] { flex:1 0 auto; display:grid; align-content:center; }
+.listCard > .listBody[data-empty-list] > [data-empty-state] { min-height:0; }
+@media (max-width: 900px) {
+  .listCard:has(> .listBody[data-empty-list]) { margin-bottom:0; }
+}

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronRight, ArrowUp, FolderOpen, MoreHorizontal, Plus, Search } from "lucide-react";
+import { AlertCircle, ChevronRight, ArrowUp, FolderOpen, MoreHorizontal, Plus, Search } from "lucide-react";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, readAuthFlag, type Plan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, planOpenHref } from "../../lib/plan-builder/business-hub";
 import { isUnnamedBusiness, planDisplayName } from "../../lib/plan-builder/business-name";
@@ -187,7 +187,6 @@ export default function PlanList() {
         <StageArt plan={p} status={status} />
       </span>
       <span className={home.meta}>
-        <span className={home.avatar} aria-hidden="true">{display.trim().charAt(0) || "사"}</span>
         <span className={home.metaText}>
           <strong className={mine.title}>{planDisplayName(p)}</strong>
           <span className={mine.meta}><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><StageBadge plan={p} status={status} className={home.metaStage} /></span>
@@ -212,9 +211,9 @@ export default function PlanList() {
     <p role="status" className={mine.status} data-empty={notice ? undefined : ""}>{notice}</p>
     {filter === "samples" ? (samples.length ? <div className={home.grid}>{samples.map(p => <button type="button" className={home.sampleCard} key={p.id} onClick={() => sample(p.id)}>
       <span className={home.thumb}><span className={home.skeleton} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span><StatusBadge tone="info" className={home.thumbBadge}>완성 예시</StatusBadge></span>
-      <span className={home.meta}><span className={home.avatar} aria-hidden="true">예</span><span className={home.metaText}><strong>{p.title.replace(/^샘플 · /,"")}</strong><span className={mine.meta}>사업계획서 예시 보기</span></span></span>
+      <span className={home.meta}><span className={home.metaText}><strong>{p.title.replace(/^샘플 · /,"")}</strong><span className={mine.meta}>사업계획서 예시 보기</span></span></span>
     </button>)}</div> : <p className={home.quiet}>지금 보여 드릴 예시가 없어요.</p>)
-    : plans.length === 0 && error ? <div role="alert" className={styles.error}><p>사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><AppButton type="button" variant="primary" className={styles.primary} onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</AppButton></div> : plans.length === 0 ? <BusinessEmptyState heading="h2" kind="plans" />
+    : plans.length === 0 && error ? <EmptyState as="section" role="alert" className={styles.emptyPlace} icon={AlertCircle} heading="h2" title="사업 목록을 불러오지 못했어요" actions={<AppButton type="button" variant="primary" onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</AppButton>} /> : plans.length === 0 ? <BusinessEmptyState heading="h2" kind="plans" />
     : shown.length === 0 ? <p className={home.quiet}>‘{query.trim()}’ 이름의 사업이 없어요.</p> : <div className={`${mine.list} ${home.grid}`}>{shown.map(card)}</div>}
     {error && plans.length > 0 && <p role="alert" className={styles.error}>{error} <button type="button" className={styles.inlineRetry} onClick={() => retry.current()}>다시 시도</button></p>}
   </div>;

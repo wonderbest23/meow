@@ -86,7 +86,7 @@ function rememberLocally(remember: boolean, email: string) {
   }
 }
 
-export default function AccountAuthForm({ next, initialMode = "login", initialMessage = "", initialMessageError = false, recoveryTokens = null, onReset, onModeChange, titleId }: {
+export default function AccountAuthForm({ next, initialMode = "login", initialMessage = "", initialMessageError = false, recoveryTokens = null, onReset, onModeChange, titleId, reason }: {
   /** 로그인 뒤 돌아갈 내부 경로(검증된 값만). 없으면 내 사업 목록 */
   next: string | null;
   initialMode?: AuthMode;
@@ -99,6 +99,8 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   onReset?: () => void | Promise<void>;
   /** 팝업이 제목으로 이름을 붙일 수 있게 */
   titleId?: string;
+  /** 팝업으로 열 때 로그인하는 이유 한 줄 — 로그인 화면 · 회원가입 화면 문장을 따로 */
+  reason?: { login: string; register: string };
   /** 로그인·회원가입 등 모드가 바뀔 때(계정 화면이 탭 제목을 맞춘다) */
   onModeChange?: (mode: AuthMode) => void;
 }) {
@@ -341,6 +343,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           </Link>
           {/* 로그인 화면은 제목을 보이지 않는다 — 바로 아래 '로그인' 단추가 같은 말을 한다(대표 요청 2026-11-14). 화면 낭독용 이름은 남기고, 회원가입 · 비밀번호 재설정처럼 화면이 바뀐 것을 알려야 할 때만 보인다 */}
           <h1 id={titleId} className={mode === "login" ? styles.srOnly : styles.title}>{mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 재설정" : mode === "reset" ? "새 비밀번호" : "로그인"}</h1>
+          {reason && (mode === "login" || mode === "register") && <p className={styles.sub}>{reason[mode]}</p>}
           {mode === "recover" && <p className={styles.sub}>가입한 이메일로 재설정 링크를 보내드려요.</p>}
           {mode === "reset" && <p className={styles.sub}>8자 이상으로 정해 주세요.</p>}
         </header>
