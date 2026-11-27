@@ -676,10 +676,15 @@ export default function DocumentWorkspace(props: Props) {
                 </li>)}</ol>
                 <div className={styles.lockedFoot}>
                   <span className={styles.lockedFormats} aria-label={`받는 파일: PDF, Word${PPT_GENERATION_VERIFIED ? ", PPT" : ""}`}><span><FileText size={14} aria-hidden="true" />PDF</span><span><FileText size={14} aria-hidden="true" />Word</span>{PPT_GENERATION_VERIFIED && <span><Presentation size={14} aria-hidden="true" />PPT</span>}</span>
-                  <AppButton type="button" variant="primary" className={styles.lockedOutlinePay} onClick={props.lockedOutline.onPay}>{props.lockedOutline.price.toLocaleString("ko-KR")}원 결제하고 전체 받기 →</AppButton>
+                  {/* PC 작업실만 여기 단추 — 휴대폰 · 좁은 화면은 아래 고정 단추가 맡는다(두 번 보이지 않게) */}
+                  {studioPc && <AppButton type="button" variant="primary" className={styles.lockedOutlinePay} onClick={props.lockedOutline.onPay}>{props.lockedOutline.price.toLocaleString("ko-KR")}원 결제하고 전체 받기 →</AppButton>}
                 </div>
               </section>}
               {!summaryMode && !continuous && !studioPc && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
+              {/* 휴대폰 · 좁은 화면: 결제 단추를 화면 아래에 늘 붙여 둔다 — 카드를 끝까지 내려야 단추가 나왔다(대표 지적 2026-11-27, 결제 화면 아래 줄과 같은 방식) */}
+              {props.lockedOutline && !props.writing && !factMode && !studioPc && <div className={styles.stickyPay} data-sticky-pay>
+                <AppButton type="button" variant="primary" className={styles.stickyPayButton} onClick={props.lockedOutline.onPay}>{props.lockedOutline.price.toLocaleString("ko-KR")}원 결제하고 전체 받기 →</AppButton>
+              </div>}
                           </article>}
           </div>
           {/* PC 새 화면: 아래 가운데 떠 있는 장 넘기기 — '‹ 1장 / 5장 2장 고객과 시장 ›' */}

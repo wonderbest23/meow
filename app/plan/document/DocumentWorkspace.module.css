@@ -649,3 +649,6 @@
 .lockedFormats > span { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; border:1px solid var(--app-line); background:var(--app-surface); font-size:.75rem; font-weight:600; color:var(--app-body); }
 .lockedFoot .lockedOutlinePay { margin-top:0; }
 @media (max-width:640px) { .lockedFoot { flex-direction:column; align-items:stretch; } .lockedFormats { justify-content:center; } }
+/* 휴대폰 · 좁은 화면의 아래 고정 결제 단추 — 본문(article) 끝 자식이라 본문을 읽는 내내 화면 아래에 붙는다. 뒤 글이 비치지 않게 위로 옅어지는 바탕 */
+.stickyPay { position:sticky; bottom:0; z-index:5; margin-top:8px; padding:20px 0 calc(12px + env(safe-area-inset-bottom)); background:linear-gradient(to bottom, transparent, var(--app-surface) 34%); }
+.stickyPayButton { width:100%; }
