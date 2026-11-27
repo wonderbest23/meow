@@ -28,7 +28,7 @@ const title = rule(css, ".title[data-empty-part][data-empty-part]");
 for (const part of ["font-size:1.0625rem", "font-weight:700", "color:var(--app-text)", "margin:0"]) assert.ok(title.includes(part), `제목 규격에 '${part}' 가 없다`);
 const description = rule(css, ".description[data-empty-part][data-empty-part]");
 for (const part of ["font-size:.9375rem", "color:var(--app-muted)", "margin:0"]) assert.ok(description.includes(part), `설명 규격에 '${part}' 가 없다`);
-assert.match(rule(css, ".icon[data-empty-part][data-empty-part]"), /color:var\(--app-muted\)/, "아이콘은 --app-muted");
+assert.match(rule(css, ".icon[data-empty-part][data-empty-part]"), /width:60px;[^}]*height:60px;[^}]*border-radius:16px;[^}]*background:var\(--app-soft\);[^}]*color:var\(--app-primary\)/, "아이콘은 둥근 네모 60px 바탕 안에(앱 전체 같은 모양)");
 assert.match(rule(css, ".actions[data-empty-part][data-empty-part]"), /justify-content:center;[^}]*gap:8px;[^}]*margin:16px 0 0;/, "동작 버튼 줄은 가운데 · 8px 간격 · 설명 아래 16px");
 assert.equal([...css.matchAll(/padding\s*:/g)].length, 1, "여백은 하나(48px 24px) — 화면마다 다른 여백을 두지 않는다");
 assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i, "빈 화면 색을 하드코딩했다 — --app-* 토큰만 쓴다");
@@ -41,7 +41,8 @@ assert.doesNotMatch(rule(css, ".root[data-empty-state][data-empty-state]"), /(?:
 
 const component = read("app/plan/BusinessEmptyState.tsx");
 assert.match(component, /export function EmptyState\(/, "공통 EmptyState 를 내보내지 않는다");
-assert.match(component, /<Icon className=\{styles\.icon\} size=\{28\} strokeWidth=\{1\.75\} aria-hidden="true"/, "아이콘은 lucide 28px · 화면 읽기에서 숨김");
+assert.match(component, /<span className=\{styles\.icon\} aria-hidden="true" data-empty-part="icon"><Icon size=\{28\} strokeWidth=\{1\.75\} \/><\/span>/, "아이콘은 lucide 28px · 둥근 네모 바탕 · 화면 읽기에서 숨김");
+for (const file of ["app/plan/chat/BusinessIntake.tsx", "app/plan/MissingBusiness.tsx"]) assert.match(read(file), /<EmptyIcon icon=\{/, `${file} 의 안내 아이콘이 공통 EmptyIcon 이 아니다`);
 assert.match(component, /export type EmptyStateHeading = "h1" \| "h2" \| "h3" \| "p";/, "제목 태그는 화면 제목 순서에 맞춰 고른다");
 assert.match(component, /data-empty-state=""/);
 assert.match(component, /export default function BusinessEmptyState\([\s\S]*<EmptyState as="section"/, "내 사업 빈 화면도 공통 EmptyState 로 그린다");

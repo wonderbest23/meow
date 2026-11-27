@@ -23,9 +23,14 @@ export type EmptyStateProps = Omit<HTMLAttributes<HTMLElement>, "title"> & {
  * className 은 자리(높이·너비·바깥 여백)용이다 — 여백·글자·색을 덮어쓰지 않는다.
  * children 은 버튼 아래 덧붙이는 짧은 안내(예: 기록 기간)용이다.
  */
+/** 빈 화면·안내 화면 아이콘 — 둥근 네모 바탕 안 28px. 공통 EmptyState 밖(결제 안내 · 사업 없음 · 대화 칸)도 이것으로 같은 모양 */
+export function EmptyIcon({ icon: Icon }: { icon: LucideIcon }) {
+  return <span className={styles.icon} aria-hidden="true" data-empty-part="icon"><Icon size={28} strokeWidth={1.75} /></span>;
+}
+
 export function EmptyState({ icon: Icon, title, heading: Title = "h2", description, actions, as: Tag = "div", className, children, ...rest }: EmptyStateProps) {
   return <Tag {...rest} className={className ? `${styles.root} ${className}` : styles.root} data-empty-state="">
-    {Icon && <Icon className={styles.icon} size={28} strokeWidth={1.75} aria-hidden="true" data-empty-part="icon" />}
+    {Icon && <EmptyIcon icon={Icon} />}
     <Title className={styles.title} data-empty-part="title">{title}</Title>
     {description && <p className={styles.description} data-empty-part="description">{description}</p>}
     {actions && <div className={styles.actions} data-empty-part="actions">{actions}</div>}

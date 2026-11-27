@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
 import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
+import { EmptyIcon } from "../BusinessEmptyState";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
@@ -2080,21 +2081,21 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
           {/* '사업계획서 만들기'를 누른 뒤 — 단추가 화면 밖으로 밀려도 알 수 있게 화면 전체에 같은 로딩(얇은 원)을 덮는다 */}
           {preparing && <div className={styles.prepareCover}><PlanLoading fill={!embedded} note="사업계획서를 준비하고 있어요" /></div>}
-          {!loaded ? (onLoadingChange ? null : <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" />) : loginGate ? <LoginGate guestStudio={embedded} wide={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><p>{MISSING_BUSINESS_DETAIL}</p><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan/chat?new=1" className={styles.textLink}>새 대화 시작하기</Link></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan" className={styles.textLink}>내 사업으로</Link></>}</section>
+          {!loaded ? (onLoadingChange ? null : <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" />) : loginGate ? <LoginGate guestStudio={embedded} wide={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><EmptyIcon icon={FolderOpen} />{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><p>{MISSING_BUSINESS_DETAIL}</p><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan/chat?new=1" className={styles.textLink}>새 대화 시작하기</Link></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton><Link href="/plan" className={styles.textLink}>내 사업으로</Link></>}</section>
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.
                * 이 브라우저에서 만든 기록이 아예 없으면(처음 온 사람) '찾지 못했어요'는 맞지 않는 말이라 새로 시작하기를 앞에 둔다.
                */
               : !lastIntake ? <section className={styles.empty}>
-                <div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>
+                <EmptyIcon icon={FolderOpen} />
                 <h1>아직 이어서 할 사업이 없어요</h1>
                 <p>다른 기기에서 만든 사업은 로그인하면 보여요.</p>
                 <AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton>
                 <Link href={`/account?next=${encodeURIComponent("/plan/chat")}`} className={styles.textLink}>로그인하고 이어가기</Link>
               </section>
               : <section className={styles.empty}>
-                <div className={styles.emptyIcon} aria-hidden="true">{lastIntake?.signedIn ? <LogIn size={28} strokeWidth={1.8} /> : <FolderOpen size={28} strokeWidth={1.8} />}</div>
+                <EmptyIcon icon={lastIntake?.signedIn ? LogIn : FolderOpen} />
                 {/* 제목이 이미 말하는 내용을 긴 설명으로 되풀이하지 않는다 — 한 줄로 다음 할 일만(대표 요청 2026-10-24) */}
                 <h1>{lastIntake?.signedIn ? "로그인이 풀렸어요" : "사업을 찾지 못했어요"}</h1>
                 <p>{lastIntake?.signedIn ? "다시 로그인하면 이어서 할 수 있어요." : "로그인하거나 처음 만든 브라우저에서 열어 주세요."}</p>

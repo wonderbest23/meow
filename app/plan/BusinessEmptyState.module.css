@@ -8,7 +8,9 @@
 .root { composes: tokens from "../../components/workspace-theme.module.css"; }
 :where(.root) { width:100%; min-width:0; margin:0; }
 .root[data-empty-state][data-empty-state] { box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:48px 24px; text-align:center; color:var(--app-muted); letter-spacing:0; }
-.icon[data-empty-part][data-empty-part] { flex:none; display:block; margin:0 0 4px; color:var(--app-muted); }
+/* 아이콘은 둥근 네모 바탕 안에(60px · 아이콘 28px) — 작업실 빈 화면 모양으로 앱 전체를 맞춘다(2026-11-27 사장님: 화면마다 아이콘 모양·크기가 달랐다) */
+.icon[data-empty-part][data-empty-part] { flex:none; display:grid; place-items:center; box-sizing:border-box; width:60px; height:60px; margin:0 0 8px; border-radius:16px; background:var(--app-soft); color:var(--app-primary); }
+.icon[data-empty-part][data-empty-part] > svg { width:28px; height:28px; }
 .title[data-empty-part][data-empty-part] { max-width:28em; margin:0; color:var(--app-text); font-size:1.0625rem; font-weight:700; line-height:1.5; word-break:keep-all; overflow-wrap:anywhere; text-wrap:balance; }
 .description[data-empty-part][data-empty-part] { max-width:28em; margin:0; color:var(--app-muted); font-size:.9375rem; font-weight:400; line-height:1.6; word-break:keep-all; overflow-wrap:anywhere; white-space:pre-line; text-wrap:pretty; }
 .actions[data-empty-part][data-empty-part] { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px; margin:16px 0 0; }

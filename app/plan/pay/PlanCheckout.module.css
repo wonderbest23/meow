@@ -19,16 +19,19 @@
   text-align: center;
 }
 
+/* 안내 아이콘 — 앱 공통 빈 화면 아이콘과 같은 모양(둥근 네모 60px · 아이콘 28px, BusinessEmptyState.module.css) */
 .icon {
-  width: 62px;
-  height: 62px;
+  box-sizing: border-box;
+  width: 60px;
+  height: 60px;
   margin: 0 auto 16px;
-  border-radius: 50%;
+  border-radius: 16px;
   display: grid;
   place-items: center;
-  background: var(--blue-soft, var(--app-soft));
-  color: var(--blue, var(--app-accent));
+  background: var(--app-soft);
+  color: var(--app-primary);
 }
+.icon svg { width: 28px; height: 28px; }
 
 .title {
   margin: 0 0 8px;
@@ -151,7 +154,7 @@
 
 /* 휴대폰 — 회색 바탕에 떠 있던 카드를 걷고 흰 바탕에 바로 놓는다. 100vh 로 잡으면 머리말(68px)
    만큼 가운데가 아래로 밀려 처져 보였으므로, 머리말을 뺀 높이 안에서 가운데(아래 여백을 더 줘서
-   눈높이로 살짝 위)에 둔다. 내용이 길면 그냥 위에서부터 이어진다. 아이콘의 연한 원 바탕도 뺀다. */
+   눈높이로 살짝 위)에 둔다. 내용이 길면 그냥 위에서부터 이어진다. 아이콘은 PC와 같은 둥근 네모(2026-11-27). */
 @media (max-width: 640px) {
   .page {
     min-height: calc(100svh - 68px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
@@ -166,13 +169,6 @@
     border-radius: 0;
     box-shadow: none;
   }
-  .icon {
-    width: auto;
-    height: auto;
-    margin-bottom: 14px;
-    background: transparent;
-  }
-  .icon svg { width: 40px; height: 40px; }
 }
 
 /* 약관 동의 — 공용 동의 목록 */

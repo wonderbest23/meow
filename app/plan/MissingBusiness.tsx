@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FolderSearch } from "lucide-react";
+import { EmptyIcon } from "./BusinessEmptyState";
 import type { ReactNode } from "react";
 import BusinessAppChrome from "./BusinessAppChrome";
 import styles from "./BusinessHub.module.css";
@@ -17,6 +18,7 @@ import { AppButton } from "../../components/app-button";
  */
 export function MissingBusinessBody({ title = MISSING_BUSINESS_TITLE, detail = MISSING_BUSINESS_DETAIL, action, children }: { title?: string; detail?: string; action?: ReactNode; children?: ReactNode }) {
   return <section className={styles.empty}>
+    <EmptyIcon icon={FolderSearch} />
     <h2>{title}</h2>
     <p>{detail}</p>
     {/* 어디로 가는 단추인지 보이게 > 아이콘을 붙인다(대표 요청 2026-10-24) */}
