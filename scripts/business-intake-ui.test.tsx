@@ -735,8 +735,8 @@ async function main() {
   const resumeMissing = nextMarkup({ hasDocuments: true, missingSections: 8 }, currentDesign);
   assert.ok(resumeMissing.includes("남은 8개 항목 이어서 작성하기</button>") && !resumeMissing.includes("계획서에 반영하기") && !resumeMissing.includes("다시 생성 횟수"), "unwritten sections resume without a rewrite confirm");
   assert.ok(needsPlan.includes("결제 전에는 첫 항목만 먼저 써서 보여 드려요") && !needsPlan.includes("무료로 만들어요"), "the first document step says only the first section comes before payment");
-  const unpaidResume = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ hasDocuments: true, missingSections: 9 }, currentDesign)} prepared={false} disabled={false} aiBusy={false} unpaid payLabel="49,000원 결제하고 전체 받기 →" onDesign={noop} onPrepare={noop} />);
-  assert.ok(unpaidResume.includes("49,000원 결제하고 전체 받기 →</button>") && !unpaidResume.includes("<small") && unpaidResume.includes("data-pay-cta") && !unpaidResume.includes("이어서 작성하기"), "after the first section an unpaid plan shows one pay button that says it pays and the price, with no note under it; data-pay-cta lets the PC plan pane hide its duplicate pay button");
+  const unpaidResume = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ hasDocuments: true, missingSections: 9 }, currentDesign)} prepared={false} disabled={false} aiBusy={false} unpaid payLabel="결제하기 →" onDesign={noop} onPrepare={noop} />);
+  assert.ok(unpaidResume.includes("결제하기 →</button>") && !unpaidResume.includes("<small") && unpaidResume.includes("data-pay-cta") && !unpaidResume.includes("이어서 작성하기"), "after the first section an unpaid plan shows one pay button that says it pays, with no note under it; data-pay-cta lets the PC plan pane hide its duplicate pay button");
   const staleDocument = nextMarkup({ hasDocuments: true, documentStatus: "stale" }, currentDesign);
   assert.ok(staleDocument.includes("계획서에 반영하기</button>") && !staleDocument.includes("이전 계획서 보기") && !staleDocument.includes("진행 단계") && !staleDocument.includes("다시 생성 횟수"), "a stale document shows one rewrite button; the cost note waits for the confirm popup");
   // 반영하기 전에 비용을 먼저 보여 준다(다시 쓸 항목 수 · 대화는 무료)

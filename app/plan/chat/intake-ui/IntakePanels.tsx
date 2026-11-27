@@ -1010,7 +1010,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   loginNote?: string | null;
   /** 결제 전인 것을 확인한 사업 — 첫 항목만 받은 뒤의 단추가 결제 단추(결제 화면으로)가 된다 */
   unpaid?: boolean;
-  /** 결제 단추 글자 — 값을 단추 안에 적는다('49,000원 결제하고 전체 받기 →'). '전체 받기'만으로는 결제인지 몰랐고 값은 아래 작은 글씨에 따로 있었다(대표 지적 2026-11-27) */
+  /** 결제 단추 글자 — '결제하기 →'. '전체 받기'만으로는 결제인지 몰랐고 값은 아래 작은 글씨에 따로 있었다 · 값은 결제 화면이 알린다(대표 결정 2026-11-27) */
   payLabel?: string;
   /** '사업계획서 만들기'를 눌러 서버 확인·결제 화면 이동을 기다리는 중 — 단추가 그냥 흐려지기만 해 멈춘 줄 알았다(대표 지적 2026-10-16) */
   preparing?: boolean;
@@ -1032,7 +1032,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     : "사업계획서 문서는 언제든 다시 열 수 있어요.";
   const reapply = step === "prepare" && snapshot.hasDocuments && snapshot.documentStatus === "stale";
   // 바뀐 내용은 없고 아직 안 쓴 항목만 남았으면(결제 전 첫 항목만 있음, 작성 중 실패) 남은 항목만 이어서 쓴다 — 다시 생성 횟수를 쓰지 않는다
-  if (step === "prepare" && snapshot.hasDocuments && !reapply && snapshot.missingSections) return <div className={styles.rewriteAction} data-step={step} data-pay-cta={unpaid && !jobActive || undefined}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{unpaid ? payLabel ?? "결제하고 전체 받기 →" : `남은 ${snapshot.missingSections}개 항목 이어서 작성하기`}</AppButton>}</div>;
+  if (step === "prepare" && snapshot.hasDocuments && !reapply && snapshot.missingSections) return <div className={styles.rewriteAction} data-step={step} data-pay-cta={unpaid && !jobActive || undefined}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{unpaid ? payLabel ?? "결제하기 →" : `남은 ${snapshot.missingSections}개 항목 이어서 작성하기`}</AppButton>}</div>;
   if (minimal && !jobActive && (step === "prepare" && !snapshot.hasDocuments || step === "open")) return <div className={styles.resultAction} data-step={step}>
     {step === "prepare" ? <AppButton type="button" variant="primary" size="large" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />사업계획서 만들기</>}</AppButton>
       : <AppButton variant="primary" className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 열기</AppButton>}

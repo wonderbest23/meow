@@ -361,7 +361,7 @@ export default function DocumentWorkspace(props: Props) {
   const steps = useMemo(() => { for (const [, list] of grouped) for (const section of list) { const found = firstSteps(section.html); if (found.length) return found; } return []; }, [grouped]);
   const easyShown = useRef(false);
   useEffect(() => {
-    /* 안 쓴 항목이 남았으면(결제 전 첫 항목만 · 건너뜀) 띄우지 않는다 — 요약이 먼저 떠서 문서 끝 '남은 항목 · 결제하고 전체 받기'가 가려졌다(운영 점검 2026-11-26) */
+    /* 안 쓴 항목이 남았으면(결제 전 첫 항목만 · 건너뜀) 띄우지 않는다 — 요약이 먼저 떠서 문서 끝 '남은 항목 · 결제하기'가 가려졌다(운영 점검 2026-11-26) */
     if (easyShown.current || !ready || !grouped.length || props.writing || !props.summary?.easy || isSample || !planId || props.lockedOutline || props.missing?.length) return;
     easyShown.current = true;
     try {
@@ -677,13 +677,13 @@ export default function DocumentWorkspace(props: Props) {
                 <div className={styles.lockedFoot}>
                   <span className={styles.lockedFormats} aria-label={`받는 파일: PDF, Word${PPT_GENERATION_VERIFIED ? ", PPT" : ""}`}><span><FileText size={14} aria-hidden="true" />PDF</span><span><FileText size={14} aria-hidden="true" />Word</span>{PPT_GENERATION_VERIFIED && <span><Presentation size={14} aria-hidden="true" />PPT</span>}</span>
                   {/* PC 작업실만 여기 단추 — 휴대폰 · 좁은 화면은 아래 고정 단추가 맡는다(두 번 보이지 않게) */}
-                  {studioPc && <AppButton type="button" variant="primary" className={styles.lockedOutlinePay} onClick={props.lockedOutline.onPay}>{props.lockedOutline.price.toLocaleString("ko-KR")}원 결제하고 전체 받기 →</AppButton>}
+                  {studioPc && <AppButton type="button" variant="primary" className={styles.lockedOutlinePay} onClick={props.lockedOutline.onPay}>결제하기 →</AppButton>}
                 </div>
               </section>}
               {!summaryMode && !continuous && !studioPc && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
               {/* 휴대폰 · 좁은 화면: 결제 단추를 화면 아래에 늘 붙여 둔다 — 카드를 끝까지 내려야 단추가 나왔다(대표 지적 2026-11-27, 결제 화면 아래 줄과 같은 방식) */}
               {props.lockedOutline && !props.writing && !factMode && !studioPc && <div className={styles.stickyPay} data-sticky-pay>
-                <AppButton type="button" variant="primary" className={styles.stickyPayButton} onClick={props.lockedOutline.onPay}>{props.lockedOutline.price.toLocaleString("ko-KR")}원 결제하고 전체 받기 →</AppButton>
+                <AppButton type="button" variant="primary" className={styles.stickyPayButton} onClick={props.lockedOutline.onPay}>결제하기 →</AppButton>
               </div>}
                           </article>}
           </div>

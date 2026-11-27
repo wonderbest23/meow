@@ -612,7 +612,7 @@
 .lockedOutline p { margin:0; font-size:.875rem; line-height:1.7; color:var(--app-body); }
 .lockedOutlinePay { justify-self:start; margin-top:4px; }
 /* 작업실 PC 에서 왼쪽 대화 칸이 펼쳐져 있고 거기 결제 단추(data-pay-cta)가 보이면 계획서 끝의 같은 단추는 숨긴다 —
-   양쪽에 '결제하고 전체 받기'가 두 번 보여 어지러웠다(대표 지적 2026-11-27). 대화 칸을 접었거나 계획서만 열었을 때 · 휴대폰은 그대로 */
+   양쪽에 결제 단추가 두 번 보여 어지러웠다(대표 지적 2026-11-27). 대화 칸을 접었거나 계획서만 열었을 때 · 휴대폰은 그대로 */
 :global(body:has(#studio-panel-chat[data-visible] [data-pay-cta])) [data-studio-pc] .lockedOutlinePay { display: none; }
 @media (max-width:640px) { .lockedOutlinePay { justify-self:stretch; } }
 

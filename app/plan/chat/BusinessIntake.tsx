@@ -1284,10 +1284,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   useEffect(() => { setInApp(nativePlatform() !== null); }, []);
   const paidPlan = !!plan && payAccess?.planId === plan.planId && payAccess.paid;
   const unpaidPlan = !!plan && payAccess?.planId === plan.planId && !payAccess.paid;
-  // 결제 전: 첫 항목은 먼저 써서 보여 주고(값은 전체 값만), 그 뒤 결제 단추 안에 값을 적는다 — 홈페이지 묶음 값은 결제 화면이 알린다
+  // 결제 전: 첫 항목은 먼저 써서 보여 주고(값은 전체 값만), 그 뒤 단추는 '결제하기 →' 하나 — 값과 홈페이지 묶음 값은 결제 화면이 알린다(대표 결정 2026-11-27)
   const prepareLoginNote = prepareLoginAsked && !signedIn ? PREPARE_LOGIN_NOTE : null;
   const payNote = paidPlan ? "몇 분 걸려요" : plan?.hasDocuments ? undefined : inApp ? "첫 항목 먼저 보기" : `첫 항목 먼저 보기 · 전체 ${PACKAGE_AMOUNT.toLocaleString("ko-KR")}원`;
-  const payLabel = inApp ? "결제하고 전체 받기 →" : `${PACKAGE_AMOUNT.toLocaleString("ko-KR")}원 결제하고 전체 받기 →`;
+  const payLabel = "결제하기 →";
   useEffect(() => {
     if (!prepareVisible && !resumeVisible || !plan) return;
     let alive = true;
@@ -1461,7 +1461,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
       if (data.ownerScope !== ownerScope.current) { freezeForOwnerChange(); return; }
       if (data.plan) installPlan(data.plan);
     }).catch(() => { /* 기록을 못 받아 와도 마무리 말과 단추는 그대로 쓸 수 있다 */ });
-    if (paneVisible.current) setAnnouncement(payAccess?.planId === id && !payAccess.paid ? "첫 항목을 먼저 써 봤어요. 계획서 보기와 결제하고 전체 받기 중에 고를 수 있어요." : "사업계획서를 다 만들었어요. 계획서 보기와 홈페이지 만들기 중에 고를 수 있어요.");
+    if (paneVisible.current) setAnnouncement(payAccess?.planId === id && !payAccess.paid ? "첫 항목을 먼저 써 봤어요. 계획서 보기와 결제하기 중에 고를 수 있어요." : "사업계획서를 다 만들었어요. 계획서 보기와 홈페이지 만들기 중에 고를 수 있어요.");
     else studioNav?.markActivity?.("chat");
     // plan 전체가 아니라 사업이 바뀔 때와 작성 상태가 바뀔 때만 본다
     // eslint-disable-next-line react-hooks/exhaustive-deps
