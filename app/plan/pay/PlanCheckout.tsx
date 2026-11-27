@@ -359,9 +359,12 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   const paymentsOff = native === null && info !== null && !info.payable;
   const blocked = notSoldInApp || paymentsOff;
   const storeName = native === "android" ? "Google Play" : "Apple(App Store)";
+  const showTerms = native ? appSellable : !(info && !info.payable);
   return (
     <div className={styles.page}>
       <div className={styles.card}>
+        {/* PC 에서는 왼쪽 칸(무엇을 사는지 · 값 · 제공 시점)과 오른쪽 칸(입력 · 동의)으로 나눠 한 화면에 들어오게 한다 — 한 줄로 쌓으면 1280×800 에서도 아래로 내려야 했다(대표 지적 2026-11-27) */}
+        <div className={styles.summary}>
         <div className={styles.icon} aria-hidden="true">{blocked ? <AlertCircle size={30} strokeWidth={1.8} /> : <Unlock size={30} strokeWidth={1.8} />}</div>
         <h1 className={styles.title}>{extra ? extra.title : isHomepage ? "홈페이지 수정하고 공개하기" : "사업계획서 전체 열기"}</h1>
         <p className={styles.desc}>
@@ -399,7 +402,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <div className={styles.price}>
             {info.price.toLocaleString("ko-KR")}원
             <span>사업계획서 1부 · 1회 결제 · 부가세 포함</span>
-            {!info.paid && homepageInfo?.editable !== true && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small><ChevronRight size={18} aria-hidden="true" /></Link>}
+            {!info.paid && homepageInfo?.editable !== true && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <span className={styles.upsellTail}><small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small><ChevronRight size={18} aria-hidden="true" /></span></Link>}
           </div>
         ) : (
           /* 가격 확인 전 — 자리를 비워두면 화면이 덜컥거린다 */
@@ -410,9 +413,18 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         )}
 
         {/* 앱 결제(애플·구글)는 웹 카드 결제(나이스페이) 설정과 상관없다 — 웹 결제가 꺼져 있어도 앱에서는 동의 항목을 보여야 '앱에서 결제하기'가 켜진다 */}
-        {(native ? appSellable : !(info && !info.payable)) && (
+        {showTerms && <p className={styles.supply}><strong>제공 시점</strong>{SUPPLY[product]}</p>}
+        {/* 결제 안내 문자는 카드 결제용 — 앱 결제는 스토어가 영수증을 보낸다 */}
+        {showTerms && !native && <div className={`${styles.phone} ${styles.noticePhone}`}>
+          <FieldLabel className={styles.phone}>
+            <span>결제 안내 받을 휴대폰 <small>(선택)</small></span>
+            <TextField type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} aria-describedby="notice-phone-help" />
+          </FieldLabel>
+          {phoneInvalid ? <FieldError id="notice-phone-help">010으로 시작하는 11자리로 적어 주세요.</FieldError> : <FieldHelp id="notice-phone-help">{`결제 완료 문자 1회${receiptByEmail ? " · 영수증은 가입한 이메일로도 가요" : ""}`}</FieldHelp>}
+        </div>}
+        </div>
+        {showTerms && (
           <section className={styles.terms} aria-label="결제 전 필수 확인">
-            <p className={styles.supply}><strong>제공 시점</strong>{SUPPLY[product]}</p>
             {isDomainPurchase ? <fieldset className={styles.registrant}>
               <legend>도메인 명의자 <small>(도메인은 이 분 이름으로 등록돼요)</small></legend>
               <FieldLabel className={styles.phone}><span>이름(실명)</span><TextField autoComplete="name" value={registrant.name} onChange={setReg("name")} placeholder="홍길동" /></FieldLabel>
@@ -426,14 +438,6 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
               <FieldLabel className={styles.phone}><span>상세 주소 <small>(선택)</small></span><TextField value={registrant.addressDetail} onChange={setReg("addressDetail")} placeholder="2층 201호" /></FieldLabel>
               <FieldHelp>등록기관(도메인 관리 기관)에 그대로 전달돼요. 사업자등록증의 주소와 같으면 좋아요.</FieldHelp>
             </fieldset> : null}
-            {/* 결제 안내 문자는 카드 결제용 — 앱 결제는 스토어가 영수증을 보낸다 */}
-            {!native && <div className={styles.phone}>
-              <FieldLabel className={styles.phone}>
-                <span>결제 안내 받을 휴대폰 <small>(선택)</small></span>
-                <TextField type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} aria-describedby="notice-phone-help" />
-              </FieldLabel>
-              {phoneInvalid ? <FieldError id="notice-phone-help">010으로 시작하는 11자리로 적어 주세요.</FieldError> : <FieldHelp id="notice-phone-help">{`결제 완료 문자 1회${receiptByEmail ? " · 영수증은 가입한 이메일로도 가요" : ""}`}</FieldHelp>}
-            </div>}
             {/* 약관 동의 — 공용 동의 목록(동그란 체크·(필수)·›, 대표 요청 2026-10-16). 환불 제한처럼 꼭 읽어야 할 설명은 그 줄 아래에 그대로 */}
             <div ref={consentRef} className={styles.consentAnchor}>
             {nudge && !agreed ? <p className={styles.nudge} role="alert">필수 항목에 모두 동의해 주세요</p> : null}

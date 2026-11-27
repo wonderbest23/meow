@@ -71,7 +71,7 @@ type Props = {
   onDraft: (key: string, html: string) => void;
   exporting: Format | null; locked: boolean; accessPending: boolean; error: string | null;
   /** 결제 전 첫 항목만 있는 문서 끝에 붙이는 '남은 항목' 목차 — 무엇이 더 들어 있는지 보여 주고 결제로 잇는다 */
-  lockedOutline?: { chapters: Array<{ number: number; name: string; items: string[] }>; count: number; price: number; onPay: () => void } | null;
+  lockedOutline?: { chapters: Array<{ id?: string; number: number; name: string; items: string[] }>; count: number; price: number; onPay: () => void } | null;
   accessError: boolean; onRetryAccess: () => void;
   deckStatus?: string; deckLabel?: string;
   /** 내려받기 — 파일을 받았으면 true(창을 닫고 '내려받았어요'를 잠깐 보인다) */
@@ -123,6 +123,27 @@ function NextStepButton({ planId, homepage, header = false, size = "default" }: 
   /* 머리줄(PC) 단추는 이름만 — '다음 단계 · 홈페이지 만들기'의 앞말은 단추 자리가 이미 말한다(r37 글 점검). 낭독기는 aria-label 로 듣는다 */
   if (header) return <AppButton variant="primary" size="small" className={`${paneHeader.btn} ${paneHeader.primary}`} href={next.href} aria-label={`다음 단계: ${next.title}`}><b>{next.title}</b><ChevronRight size={16} aria-hidden="true" /></AppButton>;
   return <AppButton variant="primary" size={size} className={styles.nextButton} href={next.href}><span>다음 단계</span><b>{next.title}</b><ChevronRight size={20} aria-hidden="true" /></AppButton>;
+}
+
+/**
+ * 결제 전 '나머지 장' 카드에 쓰는 '이 장에서 무엇을 받는지' 한 줄 — 장 이름만으로는 무엇이 들어 있는지 몰랐다(대표 지적 2026-11-27).
+ * 사업마다 달라지는 숫자는 쓰지 않는다(아직 쓰지 않은 장이라 지어낸 값이 된다). 남은 항목에 따라 말이 맞게 고른다.
+ */
+function chapterGain(chapter: { id?: string; name: string; items: string[] }): string {
+  const has = (title: string) => chapter.items.includes(title);
+  switch (chapter.id) {
+    case "overview": return "이 사업이 무엇을, 누구에게, 왜 하는지 한눈에";
+    case "market": return has("핵심 고객") ? "무엇을 팔고 누가 사는지, 대표 손님이 사기까지의 흐름" : "무엇을 팔고 누구에게 파는지";
+    case "objectives": return "숫자로 확인할 수 있는 목표";
+    case "strategy": {
+      const parts = ([["상품 전략", "무엇을 내세우고"], ["유통 전략", "어디서 팔고"], ["가격 전략", "얼마에 팔고"], ["홍보 전략", "어떻게 알리고"], ["인력 전략", "누구와 일하고"], ["출구 전략", "나중에 어떻게 거둘지"]] as const).filter(([title]) => has(title)).map(([, phrase]) => phrase);
+      return parts.length ? parts.join(", ").replace(/고$/, "지") : chapter.items.join(" · ");
+    }
+    case "funding": return "필요한 돈과 쓸 곳";
+    case "financials": return chapter.items.length === 1 && has("비용") ? "매달 나가는 돈 — 고정비와 변동비 정리" : "들어오고 나가는 돈을 표로 정리";
+    case "summary": return has("12주 할 일과 매달 볼 숫자") ? "12주 동안 할 일과 매달 확인할 숫자" : "계획 전체를 한 장으로 요약";
+    default: return chapter.items.join(" · ");
+  }
 }
 
 export default function DocumentWorkspace(props: Props) {
@@ -340,7 +361,7 @@ export default function DocumentWorkspace(props: Props) {
   const steps = useMemo(() => { for (const [, list] of grouped) for (const section of list) { const found = firstSteps(section.html); if (found.length) return found; } return []; }, [grouped]);
   const easyShown = useRef(false);
   useEffect(() => {
-    /* 안 쓴 항목이 남았으면(결제 전 첫 항목만 · 건너뜀) 띄우지 않는다 — 요약이 먼저 떠서 문서 끝 '남은 항목 · 전체 받기'가 가려졌다(운영 점검 2026-11-26) */
+    /* 안 쓴 항목이 남았으면(결제 전 첫 항목만 · 건너뜀) 띄우지 않는다 — 요약이 먼저 떠서 문서 끝 '남은 항목 · 결제하기'가 가려졌다(운영 점검 2026-11-26) */
     if (easyShown.current || !ready || !grouped.length || props.writing || !props.summary?.easy || isSample || !planId || props.lockedOutline || props.missing?.length) return;
     easyShown.current = true;
     try {
@@ -644,13 +665,26 @@ export default function DocumentWorkspace(props: Props) {
                 </section>)}
               </div>)}
               {props.lockedOutline && !props.writing && !factMode && <section className={styles.lockedOutline} aria-labelledby="locked-outline-title" data-locked-outline>
-                <h2 id="locked-outline-title">남은 {props.lockedOutline.count}개 항목</h2>
-                <p>지금까지는 첫 항목이에요. 전체를 받으면 아래 항목을 같은 사업 내용으로 이어서 써요.</p>
-                <ol>{props.lockedOutline.chapters.map(chapter => <li key={chapter.name}><span><Lock size={14} aria-hidden="true" />{chapter.number}장 {chapter.name}</span><small>{chapter.items.join(" · ")}</small></li>)}</ol>
-                <AppButton type="button" variant="primary" className={styles.lockedOutlinePay} onClick={props.lockedOutline.onPay}>전체 받기 →</AppButton>
-                <small className={styles.lockedOutlineNote}>{props.lockedOutline.price.toLocaleString("ko-KR")}원 · 결제하면 바로 이어서 써요(몇 분). PDF·Word·발표자료 PPT로 내려받을 수 있어요.</small>
+                {/* 잠긴 목차가 아니라 '무엇을 받는지' 카드로(대표 지적 2026-11-27: 이름만 있어 없어 보였다) — 장마다 얻는 것 한 줄 + 흐린 본문 줄 + 항목 이름. 숫자는 지어내지 않는다 */}
+                <h2 id="locked-outline-title">나머지 {props.lockedOutline.chapters.length}개 장 · {props.lockedOutline.count}개 항목</h2>
+                <p>결제하면 지금 사업 내용으로 이어서 써요.</p>
+                <ol className={styles.lockedGrid}>{props.lockedOutline.chapters.map(chapter => <li key={chapter.name} className={styles.lockedCard}>
+                  <span className={styles.lockedCardHead}><Lock size={14} aria-hidden="true" />{chapter.number}장 {chapter.name}</span>
+                  <strong className={styles.lockedGain}>{chapterGain(chapter)}</strong>
+                  <span className={styles.lockedLines} aria-hidden="true"><i /><i /><i /></span>
+                  <small>{chapter.items.join(" · ")}</small>
+                </li>)}</ol>
+                <div className={styles.lockedFoot}>
+                  <span className={styles.lockedFormats} aria-label={`받는 파일: PDF, Word${PPT_GENERATION_VERIFIED ? ", PPT" : ""}`}><span><FileText size={14} aria-hidden="true" />PDF</span><span><FileText size={14} aria-hidden="true" />Word</span>{PPT_GENERATION_VERIFIED && <span><Presentation size={14} aria-hidden="true" />PPT</span>}</span>
+                  {/* PC 작업실만 여기 단추 — 휴대폰 · 좁은 화면은 아래 고정 단추가 맡는다(두 번 보이지 않게) */}
+                  {studioPc && <AppButton type="button" variant="primary" className={styles.lockedOutlinePay} onClick={props.lockedOutline.onPay}>결제하기 →</AppButton>}
+                </div>
               </section>}
               {!summaryMode && !continuous && !studioPc && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
+              {/* 휴대폰 · 좁은 화면: 결제 단추를 화면 아래에 늘 붙여 둔다 — 카드를 끝까지 내려야 단추가 나왔다(대표 지적 2026-11-27, 결제 화면 아래 줄과 같은 방식) */}
+              {props.lockedOutline && !props.writing && !factMode && !studioPc && <div className={styles.stickyPay} data-sticky-pay>
+                <AppButton type="button" variant="primary" className={styles.stickyPayButton} onClick={props.lockedOutline.onPay}>결제하기 →</AppButton>
+              </div>}
                           </article>}
           </div>
           {/* PC 새 화면: 아래 가운데 떠 있는 장 넘기기 — '‹ 1장 / 5장 2장 고객과 시장 ›' */}

@@ -997,7 +997,7 @@ export function RewriteConfirm({ snapshot, disabled, label = "계획서에 반�
   </>;
 }
 
-export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false, preparing = false, payNote, loginNote = null, unpaid = false, reflect = "button" }: {
+export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false, preparing = false, payNote, payLabel, loginNote = null, unpaid = false, reflect = "button" }: {
   snapshot: IntakeSnapshot; prepared: boolean; disabled: boolean; aiBusy: boolean; onDesign: () => void; onPrepare: () => void; secondary?: ReactNode; announce?: boolean;
   /**
    * 계획서가 이미 있을 때 '계획서에 반영하기'의 모양 — 작업실 PC 에서 오른쪽에 계획서 칸이 보이면 그 칸 위 파란 단추 하나만이라 두지 않고(none),
@@ -1008,8 +1008,10 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   payNote?: string;
   /** 로그인하지 않은 손님이 '사업계획서 만들기'를 누른 뒤 단추 아래 한 줄 — 로그인 창은 부르는 쪽이 바로 띄운다. 오류가 아니라 안내라 같은 옅은 글자로 */
   loginNote?: string | null;
-  /** 결제 전인 것을 확인한 사업 — 첫 항목만 받은 뒤의 단추가 '전체 받기 →'(결제 화면으로)가 된다 */
+  /** 결제 전인 것을 확인한 사업 — 첫 항목만 받은 뒤의 단추가 결제 단추(결제 화면으로)가 된다 */
   unpaid?: boolean;
+  /** 결제 단추 글자 — '결제하기 →'. '전체 받기'만으로는 결제인지 몰랐고 값은 아래 작은 글씨에 따로 있었다 · 값은 결제 화면이 알린다(대표 결정 2026-11-27) */
+  payLabel?: string;
   /** '사업계획서 만들기'를 눌러 서버 확인·결제 화면 이동을 기다리는 중 — 단추가 그냥 흐려지기만 해 멈춘 줄 알았다(대표 지적 2026-10-16) */
   preparing?: boolean;
   /** 코치 채팅 결과 화면: 단계 표시·긴 설명 없이 버튼과 한 줄만(DesignResult 아래) */
@@ -1030,7 +1032,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     : "사업계획서 문서는 언제든 다시 열 수 있어요.";
   const reapply = step === "prepare" && snapshot.hasDocuments && snapshot.documentStatus === "stale";
   // 바뀐 내용은 없고 아직 안 쓴 항목만 남았으면(결제 전 첫 항목만 있음, 작성 중 실패) 남은 항목만 이어서 쓴다 — 다시 생성 횟수를 쓰지 않는다
-  if (step === "prepare" && snapshot.hasDocuments && !reapply && snapshot.missingSections) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{unpaid ? "전체 받기 →" : `남은 ${snapshot.missingSections}개 항목 이어서 작성하기`}</AppButton>}{unpaid && !jobActive && payNote && <small className={styles.nextStepHint}>{payNote}</small>}</div>;
+  if (step === "prepare" && snapshot.hasDocuments && !reapply && snapshot.missingSections) return <div className={styles.rewriteAction} data-step={step} data-pay-cta={unpaid && !jobActive || undefined}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <AppButton type="button" variant="primary" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{unpaid ? payLabel ?? "결제하기 →" : `남은 ${snapshot.missingSections}개 항목 이어서 작성하기`}</AppButton>}</div>;
   if (minimal && !jobActive && (step === "prepare" && !snapshot.hasDocuments || step === "open")) return <div className={styles.resultAction} data-step={step}>
     {step === "prepare" ? <AppButton type="button" variant="primary" size="large" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />사업계획서 만들기</>}</AppButton>
       : <AppButton variant="primary" className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 열기</AppButton>}

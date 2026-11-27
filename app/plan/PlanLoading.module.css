@@ -16,8 +16,8 @@
 .fill { flex:1; min-height:240px; max-width:none; }
 /* 화면을 채우는 로딩은 틀과 상관없이 화면 한가운데에 고정 — 메뉴·머리말은 그대로 눌린다 */
 .pinned .loader { position:fixed; top:50%; left:50%; z-index:30; transform:translate(-50%,-50%); pointer-events:none; }
-/* PC에서 왼쪽 메뉴(208px)가 보이면 본문 가운데로 — 메뉴 폭의 절반만큼 오른쪽 */
-@media (min-width:901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .pinned .loader { left:calc(50% + 104px); } }
+/* PC에서 왼쪽 메뉴가 보이면 본문 가운데로 — 메뉴 폭(AppChrome 256px, 예전 틀 PlanShell 은 --app-rail-w 208px)의 절반만큼 오른쪽 */
+@media (min-width:901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .pinned .loader { left:calc(50% + var(--app-rail-w, 256px) / 2); } }
 /*
  * 도는 표시는 이 파일의 loadingSpin 하나로 돈다(.8s). 글 옆 작은 원은 Spinner(.spinner),
  * 아이콘(LoaderCircle 등)을 돌릴 때는 다른 CSS 에서 'composes: spin from ".../PlanLoading.module.css"' 로 이 규칙을 빌린다 — 키프레임을 따로 두지 않는다.
