@@ -11,6 +11,7 @@
  */
 .shell {
   --rail-w: 208px;
+  --app-rail-w: var(--rail-w); /* 결제 막대·로딩 표시가 메뉴 폭을 알도록(기본 256px 은 AppChrome) */
   min-height: 100vh;
   background: var(--surface-muted, var(--app-raised));
   color: var(--text-strong, var(--app-text));
