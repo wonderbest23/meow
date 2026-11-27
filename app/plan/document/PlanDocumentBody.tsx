@@ -331,7 +331,7 @@ export function PlanDocumentBody() {
   const lockedOutline = useMemo(() => {
     if (!locked || writing || !sections.length) return null;
     const written = new Set(sections.map(section => section.key));
-    const chapters = chaptersForType(planType).map((chapter, index) => ({ number: index + 1, name: chapter.title, items: chapter.sections.filter(section => !written.has(`${chapter.id}/${section.id}`)).map(section => section.title) })).filter(chapter => chapter.items.length);
+    const chapters = chaptersForType(planType).map((chapter, index) => ({ id: chapter.id, number: index + 1, name: chapter.title, items: chapter.sections.filter(section => !written.has(`${chapter.id}/${section.id}`)).map(section => section.title) })).filter(chapter => chapter.items.length);
     const count = chapters.reduce((sum, chapter) => sum + chapter.items.length, 0);
     return count ? { chapters, count, price: access?.price ?? PACKAGE_AMOUNT, onPay: goPay } : null;
     // goPay 는 사업 번호·종류만 본다

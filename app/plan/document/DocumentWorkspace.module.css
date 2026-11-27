@@ -610,10 +610,6 @@
 .lockedOutline { display:grid; gap:12px; margin:8px 0 40px; padding:22px 20px; border-radius:12px; background:var(--app-raised); }
 .lockedOutline h2 { margin:0; font-size:1.0625rem; line-height:1.5; font-weight:700; color:var(--app-text); }
 .lockedOutline p { margin:0; font-size:.875rem; line-height:1.7; color:var(--app-body); }
-.lockedOutline ol { list-style:none; margin:0; padding:0; display:grid; gap:10px; }
-.lockedOutline li { display:grid; gap:2px; min-width:0; }
-.lockedOutline li span { display:flex; align-items:center; gap:6px; font-size:.875rem; font-weight:600; color:var(--app-text); }
-.lockedOutline li small { padding-left:20px; font-size:.8125rem; line-height:1.6; color:var(--app-muted); word-break:keep-all; overflow-wrap:anywhere; }
 .lockedOutlinePay { justify-self:start; margin-top:4px; }
 /* 작업실 PC 에서 왼쪽 대화 칸이 펼쳐져 있고 거기 결제 단추(data-pay-cta)가 보이면 계획서 끝의 같은 단추는 숨긴다 —
    양쪽에 '결제하고 전체 받기'가 두 번 보여 어지러웠다(대표 지적 2026-11-27). 대화 칸을 접었거나 계획서만 열었을 때 · 휴대폰은 그대로 */
@@ -625,3 +621,31 @@
 .actions[data-download][data-single] { grid-template-columns:auto minmax(0,1fr); }
 .barDownload { display:inline-flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
 @media (max-width:400px) { .actions[data-download] .barDownload svg { display:none; } }
+
+/* ── 결제 전 '나머지 장' 미리보기 카드(대표 지적 2026-11-27) ──
+   장마다 흰 카드: 장 이름 · 받는 것 한 줄(굵게) · 흐린 본문 줄 3개(글자 없는 막대 — 지어낸 글을 보이지 않는다) · 항목 이름.
+   칸이 넓으면 두 칸 격자, 휴대폰은 한 줄. 맨 아래 받는 파일 표시와 결제 단추(대화 칸에 단추가 보이면 위 규칙으로 숨김). */
+.lockedOutline { gap:14px; padding:24px 22px; }
+.lockedOutline > h2 { font-size:1.125rem; }
+.lockedOutline > p { color:var(--app-muted); }
+.lockedOutline { container-type:inline-size; }
+.lockedGrid { list-style:none; margin:2px 0 0; padding:0; display:grid; grid-template-columns:minmax(0, 1fr); gap:10px; }
+/* 칸이 넓으면 정확히 두 칸 — 장 수가 홀수면 마지막 카드가 혼자 남아 옆이 비었으므로 두 칸 너비로(대표 요청 2026-11-27) */
+@container (min-width:540px) {
+  .lockedGrid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .lockedOutline .lockedCard:last-child:nth-child(odd) { grid-column:1 / -1; }
+}
+.lockedOutline .lockedCard { display:flex; flex-direction:column; gap:8px; min-width:0; padding:16px; border:1px solid var(--app-line); border-radius:12px; background:var(--app-surface); }
+.lockedOutline .lockedCardHead { display:flex; align-items:center; gap:6px; font-size:.8125rem; font-weight:600; color:var(--app-muted); }
+.lockedGain { font-size:.9375rem; line-height:1.5; font-weight:700; color:var(--app-text); word-break:keep-all; }
+.lockedLines { display:grid; gap:6px; margin:2px 0; }
+.lockedLines i { display:block; height:8px; border-radius:4px; background:linear-gradient(90deg, var(--app-raised), color-mix(in srgb, var(--app-line) 70%, transparent)); }
+.lockedLines i:nth-child(1) { width:92%; }
+.lockedLines i:nth-child(2) { width:78%; }
+.lockedLines i:nth-child(3) { width:56%; }
+.lockedOutline .lockedCard small { padding-left:0; margin-top:auto; font-size:.75rem; line-height:1.6; color:var(--app-muted); word-break:keep-all; overflow-wrap:anywhere; }
+.lockedFoot { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-top:2px; }
+.lockedFormats { display:flex; flex-wrap:wrap; gap:6px; }
+.lockedFormats > span { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:999px; border:1px solid var(--app-line); background:var(--app-surface); font-size:.75rem; font-weight:600; color:var(--app-body); }
+.lockedFoot .lockedOutlinePay { margin-top:0; }
+@media (max-width:640px) { .lockedFoot { flex-direction:column; align-items:stretch; } .lockedFormats { justify-content:center; } }
