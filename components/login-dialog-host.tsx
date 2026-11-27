@@ -121,7 +121,7 @@ export function LoginDialogHost() {
         <div className={`${accountStyles.page} ${styles.scope}`}>
           <button type="button" className={styles.close} onClick={close} aria-label="로그인 닫기"><X size={20} /></button>
           {/* 열 때마다 새 폼 — 이전 입력·메시지를 남기지 않는다 */}
-          <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm key={opened} next={next} initialMode={mode} titleId="login-dialog-title" /></div>
+          <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm key={opened} next={next} initialMode={mode} titleId="login-dialog-title" reason="로그인하면 지금 하던 내용 그대로 이어서 할 수 있어요." /></div>
         </div>
       )}
     </dialog>
