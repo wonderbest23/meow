@@ -12,7 +12,6 @@
 .eyebrow { display:block; color:var(--app-muted); font-size:.8125rem; font-weight:600; margin-bottom:10px; }
 /* 빈 화면 — 새 대화의 로그인 안내와 같은 모양: 아이콘·제목·설명·버튼을 가운데에 세로로 모은다 */
 .empty { display:grid; justify-items:center; max-width:440px; margin:0 auto; padding:clamp(40px,14vh,140px) 0 48px; text-align:center; }.empty img { display:block; margin-bottom:28px; }.empty h1 { margin-bottom:12px; word-break:keep-all; }.empty p { max-width:400px; color:var(--app-muted); line-height:1.7; word-break:keep-all; white-space:pre-line; }.empty .primary, .empty .secondary { width:var(--app-state-button); margin-top:24px; max-width:100%; }
-.emptyIcon { display:grid; place-items:center; width:60px; height:60px; margin:0 0 20px; background:color-mix(in srgb, var(--app-primary) 10%, transparent); color:var(--app-primary); border-radius:16px; }
 .empty .textButton { margin-top:4px; }
 .filters { display:flex; gap:6px; margin-bottom:24px; }.filters button { border:0; border-radius:8px; padding:12px 16px; min-height:44px; background:transparent; color:var(--app-muted); font-size:.875rem; }.filters button[aria-pressed=true] { background:var(--app-soft); color:var(--app-accent); font-weight:600; }
 .businessList { display:grid; gap:16px; }.businessRow { border:1px solid var(--app-line); border-radius:8px; background:var(--app-surface); padding:20px 24px; min-width:0; }
