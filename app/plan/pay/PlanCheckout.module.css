@@ -215,7 +215,12 @@
 .summary > .supply, .noticePhone { text-align: left; margin-bottom: 10px; }
 /* PC(901px~) 결제 · 결제 결과 공통 — 본문 판 안의 스크롤 칸에서 100vh 를 최소 높이로 잡으면 머리줄(약 96px)만큼 늘 넘쳐
    내용이 짧아도 스크롤이 생겼다(1280×800 · 1440×900 실측, 대표 지적 2026-11-27). 칸 높이만큼만 채우고, 넘치면 위에서부터 보이게(safe) 가운데 둔다. */
-@media (min-width: 901px) { .page { box-sizing: border-box; min-height: 100%; place-items: safe center; } }
+@media (min-width: 901px) {
+  .page { box-sizing: border-box; min-height: 100%; place-items: safe center; }
+  /* 부모(작업 틀 안쪽)는 min-height 만 있어 100% 가 먹지 않았다 — 짧은 화면(결과 · 사업 없음)에서 회색 바탕이 중간에 끊기고 카드가 위에 붙었다(2026-11-27 점검).
+     부모를 한 칸 그리드로 바꿔 .page 가 부모 높이만큼 늘어나게 한다 */
+  *:has(> .page) { display: grid; }
+}
 /* PC(901px~): 왼쪽 요약 · 오른쪽 동의 두 칸으로 한 화면(1280×800)에 — 한 줄로 쌓으면 결제 화면도 아래로 내려야 했다(대표 지적 2026-11-27) */
 @media (min-width: 901px) {
   .page:has(> .card > .terms) { padding: 20px 32px calc(84px + env(safe-area-inset-bottom)); }

@@ -229,3 +229,16 @@
 /* 로그인 전 '내 사업' — 좁은 화면에서도 '로그인' 단추는 남긴다(위 규칙은 '시작하기'가 떠 있는 '새 대화' 알약과 겹쳐 단추 줄을 통째로 숨긴다). 같은 이유로 '새 대화 시작하기'만 좁은 화면에서 뺀다 */
 .listCard[data-list-only] [data-business-empty="guest"] [data-empty-part=actions] { display:flex; }
 @media (max-width:900px) { .listCard[data-list-only] [data-business-empty="guest"] .guestStart { display:none; } }
+
+/*
+ * 내 사업 목록이 비었을 때 — 목록 카드가 내용 높이만큼만 생겨 PC 에서는 빈 블록이 위쪽에 붙고,
+ * 휴대폰에서는 빈 블록의 화면 높이 기준 최소 높이 + 아래 여백 때문에 내용 없이 85px 쯤 스크롤됐다(2026-11-27 점검).
+ * 카드를 남은 높이만큼 늘리고 빈 블록은 그 안에서 세로 가운데에 둔다.
+ */
+.scroll:has(.listBody[data-empty-list]) { display:flex; flex-direction:column; }
+.listCard:has(> .listBody[data-empty-list]) { flex:1 0 auto; display:flex; flex-direction:column; margin-bottom:32px; }
+.listCard > .listBody[data-empty-list] { flex:1 0 auto; display:grid; align-content:center; }
+.listCard > .listBody[data-empty-list] > [data-empty-state] { min-height:0; }
+@media (max-width: 900px) {
+  .listCard:has(> .listBody[data-empty-list]) { margin-bottom:0; }
+}
