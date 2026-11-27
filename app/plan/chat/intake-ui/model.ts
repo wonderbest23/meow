@@ -92,6 +92,8 @@ export function entryMessage(draft: Pick<IntakeDraft, "memo" | "introMessage">) 
 const questionIntent = /어떻게|왜\s|무엇(?:부터|을|이)|뭐부터|(?:할|일|될|괜찮을|좋을|맞을)까요|(?:좋|맞|괜찮|가능)[은을]?가요|(?:알려|추천해|비교해|설명해)\s*(?:줘|주세요)|고민(?:이에요|입니다)|조언/;
 const acknowledgement = /^(?:안녕(?:하세요)?|반갑습니다|네|넵|예|좋아요|감사합니다|고마워요|알겠습니다|ok)[.!?~\s]*$/i;
 const compoundFields = /(?:예산|가격|고객|매출|비용|상품|서비스|시간)\s*[:：]/g;
+/** 인사·맞장구뿐인 말('안녕?'·'네')인지 — 사업 이야기가 없으니 AI 참고 의견을 부르지 않고, 화면이 먼저 인사로 받아 사업 이야기를 꺼내게 한다 */
+export const isGreetingOnly = (text: string) => acknowledgement.test(text.trim());
 export const isConsultationText = (text: string) => questionIntent.test(text) || /[?？]/.test(text);
 export function needsEntryConfirmation(text: string) {
   const intent = entryIntent(text);

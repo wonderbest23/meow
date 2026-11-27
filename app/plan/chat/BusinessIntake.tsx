@@ -32,7 +32,7 @@ import { InlineLogin, openLogin } from "../../../components/login-dialog";
 import { coachFieldDisplay } from "../../../lib/plan-builder/coach-presentation";
 import { ResourcePanel } from "./intake-ui/ResourcePanel";
 import { IdeaExploration } from "./intake-ui/IdeaExploration";
-import { businessDescriptionText, incompleteChoiceText, nextRefinementQuestion, questionPromptText } from "./intake-ui/model";
+import { businessDescriptionText, incompleteChoiceText, isGreetingOnly, nextRefinementQuestion, questionPromptText } from "./intake-ui/model";
 import { composerEnterSends, composerLimitNote, resultUpdateNotice, resumeSummary, visibleComposerText } from "./intake-ui/guidance";
 import { nativePlatform } from "../../../lib/native-app";
 import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
@@ -1027,7 +1027,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
       if (text.length > 1200) { setError("처음 사업 설명은 1,200자 이내로 나눠 보내 주세요. 입력한 내용은 그대로 보관했어요."); return; }
       const entry = entrySubmission(text);
       // 규격 질문은 규칙으로 바로 진행하고, AI 참고 의견은 옆에서 따로 흘러나온다(서버에서 꺼져 있으면 아무 일도 없다).
-      if (text) void liveComment.request(text);
+      // 인사·맞장구뿐이면('안녕?') 사업 이야기가 없어 참고 의견을 부르지 않는다 — 엉뚱한 의견과 AI 비용만 생겼다(2026-11-27)
+      if (text && !isGreetingOnly(text)) void liveComment.request(text);
       if (text && entry.kind === "confirm") {
         editDraft({ ...draftRef.current, memo: "", introMessage: text });
         follow.current = true;
