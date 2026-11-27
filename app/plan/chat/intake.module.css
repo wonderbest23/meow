@@ -217,8 +217,10 @@
 /* 첫 질문(지금 어느 단계세요? + 선택지)도 대화 칸 세로 가운데에 — 대화가 시작되면 이 묶음이 사라져 원래처럼 아래부터 쌓인다 */
 .inputContent:has(> [data-coach-entry]) { box-sizing: border-box; display: grid; align-content: center; min-height: 100%; }
 .empty { display: grid; justify-items: center; gap: 0; max-width: 440px; margin: 0 auto; padding: 24px 0; text-align: center; }
-.empty h1 { margin: 0 0 8px; font-size: 1.4375rem; line-height: 1.4; word-break: keep-all; text-wrap: balance; }
-.empty .primaryButton { width: 100%; max-width: 320px; margin-top: 24px; }
+/* .empty 를 두 번 — 휴대폰 '.page h1'(1.4375rem)이 뒤에 있어 덮었다 */
+.empty.empty h1 { margin: 0 0 8px; font-size: var(--app-state-title); font-weight: 700; line-height: 1.4; word-break: keep-all; text-wrap: balance; }
+/* 너비를 정해 둔다 — 가운데 정렬 칸이라 100% 는 제목 너비만큼으로 줄었다 */
+.empty .primaryButton { width: var(--app-state-button); max-width: 100%; margin-top: 24px; }
 .empty .textLink { justify-content: center; margin-top: 8px; }
 .muted { color: var(--intake-muted); font-size: .8125rem; margin-top: 20px !important; }
 .error { color: var(--intake-danger); font-size: .8125rem; }

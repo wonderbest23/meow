@@ -36,8 +36,8 @@
 .title {
   margin: 0 0 8px;
   text-wrap: balance;
-  font-size: 1.375rem;
-  font-weight: 800;
+  font-size: var(--app-state-title);
+  font-weight: 700;
   letter-spacing: 0;
   color: var(--text-strong, var(--app-text));
 }
@@ -72,6 +72,8 @@
 }
 
 .primary { width: 100%; }
+/* 안내·결과 카드(동의 항목 없는 카드)의 파란 단추는 앱 공통 너비 — 빈 화면과 같은 규격(workspace-theme --app-state-button) */
+.card:not(:has(> .terms)) .primary { width: min(100%, var(--app-state-button)); }
 
 /* 결제 정보를 다시 불러오는 단추 — 결제 단추(주 버튼)와 헷갈리지 않게 보조 버튼 */
 .retry { width: 100%; margin-top: 12px; }

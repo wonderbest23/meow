@@ -1,4 +1,7 @@
 .tokens, .theme {
+  /* 빈 화면·안내 화면 규격 하나 — 제목 크기 · 파란 단추 너비(내 사업·문의·결제 안내·결제 결과·사업 없음·대화 칸이 같이 쓴다, 2026-11-27) */
+  --app-state-title: 1.25rem;
+  --app-state-button: 280px;
   --app-bg: #f7f9fc;
   --app-surface: #ffffff;
   --app-raised: #f2f5f8;

@@ -25,7 +25,7 @@ for (const part of ["display:flex", "flex-direction:column", "align-items:center
   assert.ok(root.includes(part), `빈 화면 규격에 '${part}' 가 없다`);
 }
 const title = rule(css, ".title[data-empty-part][data-empty-part]");
-for (const part of ["font-size:1.0625rem", "font-weight:700", "color:var(--app-text)", "margin:0"]) assert.ok(title.includes(part), `제목 규격에 '${part}' 가 없다`);
+for (const part of ["font-size:var(--app-state-title)", "font-weight:700", "color:var(--app-text)", "margin:0"]) assert.ok(title.includes(part), `제목 규격에 '${part}' 가 없다`);
 const description = rule(css, ".description[data-empty-part][data-empty-part]");
 for (const part of ["font-size:.9375rem", "color:var(--app-muted)", "margin:0"]) assert.ok(description.includes(part), `설명 규격에 '${part}' 가 없다`);
 assert.match(rule(css, ".icon[data-empty-part][data-empty-part]"), /width:60px;[^}]*height:60px;[^}]*border-radius:16px;[^}]*background:var\(--app-soft\);[^}]*color:var\(--app-primary\)/, "아이콘은 둥근 네모 60px 바탕 안에(앱 전체 같은 모양)");
