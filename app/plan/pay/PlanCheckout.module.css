@@ -167,7 +167,7 @@
 .page:has(.payBar) { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 .payBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--app-line); background: var(--app-surface); box-shadow: 0 -6px 20px rgba(20, 32, 64, .06); }
 /* PC 에서 왼쪽 메뉴가 보이면 본문 쪽에만 — 메뉴 폭은 AppChrome(.side) 256px, 예전 틀 PlanShell 은 --app-rail-w 로 208px 를 알린다 */
-@media (min-width: 901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .payBar { left: var(--app-rail-w, 256px); } }
+@media (min-width: 901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .payBar { left: var(--app-rail-w, 272px); } }
 .payBarInner { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 920px; margin: 0 auto; }
 .payBarNote { margin: 0; color: var(--text-muted, var(--app-muted)); font-size: .875rem; line-height: 1.5; }
 .payBarButton { flex: 0 1 380px; }

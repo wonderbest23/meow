@@ -108,3 +108,10 @@ button.step[aria-disabled="true"]:hover { background:var(--app-fill); }
 @media (pointer:coarse) { .grouped .group { min-height:44px; } }
 /* 왼쪽 메뉴 빈 안내('아직 사업이 없어요') — 캡처 '아직 채팅이 없어요'와 같은 14/21 회색, 안쪽 8 */
 .grouped .empty { margin:0; padding:8px; color:var(--app-muted); font-size:.875rem; line-height:1.5; }
+
+/* Claude 패널처럼(2026-11-27) — 묶음 제목 '사업 ⌄' 13px 회색(위 24 아래 4), 사업 줄은 글자 배지 없이 이름만 36px · 15px */
+.grouped .group { justify-content:flex-start; gap:4px; height:28px; margin:24px 0 4px; padding:0 10px; font-size:.8125rem; }
+.grouped .groupCaret { width:14px; height:14px; }
+.grouped .planRow { height:36px; min-height:36px; padding:0 10px; font-size:.9375rem; }
+.grouped .steps { margin:2px 0 8px 16px; }
+.grouped .step { min-height:34px; font-size:.875rem; }

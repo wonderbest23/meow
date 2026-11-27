@@ -73,10 +73,27 @@
 :global([data-rail-open]) .menu .item { height:auto; min-height:44px; font-size:1rem; }
 :global([data-rail-open]) .menu .ws { height:44px; font-size:1rem; }
 :global([data-rail-open]) .menu .brand { height:44px; }
-:global([data-rail-open]) .menu .footAvatar, :global([data-rail-open]) .menu .footIcon { width:44px; height:44px; }
+:global([data-rail-open]) .menu .footIcon { width:44px; height:44px; }
+:global([data-rail-open]) .menu .footAvatar { width:100%; height:48px; }
 :global([data-rail-open]) .menu .auth a { height:48px; font-size:1rem; }
 /* 손가락(태블릿) — 누르는 자리 44px */
 @media (pointer:coarse) {
   .item, .ws { min-height:44px; height:auto; }
-  .footAvatar, .footIcon { width:44px; height:44px; }
+  .footIcon { width:44px; height:44px; }
 }
+
+/*
+ * Claude 왼쪽 패널처럼 넉넉하게(2026-11-27 사장님: "가독성 떨어지고 간격 빡빡") —
+ * 메뉴 272px · 칸 36px · 글씨 15px · 아이콘 20 · 아이콘↔글자 12 · 안쪽 10. 묶음 제목 13px 회색(위 24).
+ * 맨 아래는 동그라미만 있던 것을 '동그라미 + 이름 + ⌄' 한 줄로.
+ */
+.brand { height:40px; padding:0 10px; }
+.brand img { height:24px; }
+.nav { margin-top:12px; gap:2px; }
+.item { height:36px; gap:12px; padding:0 10px; font-size:.9375rem; }
+@media (pointer:coarse) { .item { height:auto; min-height:44px; } }
+.foot { height:auto; margin-top:12px; }
+.footAvatar { display:flex; align-items:center; gap:10px; width:100%; height:44px; padding:0 10px; border-radius:10px; text-align:left; font:inherit; }
+.footAvatar .avatar { width:28px; height:28px; font-size:.8125rem; }
+.footName { flex:1; min-width:0; overflow:hidden; color:var(--app-text); font-size:.9375rem; text-overflow:ellipsis; white-space:nowrap; }
+.footCaret { flex:none; width:16px; height:16px; color:var(--app-muted); }
