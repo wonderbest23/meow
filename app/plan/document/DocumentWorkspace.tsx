@@ -340,7 +340,7 @@ export default function DocumentWorkspace(props: Props) {
   const steps = useMemo(() => { for (const [, list] of grouped) for (const section of list) { const found = firstSteps(section.html); if (found.length) return found; } return []; }, [grouped]);
   const easyShown = useRef(false);
   useEffect(() => {
-    /* 안 쓴 항목이 남았으면(결제 전 첫 항목만 · 건너뜀) 띄우지 않는다 — 요약이 먼저 떠서 문서 끝 '남은 항목 · 전체 받기'가 가려졌다(운영 점검 2026-11-26) */
+    /* 안 쓴 항목이 남았으면(결제 전 첫 항목만 · 건너뜀) 띄우지 않는다 — 요약이 먼저 떠서 문서 끝 '남은 항목 · 결제하고 전체 받기'가 가려졌다(운영 점검 2026-11-26) */
     if (easyShown.current || !ready || !grouped.length || props.writing || !props.summary?.easy || isSample || !planId || props.lockedOutline || props.missing?.length) return;
     easyShown.current = true;
     try {
@@ -647,8 +647,7 @@ export default function DocumentWorkspace(props: Props) {
                 <h2 id="locked-outline-title">남은 {props.lockedOutline.count}개 항목</h2>
                 <p>지금까지는 첫 항목이에요. 전체를 받으면 아래 항목을 같은 사업 내용으로 이어서 써요.</p>
                 <ol>{props.lockedOutline.chapters.map(chapter => <li key={chapter.name}><span><Lock size={14} aria-hidden="true" />{chapter.number}장 {chapter.name}</span><small>{chapter.items.join(" · ")}</small></li>)}</ol>
-                <AppButton type="button" variant="primary" className={styles.lockedOutlinePay} onClick={props.lockedOutline.onPay}>전체 받기 →</AppButton>
-                <small className={styles.lockedOutlineNote}>{props.lockedOutline.price.toLocaleString("ko-KR")}원 · 결제하면 바로 이어서 써요(몇 분). PDF·Word·발표자료 PPT로 내려받을 수 있어요.</small>
+                <AppButton type="button" variant="primary" className={styles.lockedOutlinePay} onClick={props.lockedOutline.onPay}>{props.lockedOutline.price.toLocaleString("ko-KR")}원 결제하고 전체 받기 →</AppButton>
               </section>}
               {!summaryMode && !continuous && !studioPc && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
                           </article>}

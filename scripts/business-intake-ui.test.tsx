@@ -735,8 +735,8 @@ async function main() {
   const resumeMissing = nextMarkup({ hasDocuments: true, missingSections: 8 }, currentDesign);
   assert.ok(resumeMissing.includes("남은 8개 항목 이어서 작성하기</button>") && !resumeMissing.includes("계획서에 반영하기") && !resumeMissing.includes("다시 생성 횟수"), "unwritten sections resume without a rewrite confirm");
   assert.ok(needsPlan.includes("결제 전에는 첫 항목만 먼저 써서 보여 드려요") && !needsPlan.includes("무료로 만들어요"), "the first document step says only the first section comes before payment");
-  const unpaidResume = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ hasDocuments: true, missingSections: 9 }, currentDesign)} prepared={false} disabled={false} aiBusy={false} unpaid payNote="49,000원 · 홈페이지까지 59,000원" onDesign={noop} onPrepare={noop} />);
-  assert.ok(unpaidResume.includes("전체 받기 →</button>") && unpaidResume.includes("49,000원 · 홈페이지까지 59,000원") && !unpaidResume.includes("이어서 작성하기"), "after the first section an unpaid plan shows one pay button with the price");
+  const unpaidResume = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ hasDocuments: true, missingSections: 9 }, currentDesign)} prepared={false} disabled={false} aiBusy={false} unpaid payLabel="49,000원 결제하고 전체 받기 →" onDesign={noop} onPrepare={noop} />);
+  assert.ok(unpaidResume.includes("49,000원 결제하고 전체 받기 →</button>") && !unpaidResume.includes("<small") && !unpaidResume.includes("이어서 작성하기"), "after the first section an unpaid plan shows one pay button that says it pays and the price, with no note under it");
   const staleDocument = nextMarkup({ hasDocuments: true, documentStatus: "stale" }, currentDesign);
   assert.ok(staleDocument.includes("계획서에 반영하기</button>") && !staleDocument.includes("이전 계획서 보기") && !staleDocument.includes("진행 단계") && !staleDocument.includes("다시 생성 횟수"), "a stale document shows one rewrite button; the cost note waits for the confirm popup");
   // 반영하기 전에 비용을 먼저 보여 준다(다시 쓸 항목 수 · 대화는 무료)
@@ -1246,7 +1246,7 @@ async function main() {
     // 안내 한 줄은 손님일 때만, 다른 사업을 열면 거둔다
     assert.match(intake, /const PREPARE_LOGIN_NOTE = "로그인하면 첫 항목을 바로 볼 수 있어요";/);
     assert.match(intake, /const prepareLoginNote = prepareLoginAsked && !signedIn \? PREPARE_LOGIN_NOTE : null;/);
-    assert.equal([...intake.matchAll(/<NextStepAction [^\n]*?payNote=\{payNote\} loginNote=\{prepareLoginNote\}/g)].length, [...intake.matchAll(/<NextStepAction /g)].length, "다음 단계 단추마다 안내 한 줄을 넘긴다");
+    assert.equal([...intake.matchAll(/<NextStepAction [^\n]*?payNote=\{payNote\} payLabel=\{payLabel\} loginNote=\{prepareLoginNote\}/g)].length, [...intake.matchAll(/<NextStepAction /g)].length, "다음 단계 단추마다 안내 한 줄을 넘긴다");
     assert.match(intake, /setLogin\(false\); setPrepareLoginAsked\(false\);/, "다른 사업을 불러오면 안내를 거둔다");
     // 로그인 창 열기는 창 이벤트 하나(서버 호출 없음) — 받는 쪽이 없으면 예전처럼 /account?next= 로
     const core = readFileSync(new URL("../components/login-dialog-core.ts", import.meta.url), "utf8");

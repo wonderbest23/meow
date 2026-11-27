@@ -135,6 +135,8 @@
 /* 계획서 결제 화면에서 묶음으로 넘어가는 링크 */
 .upsell { display: inline-flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap; margin-top: 8px; font-size: .875rem; font-weight: 700; color: var(--app-primary-text); text-decoration: none; }
 .upsell small { margin-left: 4px; font-weight: 500; color: var(--app-muted); }
+/* '따로 사면 …원 ›' 은 한 덩어리로 줄을 바꾼다 — 좁은 화면에서 화살표만 다음 줄로 떨어졌다 */
+.upsellTail { display: inline-flex; align-items: center; white-space: nowrap; }
 
 /* 결제 안내 받을 휴대폰(선택) */
 .phone { display: grid; gap: 6px; }
@@ -205,3 +207,26 @@
 
 /* 결제 완료 뒤 자동 이동 안내 — 단추 아래 옅은 한 줄 */
 .autoNote { margin:10px 0 0; text-align:center; font-size:.8125rem; line-height:1.6; color:var(--text-muted, var(--app-muted)); }
+
+/* ── 두 칸 배치 ──
+   .summary 는 무엇을 사는지 · 값 · 제공 시점 · 안내 휴대폰. 휴대폰·태블릿에서는 상자 없이(display: contents) 예전처럼 한 줄로 쌓인다.
+   제공 시점과 휴대폰은 예전에 .terms(왼쪽 정렬) 안에 있었으므로 왼쪽 정렬과 아래 간격을 그대로 준다. */
+.summary { display: contents; }
+.summary > .supply, .noticePhone { text-align: left; margin-bottom: 10px; }
+/* PC(901px~) 결제 · 결제 결과 공통 — 본문 판 안의 스크롤 칸에서 100vh 를 최소 높이로 잡으면 머리줄(약 96px)만큼 늘 넘쳐
+   내용이 짧아도 스크롤이 생겼다(1280×800 · 1440×900 실측, 대표 지적 2026-11-27). 칸 높이만큼만 채우고, 넘치면 위에서부터 보이게(safe) 가운데 둔다. */
+@media (min-width: 901px) { .page { box-sizing: border-box; min-height: 100%; place-items: safe center; } }
+/* PC(901px~): 왼쪽 요약 · 오른쪽 동의 두 칸으로 한 화면(1280×800)에 — 한 줄로 쌓으면 결제 화면도 아래로 내려야 했다(대표 지적 2026-11-27) */
+@media (min-width: 901px) {
+  .page:has(> .card > .terms) { padding: 20px 32px calc(84px + env(safe-area-inset-bottom)); }
+  .card:has(> .terms) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-rows: auto 1fr; column-gap: 40px; align-items: start; max-width: 940px; padding: 30px 34px; text-align: left; }
+  .card:has(> .terms) > .summary { display: block; grid-column: 1; grid-row: 1; }
+  .card:has(> .terms) > .terms { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+  .card:has(> .terms) > .note, .card:has(> .terms) > .back { grid-column: 1; justify-self: start; }
+  .card:has(> .terms) .icon { width: 48px; height: 48px; margin: 0 0 12px; }
+  .card:has(> .terms) .icon svg { width: 24px; height: 24px; }
+  .card:has(> .terms) .desc { margin-bottom: 16px; line-height: 1.65; }
+  .card:has(> .terms) .price { margin-bottom: 12px; padding: 14px 16px; }
+  .card:has(> .terms) .upsell { justify-content: flex-start; }
+  .card:has(> .terms) .consentList { margin: 0; }
+}

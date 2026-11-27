@@ -615,7 +615,6 @@
 .lockedOutline li span { display:flex; align-items:center; gap:6px; font-size:.875rem; font-weight:600; color:var(--app-text); }
 .lockedOutline li small { padding-left:20px; font-size:.8125rem; line-height:1.6; color:var(--app-muted); word-break:keep-all; overflow-wrap:anywhere; }
 .lockedOutlinePay { justify-self:start; margin-top:4px; }
-.lockedOutlineNote { font-size:.75rem; line-height:1.6; color:var(--app-muted); }
 @media (max-width:640px) { .lockedOutlinePay { justify-self:stretch; } }
 
 /* 휴대폰 아래 단추 줄에 내려받기가 함께 있을 때 — 내려받기 · 직접 고치기는 글 폭만큼, 다음 단계가 남은 폭 */
