@@ -39,9 +39,6 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
       <section className={styles.wrap} aria-label="로그인 필요">
         <EmptyIcon icon={KeyRound} />
         <h2 className={styles.title}>로그인이 필요해요</h2>
-        <p className={styles.desc}>
-          작성한 내용을 계정에 저장해 어느 기기에서든 이어서 쓸 수 있어요.
-        </p>
         {/* '완성 예시 보기'(/plan)는 뺐다 — /plan 이 로그인 화면으로 되돌려 보내 막다른 길이었다(2026-11-02) */}
         <AppButton href={backTo} variant="primary" className={styles.primary}>
           로그인 · 회원가입

@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import BusinessAppChrome from "./BusinessAppChrome";
 import styles from "./BusinessHub.module.css";
 import frame from "./chat/page.module.css";
-import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../lib/plan-builder/missing-business";
+import { MISSING_BUSINESS_TITLE } from "../../lib/plan-builder/missing-business";
 import { AppButton } from "../../components/app-button";
 
 /* 주소의 사업을 찾지 못했을 때 — 사업 관리·홈페이지 화면과 같은 말과 '내 사업으로' 길 하나(lib/plan-builder/missing-business.ts) */
@@ -16,11 +16,11 @@ import { AppButton } from "../../components/app-button";
  * 본문 — 머리줄·왼쪽 목록이 이미 있는 화면 안에 넣는다.
  * action — '내 사업으로' 대신 둘 주된 단추(예: 로그인이 풀렸을 때 '다시 로그인하기' — 그때는 '내 사업으로'를 덜 눈에 띄게 아래에)
  */
-export function MissingBusinessBody({ title = MISSING_BUSINESS_TITLE, detail = MISSING_BUSINESS_DETAIL, action, children }: { title?: string; detail?: string; action?: ReactNode; children?: ReactNode }) {
+export function MissingBusinessBody({ title = MISSING_BUSINESS_TITLE, detail, action, children }: { title?: string; detail?: string; action?: ReactNode; children?: ReactNode }) {
   return <section className={styles.empty}>
     <EmptyIcon icon={FolderSearch} />
     <h2>{title}</h2>
-    <p>{detail}</p>
+    {detail ? <p>{detail}</p> : null}
     {/* 어디로 가는 단추인지 보이게 > 아이콘을 붙인다(대표 요청 2026-10-24) */}
     {action ?? <AppButton variant="primary" className={styles.primary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton>}
     {action ? <AppButton variant="secondary" className={styles.secondary} href="/plan">내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton> : null}

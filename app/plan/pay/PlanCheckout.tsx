@@ -17,7 +17,7 @@ import { normalizePurchaseDomain, validateRegistrant } from "../../../lib/landin
 import { AddressSearchButton } from "../../../components/address-search";
 import { DocLink } from "../../../components/doc-sheet";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed } from "../../../lib/plan-builder/plan-store";
-import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
+import { MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import { fetchWithTimeout, koreanText } from "../../../lib/client/user-error";
 import { AppButton } from "../../../components/app-button";
 import { FieldError, FieldHelp, FieldLabel, TextField } from "../../../components/app-field";
@@ -255,9 +255,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>결제 상태를 확인하지 못했어요</h1>
-          <p className={styles.desc}>이미 결제했을 수도 있어요. 잠시 후 다시 확인해 주세요. 결제는 아직 진행되지 않았어요.</p>
+          <p className={styles.desc}>다시 결제하기 전에 잠시 후 확인해 주세요.</p>
           <AppButton type="button" variant="primary" className={styles.primary} onClick={() => window.location.reload()}>다시 확인하기</AppButton>
-          <AppButton href={planHref} variant="text" className={styles.back}>← 사업계획서로 돌아가기</AppButton>
         </div>
       </div>
     );
@@ -269,9 +268,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><LogIn size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>로그인이 필요해요</h1>
-          <p className={styles.desc}>로그인하면 이 화면으로 돌아와요.</p>
-          <AppButton href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} variant="primary" className={`${styles.primary} ${styles.nav}`}>로그인 · 회원가입<ChevronRight size={18} aria-hidden="true" /></AppButton>
-          <AppButton href={laterHref} variant="text" className={styles.back}>← 나중에 하기</AppButton>
+                    <AppButton href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} variant="primary" className={`${styles.primary} ${styles.nav}`}>로그인 · 회원가입<ChevronRight size={18} aria-hidden="true" /></AppButton>
         </div>
       </div>
     );
@@ -288,7 +285,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>{MISSING_BUSINESS_TITLE}</h1>
-          <p className={styles.desc}>{MISSING_BUSINESS_DETAIL} 결제는 진행되지 않았어요.</p>
+          <p className={styles.desc}>결제는 진행되지 않았어요.</p>
           <AppButton href="/plan" variant="primary" className={`${styles.primary} ${styles.nav}`}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton>
         </div>
       </div>
@@ -317,7 +314,6 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <h1 className={styles.title}>홈페이지는 사업계획서와 함께 열어요</h1>
           <p className={styles.desc}>홈페이지 단독 {HOMEPAGE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원은 이 사업의 사업계획서를 결제한 분 전용이에요. 사업계획서 + 홈페이지를 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 함께 결제해 주세요.</p>
           <AppButton href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`} variant="primary" className={`${styles.primary} ${styles.nav}`}>사업계획서 + 홈페이지 결제하기<ChevronRight size={18} aria-hidden="true" /></AppButton>
-          <AppButton href={laterHref} variant="text" className={styles.back}>← 나중에 하기</AppButton>
         </div>
       </div>
     );
@@ -503,7 +499,6 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
             {product === "domain" ? "결제가 끝나면 홈페이지 화면에서 가지고 있는 도메인의 www 주소를 넣고 ‘연결 시작’을 눌러요(홈페이지를 먼저 공개해야 해요). 도메인을 산 곳에서 안내대로 한 줄(CNAME)만 설정하면 보통 몇 분 안에 연결돼요."
               : "결제가 끝나면 적어 주신 명의자 이름으로 도메인을 등록해요(.com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일). 진행 상황은 홈페이지 화면에서 볼 수 있어요."}
           </p> : null}
-          <AppButton href={laterHref} variant="text" className={styles.back}>← 나중에 하기</AppButton>
         </>}
       </div>
     </div>

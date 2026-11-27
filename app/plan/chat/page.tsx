@@ -288,7 +288,7 @@ function BusinessCoach() {
       {hasBrief && <div {...split.separator} aria-controls="business-chat-pane" className={styles.splitHandle} title="드래그로 너비 조절 · 두 번 클릭하면 기본 너비"><span /></div>}
       {hasBrief && plan && <aside className={`${styles.briefPane} ${view !== "brief" ? styles.mobileHidden : ""}`} aria-label="내 사업안 결과"><BusinessBrief coach={plan.coach} changed={changed} onEdit={edit} onSave={saveBrief} onDirty={setEditDirty} disabled={blocked} actions={actions} />{error && view === "brief" && <p className={styles.error} role="alert">{error}</p>}</aside>}
     </div> : <div className={hubStyles.scroll}><div className={hubStyles.content}>
-      {loadFailed ? <section className={hubStyles.empty}><EmptyIcon icon={AlertCircle} /><h1>기획을 불러오지 못했어요</h1><p role="alert">{error}</p><AppButton variant="secondary" className={hubStyles.secondary} onClick={() => { setLoaded(false); void refresh(searchParams.get("planId") ?? undefined).catch(e => setError(e.message)).finally(() => setLoaded(true)); }}>다시 불러오기</AppButton><AppButton variant="text" className={hubStyles.textButton} href="/plan">내 사업 목록으로</AppButton></section> : <BusinessEmptyState kind={searchParams.get("planId") ? "missing" : "planning"} />}
+      {loadFailed ? <section className={hubStyles.empty}><EmptyIcon icon={AlertCircle} /><h1 role="alert">기획을 불러오지 못했어요</h1><AppButton variant="primary" className={hubStyles.primary} onClick={() => { setLoaded(false); void refresh(searchParams.get("planId") ?? undefined).catch(e => setError(e.message)).finally(() => setLoaded(true)); }}>다시 불러오기</AppButton></section> : <BusinessEmptyState kind={searchParams.get("planId") ? "missing" : "planning"} />}
     </div></div>}
     </BusinessAppChrome>
   </main>;
