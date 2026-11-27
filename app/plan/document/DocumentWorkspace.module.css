@@ -615,6 +615,9 @@
 .lockedOutline li span { display:flex; align-items:center; gap:6px; font-size:.875rem; font-weight:600; color:var(--app-text); }
 .lockedOutline li small { padding-left:20px; font-size:.8125rem; line-height:1.6; color:var(--app-muted); word-break:keep-all; overflow-wrap:anywhere; }
 .lockedOutlinePay { justify-self:start; margin-top:4px; }
+/* 작업실 PC 에서 왼쪽 대화 칸이 펼쳐져 있고 거기 결제 단추(data-pay-cta)가 보이면 계획서 끝의 같은 단추는 숨긴다 —
+   양쪽에 '결제하고 전체 받기'가 두 번 보여 어지러웠다(대표 지적 2026-11-27). 대화 칸을 접었거나 계획서만 열었을 때 · 휴대폰은 그대로 */
+:global(body:has(#studio-panel-chat[data-visible] [data-pay-cta])) [data-studio-pc] .lockedOutlinePay { display: none; }
 @media (max-width:640px) { .lockedOutlinePay { justify-self:stretch; } }
 
 /* 휴대폰 아래 단추 줄에 내려받기가 함께 있을 때 — 내려받기 · 직접 고치기는 글 폭만큼, 다음 단계가 남은 폭 */
