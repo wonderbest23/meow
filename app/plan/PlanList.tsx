@@ -187,7 +187,6 @@ export default function PlanList() {
         <StageArt plan={p} status={status} />
       </span>
       <span className={home.meta}>
-        <span className={home.avatar} aria-hidden="true">{display.trim().charAt(0) || "사"}</span>
         <span className={home.metaText}>
           <strong className={mine.title}>{planDisplayName(p)}</strong>
           <span className={mine.meta}><time dateTime={p.updatedAt}>{editedAgo(p.updatedAt)}</time><StageBadge plan={p} status={status} className={home.metaStage} /></span>
@@ -212,7 +211,7 @@ export default function PlanList() {
     <p role="status" className={mine.status} data-empty={notice ? undefined : ""}>{notice}</p>
     {filter === "samples" ? (samples.length ? <div className={home.grid}>{samples.map(p => <button type="button" className={home.sampleCard} key={p.id} onClick={() => sample(p.id)}>
       <span className={home.thumb}><span className={home.skeleton} aria-hidden="true"><i /><i /><i /><span><i /><i /><i /></span><i /></span><StatusBadge tone="info" className={home.thumbBadge}>완성 예시</StatusBadge></span>
-      <span className={home.meta}><span className={home.avatar} aria-hidden="true">예</span><span className={home.metaText}><strong>{p.title.replace(/^샘플 · /,"")}</strong><span className={mine.meta}>사업계획서 예시 보기</span></span></span>
+      <span className={home.meta}><span className={home.metaText}><strong>{p.title.replace(/^샘플 · /,"")}</strong><span className={mine.meta}>사업계획서 예시 보기</span></span></span>
     </button>)}</div> : <p className={home.quiet}>지금 보여 드릴 예시가 없어요.</p>)
     : plans.length === 0 && error ? <EmptyState as="section" role="alert" className={styles.emptyPlace} icon={AlertCircle} heading="h2" title="사업 목록을 불러오지 못했어요" actions={<AppButton type="button" variant="primary" onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</AppButton>} /> : plans.length === 0 ? <BusinessEmptyState heading="h2" kind="plans" />
     : shown.length === 0 ? <p className={home.quiet}>‘{query.trim()}’ 이름의 사업이 없어요.</p> : <div className={`${mine.list} ${home.grid}`}>{shown.map(card)}</div>}

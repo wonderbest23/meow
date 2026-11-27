@@ -88,7 +88,6 @@
 .skeleton > span i:first-child { background:var(--app-soft); }
 .skeleton > span i:nth-child(2) { background:var(--app-danger-bg); }
 .meta { display:flex; align-items:flex-start; gap:8px; margin-top:12px; min-width:0; }
-.avatar { display:inline-grid; place-items:center; flex:none; width:36px; height:36px; border-radius:50%; background:var(--app-primary); color:var(--app-on-primary); font-size:1rem; font-weight:400; }
 .metaText { display:grid; min-width:0; padding-right:36px; }
 .metaText > strong { font-size:.875rem; font-weight:450; line-height:19.6px; }
 .metaText > span { flex-wrap:nowrap; height:16px; margin-top:0; overflow:visible; font-size:.875rem; line-height:16px; }
@@ -161,7 +160,6 @@
   .listCard[data-list-only] .skeleton { inset:8px; gap:4px; }
   .listCard[data-list-only] .skeleton > span { display:none; }
   .listCard[data-list-only] .meta { flex:1; margin:0; }
-  .listCard[data-list-only] .avatar { display:none; }
   .listCard[data-list-only] .metaText { padding-right:0; }
   .listCard[data-list-only] .metaText > strong { font-size:1rem; font-weight:400; line-height:24px; }
   .listCard[data-list-only] .metaText > span { font-size:1rem; line-height:24px; }
