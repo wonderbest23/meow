@@ -123,6 +123,15 @@
         "url": "https://www.foodsafetykorea.go.kr/portal/board/boardDetail.do?menu_no=3504&menu_grp=MENU_NEW04&bbs_no=bbs1021",
         "title": "식품안전나라 · 식품위생교육"
       }
+    ],
+    "cautions": [
+      {
+        "text": "커피 전문점이 여기에 해당하는지는 신고할 때 시·군·구청에 확인하세요.",
+        "mention": [
+          "커피 전문점",
+          "커피전문점"
+        ]
+      }
     ]
   },
   {
@@ -184,6 +193,14 @@
         "url": "https://www.foodsafetykorea.go.kr/portal/board/boardDetail.do?menu_no=3504&menu_grp=MENU_NEW04&bbs_no=bbs1021",
         "title": "식품안전나라 · 식품위생교육"
       }
+    ],
+    "cautions": [
+      {
+        "text": "다만 떡집은 '즉석판매제조·가공업'으로 신고하는 경우도 있으니, 어느 쪽인지 시·군·구청 위생 담당 부서에 먼저 물어보세요.",
+        "mention": [
+          "즉석판매"
+        ]
+      }
     ]
   },
   {
@@ -243,6 +260,15 @@
         "url": "https://www.foodsafetykorea.go.kr/portal/board/boardDetail.do?menu_no=3504&menu_grp=MENU_NEW04&bbs_no=bbs1021",
         "title": "식품안전나라 · 식품위생교육"
       }
+    ],
+    "cautions": [
+      {
+        "text": "그러니 만들 반찬이 해당하는지 시·군·구청 위생 담당 부서에 먼저 확인하세요.",
+        "mention": [
+          "해당하는지",
+          "먼저 확인"
+        ]
+      }
     ]
   },
   {
@@ -297,6 +323,14 @@
       {
         "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EC%8B%9D%ED%92%88%EC%9C%84%EC%83%9D%EB%B2%95+%EC%8B%9C%ED%96%89%EB%A0%B9&joNo=002602&mode=11",
         "title": "국가법령정보센터 · 식품위생법 시행령 제26조의2(등록하여야 하는 영업)"
+      }
+    ],
+    "cautions": [
+      {
+        "text": "만든 도시락을 다른 곳에 공급하려면 식품제조·가공업에 해당할 수 있는데, 이 영업은 신고가 아니라 등록 대상이에요.",
+        "mention": [
+          "등록"
+        ]
       }
     ]
   },
@@ -574,6 +608,14 @@
         "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EA%B3%B5%EC%A4%91%EC%9C%84%EC%83%9D%EA%B4%80%EB%A6%AC%EB%B2%95&joNo=000600&mode=11",
         "title": "국가법령정보센터 · 공중위생관리법 제6조(이용사 및 미용사의 면허)"
       }
+    ],
+    "cautions": [
+      {
+        "text": "2015년 4월 17일 이후 딴 미용사(일반) 자격에는 네일 업무가 없어요.",
+        "mention": [
+          "2015"
+        ]
+      }
     ]
   },
   {
@@ -838,6 +880,15 @@
         "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%ED%95%99%EC%9B%90%EC%9D%98%20%EC%84%A4%EB%A6%BD%E3%86%8D%EC%9A%B4%EC%98%81%20%EB%B0%8F%20%EA%B3%BC%EC%99%B8%EA%B5%90%EC%8A%B5%EC%97%90%20%EA%B4%80%ED%95%9C%20%EB%B2%95%EB%A5%A0&joNo=000200&mode=11",
         "title": "국가법령정보센터 · 학원법 제2조(정의)"
       }
+    ],
+    "cautions": [
+      {
+        "text": "집이 아닌 상가 같은 곳에서 가르치면 개인과외가 아니라 교습소 신고나 학원 등록 대상이에요.",
+        "mention": [
+          "교습소",
+          "학원"
+        ]
+      }
     ]
   },
   {
@@ -1071,6 +1122,17 @@
         "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EA%B3%B5%EC%A4%91%EC%9C%84%EC%83%9D%EA%B4%80%EB%A6%AC%EB%B2%95%20%EC%8B%9C%ED%96%89%EA%B7%9C%EC%B9%99&joNo=001400&mode=11",
         "title": "국가법령정보센터 · 공중위생관리법 시행규칙 제14조(업무범위)"
       }
+    ],
+    "cautions": [
+      {
+        "text": "어떤 미용사 면허(일반·피부 등)로 할 수 있는지는 법령에 따로 적혀 있지 않으니 영업소가 있는 시·군·구청에 먼저 확인하세요.",
+        "mention": [
+          "따로 적혀",
+          "정해져 있지 않",
+          "나오지 않",
+          "명시"
+        ]
+      }
     ]
   },
   {
@@ -1134,6 +1196,21 @@
       {
         "url": "https://mohw.go.kr/board.es?act=view&bid=0027&list_no=1487514&mid=a10503000000",
         "title": "보건복지부 보도자료 · 문신, 안전하게! 당당하게!(2025-09-25)"
+      }
+    ],
+    "cautions": [
+      {
+        "text": "보건복지부는 그동안 의료인이 아닌 사람의 문신이 의료법 위반으로 처벌될 수밖에 없었다고 밝혔어요.",
+        "mention": [
+          "처벌",
+          "의료법"
+        ]
+      },
+      {
+        "text": "문신사법은 2027년 10월 29일부터 시행돼요.",
+        "mention": [
+          "2027"
+        ]
       }
     ]
   },
@@ -1211,6 +1288,14 @@
       {
         "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EB%8F%99%EB%AC%BC%EB%B3%B4%ED%98%B8%EB%B2%95%20%EC%8B%9C%ED%96%89%EA%B7%9C%EC%B9%99&joNo=004200&mode=11&efYd=20261128",
         "title": "국가법령정보센터 · 동물보호법 시행규칙 제42조(영업의 등록)"
+      }
+    ],
+    "cautions": [
+      {
+        "text": "반려동물의 털, 피부 또는 발톱 등을 손질하거나 위생적으로 관리하는 영업은 '동물미용업'이고, 신고가 아니라 시·군·구청에 등록해야 해요(자동차를 이용한 미용도 등록 대상).",
+        "mention": [
+          "등록"
+        ]
       }
     ]
   },
@@ -1386,6 +1471,14 @@
         "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EA%B3%B5%EC%A4%91%EC%9C%84%EC%83%9D%EA%B4%80%EB%A6%AC%EB%B2%95&joNo=000200&mode=11",
         "title": "국가법령정보센터 · 공중위생관리법 제2조(정의)"
       }
+    ],
+    "cautions": [
+      {
+        "text": "이 업은 외국인 관광객에게 숙식을 제공하는 업이라 내국인 손님을 받는 숙소로는 쓸 수 없고(도시재생 마을기업은 외국인 손님 이용에 지장이 없는 범위에서 예외), 주인이 살지 않는 집도 해당하지 않아요.",
+        "mention": [
+          "내국인"
+        ]
+      }
     ]
   },
   {
@@ -1438,6 +1531,15 @@
       {
         "url": "https://www.gov.kr/mw/AA020InfoCappView.do?CappBizCD=13800000313",
         "title": "정부24 · 농어촌 민박사업자 신고"
+      }
+    ],
+    "cautions": [
+      {
+        "text": "펜션이나 민박집이라도 이 조건을 모두 갖추지 못하면 농어촌민박으로 신고할 수 없어서 다른 업종으로 알아봐야 해요.",
+        "mention": [
+          "조건",
+          "요건"
+        ]
       }
     ]
   }

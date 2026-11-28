@@ -36,6 +36,14 @@
         "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2444&cntntsId=7777",
         "title": "국세청 · 사업자등록 신청"
       }
+    ],
+    "cautions": [
+      {
+        "text": "다른 사람 명의를 빌려 등록하면 세금과 처벌이 명의를 빌려준 사람에게도 돌아가니 실제로 사업하는 사람 이름으로 해야 해요.",
+        "mention": [
+          "명의"
+        ]
+      }
     ]
   },
   {

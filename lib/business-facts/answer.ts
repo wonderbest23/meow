@@ -63,8 +63,8 @@ function finalCheck(matches: FactMatch[]): string {
 }
 const topicOf = (matches: FactMatch[]): FactTopic => matches.length && matches.every(({ fact }) => fact.group === "permit") ? "permit" : "tax";
 
-/** 답 끝에 붙이는 출처 줄 — 항목마다 첫 출처 제목 · 주소 · 확인한 날. 다시 확인 날이 지난 항목은 표시 */
-export function factsFooter(matches: FactMatch[]): string {
+/** 답 끝에 붙이는 출처 줄 — 항목마다 첫 출처 제목 · 주소 · 확인한 날. 다시 확인 날이 지난 항목은 표시. cautions 는 AI 답이 빠뜨린 경고 */
+export function factsFooter(matches: FactMatch[], cautions: string[] = []): string {
   const seen = new Set<string>();
   const sources: FactSource[] = [];
   for (const { fact, stale } of matches) {
@@ -74,7 +74,7 @@ export function factsFooter(matches: FactMatch[]): string {
     sources.push({ title: source.title, checkedAt: fact.checkedAt, stale, url: source.url });
   }
   // 화면은 이 줄을 떼어 '출처' 칸으로 따로 보인다(footer.ts splitFactsFooter) — 모양을 바꾸면 그쪽도 함께
-  return formatFactsFooter({ sources, note: finalCheck(matches) });
+  return formatFactsFooter({ sources, note: finalCheck(matches), cautions });
 }
 
 /** AI 답을 쓸 수 없을 때 — 가장 맞는 항목의 답 원문 그대로 + 출처 */
@@ -99,5 +99,28 @@ export function checkGroundedReply(reply: string, matches: FactMatch[], extra: s
   return { ok: stray.length === 0, stray };
 }
 
+/*
+ * 자료보다 단정하는 말 — 조건·경고가 있는 항목에서 이런 말이 나오면 그 답은 쓰지 않고 항목 원문을 보인다.
+ * (2026-11-28 실제 AI 시험: 하이쿠가 '네, 동네 1인 카페는 간이과세로 시작할 수 있는 업종이에요'라고 단정 — 자료는 배제 업종·기준 확인을 말한다)
+ * 좁게 둔다: '할 수 있어요' 자체는 자료도 쓰는 말이라 잡지 않고, 업종·자격을 통째로 보증하는 말만.
+ */
+const OVERCLAIM = /할수있는업종(?:이에요|입니다|이에요\.)|가능한업종(?:이에요|입니다)|해당되는업종(?:이에요|입니다)|무조건|100%|걱정(?:안|하지않)으셔도|문제(?:가)?없어요|확실(?:히|하게)(?:돼요|됩니다|가능)|당연히(?:돼요|됩니다|가능)/;
+
+export type GroundedOutcome = { message: string; outcome: "ai" | "ai_with_caution" | "fallback"; stray: string[]; overclaim: string | null; missing: string[] };
+
+/**
+ * 세금·영업신고 AI 답을 손님에게 보일 모양으로 — 숫자가 근거에 없거나 자료보다 단정하면 항목 원문, 가장 맞는 항목의 꼭 지킬 조건·경고를
+ * 답이 빠뜨렸으면 '꼭 확인' 줄로 덧붙인다(출처 칸에 늘 보인다 — 접히는 본문이 아니라)
+ */
+export function finalizeGroundedReply(reply: string, matches: FactMatch[], kind: FactTopic, extra: string[] = []): GroundedOutcome {
+  const { stray } = checkGroundedReply(reply, matches, extra);
+  const [top] = matches;
+  const normalized = normalizeFactText(reply);
+  const overclaim = top?.fact.cautions.length ? normalized.match(OVERCLAIM)?.[0] ?? null : null;
+  if (stray.length || overclaim) return { message: factFallbackReply(matches, kind), outcome: "fallback", stray, overclaim, missing: [] };
+  const missing = (top?.fact.cautions ?? []).filter(caution => !caution.mention.some(word => normalized.includes(normalizeFactText(word)))).map(caution => caution.text);
+  return { message: `${reply.trim()}${factsFooter(matches, missing)}`, outcome: missing.length ? "ai_with_caution" : "ai", stray, overclaim: null, missing };
+}
+
 /** AI 에게 덧붙이는 규칙 — 항목 밖의 세금·등록·인허가 사실은 쓰지 않는다 */
-export const GROUNDED_RULES = "This question is about Korean business registration, tax or business-permit (영업신고) procedures. Answer ONLY from the verified facts given as `facts` (official government pages): restate them in plain 해요체 and apply them to the founder's situation. Do not add any tax rate, fee, amount, deadline, date, hours, form name, document, exception or agency that is not in `facts`. Write numbers exactly as they appear in `facts`. If `facts` do not answer the question, say that this is not in the verified material yet and suggest the agency named in `facts` (국세상담센터 126 or the 관할 세무서 for tax, the 시·군·구청 for permits). Do not add a sources line; the service appends it.";
+export const GROUNDED_RULES = "This question is about Korean business registration, tax or business-permit (영업신고) procedures. Answer ONLY from the verified facts given as `facts` (official government pages): restate them in plain 해요체 and apply them to the founder's situation. Do not add any tax rate, fee, amount, deadline, date, hours, form name, document, exception or agency that is not in `facts`. Write numbers exactly as they appear in `facts`. Keep every condition, exception and warning that `facts` state (for example 'only if', 'except', 'check with the office first', penalties, dates a law takes effect) — never drop them to sound simpler — and never state eligibility, permission or a business type more definitively than `facts` do (no 'you definitely can', 'no problem', 'this business qualifies' when `facts` give conditions). If `facts` do not answer the question, say that this is not in the verified material yet and suggest the agency named in `facts` (국세상담센터 126 or the 관할 세무서 for tax, the 시·군·구청 for permits). Do not add a sources line; the service appends it.";

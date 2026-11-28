@@ -51,6 +51,11 @@ export function checkFacts(files: Partial<Record<FactGroup, unknown>>, today: st
       if (fact.validTo && fact.validTo < fact.validFrom) problems.push("적용 기간 끝이 시작보다 빨라요");
       if (fact.recheckBy <= fact.checkedAt) problems.push("다시 확인 날은 확인한 날보다 뒤여야 해요");
       if (fact.group === "permit" && !fact.sectors.length && !fact.ksic.length) problems.push("업종별 항목에는 sectors 나 ksic 가 있어야 해요");
+      for (const caution of fact.cautions) {
+        if (!normalizeFactText(fact.answer).includes(normalizeFactText(caution.text))) problems.push(`꼭 지킬 문장이 답에 없어요: ${caution.text.slice(0, 30)}`);
+        // mention 은 AI 가 같은 뜻으로 쓸 만한 말들 — 적어도 하나는 문장 자체에 있어야 한다(원문을 그대로 덧붙이면 통과하도록)
+        if (!caution.mention.some(word => normalizeFactText(caution.text).includes(normalizeFactText(word)))) problems.push(`mention 중 어느 말도 꼭 지킬 문장에 없어요: ${caution.text.slice(0, 30)}`);
+      }
       seen.add(fact.id);
       if (problems.length) { issues.push({ file, id: fact.id, index, level: "error", message: problems.join(" · ") }); return; }
       if (fact.status === "verified" && fact.recheckBy < today) issues.push({ file, id: fact.id, index, level: "stale", message: `다시 확인 날(${fact.recheckBy})이 지났어요 — 출처를 다시 열어 확인해 주세요` });

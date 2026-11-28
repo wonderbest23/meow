@@ -72,6 +72,11 @@ export const businessFactSchema = z.object({
   agency: z.string().trim().min(1).max(120),
   basis: z.array(factBasisSchema).min(1),
   sources: z.array(factSourceSchema).min(1),
+  /**
+   * 빼면 안 되는 조건·예외·경고 문장 — answer 안의 문장을 그대로 옮긴다(검사가 확인). AI 답이 mention 중 어느 말도 쓰지 않으면
+   * 코드가 '꼭 확인' 줄로 덧붙인다(2026-11-28 실제 AI 시험: 하이쿠가 타투 '시행 전 처벌' 경고를 빠뜨렸다)
+   */
+  cautions: z.array(z.object({ text: z.string().trim().min(5).max(300), mention: z.array(z.string().trim().min(1).max(20)).min(1).max(6) })).max(3).default([]),
   /** 마지막으로 출처를 열어 확인한 날 · 사람 */
   checkedAt: isoDate,
   checkedBy: z.string().trim().min(1).max(40),
