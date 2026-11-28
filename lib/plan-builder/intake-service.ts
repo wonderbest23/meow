@@ -560,21 +560,21 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
       }
       const context = JSON.stringify(recentNotes.length ? { ...base, ownerNotes: recentNotes } : base);
       /*
-       * 세금·등록 질문은 사이트 자료(국세청 원문 대조 · data/business-facts)만 근거로(2026-11-28 사장님) — 맞는 항목이 없으면 AI 를 부르지 않고
+       * 세금·등록 · 영업신고 질문은 사이트 자료(국세청 원문 대조 · data/business-facts)만 근거로(2026-11-28 사장님) — 맞는 항목이 없으면 AI 를 부르지 않고
        * '아직 확인된 자료가 없어요', 있으면 그 항목만 건네고, 답의 숫자가 항목·질문·사업 정보에 없으면 그 답을 버리고 항목 원문을 보인다.
        */
       const grounding = groundTaxQuestion(job.request ?? "", { sector: claimed.intake.sector, ksic: claimed.intake.ksic ?? null });
       let message: string;
-      if (grounding.topic && !grounding.matches.length) message = noFactReply();
+      if (grounding.topic && !grounding.matches.length) message = noFactReply(grounding.kind);
       else {
         const result = await helpIntake(config, context, job.request ?? "", grounding.topic ? factsForPrompt(grounding.matches) : undefined);
         if (!result.ok) {
           if (!grounding.topic) throw new IntakeError(result.reason, "AI 답변을 완료하지 못했어요. 질문을 짧게 나눠 다시 요청할 수 있고 사업정보는 그대로 보관되어 있어요");
-          message = factFallbackReply(grounding.matches);
+          message = factFallbackReply(grounding.matches, grounding.kind);
         } else if (grounding.topic) {
           const checked = checkGroundedReply(result.message, grounding.matches, [job.request ?? "", context]);
           if (!checked.ok) console.info("[business-intake-job]", JSON.stringify({ event: "tax-reply-replaced", jobId: job.id, stray: checked.stray.slice(0, 5) }));
-          message = checked.ok ? `${result.message.trim()}${factsFooter(grounding.matches)}` : factFallbackReply(grounding.matches);
+          message = checked.ok ? `${result.message.trim()}${factsFooter(grounding.matches)}` : factFallbackReply(grounding.matches, grounding.kind);
         } else message = result.message;
       }
       const result = { ok: true as const, message };

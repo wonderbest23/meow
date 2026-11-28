@@ -1,1 +1,394 @@
-[]
+[
+  {
+    "group": "permit",
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-05-28",
+    "status": "verified",
+    "id": "permit.food.restaurant",
+    "sectors": [
+      "food_beverage"
+    ],
+    "ksic": [
+      "5611",
+      "5612"
+    ],
+    "keywords": [
+      "일반음식점",
+      "식당",
+      "음식점",
+      "밥집",
+      "한식당",
+      "술도 파는"
+    ],
+    "questions": [
+      "식당 하려면 어떤 신고를 해야 해요?",
+      "밥이랑 술도 같이 팔려면 무슨 영업이에요?",
+      "음식점 영업신고 어디서 해요?"
+    ],
+    "answer": "식사와 함께 술을 곁들여 팔 수 있는 식당은 '일반음식점영업'이에요. 영업소가 있는 시·군·구청에 영업신고를 해요(인터넷·방문·우편). 수수료는 방문·우편 28,000원, 전자 25,200원이고 처리는 즉시(근무시간 내 3시간)예요. 신고 전에 식품위생교육 6시간을 미리 받아야 해요(미리 받기 어렵다고 신고관청이 인정하면 신고 후 6개월 안에).",
+    "agency": "사업장 주소지 시·군·구청 식품위생 담당 부서",
+    "basis": [
+      {
+        "law": "식품위생법 시행령",
+        "article": "제21조 제8호 나목"
+      },
+      {
+        "law": "식품위생법",
+        "article": "제37조 제4항"
+      },
+      {
+        "law": "식품위생법 시행령",
+        "article": "제25조 제1항"
+      },
+      {
+        "law": "식품위생법",
+        "article": "제41조"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EC%8B%9D%ED%92%88%EC%9C%84%EC%83%9D%EB%B2%95+%EC%8B%9C%ED%96%89%EB%A0%B9&joNo=002100&mode=11",
+        "title": "국가법령정보센터 · 식품위생법 시행령 제21조(영업의 종류)"
+      },
+      {
+        "url": "https://www.gov.kr/mw/AA020InfoCappView.do?HighCtgCD=A09006&CappBizCD=14600000021&tp_seq=02",
+        "title": "정부24 · 식품관련영업신고"
+      },
+      {
+        "url": "https://www.foodsafetykorea.go.kr/portal/board/boardDetail.do?menu_no=3504&menu_grp=MENU_NEW04&bbs_no=bbs1021",
+        "title": "식품안전나라 · 식품위생교육"
+      }
+    ]
+  },
+  {
+    "group": "permit",
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-05-28",
+    "status": "verified",
+    "id": "permit.food.cafe",
+    "sectors": [
+      "food_beverage"
+    ],
+    "ksic": [
+      "5622",
+      "5619"
+    ],
+    "keywords": [
+      "카페",
+      "커피",
+      "커피숍",
+      "디저트카페",
+      "분식점",
+      "휴게음식점"
+    ],
+    "questions": [
+      "카페 차리려면 무슨 신고를 해요?",
+      "커피숍은 휴게음식점이에요?",
+      "카페에서 맥주도 팔 수 있어요?"
+    ],
+    "answer": "주로 차(다류)·아이스크림류 등을 조리해 팔거나 패스트푸드점·분식점 형태로 음식을 조리해 파는 곳으로, 손님이 술을 마실 수 없는 영업은 '휴게음식점영업'이에요. 커피 전문점이 여기에 해당하는지는 신고할 때 시·군·구청에 확인하세요. 손님이 식사와 함께 술도 마실 수 있게 하려면 일반음식점영업으로 신고해야 해요. 영업소가 있는 시·군·구청에 영업신고를 해요(인터넷·방문·우편). 수수료는 방문·우편 28,000원, 전자 25,200원이고 처리는 즉시(근무시간 내 3시간)예요. 신고 전에 식품위생교육 6시간을 미리 받아야 해요(미리 받기 어렵다고 신고관청이 인정하면 신고 후 6개월 안에).",
+    "agency": "사업장 주소지 시·군·구청 식품위생 담당 부서",
+    "basis": [
+      {
+        "law": "식품위생법 시행령",
+        "article": "제21조 제8호 가목"
+      },
+      {
+        "law": "식품위생법",
+        "article": "제37조 제4항"
+      },
+      {
+        "law": "식품위생법 시행령",
+        "article": "제25조 제1항"
+      },
+      {
+        "law": "식품위생법",
+        "article": "제41조"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EC%8B%9D%ED%92%88%EC%9C%84%EC%83%9D%EB%B2%95+%EC%8B%9C%ED%96%89%EB%A0%B9&joNo=002100&mode=11",
+        "title": "국가법령정보센터 · 식품위생법 시행령 제21조(영업의 종류)"
+      },
+      {
+        "url": "https://www.gov.kr/mw/AA020InfoCappView.do?HighCtgCD=A09006&CappBizCD=14600000021&tp_seq=02",
+        "title": "정부24 · 식품관련영업신고"
+      },
+      {
+        "url": "https://www.foodsafetykorea.go.kr/portal/board/boardDetail.do?menu_no=3504&menu_grp=MENU_NEW04&bbs_no=bbs1021",
+        "title": "식품안전나라 · 식품위생교육"
+      }
+    ]
+  },
+  {
+    "group": "permit",
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-05-28",
+    "status": "verified",
+    "id": "permit.food.bakery",
+    "sectors": [
+      "food_beverage"
+    ],
+    "ksic": [
+      "5615",
+      "10601"
+    ],
+    "keywords": [
+      "빵집",
+      "베이커리",
+      "제과점",
+      "떡집",
+      "과자"
+    ],
+    "questions": [
+      "빵집 하려면 무슨 신고를 해요?",
+      "떡집은 어떤 영업으로 신고해요?"
+    ],
+    "answer": "빵·떡·과자 등을 주로 만들어 파는 가게로 술을 팔지 않으면 '제과점영업'이에요. 다만 떡집은 '즉석판매제조·가공업'으로 신고하는 경우도 있으니, 어느 쪽인지 시·군·구청 위생 담당 부서에 먼저 물어보세요. 영업소가 있는 시·군·구청에 영업신고를 해요(인터넷·방문·우편). 수수료는 방문·우편 28,000원, 전자 25,200원이고 처리는 즉시(근무시간 내 3시간)예요. 신고 전에 식품위생교육 6시간을 미리 받아야 해요(미리 받기 어렵다고 신고관청이 인정하면 신고 후 6개월 안에).",
+    "agency": "사업장 주소지 시·군·구청 식품위생 담당 부서",
+    "basis": [
+      {
+        "law": "식품위생법 시행령",
+        "article": "제21조 제8호 바목"
+      },
+      {
+        "law": "식품위생법",
+        "article": "제37조 제4항"
+      },
+      {
+        "law": "식품위생법 시행령",
+        "article": "제25조 제1항"
+      },
+      {
+        "law": "식품위생법",
+        "article": "제41조"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EC%8B%9D%ED%92%88%EC%9C%84%EC%83%9D%EB%B2%95+%EC%8B%9C%ED%96%89%EB%A0%B9&joNo=002100&mode=11",
+        "title": "국가법령정보센터 · 식품위생법 시행령 제21조(영업의 종류)"
+      },
+      {
+        "url": "https://www.gov.kr/mw/AA020InfoCappView.do?HighCtgCD=A09006&CappBizCD=14600000021&tp_seq=02",
+        "title": "정부24 · 식품관련영업신고"
+      },
+      {
+        "url": "https://www.foodsafetykorea.go.kr/portal/board/boardDetail.do?menu_no=3504&menu_grp=MENU_NEW04&bbs_no=bbs1021",
+        "title": "식품안전나라 · 식품위생교육"
+      }
+    ]
+  },
+  {
+    "group": "permit",
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-05-28",
+    "status": "verified",
+    "id": "permit.food.banchan",
+    "sectors": [
+      "food_beverage"
+    ],
+    "ksic": [
+      "47223"
+    ],
+    "keywords": [
+      "반찬가게",
+      "반찬",
+      "즉석판매제조",
+      "즉석판매"
+    ],
+    "questions": [
+      "반찬 만들어서 가게에서 팔려면 무슨 신고를 해요?",
+      "반찬가게는 어떤 영업이에요?"
+    ],
+    "answer": "총리령으로 정한 식품을 만든 가게(제조·가공업소)에서 최종소비자에게 직접 파는 영업은 '즉석판매제조·가공업'이에요. 그러니 만들 반찬이 해당하는지 시·군·구청 위생 담당 부서에 먼저 확인하세요. 신고할 때 만들 식품의 종류와 제조방법설명서를 함께 내요. 영업소가 있는 시·군·구청에 영업신고를 해요(인터넷·방문·우편). 수수료는 방문·우편 28,000원, 전자 25,200원이고 처리는 즉시(근무시간 내 3시간)예요. 신고 전에 식품위생교육 6시간을 미리 받아야 해요(미리 받기 어렵다고 신고관청이 인정하면 신고 후 6개월 안에).",
+    "agency": "사업장 주소지 시·군·구청 식품위생 담당 부서",
+    "basis": [
+      {
+        "law": "식품위생법 시행령",
+        "article": "제21조 제2호"
+      },
+      {
+        "law": "식품위생법",
+        "article": "제37조 제4항"
+      },
+      {
+        "law": "식품위생법 시행령",
+        "article": "제25조 제1항"
+      },
+      {
+        "law": "식품위생법",
+        "article": "제41조"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EC%8B%9D%ED%92%88%EC%9C%84%EC%83%9D%EB%B2%95+%EC%8B%9C%ED%96%89%EB%A0%B9&joNo=002100&mode=11",
+        "title": "국가법령정보센터 · 식품위생법 시행령 제21조(영업의 종류)"
+      },
+      {
+        "url": "https://www.gov.kr/mw/AA020InfoCappView.do?HighCtgCD=A09006&CappBizCD=14600000021&tp_seq=02",
+        "title": "정부24 · 식품관련영업신고"
+      },
+      {
+        "url": "https://www.foodsafetykorea.go.kr/portal/board/boardDetail.do?menu_no=3504&menu_grp=MENU_NEW04&bbs_no=bbs1021",
+        "title": "식품안전나라 · 식품위생교육"
+      }
+    ]
+  },
+  {
+    "group": "permit",
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-05-28",
+    "status": "verified",
+    "id": "permit.food.lunchbox",
+    "sectors": [
+      "food_beverage"
+    ],
+    "ksic": [
+      "56199",
+      "1070"
+    ],
+    "keywords": [
+      "도시락",
+      "도시락가게",
+      "도시락 배달"
+    ],
+    "questions": [
+      "도시락 가게는 무슨 신고를 해요?",
+      "도시락 만들어서 팔려면 어떤 영업이에요?"
+    ],
+    "answer": "도시락은 파는 방식에 따라 영업 종류가 달라져요. 가게에서 만들어 손님에게 직접 팔면 즉석판매제조·가공업이나 음식점(술을 팔지 않으면 휴게음식점, 술도 팔면 일반음식점) 영업이 될 수 있어요. 만든 도시락을 다른 곳에 공급하려면 식품제조·가공업에 해당할 수 있는데, 이 영업은 신고가 아니라 등록 대상이에요. 어느 쪽인지 영업소가 있는 시·군·구청 위생 담당 부서에 먼저 물어보고 신고나 등록을 하세요.",
+    "agency": "사업장 주소지 시·군·구청 식품위생 담당 부서",
+    "basis": [
+      {
+        "law": "식품위생법 시행령",
+        "article": "제21조"
+      },
+      {
+        "law": "식품위생법 시행령",
+        "article": "제25조 제1항"
+      },
+      {
+        "law": "식품위생법 시행령",
+        "article": "제26조의2 제1항 제1호"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EC%8B%9D%ED%92%88%EC%9C%84%EC%83%9D%EB%B2%95+%EC%8B%9C%ED%96%89%EB%A0%B9&joNo=002100&mode=11",
+        "title": "국가법령정보센터 · 식품위생법 시행령 제21조(영업의 종류)"
+      },
+      {
+        "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EC%8B%9D%ED%92%88%EC%9C%84%EC%83%9D%EB%B2%95+%EC%8B%9C%ED%96%89%EB%A0%B9&joNo=002500&mode=11",
+        "title": "국가법령정보센터 · 식품위생법 시행령 제25조(영업신고를 하여야 하는 업종)"
+      },
+      {
+        "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EC%8B%9D%ED%92%88%EC%9C%84%EC%83%9D%EB%B2%95+%EC%8B%9C%ED%96%89%EB%A0%B9&joNo=002602&mode=11",
+        "title": "국가법령정보센터 · 식품위생법 시행령 제26조의2(등록하여야 하는 영업)"
+      }
+    ]
+  },
+  {
+    "group": "permit",
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-05-28",
+    "status": "verified",
+    "id": "permit.food.report-how",
+    "sectors": [
+      "food_beverage"
+    ],
+    "ksic": [],
+    "keywords": [
+      "영업신고",
+      "식품 영업신고",
+      "위생과",
+      "구청 신고"
+    ],
+    "questions": [
+      "음식 장사 영업신고는 어떻게 해요?",
+      "영업신고 할 때 뭘 내요?",
+      "영업신고 수수료가 얼마예요?"
+    ],
+    "answer": "휴게음식점·일반음식점·제과점·즉석판매제조·가공업처럼 신고 대상인 식품 영업은 영업 종류별, 영업소별로 영업소가 있는 시·군·구청에 신고해요. 인터넷·방문·우편으로 할 수 있고(온라인은 대리인 신청 불가), 수수료는 방문·우편 28,000원, 전자 25,200원, 처리는 즉시(근무시간 내 3시간)예요. 식품 영업 신고서와, 미리 위생교육을 받았으면 교육이수증을 내요. 즉석판매제조·가공업은 만들 식품의 종류와 제조방법설명서를, 지하수 등 수돗물이 아닌 물을 쓰면 수질검사성적서를, 다중이용업소 안전시설등 완비증명서 발급 대상이면 그 증명서를 함께 내요. 건축물대장·토지이용계획확인서·건강진단결과서(대상자만)는 정보 이용에 동의하면 담당 공무원이 확인하고, 동의하지 않으면 직접 내야 해요.",
+    "agency": "사업장 주소지 시·군·구청(특별자치시·도)",
+    "basis": [
+      {
+        "law": "식품위생법",
+        "article": "제37조 제4항"
+      },
+      {
+        "law": "식품위생법 시행령",
+        "article": "제25조 제1항"
+      },
+      {
+        "law": "식품위생법 시행규칙",
+        "article": "제42조 제1항"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.gov.kr/mw/AA020InfoCappView.do?HighCtgCD=A09006&CappBizCD=14600000021&tp_seq=02",
+        "title": "정부24 · 식품관련영업신고"
+      },
+      {
+        "url": "https://www.law.go.kr/lsLinkProc.do?lsNm=%EC%8B%9D%ED%92%88%EC%9C%84%EC%83%9D%EB%B2%95+%EC%8B%9C%ED%96%89%EB%A0%B9&joNo=002500&mode=11",
+        "title": "국가법령정보센터 · 식품위생법 시행령 제25조(영업신고를 하여야 하는 업종)"
+      }
+    ]
+  },
+  {
+    "group": "permit",
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-05-28",
+    "status": "verified",
+    "id": "permit.food.hygiene-education",
+    "sectors": [
+      "food_beverage"
+    ],
+    "ksic": [],
+    "keywords": [
+      "위생교육",
+      "식품위생교육",
+      "교육이수증"
+    ],
+    "questions": [
+      "위생교육은 언제 받아요?",
+      "식당 위생교육 몇 시간이에요?",
+      "가게 열고 나서 위생교육 받아도 돼요?"
+    ],
+    "answer": "식품 영업을 하려는 사람은 영업신고(식품제조·가공업은 등록) 전에 미리 식품위생교육을 받아야 해요. 즉석판매제조·가공업, 휴게음식점·일반음식점·제과점영업은 6시간, 식품제조·가공업은 8시간이에요. 처음 받는 교육은 집합교육이에요. 영업 준비 때문에 미리 받기 어렵다고 신고·등록 관청이 인정하면 신고·등록 후 6개월 안에 받을 수 있어요. 휴게음식점·일반음식점·제과점 중 하나로 처음 교육을 받았다면 이 셋 중 다른 영업을 할 때 다시 받지 않아도 돼요. 영업을 시작한 뒤에는 매년 3시간 교육을 받아야 하고, 이때는 집합교육과 온라인 교육 중에서 고를 수 있어요.",
+    "agency": "시·군·구청(신고관청) · 식약처 지정 위생교육기관",
+    "basis": [
+      {
+        "law": "식품위생법",
+        "article": "제41조"
+      },
+      {
+        "law": "식품위생법 시행규칙",
+        "article": "제52조"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.foodsafetykorea.go.kr/portal/board/boardDetail.do?menu_no=3504&menu_grp=MENU_NEW04&bbs_no=bbs1021",
+        "title": "식품안전나라 · 식품위생교육"
+      }
+    ]
+  }
+]
