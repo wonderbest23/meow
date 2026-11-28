@@ -1961,18 +1961,32 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    * 계획서를 만든 대화의 입력창 — 고정 예시 칩 대신, 위 대화를 읽고 AI가 만든 '다음에 보낼 만한 말'을 회색 안내 글자로만 보인다(대표 결정 2026-11-13).
    * 입력값이 아니다: 입력창을 누르면 사라지고(intake.module.css [data-reply-hint]), 빈 채로 빠져나오면 다시 보인다. 못 받으면 기본 안내 글자.
    * 대화가 한 번 오갈 때마다(메시지 수가 바뀔 때) 한 번만 부른다.
+   * 다시 열기만 한 화면에서는 부르지 않는다 — 이 화면을 연 뒤 대화가 새로 오갔을 때만(2026-11-28 운영: 열 때마다 오퍼스를 불러 한 번 약 10원).
+   * 받은 추천은 이 탭(sessionStorage)에 두고, 같은 대화 수면 다시 묻지 않는다. 서버도 마지막 말이 10분 넘게 지났으면 AI 를 부르지 않는다.
    */
+  const replyHintBase = useRef<Map<string, number>>(new Map());
+  if (plan?.planId && !replyHintBase.current.has(plan.planId)) replyHintBase.current.set(plan.planId, plan.coach.messages.length);
+  const replyHintMoved = !!plan?.planId && plan.coach.messages.length > (replyHintBase.current.get(plan.planId) ?? Infinity);
   const replyHintKey = embedded && studioRoute === "chat" && planSide && plan?.hasDocuments && editChatReady && !editProposalOpen && !aiBusy && !editWorking ? `${plan.planId}\n${plan.coach.messages.length}` : "";
   const [replyHint, setReplyHint] = useState<{ key: string; text: string } | null>(null);
   useEffect(() => {
     if (!replyHintKey) return;
+    const storageKey = `oneul-reply-hint:${replyHintKey.replace("\n", ":")}`;
+    let saved: string | null = null;
+    try { saved = window.sessionStorage.getItem(storageKey); } catch { /* 저장소를 못 쓰면 없는 셈 */ }
+    if (saved) { setReplyHint({ key: replyHintKey, text: saved }); return; }
+    if (!replyHintMoved) return;
     const abort = new AbortController();
     fetch("/api/plan/chat/reply-suggestion", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ planId: replyHintKey.split("\n")[0] }), signal: abort.signal })
       .then(response => response.status === 200 ? response.json() : null)
-      .then(data => { if (typeof data?.reply === "string") setReplyHint({ key: replyHintKey, text: data.reply }); })
+      .then(data => {
+        if (typeof data?.reply !== "string") return;
+        setReplyHint({ key: replyHintKey, text: data.reply });
+        try { window.sessionStorage.setItem(storageKey, data.reply); } catch { /* 저장 못 해도 이번 화면에는 보인다 */ }
+      })
       .catch(() => { /* 추천은 없어도 된다 */ });
     return () => abort.abort();
-  }, [replyHintKey]);
+  }, [replyHintKey, replyHintMoved]);
   const replyHintText = replyHint?.key === replyHintKey ? replyHint.text : "";
   /* 휴대폰 작업실도 같은 추천을 입력 상자 위 한 줄(가로로 밀어 보기)로 — lovable 구조 2단계(시안 MChat) */
   const suggestionChips: SuggestionChip[] = !embedded || !studioComposer || editWorking ? []

@@ -38,7 +38,7 @@ suites.push("schema-readiness");
 suites.push("launch-scope");
 suites.push("synthetic-preview");
 suites.push("business-design");
-suites.push("business-facts", "business-facts-answer", "login-claim-empty-guest");
+suites.push("business-facts", "business-facts-answer", "login-claim-empty-guest", "reply-suggestion-once");
 suites.push("business-launch-shape");
 suites.push("consult-reply", "homepage-design-carry");
 suites.push("homepage-copy-coverage");
