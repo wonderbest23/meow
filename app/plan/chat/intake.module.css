@@ -115,6 +115,14 @@
 .disclosure > p { white-space: pre-wrap; font-size: .875rem; }
 .conversationText { min-width: 0; }
 .conversationText > p { white-space: pre-wrap; }
+/* 세금·영업신고 답의 출처 칸 — 본문보다 작게, 문서 이름은 밑줄 링크, 확인 날짜는 옅게 */
+.factSources { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--intake-line); font-size: .8125rem; line-height: 1.55; }
+.factSources > .factSourcesLabel { margin: 0 0 4px; font-weight: 600; color: var(--intake-muted); white-space: normal; }
+.factSources ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.factSources li { display: grid; gap: 1px; }
+.factSources a { color: var(--intake-ink); text-decoration: underline; text-underline-offset: 2px; word-break: keep-all; overflow-wrap: anywhere; }
+.factSources li > span { color: var(--intake-muted); font-size: .75rem; }
+.factSources > .factNote { margin: 8px 0 0; color: var(--intake-muted); white-space: normal; }
 .customToggle { display: flex; align-items: flex-start; gap: 9px; padding: 18px 0; font-size: .875rem; cursor: pointer; }
 .answerField { min-width: 0; }
 /* 입력칸·라벨 모양은 공통 입력칸(components/app-field)이 정한다 — 여기서는 자리만 */

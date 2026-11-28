@@ -102,6 +102,8 @@ export type FactMatch = { fact: BusinessFact; score: number; stale: boolean; why
 export function findFacts(query: FactQuery, facts: BusinessFact[], today: string, limit = 3): FactMatch[] {
   const text = normalizeFactText(query.text ?? "");
   const ksic = (query.ksic ?? "").replace(/\D/g, "");
+  // '일반(general)'은 아직 업종을 모른다는 뜻 — 다른 업종으로 보지 않는다(새 대화의 기본값이라 영업신고 질문이 모두 '자료 없음'이 됐다, 2026-11-28 미리보기)
+  const sector = query.sector && query.sector !== "general" ? query.sector : null;
   const matches: FactMatch[] = [];
   // 질문에 걸린 낱말 중 더 긴 낱말 안에 든 짧은 낱말은 무시한다('애견미용실'의 '미용실'로 미용실 항목이 끌려오지 않게)
   const hits = text ? [...new Set(facts.flatMap(fact => fact.keywords.map(normalizeFactText)).filter(word => word && text.includes(word)))] : [];
@@ -114,16 +116,17 @@ export function findFacts(query: FactQuery, facts: BusinessFact[], today: string
     let score = 0;
     const industrySpecific = fact.sectors.length > 0 || fact.ksic.length > 0;
     const ksicHit = !!ksic && fact.ksic.some(prefix => ksic.startsWith(prefix));
-    const sectorHit = !!query.sector && fact.sectors.includes(query.sector as BusinessFact["sectors"][number]);
+    const sectorHit = !!sector && fact.sectors.includes(sector as BusinessFact["sectors"][number]);
     if (ksicHit) { score += 5; why.push("업종 코드"); }
     else if (sectorHit) { score += 3; why.push("업종 분류"); }
     const keyword = text ? fact.keywords.find(word => { const normalized = normalizeFactText(word); return text.includes(normalized) && !shadowed.has(normalized); }) : undefined;
     if (keyword) { score += 4; why.push(`말 '${keyword}'`); }
     // 업종이 정해진 항목: 업종이 다르다고 알려졌으면(코드나 분류가 있는데 안 맞음) 말이 맞지 않는 한 뺀다
-    if (industrySpecific && !ksicHit && !sectorHit && !keyword && (ksic || query.sector)) continue;
+    if (industrySpecific && !ksicHit && !sectorHit && !keyword && (ksic || sector)) continue;
     // 영업신고·허가는 업종마다 다르다 — 큰 분류(동네 서비스 · 교육)만 같아서는 안 된다(속눈썹 가게에 네일숍 답, 태권도장에 과외 답이 나가지 않게).
     // 손님 업종 코드가 맞거나, 질문에 그 업종을 부르는 말이 있어야 한다. 말이 맞아도 손님 큰 분류가 다르면 뺀다(미용실 사장님의 '위생교육'에 식품 위생교육 답 X)
-    const sectorConflict = !!query.sector && fact.sectors.length > 0 && !sectorHit;
+    // 큰 분류가 다르다고 빼는 건 업종 코드(손님 말에서 코드가 찾은 것)가 있을 때만 — AI 가 고른 큰 분류만으로는 빼지 않는다(잘못 고르면 '카페 차리려면…'에도 '자료 없음', 2026-11-28 미리보기)
+    const sectorConflict = !!sector && !!ksic && fact.sectors.length > 0 && !sectorHit;
     if (fact.group === "permit" && !ksicHit && (!keyword || sectorConflict)) continue;
     if (text) {
       const best = Math.max(0, ...fact.questions.map(question => questionSimilarity(text, question)));

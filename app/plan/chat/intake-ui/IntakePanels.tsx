@@ -21,6 +21,7 @@ import { ksicNameHint, ksicSectorLabel } from "../../../../lib/plan-builder/ksic
 import { parseWonAmount } from "../../../../lib/plan-builder/answer-number";
 import { FieldGroup, FieldLabel, TextArea, TextField } from "../../../../components/app-field";
 import styles from "../intake.module.css";
+import { splitFactsFooter, type FactsFooter } from "../../../../lib/business-facts/footer";
 import { StatusBadge } from "../../../../components/status-badge";
 import { AppButton, type AppButtonSize, type AppButtonVariant } from "../../../../components/app-button";
 import theme from "../../../../components/workspace-theme.module.css";
@@ -665,11 +666,28 @@ export function ReplyTyping() {
 
 export function ConversationText({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
-  const preview = chatTextPreview(text);
-  if (!preview) return <p>{text}</p>;
+  // 세금·영업신고 답의 출처 줄은 접히는 글에서 떼어 늘 보이는 '출처' 칸으로(2026-11-28 — 접힌 글 뒤에 숨고 긴 주소가 그대로 보였다)
+  const { body, footer } = splitFactsFooter(text);
+  const preview = chatTextPreview(body);
+  if (!preview && !footer) return <p>{text}</p>;
   return <div className={styles.conversationText}>
-    <p>{expanded ? text : preview}</p>
-    <AppButton type="button" variant="text" className={styles.textButton} aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? "접기" : "전체 내용 보기"}</AppButton>
+    <p>{expanded || !preview ? body : preview}</p>
+    {preview && <AppButton type="button" variant="text" className={styles.textButton} aria-expanded={expanded} onClick={() => setExpanded(value => !value)}>{expanded ? "접기" : "전체 내용 보기"}</AppButton>}
+    {footer && <FactSources footer={footer} />}
+  </div>;
+}
+
+/** 답 아래 '출처' — 문서 이름을 누르면 공식 누리집이 새 창으로 열린다(https 만, footer.ts 가 거른다) */
+function FactSources({ footer }: { footer: FactsFooter }) {
+  return <div className={styles.factSources} data-fact-sources>
+    <p className={styles.factSourcesLabel}>출처</p>
+    <ul>
+      {footer.sources.map(source => <li key={source.url}>
+        <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}</a>
+        <span>{source.checkedAt.replace(/-/g, ".")} 확인{source.stale ? " · 다시 확인 필요" : ""}</span>
+      </li>)}
+    </ul>
+    <p className={styles.factNote}>{footer.note}</p>
   </div>;
 }
 
