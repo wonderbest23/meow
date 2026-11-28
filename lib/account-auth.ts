@@ -137,9 +137,37 @@ export async function currentGuestHash() {
   return token ? hashIdentityToken(token) : null;
 }
 
+/**
+ * 로그인 전 손님 상태에 옮길 것이 있는지 — 사업 상태(plans) · 프로젝트 · 결제 주문 · 기회 선호. 확인하지 못하면 있다고 본다(안전한 쪽).
+ * 옮길 것이 없으면 옮기기가 실패해도 로그인을 막지 않는다(2026-11-28 운영: 새 브라우저에서 둘러본 뒤 로그인하면 빈 손님인데도
+ * '작성한 사업을 계정에 연결하지 못했어요'(503)로 로그인 자체가 막혔다).
+ */
+async function guestHasWork(supabase: NonNullable<ReturnType<typeof getServerSupabase>>, guestHash: string): Promise<boolean> {
+  try {
+    const [state, projects, orders, preferences] = await Promise.all([
+      supabase.from("plan_states").select("data").eq("owner_hash", guestHash).maybeSingle(),
+      supabase.from("projects").select("id", { count: "exact", head: true }).eq("guest_token_hash", guestHash),
+      supabase.from("payment_orders").select("id", { count: "exact", head: true }).eq("guest_token_hash", guestHash),
+      supabase.from("opportunity_preferences").select("id", { count: "exact", head: true }).eq("guest_token_hash", guestHash),
+    ]);
+    if (state.error || projects.error || orders.error || preferences.error) return true;
+    const plans = (state.data?.data as { plans?: unknown[] } | null | undefined)?.plans;
+    return (Array.isArray(plans) && plans.length > 0) || (projects.count ?? 0) > 0 || (orders.count ?? 0) > 0 || (preferences.count ?? 0) > 0;
+  } catch {
+    return true;
+  }
+}
+
+/** 운영 로그에 남길 실패 이유 — DB 오류 코드와 앞부분만(긴 해시는 가린다). 개인정보는 넣지 않는다 */
+function claimFailureReason(error: unknown) {
+  const record = (error ?? {}) as { code?: unknown; message?: unknown };
+  return { code: typeof record.code === "string" ? record.code : null, message: String(record.message ?? error ?? "").replace(/[0-9a-f]{16,}/gi, "…").slice(0, 160) };
+}
+
 export async function claimGuestProjects(userId: string, previousGuestHash: string | null) {
   const supabase = getServerSupabase();
   if (!supabase) return;
+  const originalGuestHash = previousGuestHash;
   const userHash = hashIdentityToken(userProjectToken(userId));
   // Login may proceed, but an unresolved collection must not be moved wholesale.
   if ((await readPlanQuarantine(userHash)).profileBlocked || (previousGuestHash && (await readPlanQuarantine(previousGuestHash)).profileBlocked)) return;
@@ -163,6 +191,13 @@ export async function claimGuestProjects(userId: string, previousGuestHash: stri
     }
     await claimLegacyProjects(userId, userHash, null);
   } catch (error) {
+    // 예전엔 이유를 남기지 않아 운영에서 원인을 알 수 없었다
+    console.error("[account-link]", JSON.stringify({ event: "plan-claim-failed", reason: claimFailureReason(error) }));
+    // 손님 쪽에 옮길 것이 없으면 잃을 것도 없다 — 로그인은 이어 가고(계정의 사업은 그대로), 다음 로그인 때 다시 옮겨 본다
+    if (!originalGuestHash || originalGuestHash === userHash || !(await guestHasWork(supabase, originalGuestHash))) {
+      console.info("[account-link]", JSON.stringify({ event: "plan-claim-skipped-empty-guest" }));
+      return;
+    }
     if (error instanceof Error && ["PLAN_CLAIM_BUSY", "PLAN_VERSION_CONFLICT", "PLAN_CLAIM_FAILED"].includes(error.message)) throw error;
     throw new Error("PLAN_CLAIM_FAILED");
   }
