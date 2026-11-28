@@ -55,11 +55,16 @@ async function main() {
   await claimGuestProjects("user-1", "guest-hash");
   assert.ok(logs.some(line => line.includes("plan-claim-failed") && line.includes("PLAN_CLAIM_FAILED")), "실패 이유를 남긴다");
   assert.ok(logs.some(line => line.includes("plan-claim-skipped-empty-guest")), "빈 손님이라 로그인을 막지 않는다");
+  // 진짜 DB 오류가 로그에 보인다(예전엔 PLAN_CLAIM_FAILED 이름만 — 2026-11-28 운영)
+  const failed = logs.find(line => line.includes("plan-claim-failed")) ?? "";
+  const reason = JSON.parse(failed.slice(failed.indexOf("{"))).reason;
+  assert.equal(reason.message, "PLAN_CLAIM_FAILED");
+  assert.deepEqual(reason.cause, { code: "P0001", message: "PLAN_QUARANTINED" }, "옮기기 DB 함수가 거절한 이유");
 
-  // 2) 손님에게 쓰던 사업이 있으면 예전처럼 막는다(작업을 잃지 않게)
+  // 2) 손님에게 쓰던 사업이 있으면 예전처럼 막는다(작업을 잃지 않게) — 던진 오류에도 진짜 이유가 달려 있다
   scenario = { guestPlans: [{ id: "guest-plan" }], guestProjects: 0, claimError: "PLAN_QUARANTINED" };
   logs.length = 0;
-  await assert.rejects(claimGuestProjects("user-1", "guest-hash"), /PLAN_CLAIM_FAILED/);
+  await assert.rejects(claimGuestProjects("user-1", "guest-hash"), (error: Error & { cause?: { message?: string } }) => error.message === "PLAN_CLAIM_FAILED" && error.cause?.message === "PLAN_QUARANTINED");
   assert.ok(logs.some(line => line.includes("plan-claim-failed")) && !logs.some(line => line.includes("skipped")));
   // 프로젝트만 있는 손님도 막는다
   scenario = { guestPlans: [], guestProjects: 1, claimError: "PLAN_QUARANTINED" };
