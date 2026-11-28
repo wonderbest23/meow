@@ -18,7 +18,7 @@
 .theme .speaker b { font-weight: 600; }.theme .speaker > span { color: var(--app-accent); font-size: .6875rem; }
 .theme .message { min-width: 0; animation: messageArrive .28s ease-out; }
 .theme .message > p { margin: 0; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; font-size: var(--coach-font); line-height: 1.85; }
-.theme .userMessage { width: fit-content; max-width: 85%; margin-left: auto; padding: 13px 17px; background: var(--app-raised); color: var(--app-text); border: 1px solid var(--app-line); border-radius: 16px 16px 4px 16px; }
+.theme .userMessage { width: fit-content; max-width: 85%; margin-left: auto; padding: 13px 17px; background: var(--app-surface); color: var(--app-text); border: 0; box-shadow: 0 1px 2px color-mix(in srgb, var(--app-text) 7%, transparent), 0 8px 20px -8px color-mix(in srgb, var(--app-text) 18%, transparent); border-radius: 16px 16px 4px 16px; }
 .theme .userMessage > p { color: var(--app-text); line-height: 1.7; }.theme .userMessage > small { display: block; margin-top: 6px; font-size: .6875rem; color: var(--app-muted); }
 .theme .assistantMessage { color: var(--app-body); background: transparent; }
 .theme .resultCard { padding: 0; border: 1px solid var(--app-line); border-radius: 8px; overflow: hidden; background: var(--app-surface); box-shadow: 0 5px 20px #24354b06; animation: messageArrive .32s ease-out; }

@@ -5,7 +5,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer,
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
-import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
 import { EmptyIcon } from "../BusinessEmptyState";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
@@ -49,8 +49,6 @@ import { JourneyGuideTurn } from "./intake-ui/JourneyGuideTurn";
 import { GUIDE_PARAM, journeyGuide, journeyGuideContext, readJourneyGuide, type JourneyGuideCode } from "../../../lib/plan-builder/journey-guides";
 import { planSectionEditMessage } from "../../../lib/plan-builder/studio-plan-edit";
 import { WorkLog } from "./intake-ui/WorkLog";
-import { FillThinking } from "./intake-ui/FillThinking";
-import { nextFillSeen, type FillSeen } from "./intake-ui/fill-thinking";
 import { designLogItem, planLogItem } from "./intake-ui/work-log";
 import { editExamples } from "../../../lib/plan-builder/edit-examples";
 import { STUDIO_QUEUE_LIMIT, editTurnBusy, editTurnsKey, enqueueRequest, queuedRequestRoute, readRequestQueue, requestQueueKey, restoreEditTurns, sectionHint, studioEditAction, studioEditError, studioEditReducer, studioTargetChipText, type QueuedStudioRequest, type StudioEditTurn } from "./intake-ui/studio-edit";
@@ -318,6 +316,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const [amountCheck, setAmountCheck] = useState<{ text?: string; questionId: string; value: IntakeValue; revision: number; prompt: string } | null>(null);
   const [draft, setDraft] = useState<IntakeDraft>(emptyDraft);
   const liveComment = useLiveComment();
+  /* 다음 질문을 순서대로(입력 중 점 → 질문 → 선택지 하나씩) — 이 화면에서 손님이 무언가 보낸 뒤부터만. 다시 불러온 대화는 한 번에(2026-11-28 사장님) */
+  const [revealOn, setRevealOn] = useState(false);
+  const [revealSkip, setRevealSkip] = useState<string | null>(null);
   const answerSuggestions = useAnswerSuggestions(plan?.planId, plan && (plan.intake.mode === "startup" || plan.intake.mode === "operating") ? { text: businessDescriptionText(plan), stage: plan.intake.mode } : null);
   const [ideaRejectIds, setIdeaRejectIds] = useState<string[]>([]);
   // 마지막으로 고른 AI 제안 — 저장하지 못하면 그 카드 바로 아래에 이유를 보인다
@@ -640,6 +641,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   };
 
   async function send(input?: CommandInput, captured?: Pick<PendingRequest, "answer" | "text" | "intro" | "composer">) {
+    // 처음 켤 때는 지금 떠 있는 질문이 다시 움직이지 않게 그 질문은 건너뛴다(다음 질문부터 순서대로)
+    if (!revealOn) setRevealSkip(planRef.current?.nextQuestion?.id ?? null);
+    setRevealOn(true);
     if (coach && input?.action === "answer" && busyRef.current && draftRef.current.pending?.command.action === "answer" && !replyActive.current && !conflictRef.current && loaded && !loadFailed && queuedAnswers.current.length < 8) {
       const base = previewRef.current ?? planRef.current;
       if (!base) return;
@@ -1025,16 +1029,25 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     if (!plan) {
       const text = entryMessage(draftRef.current);
       if (text.length > 1200) { setError("처음 사업 설명은 1,200자 이내로 나눠 보내 주세요. 입력한 내용은 그대로 보관했어요."); return; }
-      const entry = entrySubmission(text);
-      // 규격 질문은 규칙으로 바로 진행하고, AI 참고 의견은 옆에서 따로 흘러나온다(서버에서 꺼져 있으면 아무 일도 없다).
-      // 인사·맞장구뿐이면('안녕?') 사업 이야기가 없어 참고 의견을 부르지 않는다 — 엉뚱한 의견과 AI 비용만 생겼다(2026-11-27)
-      if (text && !isGreetingOnly(text)) void liveComment.request(text);
+      /*
+       * 앞에 보낸 말('안녕?')이 있으면 이번 말만 따로 본다(2026-11-28 사장님) — 예전엔 둘을 이어 붙여 읽어서 '안녕?\n집 앞에 빵집 열고 싶어'가
+       * 물음표 때문에 다시 '애매한 첫 말'이 되었고, 같은 답과 선택지만 되풀이했다. 이번 말에 사업 이야기가 있으면 그 말로 바로 시작한다.
+       */
+      const current = draftRef.current.memo.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+      const earlier = !!draftRef.current.introMessage?.trim() && !!current;
+      const entry = earlier ? entrySubmission(current) : entrySubmission(text);
+      const said = earlier ? current : text;
+      // 규격 질문은 규칙으로 바로 진행하고, AI 한마디는 진행자 답장으로 흘러나온다(서버에서 꺼져 있으면 아무 일도 없다).
+      // 인사·맞장구뿐이면('안녕?') 사업 이야기가 없어 부르지 않는다 — 정해진 인사로 받는다(AI 비용 0)
+      if (said && !isGreetingOnly(said)) void liveComment.request(said); else liveComment.dismiss();
       if (text && entry.kind === "confirm") {
         editDraft({ ...draftRef.current, memo: "", introMessage: text });
         follow.current = true;
       } else if (text && entry.kind === "send") {
+        // 앞의 말이 인사뿐이었으면 지운다 — 남겨 두면 사업이 만들어진 뒤 '안녕?'이 메모로 저장된다. 물은 말이면 그대로 두어 메모(질문)로 남긴다
+        if (earlier && (draftRef.current.introMessage ?? "").split("\n").every(line => !line.trim() || isGreetingOnly(line))) editDraft({ ...draftRef.current, introMessage: "" });
         // 구체적인 사업 설명이면 뒤에 나올 고객·문제·상품·경로 질문의 맞춤 추천도 미리 받아 둔다.
-        if (entry.command.questionId === "business" && (entry.command.mode === "startup" || entry.command.mode === "operating")) void answerSuggestions.request(text, entry.command.mode);
+        if (entry.command.questionId === "business" && (entry.command.mode === "startup" || entry.command.mode === "operating")) void answerSuggestions.request(said, entry.command.mode);
         void send(entry.command, { text: draftRef.current.memo, intro: draftRef.current.introMessage });
       }
       return;
@@ -1938,19 +1951,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    * 불러올 때 이미 있던 상자(새로고침 · 다시 열기 · 이전 대화)와 같은 상자가 다시 그려질 때는 재생하지 않는다(규칙: fill-thinking.ts).
    * 재생하든 안 하든 새로 채운 상자는 접힌 한 줄 요약으로 끝난다. 움직임 줄이기를 켰으면 재생 없이 바로 요약 줄.
    */
-  const [fillSeen, setFillSeen] = useState<FillSeen | null>(null);
-  const [fillPlay, setFillPlay] = useState<{ key: string; items: typeof filledAnswers; refill: boolean } | null>(null);
-  const fillNext = nextFillSeen(fillSeen, loaded, plan?.planId ?? null, [...new Set(filledAnswers.map(item => item.batch))]);
-  if (fillNext.seen !== fillSeen) {
-    setFillSeen(fillNext.seen);
-    if (!loaded && fillPlay) setFillPlay(null);
-    if (fillNext.fresh.length) {
-      const items = filledAnswers.filter(item => fillNext.fresh.includes(item.batch));
-      const still = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      setChipsOpen(current => ({ ...current, filled: false }));
-      setFillPlay(still || !items.length ? null : { key: fillNext.fresh.join("\n"), items, refill: fillNext.refill });
-    }
-  }
+  /* 채움 상자 재생(FillThinking)은 대화에서 뺐다(2026-11-28) — 일반 모드는 먼저 채운 값을 계획서 직전 '제가 정한 값'에서만 보여 준다 */
   const understandingRef = useRef(false);
   useEffect(() => { understandingRef.current = understanding; });
   // 읽기 시작하면 '적은 글을 읽고 있어요' 줄까지, 끝나면 다음 질문까지 내린다
@@ -2038,21 +2039,24 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    */
   /* 대화가 불러와진 뒤(브라우저에서만) 그려지는 상자라 여기서 화면 폭을 읽어도 서버 그림과 어긋나지 않는다 */
   const narrowScreen = typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches;
-  const understoodHead = (key: "said" | "filled", title: string, summary: string, open: boolean) => <h3><button type="button" aria-expanded={open} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><b>{title}</b>{open ? <small>다르면 눌러서 바꾸세요</small> : <span>{summary}</span>}<em data-open={open || undefined} aria-hidden="true"><ChevronDown size={16} /></em></button></h3>;
+  /* 한 줄짜리 작은 표시 — '✓ 10가지는 먼저 채워 뒀어요 · 보기'. 펼치면 칩을 눌러 고친다(제목·요약은 화면 읽기용으로만) */
+  const understoodHead = (key: "said" | "filled", title: string, summary: string, open: boolean) => { const count = Number(summary.match(/^(\d+)개/)?.[1] ?? 0); return <h3><button type="button" aria-expanded={open} aria-label={`${title} · ${summary}`} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><Check size={14} aria-hidden="true" /><b>{key === "filled" ? `${count}가지는 먼저 채워 뒀어요` : `${count}가지는 말씀대로 넣었어요`}</b><span aria-hidden="true">·</span><i>{open ? "접기" : "보기"}</i></button></h3>; };
   const understoodBox = (key: "said" | "filled", title: string, items: typeof saidAnswers, summary: string) => {
     if (!items.length) return null;
     /* 휴대폰에서는 처음부터 접힌 채로(2026-11-15 사장님) — 펼쳐 두면 화면을 다 차지해 질문이 아래로 밀렸다 */
-    const open = chipsOpen[key] ?? (chipsFresh && !narrowScreen);
+    /* 처음부터 접어 둔다(2026-11-28 사장님) — 펼친 상자가 다음 질문과 눈길을 다퉜다 */
+    const open = chipsOpen[key] ?? false;
     return <>
       {understoodHead(key, title, summary, open)}
       {open && <div data-said={key === "said" ? "" : undefined}>{items.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div>}
     </>;
   };
   const FILLED_TITLE = "말하지 않은 것은 이렇게 채웠어요";
+  const MONEY_FIRST = new Set(["price", "structure.unitCost", "structure.cost", "cost", "budget", "sales"]);
   const filledSummary = (items: typeof filledAnswers) => `${items.length}개 · ${items.map(item => item.label).join(" · ")}`;
   /* 보내기 단추 — 예전 모양은 입력칸 오른쪽, PC 는 입력 카드 아래 줄 오른쪽 */
   const sendButton = <button type="submit" className={styles.sendButton} aria-label={studioRoute ? studioRoute === "queue" ? "기다리는 요청으로 보내기" : "보내기" : sendLabel} title={studioRoute ? "보내기" : sendLabel} disabled={studioRoute ? studioSendDisabled || !visibleComposerText(studioText) : !loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{!studioRoute && (busy && !answerQueueOpen || replyTurn) ? <LoaderCircle size={20} className={styles.spinner} /> : !studioRoute && askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>;
-  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined} data-studio-pro={pro || undefined} data-focus={focus && embedded || undefined} data-drawer={drawerOpen || undefined} data-keyboard={keyboardOpen || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={embedded ? undefined : summaryToggle}>
+  return <div data-reveal={revealOn || undefined} className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined} data-studio-pro={pro || undefined} data-focus={focus && embedded || undefined} data-drawer={drawerOpen || undefined} data-keyboard={keyboardOpen || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={embedded ? undefined : summaryToggle}>
     {plan && <>
       {/*
         작업실 칸 안: 칸 단추 줄(요약)과 진행 막대를 한 줄로 합친다 — 예전엔 요약 단추만 있는 넓은 줄 아래 막대가 또 있어 대화 위가 무거웠다.
@@ -2082,7 +2086,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
           {/* '사업계획서 만들기'를 누른 뒤 — 단추가 화면 밖으로 밀려도 알 수 있게 화면 전체에 같은 로딩(얇은 원)을 덮는다 */}
           {preparing && <div className={styles.prepareCover}><PlanLoading fill={!embedded} note="사업계획서를 준비하고 있어요" /></div>}
-          {!loaded ? (onLoadingChange ? null : <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" />) : loginGate ? <LoginGate guestStudio={embedded} wide={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><EmptyIcon icon={FolderOpen} />{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton></>}</section>
+          {!loaded ? (onLoadingChange ? null : <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" />) : loginGate ? <LoginGate guestStudio={embedded} wide={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} aiReply={liveComment.comment ? <LiveComment comment={liveComment.comment} /> : undefined} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><EmptyIcon icon={FolderOpen} />{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton></>}</section>
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.
@@ -2101,11 +2105,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
               </section>) : <>
             <ConversationHistory snapshot={plan} onEdit={editQuestion} receipt={receipt} readOnly={documentFixed} pro={pro} log={historyLog} />
 {/* 일반 모드: 문장에서 읽은 것(실선)과 말하지 않아 채운 것(점선)을 한눈에 — 누르면 그 답을 고친다 */}
-            {(chipCount > 0 || fillPlay) && <section className={styles.understood} aria-label="알아들은 내용">
+            {/* 일반 모드 대화 중에는 AI 가 먼저 채운 값을 보이지 않는다(2026-11-28 사장님: 초보자에게는 군더더기) — 계획서 만들기 직전 '제가 정한 값'에서 한 번 보여 주고 고치게 한다 */}
+            {saidAnswers.length > 0 && <section className={styles.understood} aria-label="알아들은 내용">
               {understoodBox("said", "이렇게 알아들었어요", saidAnswers, saidAnswers.map(item => item.value).join(" · "))}
-              {/* 처음 채울 때 — 채운 값이 한 줄씩 나온 뒤 접힌 요약 줄로 합쳐진다. 합쳐진 뒤는 아래 상자 그대로(눌러서 펼치기) */}
-              {fillPlay ? <FillThinking key={fillPlay.key} items={fillPlay.items} refill={fillPlay.refill} head={filledAnswers.length ? understoodHead("filled", FILLED_TITLE, filledSummary(filledAnswers), false) : null} announce={`${FILLED_TITLE} · ${filledSummary(fillPlay.items)}`} hold={understanding} onDone={() => setFillPlay(null)} />
-                : understoodBox("filled", FILLED_TITLE, filledAnswers, filledSummary(filledAnswers))}
             </section>}
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}
@@ -2119,9 +2121,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
               * 생각 표시는 한 번만 — 채움 상자가 재생 중이면(fillPlay) 그 상자가 읽기가 끝날 때까지 접지 않고 머리줄로 '적은 글을 읽고 있어요…'를 이어 보인다(hold).
               * 예전엔 상자가 접힌 뒤에도 이 줄이 2~4초 남아 생각 표시가 두 번 보였다(2026-11-17 사장님). 재생하지 않을 때(움직임 줄이기 · 다시 연 대화)만 이 줄.
               */}
-            {understanding && !fillPlay && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요" note="말하지 않은 것은 같은 업종 기준값으로 먼저 채우고 있어요." /></div>}
+            {understanding && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요" note="말하지 않은 것은 같은 업종 기준값으로 먼저 채우고 있어요." /></div>}
             {readingTyped && !understanding && <div role="status"><ThinkingLine title="답을 읽고 있어요" note="적은 글에서 이 질문에 맞는 값을 찾고 있어요." /></div>}
-            <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview || understanding}>
+            <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview || understanding} data-reveal-skip={revealSkip === question?.id || undefined} onPointerDownCapture={() => setRevealSkip(question?.id ?? null)}>
               {/* 쓰는 동안 받아 둔 요청을 보내 채팅 수정 화면이 되어도 마무리 말(계획서 보기 · 홈페이지 만들기)을 먼저 남기고 그 아래에 제안 카드 */}
               {editTurn && !replyTurn ? <>{studioTurn}<EditChatTurn pro={pro} chapters={editChapters} snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} payLabel={payLabel} loginNote={prepareLoginNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : locked && !replyTurn ? <>{studioTurn ?? <DocumentLockedTurn pro={pro} planId={plan.planId} chatEdit={COACH_EDIT_CHAT} onChatEdit={embedded ? () => { follow.current = true; focusComposer(); } : undefined} partial={plan.missingSections ? unpaidPlan ? "preview" : "missing" : undefined} remaining={plan.missingSections} />}{nextStep === "prepare" && !studioRun && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} payLabel={payLabel} loginNote={prepareLoginNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || amountConfirmation || sectorConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat cardLabel={questionCardLabel} cardFoot={questionCardFoot} question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={answerBlocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onCarry={carryDraft} onComposer={focusComposer} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</AppButton></section> : <section className={styles.complete}>
                 {designRunning || designStarting || reflecting ? <DesignProgress snapshot={plan} announce /> : <>
@@ -2136,6 +2138,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
                 {/* 계획서 전 채팅 수정 — 바꿀 내용을 먼저 보여 주고 확인을 받는다(바꾸기 · 그대로 두기). '바꾸기'를 눌러야 값이 바뀌고 방향을 다시 정리한다 */}
                 {!plan.hasDocuments && <DirectionEditConfirm snapshot={plan} disabled={blocked || aiBusy} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />}
                 {/* 작업실 안: 작성 중이면 진행 카드, 방금 끝났으면 마무리 말이 다음 단계 단추 자리를 대신한다 */}
+                {/* 계획서 만들기 직전 한 번 — AI 가 정한 값(가격 · 비용 · 예산 먼저). 엉뚱한 숫자로 계획서를 받지 않게(2026-11-28 사장님) */}
+                {nextStep === "prepare" && !studioTurn && filledAnswers.length > 0 && <section className={styles.assumed} aria-label="제가 정한 값">
+                  <h3>제가 정한 값 <small>맞지 않으면 눌러서 고쳐 주세요</small></h3>
+                  <div>{[...filledAnswers].sort((a, b) => Number(!MONEY_FIRST.has(a.id)) - Number(!MONEY_FIRST.has(b.id))).map(item => <button type="button" key={item.id} disabled={blocked} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div>
+                </section>}
                 {studioTurn ?? <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} payLabel={payLabel} loginNote={prepareLoginNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce minimal={coach && !!currentIdentity(plan)} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}
                 {/* 사업 방향을 정리한 직후 한 번 — 다음 할 일을 카카오톡으로 받을지 권한다(계정에 한 번만) */}
                 {nextStep === "prepare" && signedIn && <StageAlertOffer />}

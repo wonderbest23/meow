@@ -1303,10 +1303,10 @@ button.workLogRow { min-height: 32px; }
   .page[data-coach] .chatQuestion .chip[data-picked] { animation: none; position: absolute; visibility: hidden; }
 }
 
-/* '잘 모르겠어요'는 답이 아니라 건너뛰기다 — 업종·선택지 칩과 같은 알약 모양이면 선택지 하나로 보여 헷갈린다(소유자 피드백 2026-11-04). 칩 줄 아래 밑줄 글자 단추로. PC 작업실에서는 알약 규칙이 이겨서 회색 알약 + 밑줄 + 간격 0 으로 섞여 나왔다(2026-11-15) — 이 규칙이 늘 이기게 했다 */
-.page.page.page .chatQuestion .unknownChoice.unknownChoice, .page.page.page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { display: inline-flex; flex-basis: 100%; width: max-content; min-height: 32px; margin-top: 10px; padding: 4px 2px; border: 0; border-radius: 4px; background: none; color: var(--app-muted); text-decoration: underline; text-underline-offset: 3px; transform: none; }
-.page.page.page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { color: var(--app-text); }
-.page.page.page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"], .page.page.page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"]:hover:not(:disabled) { background: none; color: var(--app-text); font-weight: 600; }
+/* '잘 모르겠어요' — 선택지 줄의 마지막 칩으로(2026-11-28 사장님: Claude 의 '직접 입력'처럼 답 가운데 하나). 진짜 답과 헷갈리지 않게 채운 알약이 아니라 테두리만 있는 옅은 칩. 예전 밑줄 글자 단추(2026-11-04)는 덧붙인 것처럼 보였다 */
+.page.page.page .chatQuestion .unknownChoice.unknownChoice, .page.page.page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { display: inline-flex; flex-basis: auto; width: max-content; min-height: 32px; margin-top: 6px; padding: 6px 12px; border: 1px dashed var(--app-line-strong); border-radius: 999px; background: transparent; color: var(--app-muted); text-decoration: none; transform: none; }
+.page.page.page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { border-style: solid; color: var(--app-text); }
+.page.page.page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"], .page.page.page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"]:hover:not(:disabled) { border-style: solid; border-color: var(--app-text); background: var(--app-soft); color: var(--app-text); font-weight: 600; }
 
 /* 고른 칩은 입력창 글이 되어 올라가므로 줄에서 빠진다(소유자 2026-11-04) — 180ms 줄어들며 사라진 뒤 흐름에서 빠져 옆 칩이 자리를 메운다. 입력창에서 글을 지우면 다시 나타난다.
    여러 개 고르는 체크 질문은 고른 것이 입력창에 안 보이므로(체크 표시만) 숨기지 않는다 */
@@ -1416,7 +1416,7 @@ button.workLogRow { min-height: 32px; }
 .page.page[data-embedded] .workLogCardTitle { font-size: 1rem; }
 .page.page[data-embedded] .workLogCardSub, .page.page[data-embedded] .workLogCardButton { font-size: .875rem; }
 /* 내 말풍선 — 메타 AI 실측: 납작한 회색, 둥근 22, 안쪽 9×16, 16px, 그림자 없음(2026-11-15) */
-.page.page.page[data-embedded] .userMessage { padding: 9px 16px; border-radius: 22px; background: var(--app-fill); box-shadow: none; color: var(--app-text); font-size: 1rem; line-height: 1.625; }
+.page.page.page[data-embedded] .userMessage { padding: 9px 16px; border-radius: 22px; background: var(--app-surface); box-shadow: 0 1px 2px color-mix(in srgb, var(--app-text) 7%, transparent), 0 8px 20px -8px color-mix(in srgb, var(--app-text) 18%, transparent); color: var(--app-text); font-size: 1rem; line-height: 1.625; }
 /* 대화 칸에 남은 작은 글씨도 보조 14 로(2026-11-15) — 채운 값 요약 · 채운 값 이름표 · 일반/전문가 전환 */
 .page.page[data-embedded] .understood h3 > button > span, .page.page[data-embedded] .understood h3 small, .page.page[data-embedded] .understood button small, .page.page.page[data-embedded] .depthPick button, .page.page[data-embedded] .depthPick span { font-size: .875rem; }
 /* 휴대폰에서 누르기 작던 두 곳(2026-11-15 휴대폰 점검) — 채운 값 카드 펼치기(높이 21) · 답 복사/고치기(28×28). 보이는 크기는 그대로 두고 누르는 자리만 44 로 넓힌다 */
@@ -1429,3 +1429,57 @@ button.workLogRow { min-height: 32px; }
 /* 계획서 작성 시작 실패 — 맨 위 한 줄 끝의 [다시 시도] · [로그인하고 이어가기] */
 .statusAction { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin-left: auto; padding: 4px 12px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-weight: 600; text-decoration: none; white-space: nowrap; cursor: pointer; }
 .statusAction:disabled { opacity: .5; cursor: default; }
+
+/* 채운 값·알아들은 값 — 상자 대신 진행자 말 아래 한 줄짜리 작은 표시(2026-11-28 사장님: ChatGPT 의 '메모리 업데이트됨'처럼). 누르면 펼쳐서 고친다 */
+.understood.understood { margin: -2px 0 14px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.understood.understood h3 { margin: 0; font-size: .8125rem; font-weight: 400; }
+.understood.understood h3 + h3 { margin-top: 4px; }
+.understood.understood h3 > button { flex: 0 1 auto; align-items: center; gap: 6px; color: var(--app-muted); }
+.understood.understood h3 > button > b { font-weight: 500; }
+.understood.understood h3 > button > svg { flex: none; color: var(--app-primary-text); }
+.understood.understood h3 > button > i { flex: none; font-style: normal; color: var(--app-text); text-decoration: underline; text-underline-offset: 3px; }
+.understood.understood h3 > button:hover:not(:disabled) > i { color: var(--app-primary-text); }
+.understood.understood > div { margin: 8px 0 4px; }
+
+/* 계획서 만들기 직전 '제가 정한 값' — 진한 칸 없이 작은 제목 + 점선 칩(누르면 그 질문을 고친다) */
+.assumed { margin: 12px 0 4px; }
+.assumed h3 { margin: 0 0 8px; font-size: .875rem; font-weight: 600; color: var(--app-text); }
+.assumed h3 small { margin-left: 6px; font-size: .75rem; font-weight: 400; color: var(--app-muted); }
+.assumed > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.assumed button { display: inline-flex; align-items: baseline; gap: 6px; max-width: 100%; min-height: 36px; padding: 6px 12px; border: 1px dashed var(--app-line-strong); border-radius: 999px; background: transparent; color: var(--app-text); font: inherit; font-size: .875rem; text-align: left; cursor: pointer; }
+.assumed button small { flex: none; color: var(--app-muted); font-size: .75rem; }
+.assumed button:hover:not(:disabled) { border-style: solid; border-color: var(--app-text); }
+
+/*
+ * 다음 질문을 순서대로(2026-11-28 사장님: Claude 처럼) — 입력 중 점(0.3초) → 질문 글이 흘러나오듯 → 선택지가 하나씩(0.05초 간격) → '잘 모르겠어요' → 아래 안내.
+ * 이 화면에서 손님이 무언가 보낸 뒤(data-reveal)만. 질문 칸을 누르면 남은 순서를 건너뛴다(data-reveal-skip). 다시 불러온 대화 · 동작 줄이기는 한 번에.
+ */
+.revealTyping { display: none; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion .revealTyping { display: inline-flex; align-items: center; gap: 4px; height: 20px; margin: 2px 0 0; animation: reveal-typing-out .01s linear .32s forwards; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion .revealTyping i { width: 6px; height: 6px; border-radius: 50%; background: var(--app-muted); opacity: .35; animation: intake-typing-glow 1s ease-in-out infinite; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion .revealTyping i:nth-child(2) { animation-delay: .15s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion .revealTyping i:nth-child(3) { animation-delay: .3s; }
+@keyframes reveal-typing-out { to { height: 0; margin: 0; opacity: 0; overflow: hidden; visibility: hidden; } }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion > h2 { animation: reveal-text .45s ease-out .32s both; }
+@keyframes reveal-text { from { clip-path: inset(0 100% 0 0); opacity: .4; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label) { animation: reveal-chip .24s ease-out both; animation-delay: .8s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(2) { animation-delay: 0.85s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(3) { animation-delay: 0.90s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(4) { animation-delay: 0.95s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(5) { animation-delay: 1.00s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(6) { animation-delay: 1.05s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(7) { animation-delay: 1.10s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(8) { animation-delay: 1.15s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(9) { animation-delay: 1.20s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(10) { animation-delay: 1.25s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(11) { animation-delay: 1.30s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(12) { animation-delay: 1.35s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(13) { animation-delay: 1.40s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(14) { animation-delay: 1.45s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label):nth-child(15) { animation-delay: 1.50s; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion .unknownChoice.unknownChoice { animation: reveal-chip .24s ease-out 1.3s both; }
+.page.page.page[data-reveal] .chatQuestion.chatQuestion .questionCardFoot { animation: reveal-chip .24s ease-out 1.4s both; }
+@keyframes reveal-chip { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.page.page.page [data-reveal-skip] .chatQuestion.chatQuestion > h2, .page.page.page [data-reveal-skip] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label), .page.page.page [data-reveal-skip] .chatQuestion.chatQuestion .unknownChoice.unknownChoice, .page.page.page [data-reveal-skip] .chatQuestion.chatQuestion .questionCardFoot { animation: none !important; }
+.page.page.page [data-reveal-skip] .chatQuestion.chatQuestion .revealTyping { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .page.page.page[data-reveal] .chatQuestion.chatQuestion > h2, .page.page.page[data-reveal] .chatQuestion.chatQuestion form :is(.chipRow, .presetChips, .amountLadder, div) > :is(button, label), .page.page.page[data-reveal] .chatQuestion.chatQuestion .unknownChoice.unknownChoice, .page.page.page[data-reveal] .chatQuestion.chatQuestion .questionCardFoot { animation: none !important; } .page.page.page[data-reveal] .chatQuestion.chatQuestion .revealTyping { display: none !important; } }
