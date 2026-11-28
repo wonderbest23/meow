@@ -49,8 +49,6 @@ import { JourneyGuideTurn } from "./intake-ui/JourneyGuideTurn";
 import { GUIDE_PARAM, journeyGuide, journeyGuideContext, readJourneyGuide, type JourneyGuideCode } from "../../../lib/plan-builder/journey-guides";
 import { planSectionEditMessage } from "../../../lib/plan-builder/studio-plan-edit";
 import { WorkLog } from "./intake-ui/WorkLog";
-import { FillThinking } from "./intake-ui/FillThinking";
-import { nextFillSeen, type FillSeen } from "./intake-ui/fill-thinking";
 import { designLogItem, planLogItem } from "./intake-ui/work-log";
 import { editExamples } from "../../../lib/plan-builder/edit-examples";
 import { STUDIO_QUEUE_LIMIT, editTurnBusy, editTurnsKey, enqueueRequest, queuedRequestRoute, readRequestQueue, requestQueueKey, restoreEditTurns, sectionHint, studioEditAction, studioEditError, studioEditReducer, studioTargetChipText, type QueuedStudioRequest, type StudioEditTurn } from "./intake-ui/studio-edit";
@@ -318,6 +316,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   const [amountCheck, setAmountCheck] = useState<{ text?: string; questionId: string; value: IntakeValue; revision: number; prompt: string } | null>(null);
   const [draft, setDraft] = useState<IntakeDraft>(emptyDraft);
   const liveComment = useLiveComment();
+  /* 다음 질문을 순서대로(입력 중 점 → 질문 → 선택지 하나씩) — 이 화면에서 손님이 무언가 보낸 뒤부터만. 다시 불러온 대화는 한 번에(2026-11-28 사장님) */
+  const [revealOn, setRevealOn] = useState(false);
+  const [revealSkip, setRevealSkip] = useState<string | null>(null);
   const answerSuggestions = useAnswerSuggestions(plan?.planId, plan && (plan.intake.mode === "startup" || plan.intake.mode === "operating") ? { text: businessDescriptionText(plan), stage: plan.intake.mode } : null);
   const [ideaRejectIds, setIdeaRejectIds] = useState<string[]>([]);
   // 마지막으로 고른 AI 제안 — 저장하지 못하면 그 카드 바로 아래에 이유를 보인다
@@ -640,6 +641,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
   };
 
   async function send(input?: CommandInput, captured?: Pick<PendingRequest, "answer" | "text" | "intro" | "composer">) {
+    // 처음 켤 때는 지금 떠 있는 질문이 다시 움직이지 않게 그 질문은 건너뛴다(다음 질문부터 순서대로)
+    if (!revealOn) setRevealSkip(planRef.current?.nextQuestion?.id ?? null);
+    setRevealOn(true);
     if (coach && input?.action === "answer" && busyRef.current && draftRef.current.pending?.command.action === "answer" && !replyActive.current && !conflictRef.current && loaded && !loadFailed && queuedAnswers.current.length < 8) {
       const base = previewRef.current ?? planRef.current;
       if (!base) return;
@@ -1947,19 +1951,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    * 불러올 때 이미 있던 상자(새로고침 · 다시 열기 · 이전 대화)와 같은 상자가 다시 그려질 때는 재생하지 않는다(규칙: fill-thinking.ts).
    * 재생하든 안 하든 새로 채운 상자는 접힌 한 줄 요약으로 끝난다. 움직임 줄이기를 켰으면 재생 없이 바로 요약 줄.
    */
-  const [fillSeen, setFillSeen] = useState<FillSeen | null>(null);
-  const [fillPlay, setFillPlay] = useState<{ key: string; items: typeof filledAnswers; refill: boolean } | null>(null);
-  const fillNext = nextFillSeen(fillSeen, loaded, plan?.planId ?? null, [...new Set(filledAnswers.map(item => item.batch))]);
-  if (fillNext.seen !== fillSeen) {
-    setFillSeen(fillNext.seen);
-    if (!loaded && fillPlay) setFillPlay(null);
-    if (fillNext.fresh.length) {
-      const items = filledAnswers.filter(item => fillNext.fresh.includes(item.batch));
-      const still = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      setChipsOpen(current => ({ ...current, filled: false }));
-      setFillPlay(still || !items.length ? null : { key: fillNext.fresh.join("\n"), items, refill: fillNext.refill });
-    }
-  }
+  /* 채움 상자 재생(FillThinking)은 대화에서 뺐다(2026-11-28) — 일반 모드는 먼저 채운 값을 계획서 직전 '제가 정한 값'에서만 보여 준다 */
   const understandingRef = useRef(false);
   useEffect(() => { understandingRef.current = understanding; });
   // 읽기 시작하면 '적은 글을 읽고 있어요' 줄까지, 끝나면 다음 질문까지 내린다
@@ -2060,10 +2052,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     </>;
   };
   const FILLED_TITLE = "말하지 않은 것은 이렇게 채웠어요";
+  const MONEY_FIRST = new Set(["price", "structure.unitCost", "structure.cost", "cost", "budget", "sales"]);
   const filledSummary = (items: typeof filledAnswers) => `${items.length}개 · ${items.map(item => item.label).join(" · ")}`;
   /* 보내기 단추 — 예전 모양은 입력칸 오른쪽, PC 는 입력 카드 아래 줄 오른쪽 */
   const sendButton = <button type="submit" className={styles.sendButton} aria-label={studioRoute ? studioRoute === "queue" ? "기다리는 요청으로 보내기" : "보내기" : sendLabel} title={studioRoute ? "보내기" : sendLabel} disabled={studioRoute ? studioSendDisabled || !visibleComposerText(studioText) : !loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{!studioRoute && (busy && !answerQueueOpen || replyTurn) ? <LoaderCircle size={20} className={styles.spinner} /> : !studioRoute && askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>;
-  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined} data-studio-pro={pro || undefined} data-focus={focus && embedded || undefined} data-drawer={drawerOpen || undefined} data-keyboard={keyboardOpen || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={embedded ? undefined : summaryToggle}>
+  return <div data-reveal={revealOn || undefined} className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined} data-studio-pro={pro || undefined} data-focus={focus && embedded || undefined} data-drawer={drawerOpen || undefined} data-keyboard={keyboardOpen || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={embedded ? undefined : summaryToggle}>
     {plan && <>
       {/*
         작업실 칸 안: 칸 단추 줄(요약)과 진행 막대를 한 줄로 합친다 — 예전엔 요약 단추만 있는 넓은 줄 아래 막대가 또 있어 대화 위가 무거웠다.
@@ -2112,11 +2105,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
               </section>) : <>
             <ConversationHistory snapshot={plan} onEdit={editQuestion} receipt={receipt} readOnly={documentFixed} pro={pro} log={historyLog} />
 {/* 일반 모드: 문장에서 읽은 것(실선)과 말하지 않아 채운 것(점선)을 한눈에 — 누르면 그 답을 고친다 */}
-            {(chipCount > 0 || fillPlay) && <section className={styles.understood} aria-label="알아들은 내용">
+            {/* 일반 모드 대화 중에는 AI 가 먼저 채운 값을 보이지 않는다(2026-11-28 사장님: 초보자에게는 군더더기) — 계획서 만들기 직전 '제가 정한 값'에서 한 번 보여 주고 고치게 한다 */}
+            {saidAnswers.length > 0 && <section className={styles.understood} aria-label="알아들은 내용">
               {understoodBox("said", "이렇게 알아들었어요", saidAnswers, saidAnswers.map(item => item.value).join(" · "))}
-              {/* 처음 채울 때 — 채운 값이 한 줄씩 나온 뒤 접힌 요약 줄로 합쳐진다. 합쳐진 뒤는 아래 상자 그대로(눌러서 펼치기) */}
-              {fillPlay ? <FillThinking key={fillPlay.key} items={fillPlay.items} refill={fillPlay.refill} head={filledAnswers.length ? understoodHead("filled", FILLED_TITLE, filledSummary(filledAnswers), false) : null} announce={`${FILLED_TITLE} · ${filledSummary(fillPlay.items)}`} hold={understanding} onDone={() => setFillPlay(null)} />
-                : understoodBox("filled", FILLED_TITLE, filledAnswers, filledSummary(filledAnswers))}
             </section>}
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}
@@ -2130,9 +2121,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
               * 생각 표시는 한 번만 — 채움 상자가 재생 중이면(fillPlay) 그 상자가 읽기가 끝날 때까지 접지 않고 머리줄로 '적은 글을 읽고 있어요…'를 이어 보인다(hold).
               * 예전엔 상자가 접힌 뒤에도 이 줄이 2~4초 남아 생각 표시가 두 번 보였다(2026-11-17 사장님). 재생하지 않을 때(움직임 줄이기 · 다시 연 대화)만 이 줄.
               */}
-            {understanding && !fillPlay && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요" note="말하지 않은 것은 같은 업종 기준값으로 먼저 채우고 있어요." /></div>}
+            {understanding && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요" note="말하지 않은 것은 같은 업종 기준값으로 먼저 채우고 있어요." /></div>}
             {readingTyped && !understanding && <div role="status"><ThinkingLine title="답을 읽고 있어요" note="적은 글에서 이 질문에 맞는 값을 찾고 있어요." /></div>}
-            <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview || understanding}>
+            <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview || understanding} data-reveal-skip={revealSkip === question?.id || undefined} onPointerDownCapture={() => setRevealSkip(question?.id ?? null)}>
               {/* 쓰는 동안 받아 둔 요청을 보내 채팅 수정 화면이 되어도 마무리 말(계획서 보기 · 홈페이지 만들기)을 먼저 남기고 그 아래에 제안 카드 */}
               {editTurn && !replyTurn ? <>{studioTurn}<EditChatTurn pro={pro} chapters={editChapters} snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} payLabel={payLabel} loginNote={prepareLoginNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : locked && !replyTurn ? <>{studioTurn ?? <DocumentLockedTurn pro={pro} planId={plan.planId} chatEdit={COACH_EDIT_CHAT} onChatEdit={embedded ? () => { follow.current = true; focusComposer(); } : undefined} partial={plan.missingSections ? unpaidPlan ? "preview" : "missing" : undefined} remaining={plan.missingSections} />}{nextStep === "prepare" && !studioRun && <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} payLabel={payLabel} loginNote={prepareLoginNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || amountConfirmation || sectorConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat cardLabel={questionCardLabel} cardFoot={questionCardFoot} question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={answerBlocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onCarry={carryDraft} onComposer={focusComposer} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><AppButton type="button" variant="secondary" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</AppButton></section> : <section className={styles.complete}>
                 {designRunning || designStarting || reflecting ? <DesignProgress snapshot={plan} announce /> : <>
@@ -2147,6 +2138,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
                 {/* 계획서 전 채팅 수정 — 바꿀 내용을 먼저 보여 주고 확인을 받는다(바꾸기 · 그대로 두기). '바꾸기'를 눌러야 값이 바뀌고 방향을 다시 정리한다 */}
                 {!plan.hasDocuments && <DirectionEditConfirm snapshot={plan} disabled={blocked || aiBusy} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />}
                 {/* 작업실 안: 작성 중이면 진행 카드, 방금 끝났으면 마무리 말이 다음 단계 단추 자리를 대신한다 */}
+                {/* 계획서 만들기 직전 한 번 — AI 가 정한 값(가격 · 비용 · 예산 먼저). 엉뚱한 숫자로 계획서를 받지 않게(2026-11-28 사장님) */}
+                {nextStep === "prepare" && !studioTurn && filledAnswers.length > 0 && <section className={styles.assumed} aria-label="제가 정한 값">
+                  <h3>제가 정한 값 <small>맞지 않으면 눌러서 고쳐 주세요</small></h3>
+                  <div>{[...filledAnswers].sort((a, b) => Number(!MONEY_FIRST.has(a.id)) - Number(!MONEY_FIRST.has(b.id))).map(item => <button type="button" key={item.id} disabled={blocked} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div>
+                </section>}
                 {studioTurn ?? <NextStepAction reflect={reflectStyle} preparing={preparing} payNote={payNote} payLabel={payLabel} loginNote={prepareLoginNote} unpaid={unpaidPlan} snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce minimal={coach && !!currentIdentity(plan)} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} />}
                 {/* 사업 방향을 정리한 직후 한 번 — 다음 할 일을 카카오톡으로 받을지 권한다(계정에 한 번만) */}
                 {nextStep === "prepare" && signedIn && <StageAlertOffer />}

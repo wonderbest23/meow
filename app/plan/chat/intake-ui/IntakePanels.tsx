@@ -233,6 +233,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   const ranges = months && months > 1 ? scaledAmountRanges(ladder, months) : ladder;
   return <section className={`${styles.question} ${inChat ? styles.chatQuestion : ""}`} aria-labelledby="intake-question-heading" data-chat-question={inChat || undefined} data-question-card={cardLabel || cardFoot ? true : undefined}>
     {inChat && <ChatSpeaker />}
+    {inChat && <span className={styles.revealTyping} aria-hidden="true"><i /><i /><i /></span>}
     {cardLabel && <p className={styles.questionCardLabel}>{cardLabel}</p>}
     {(!inChat || editing) && <div className={styles.questionMeta}>
       <span>{refining ? "선택 보완" : editing ? "답변 수정" : inChat ? "" : snapshot.coreComplete ? "선택 보완" : "기본 질문"}</span>

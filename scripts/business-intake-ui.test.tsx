@@ -1303,16 +1303,17 @@ async function main() {
     assert.match(fillCss, /@media \(prefers-reduced-motion: reduce\) \{\n  \.head span, \.list li, \.root\.root h3 \{ animation: none; \}/);
     // 대화 화면 — 처음 보는 묶음만 재생, 움직임 줄이기면 재생 없이 바로 접힌 요약 줄, 재생 중에는 FillThinking 이 채움 상자 자리를 대신한다
     const intakeSource = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
-    assert.match(intakeSource, /const fillNext = nextFillSeen\(fillSeen, loaded, plan\?\.planId \?\? null, \[\.\.\.new Set\(filledAnswers\.map\(item => item\.batch\)\)\]\);/);
-    assert.match(intakeSource, /const still = typeof window !== "undefined" && window\.matchMedia\("\(prefers-reduced-motion: reduce\)"\)\.matches;\n\s*setChipsOpen\(current => \(\{ \.\.\.current, filled: false \}\)\);\n\s*setFillPlay\(still \|\| !items\.length \? null : /, "움직임 줄이기면 재생하지 않고 접힌 요약 줄");
-    assert.match(intakeSource, /\{fillPlay \? <FillThinking key=\{fillPlay\.key\} items=\{fillPlay\.items\}[^\n]*head=\{filledAnswers\.length \? understoodHead\("filled", FILLED_TITLE, filledSummary\(filledAnswers\), false\) : null\}/, "합쳐지는 자리는 지금의 접힌 요약 줄 그대로");
-    assert.match(intakeSource, /: understoodBox\("filled", FILLED_TITLE, filledAnswers, filledSummary\(filledAnswers\)\)\}/);
+    assert.doesNotMatch(intakeSource, /nextFillSeen|setFillPlay/, "대화 화면은 채움 재생 상태를 두지 않는다(2026-11-28)");
+    // 일반 모드 대화 중에는 AI 가 먼저 채운 값을 보이지 않는다(2026-11-28 사장님) — 계획서 만들기 직전 '제가 정한 값'에서 돈 칸부터 보여 주고 눌러서 고친다
+    assert.doesNotMatch(intakeSource, /understoodBox\("filled"|<FillThinking /, "대화 중에는 먼저 채운 값 줄을 그리지 않는다");
+    assert.match(intakeSource, /nextStep === "prepare" && !studioTurn && filledAnswers\.length > 0 && <section className=\{styles\.assumed\} aria-label="제가 정한 값">/, "계획서 만들기 직전 '제가 정한 값'");
+    assert.match(intakeSource, /const MONEY_FIRST = new Set\(\["price", "structure\.unitCost", "structure\.cost", "cost", "budget", "sales"\]\)/, "가격 · 비용 · 예산이 맨 위");
     /*
      * 생각 표시는 한 번만(2026-11-17 사장님) — 채움 상자가 재생 중이면 '적은 글을 읽고 있어요'(회전 아이콘) 줄을 따로 띄우지 않고,
      * 읽기가 끝날 때까지 상자가 접히지 않고 머리줄로 이어 보인다(hold). 예전엔 상자가 접힌 뒤에도 그 줄이 2~4초 남아 두 번 보였다.
      */
-    assert.match(intakeSource, /<FillThinking key=\{fillPlay\.key\}[^\n]*hold=\{understanding\} onDone=\{\(\) => setFillPlay\(null\)\} \/>/, "읽는 중이면 채움 상자가 기다린다");
-    assert.match(intakeSource, /\{understanding && !fillPlay && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요"/, "채움 상자가 재생 중이면 읽는 중 줄을 따로 띄우지 않는다");
+    // 채움 재생을 대화에서 뺐으므로(2026-11-28) 읽는 중 줄은 늘 그 자리에 뜬다
+    assert.match(intakeSource, /\{understanding && <div role="status"><ThinkingLine title="적은 글을 읽고 있어요"/, "읽는 중이면 그 줄이 뜬다");
     assert.equal([...intakeSource.matchAll(/<ThinkingLine title="적은 글을 읽고 있어요"/g)].length, 1, "읽는 중 줄은 한 곳");
     assert.match(fillSource, /if \(!due \|\| hold \|\| phase === "merge"\) return;\n\s*setPhase\("merge"\);/, "접힐 때가 돼도 읽는 중(hold)이면 기다린다");
     assert.match(fillSource, /const reading = due && hold && phase === "think";/);
