@@ -3,10 +3,10 @@
     "sectors": [],
     "ksic": [],
     "checkedAt": "2026-11-28",
-    "checkedBy": "Claude(초안 · 사장님 확인 전)",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
     "validFrom": "2026-11-28",
     "recheckBy": "2027-01-31",
-    "status": "draft",
+    "status": "verified",
     "id": "registration.when",
     "group": "registration",
     "keywords": [
@@ -42,10 +42,10 @@
     "sectors": [],
     "ksic": [],
     "checkedAt": "2026-11-28",
-    "checkedBy": "Claude(초안 · 사장님 확인 전)",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
     "validFrom": "2026-11-28",
     "recheckBy": "2027-01-31",
-    "status": "draft",
+    "status": "verified",
     "id": "registration.how",
     "group": "registration",
     "keywords": [
@@ -58,7 +58,7 @@
       "사업자등록 온라인으로 할 수 있어요?",
       "세무서 안 가고 사업자등록 돼요?"
     ],
-    "answer": "홈택스에 가입하고 공동인증서가 있으면 세무서에 가지 않고 인터넷으로 신청하고 서류도 전자로 낼 수 있어요. 등록이 끝나면 사업자등록증도 홈택스에서 받을 수 있어요. 홈택스 메뉴는 신청/제출 → 사업자등록신청/정정 등이에요. 세무서 민원봉사실을 찾아가 신청해도 돼요.",
+    "answer": "홈택스에 가입하고 공동인증서(옛 공인인증서)가 있으면 세무서에 가지 않고 인터넷으로 신청하고 서류도 전자로 낼 수 있어요. 등록이 끝나면 사업자등록증도 홈택스에서 받을 수 있어요. 홈택스 메뉴는 신청/제출 → 사업자등록신청/정정 등이에요. 세무서 민원봉사실을 찾아가 신청해도 돼요.",
     "agency": "홈택스 또는 관할·가까운 세무서 민원봉사실",
     "basis": [
       {
@@ -77,10 +77,10 @@
     "sectors": [],
     "ksic": [],
     "checkedAt": "2026-11-28",
-    "checkedBy": "Claude(초안 · 사장님 확인 전)",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
     "validFrom": "2026-11-28",
     "recheckBy": "2027-01-31",
-    "status": "draft",
+    "status": "verified",
     "id": "registration.signature-and-agent",
     "group": "registration",
     "keywords": [
@@ -111,10 +111,10 @@
     "sectors": [],
     "ksic": [],
     "checkedAt": "2026-11-28",
-    "checkedBy": "Claude(초안 · 사장님 확인 전)",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
     "validFrom": "2026-11-28",
     "recheckBy": "2027-01-31",
-    "status": "draft",
+    "status": "verified",
     "id": "registration.multiple-sites",
     "group": "registration",
     "keywords": [
@@ -127,7 +127,7 @@
       "가게를 두 곳 하면 사업자등록도 두 번 해요?",
       "매장이 여러 개면 사업자등록은 어떻게 해요?"
     ],
-    "answer": "사업장이 여러 곳이면 원칙적으로 사업장마다 따로 사업자등록을 해요. 본점에서 한꺼번에 신고·납부하고 싶다면 '사업자단위과세'로 등록할 수 있는데, 새로 여러 사업장을 열면서 적용받으려면 사업을 시작한 날부터 20일 안에 본점(주사무소) 관할 세무서에 등록해야 해요.",
+    "answer": "사업장이 여러 곳이면 원칙적으로 사업장마다 따로 사업자등록을 해요. 본점에서 한꺼번에 신고·납부하고 싶다면 본점(주사무소) 관할 세무서에 '사업자단위과세'로 등록할 수 있어요. 본점을 포함해 두 곳 이상을 새로 열면서 적용받으려면 사업을 시작한 날부터 20일 안에 사업자등록 신청서로 등록해요. 이미 사업을 하던 사람이 적용받으려면 적용받을 과세기간이 시작되기 20일 전까지 사업자단위과세 등록신청서를 내야 해요.",
     "agency": "본점 또는 각 사업장 관할 세무서",
     "basis": [
       {
