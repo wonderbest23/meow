@@ -1303,10 +1303,10 @@ button.workLogRow { min-height: 32px; }
   .page[data-coach] .chatQuestion .chip[data-picked] { animation: none; position: absolute; visibility: hidden; }
 }
 
-/* '잘 모르겠어요'는 답이 아니라 건너뛰기다 — 업종·선택지 칩과 같은 알약 모양이면 선택지 하나로 보여 헷갈린다(소유자 피드백 2026-11-04). 칩 줄 아래 밑줄 글자 단추로. PC 작업실에서는 알약 규칙이 이겨서 회색 알약 + 밑줄 + 간격 0 으로 섞여 나왔다(2026-11-15) — 이 규칙이 늘 이기게 했다 */
-.page.page.page .chatQuestion .unknownChoice.unknownChoice, .page.page.page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { display: inline-flex; flex-basis: 100%; width: max-content; min-height: 32px; margin-top: 10px; padding: 4px 2px; border: 0; border-radius: 4px; background: none; color: var(--app-muted); text-decoration: underline; text-underline-offset: 3px; transform: none; }
-.page.page.page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { color: var(--app-text); }
-.page.page.page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"], .page.page.page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"]:hover:not(:disabled) { background: none; color: var(--app-text); font-weight: 600; }
+/* '잘 모르겠어요' — 선택지 줄의 마지막 칩으로(2026-11-28 사장님: Claude 의 '직접 입력'처럼 답 가운데 하나). 진짜 답과 헷갈리지 않게 채운 알약이 아니라 테두리만 있는 옅은 칩. 예전 밑줄 글자 단추(2026-11-04)는 덧붙인 것처럼 보였다 */
+.page.page.page .chatQuestion .unknownChoice.unknownChoice, .page.page.page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { display: inline-flex; flex-basis: auto; width: max-content; min-height: 32px; margin-top: 6px; padding: 6px 12px; border: 1px dashed var(--app-line-strong); border-radius: 999px; background: transparent; color: var(--app-muted); text-decoration: none; transform: none; }
+.page.page.page .chatQuestion .unknownChoice.unknownChoice:hover:not(:disabled) { border-style: solid; color: var(--app-text); }
+.page.page.page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"], .page.page.page .chatQuestion .unknownChoice.unknownChoice[aria-pressed="true"]:hover:not(:disabled) { border-style: solid; border-color: var(--app-text); background: var(--app-soft); color: var(--app-text); font-weight: 600; }
 
 /* 고른 칩은 입력창 글이 되어 올라가므로 줄에서 빠진다(소유자 2026-11-04) — 180ms 줄어들며 사라진 뒤 흐름에서 빠져 옆 칩이 자리를 메운다. 입력창에서 글을 지우면 다시 나타난다.
    여러 개 고르는 체크 질문은 고른 것이 입력창에 안 보이므로(체크 표시만) 숨기지 않는다 */
@@ -1416,7 +1416,7 @@ button.workLogRow { min-height: 32px; }
 .page.page[data-embedded] .workLogCardTitle { font-size: 1rem; }
 .page.page[data-embedded] .workLogCardSub, .page.page[data-embedded] .workLogCardButton { font-size: .875rem; }
 /* 내 말풍선 — 메타 AI 실측: 납작한 회색, 둥근 22, 안쪽 9×16, 16px, 그림자 없음(2026-11-15) */
-.page.page.page[data-embedded] .userMessage { padding: 9px 16px; border-radius: 22px; background: var(--app-fill); box-shadow: none; color: var(--app-text); font-size: 1rem; line-height: 1.625; }
+.page.page.page[data-embedded] .userMessage { padding: 9px 16px; border-radius: 22px; background: var(--app-surface); box-shadow: 0 1px 2px color-mix(in srgb, var(--app-text) 7%, transparent), 0 8px 20px -8px color-mix(in srgb, var(--app-text) 18%, transparent); color: var(--app-text); font-size: 1rem; line-height: 1.625; }
 /* 대화 칸에 남은 작은 글씨도 보조 14 로(2026-11-15) — 채운 값 요약 · 채운 값 이름표 · 일반/전문가 전환 */
 .page.page[data-embedded] .understood h3 > button > span, .page.page[data-embedded] .understood h3 small, .page.page[data-embedded] .understood button small, .page.page.page[data-embedded] .depthPick button, .page.page[data-embedded] .depthPick span { font-size: .875rem; }
 /* 휴대폰에서 누르기 작던 두 곳(2026-11-15 휴대폰 점검) — 채운 값 카드 펼치기(높이 21) · 답 복사/고치기(28×28). 보이는 크기는 그대로 두고 누르는 자리만 44 로 넓힌다 */
@@ -1429,3 +1429,14 @@ button.workLogRow { min-height: 32px; }
 /* 계획서 작성 시작 실패 — 맨 위 한 줄 끝의 [다시 시도] · [로그인하고 이어가기] */
 .statusAction { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; margin-left: auto; padding: 4px 12px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-weight: 600; text-decoration: none; white-space: nowrap; cursor: pointer; }
 .statusAction:disabled { opacity: .5; cursor: default; }
+
+/* 채운 값·알아들은 값 — 상자 대신 진행자 말 아래 한 줄짜리 작은 표시(2026-11-28 사장님: ChatGPT 의 '메모리 업데이트됨'처럼). 누르면 펼쳐서 고친다 */
+.understood.understood { margin: -2px 0 14px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.understood.understood h3 { margin: 0; font-size: .8125rem; font-weight: 400; }
+.understood.understood h3 + h3 { margin-top: 4px; }
+.understood.understood h3 > button { flex: 0 1 auto; align-items: center; gap: 6px; color: var(--app-muted); }
+.understood.understood h3 > button > b { font-weight: 500; }
+.understood.understood h3 > button > svg { flex: none; color: var(--app-primary-text); }
+.understood.understood h3 > button > i { flex: none; font-style: normal; color: var(--app-text); text-decoration: underline; text-underline-offset: 3px; }
+.understood.understood h3 > button:hover:not(:disabled) > i { color: var(--app-primary-text); }
+.understood.understood > div { margin: 8px 0 4px; }

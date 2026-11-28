@@ -5,7 +5,7 @@ import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer,
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
-import { AlertCircle, ArrowDown, ArrowUp, Bookmark, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowUp, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, FileText, FolderOpen, Home, ListChecks, LoaderCircle, LogIn, RefreshCw, Sparkles, SquarePen, Target, Undo2, X, MessageCircle } from "lucide-react";
 import { EmptyIcon } from "../BusinessEmptyState";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
@@ -2047,11 +2047,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
    */
   /* 대화가 불러와진 뒤(브라우저에서만) 그려지는 상자라 여기서 화면 폭을 읽어도 서버 그림과 어긋나지 않는다 */
   const narrowScreen = typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches;
-  const understoodHead = (key: "said" | "filled", title: string, summary: string, open: boolean) => <h3><button type="button" aria-expanded={open} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><b>{title}</b>{open ? <small>다르면 눌러서 바꾸세요</small> : <span>{summary}</span>}<em data-open={open || undefined} aria-hidden="true"><ChevronDown size={16} /></em></button></h3>;
+  /* 한 줄짜리 작은 표시 — '✓ 10가지는 먼저 채워 뒀어요 · 보기'. 펼치면 칩을 눌러 고친다(제목·요약은 화면 읽기용으로만) */
+  const understoodHead = (key: "said" | "filled", title: string, summary: string, open: boolean) => { const count = Number(summary.match(/^(\d+)개/)?.[1] ?? 0); return <h3><button type="button" aria-expanded={open} aria-label={`${title} · ${summary}`} onClick={() => setChipsOpen(current => ({ ...current, [key]: !open }))}><Check size={14} aria-hidden="true" /><b>{key === "filled" ? `${count}가지는 먼저 채워 뒀어요` : `${count}가지는 말씀대로 넣었어요`}</b><span aria-hidden="true">·</span><i>{open ? "접기" : "보기"}</i></button></h3>; };
   const understoodBox = (key: "said" | "filled", title: string, items: typeof saidAnswers, summary: string) => {
     if (!items.length) return null;
     /* 휴대폰에서는 처음부터 접힌 채로(2026-11-15 사장님) — 펼쳐 두면 화면을 다 차지해 질문이 아래로 밀렸다 */
-    const open = chipsOpen[key] ?? (chipsFresh && !narrowScreen);
+    /* 처음부터 접어 둔다(2026-11-28 사장님) — 펼친 상자가 다음 질문과 눈길을 다퉜다 */
+    const open = chipsOpen[key] ?? false;
     return <>
       {understoodHead(key, title, summary, open)}
       {open && <div data-said={key === "said" ? "" : undefined}>{items.map(item => <button type="button" key={item.id} disabled={busy} onClick={() => editQuestion(item.id)}><small>{item.label}</small>{item.value}</button>)}</div>}
