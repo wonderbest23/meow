@@ -10,6 +10,8 @@ import type { BusinessFact, FactGroup } from "./schema";
  *  3. 있으면 그 항목만 AI 에게 건넨다(factsForPrompt) — 이 밖의 세금 사실은 쓰지 말라는 규칙과 함께(intake-extraction helpIntake)
  *  4. 받은 답의 숫자가 항목 · 질문 · 손님 사업 정보에 없으면 그 답을 버리고 항목 원문을 그대로 보인다(checkGroundedReply → factFallbackReply)
  *  5. 답 끝에 출처 · 확인한 날을 붙인다(factsFooter)
+ *
+ * 4단계(업종별 영업신고·허가)부터 '영업신고·위생교육' 질문도 같은 길로 — 주제(kind)마다 찾을 묶음 · 없을 때 안내 · 마지막 확인처가 다르다.
  */
 
 export const TAX_GROUPS: FactGroup[] = ["registration", "tax-type", "tax-calendar"];
@@ -23,20 +25,40 @@ export function isTaxQuestion(question: string): boolean {
   return TAX_WORDS.test(normalizeFactText(question));
 }
 
-export type TaxGrounding = { topic: false } | { topic: true; matches: FactMatch[] };
+export const PERMIT_GROUPS: FactGroup[] = ["permit"];
+/*
+ * 영업신고·허가 '절차'를 묻는 말 — 세금 낱말이 먼저 걸리면 세금으로 본다('부가세 신고해야 해요?').
+ * '신고'만으로는 걸지 않는다(세금 신고와 헷갈림). 무슨/어떤 신고 · 영업신고 · 허가 · 위생교육 · 영업 종류 이름.
+ */
+const PERMIT_WORDS = /영업신고|영업허가|영업등록|무슨신고|어떤신고|신고는어디|어디에신고|어디서신고|허가를받|허가받|인허가|위생교육|식품위생|보건증|건강진단|휴게음식점|일반음식점|제과점영업|즉석판매/;
+export function isPermitQuestion(question: string): boolean {
+  return !isTaxQuestion(question) && PERMIT_WORDS.test(normalizeFactText(question));
+}
 
-/** 세금·등록 질문이면 자료에서 찾는다(업종 분류 · 업종 코드로 좁힘). 아니면 topic:false */
+export type FactTopic = "tax" | "permit";
+export type TaxGrounding = { topic: false } | { topic: true; kind: FactTopic; matches: FactMatch[] };
+
+/** 세금·등록 또는 영업신고 질문이면 그 묶음에서 자료를 찾는다(업종 분류 · 업종 코드로 좁힘). 아니면 topic:false */
 export function groundTaxQuestion(question: string, business: { sector?: string | null; ksic?: string | null }, today?: string, facts: BusinessFact[] = siteFacts(today)): TaxGrounding {
-  if (!isTaxQuestion(question)) return { topic: false };
-  const matches = findFacts({ text: question, sector: business.sector ?? null, ksic: business.ksic ?? null, groups: TAX_GROUPS }, facts, today ?? new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10), 3);
-  return { topic: true, matches };
+  const kind: FactTopic | null = isTaxQuestion(question) ? "tax" : isPermitQuestion(question) ? "permit" : null;
+  if (!kind) return { topic: false };
+  const groups = kind === "tax" ? TAX_GROUPS : PERMIT_GROUPS;
+  const matches = findFacts({ text: question, sector: business.sector ?? null, ksic: business.ksic ?? null, groups }, facts, today ?? new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10), 3);
+  return { topic: true, kind, matches };
 }
 
 export const NTS_HOME = "https://www.nts.go.kr";
-/** 맞는 항목이 없을 때 — AI 를 부르지 않는다(지어낸 세금 안내가 가장 위험하다) */
-export function noFactReply(): string {
+export const GOV24_HOME = "https://www.gov.kr";
+/** 맞는 항목이 없을 때 — AI 를 부르지 않는다(지어낸 세금·인허가 안내가 가장 위험하다) */
+export function noFactReply(kind: FactTopic = "tax"): string {
+  if (kind === "permit") return `아직 확인된 자료가 없어요. 영업신고·허가는 사업장 주소지 시·군·구청 담당 부서나 정부24(${GOV24_HOME})에서 확인해 주세요.`;
   return `아직 확인된 자료가 없어요. 이 내용은 국세상담센터(국번없이 126)나 국세청 누리집(${NTS_HOME})에서 확인해 주세요. 관할 세무서 민원봉사실에서도 물어볼 수 있어요.`;
 }
+const FINAL_CHECK: Record<FactTopic, string> = {
+  tax: "안내예요. 최종 확인은 국세청(126)이나 관할 세무서에서 해 주세요.",
+  permit: "안내예요. 최종 확인은 사업장 주소지 시·군·구청 위생 담당 부서에서 해 주세요.",
+};
+const topicOf = (matches: FactMatch[]): FactTopic => matches.length && matches.every(({ fact }) => fact.group === "permit") ? "permit" : "tax";
 
 /** 답 끝에 붙이는 출처 줄 — 항목마다 첫 출처 제목 · 주소 · 확인한 날. 다시 확인 날이 지난 항목은 표시 */
 export function factsFooter(matches: FactMatch[]): string {
@@ -48,13 +70,13 @@ export function factsFooter(matches: FactMatch[]): string {
     seen.add(source.url);
     lines.push(`${source.title}(${fact.checkedAt} 확인${stale ? " · 다시 확인 필요" : ""}) ${source.url}`);
   }
-  return `\n\n출처: ${lines.join(" / ")}\n안내예요. 최종 확인은 국세청(126)이나 관할 세무서에서 해 주세요.`;
+  return `\n\n출처: ${lines.join(" / ")}\n${FINAL_CHECK[topicOf(matches)]}`;
 }
 
 /** AI 답을 쓸 수 없을 때 — 가장 맞는 항목의 답 원문 그대로 + 출처 */
-export function factFallbackReply(matches: FactMatch[]): string {
+export function factFallbackReply(matches: FactMatch[], kind: FactTopic = "tax"): string {
   const [top] = matches;
-  return top ? `${top.fact.answer}${factsFooter([top])}` : noFactReply();
+  return top ? `${top.fact.answer}${factsFooter([top])}` : noFactReply(kind);
 }
 
 /** 숫자 토큰(쉼표 · 단위 앞 공백 무시) — '10,400만원' → '10400', '1.5%' → '1.5' */
@@ -72,5 +94,5 @@ export function checkGroundedReply(reply: string, matches: FactMatch[], extra: s
   return { ok: stray.length === 0, stray };
 }
 
-/** AI 에게 덧붙이는 규칙 — 항목 밖의 세금·등록 사실은 쓰지 않는다 */
-export const GROUNDED_RULES = "This question is about Korean business registration or tax procedures. Answer ONLY from the verified facts given as `facts` (official 국세청 pages): restate them in plain 해요체 and apply them to the founder's situation. Do not add any tax rate, amount, deadline, date, form name, exception or agency that is not in `facts`. Write numbers exactly as they appear in `facts`. If `facts` do not answer the question, say that this is not in the verified material yet and suggest 국세상담센터(126) or the 관할 세무서. Do not add a sources line; the service appends it.";
+/** AI 에게 덧붙이는 규칙 — 항목 밖의 세금·등록·인허가 사실은 쓰지 않는다 */
+export const GROUNDED_RULES = "This question is about Korean business registration, tax or business-permit (영업신고) procedures. Answer ONLY from the verified facts given as `facts` (official government pages): restate them in plain 해요체 and apply them to the founder's situation. Do not add any tax rate, fee, amount, deadline, date, hours, form name, document, exception or agency that is not in `facts`. Write numbers exactly as they appear in `facts`. If `facts` do not answer the question, say that this is not in the verified material yet and suggest the agency named in `facts` (국세상담센터 126 or the 관할 세무서 for tax, the 시·군·구청 for permits). Do not add a sources line; the service appends it.";

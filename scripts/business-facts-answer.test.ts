@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { LLMConfig } from "../lib/llm/complete";
 import { checkFacts, siteFacts, type BusinessFactInput } from "../lib/business-facts";
-import { checkGroundedReply, factFallbackReply, factsFooter, GROUNDED_RULES, groundTaxQuestion, isTaxQuestion, noFactReply, NTS_HOME } from "../lib/business-facts/answer";
+import { checkGroundedReply, factFallbackReply, factsFooter, GOV24_HOME, GROUNDED_RULES, groundTaxQuestion, isPermitQuestion, isTaxQuestion, noFactReply, NTS_HOME } from "../lib/business-facts/answer";
 import { helpIntake } from "../lib/plan-builder/intake-extraction";
 
 /*
@@ -23,6 +23,21 @@ for (const q of ["세금 빼고 순이익이 얼마 남아요?", "가격은 얼�
   const wh = groundTaxQuestion("알바생 월급 주면 원천세 신고해야 해요?", { sector: "food_beverage" }, TODAY, facts);
   assert.ok(wh.topic && wh.matches[0]?.fact.id === "tax-calendar.withholding");
   assert.deepEqual(groundTaxQuestion("가격은 얼마로 할까요?", {}, TODAY, facts), { topic: false }, "세금 질문이 아니면 손대지 않는다");
+  // 음식 업종 영업신고(확인됨 7개) — 실제 자료에서
+  for (const [q, business, id] of [
+    ["카페 차리려면 무슨 신고를 해요?", { sector: "food_beverage", ksic: "56221" }, "permit.food.cafe"],
+    ["빵집 영업신고 어디서 해요?", { sector: "food_beverage", ksic: "56150" }, "permit.food.bakery"],
+    ["떡집 하려면 무슨 신고를 해요?", { sector: "food_beverage", ksic: "10601" }, "permit.food.bakery"],
+    ["반찬가게 영업신고는 어떻게 해요?", { sector: "food_beverage", ksic: "47223" }, "permit.food.banchan"],
+    ["도시락 가게는 무슨 신고를 해요?", { sector: "food_beverage", ksic: "10701" }, "permit.food.lunchbox"],
+    ["식당 하려면 어떤 신고를 해야 해요?", { sector: "food_beverage", ksic: "56111" }, "permit.food.restaurant"],
+    ["위생교육은 언제 받아요?", { sector: "food_beverage" }, "permit.food.hygiene-education"],
+  ] as const) {
+    const g = groundTaxQuestion(q, business, TODAY, facts);
+    assert.ok(g.topic && g.kind === "permit" && g.matches[0]?.fact.id === id, `${q} → ${id} (${g.topic ? g.matches.map(m => m.fact.id).join() : "-"})`);
+  }
+  const nail = groundTaxQuestion("네일숍은 무슨 신고를 해요?", { sector: "local_service", ksic: "96113" }, TODAY, facts);
+  assert.ok(nail.topic && nail.kind === "permit" && nail.matches.length === 0, "음식 밖 업종은 아직 자료 없음");
   const none = groundTaxQuestion("부가세 신고할 때 카드매출은 어떻게 적어요?", {}, TODAY, []);
   assert.ok(none.topic && none.matches.length === 0, "자료가 없으면 빈 목록");
 }
@@ -57,6 +72,26 @@ const fixture: BusinessFactInput = {
   assert.match(factsFooter(sg.topic ? sg.matches : []), /다시 확인 필요/);
 }
 
+// 4-2) 영업신고·위생교육 질문 — 세금과 따로 가르고, 없을 때 · 마지막 확인처가 시·군·구청
+for (const q of ["카페 차리려면 무슨 신고를 해요?", "반찬가게 영업신고는 어디서 해요?", "위생교육 몇 시간 받아요?", "일반음식점이랑 휴게음식점 차이가 뭐예요?", "보건증 있어야 해요?"]) assert.equal(isPermitQuestion(q), true, q);
+for (const q of ["부가세 신고해야 해요?", "가격은 얼마로 할까요?", "세금 빼고 순이익이 얼마예요?"]) assert.equal(isPermitQuestion(q), false, q);
+{
+  const permitFixture: BusinessFactInput = { ...fixture, id: "test.permit.cafe", group: "permit", sectors: ["food_beverage"], ksic: ["5622"], keywords: ["카페", "휴게음식점"], questions: ["카페 차리려면 무슨 신고를 해요?"],
+    answer: "술을 팔지 않는 카페는 휴게음식점영업이에요. 수수료는 방문·우편 28,000원이에요.", agency: "시·군·구청", sources: [{ url: "https://www.gov.kr/test", title: "정부24 · 식품관련영업신고" }] };
+  const facts = checkFacts({ registration: [fixture], permit: [permitFixture] }, TODAY).facts;
+  const g = groundTaxQuestion("카페 차리려면 무슨 신고를 해요?", { sector: "food_beverage", ksic: "56221" }, TODAY, facts);
+  assert.ok(g.topic && g.kind === "permit" && g.matches.map(m => m.fact.id).join() === "test.permit.cafe", "영업신고 질문은 영업신고 묶음에서만 찾는다");
+  assert.match(factsFooter(g.topic ? g.matches : []), /최종 확인은 사업장 주소지 시·군·구청 위생 담당 부서/);
+  assert.equal(checkGroundedReply("수수료는 28,000원이에요.", g.topic ? g.matches : []).ok, true);
+  assert.equal(checkGroundedReply("수수료는 3만 원쯤이에요.", g.topic ? g.matches : []).ok, false);
+  const none = groundTaxQuestion("네일숍은 무슨 신고를 해요?", { sector: "beauty" }, TODAY, facts);
+  assert.ok(none.topic && none.kind === "permit" && none.matches.length === 0, "다른 업종 영업신고는 자료 없음");
+  assert.ok(noFactReply("permit").startsWith("아직 확인된 자료가 없어요.") && noFactReply("permit").includes(GOV24_HOME) && !noFactReply("permit").includes("126"));
+  assert.equal(factFallbackReply([], "permit"), noFactReply("permit"));
+  const tax = groundTaxQuestion("사업자등록 언제까지 해요?", {}, TODAY, facts);
+  assert.ok(tax.topic && tax.kind === "tax" && tax.matches.every(m => m.fact.group !== "permit"), "세금 질문에는 영업신고 항목이 섞이지 않는다");
+}
+
 // 5) AI 에게 건네는 모양(가짜 AI) — 근거가 있으면 규칙과 facts 가 붙고, 없으면 예전 그대로
 async function requestShape() {
   const config: LLMConfig = { provider: "anthropic", apiKey: "facts-answer-fixture", model: "fixture-anthropic" };
@@ -83,8 +118,8 @@ async function requestShape() {
 {
   const source = readFileSync(new URL("../lib/plan-builder/intake-service.ts", import.meta.url), "utf8");
   assert.match(source, /const grounding = groundTaxQuestion\(job\.request \?\? "", \{ sector: claimed\.intake\.sector, ksic: claimed\.intake\.ksic \?\? null \}\);/);
-  assert.match(source, /if \(grounding\.topic && !grounding\.matches\.length\) message = noFactReply\(\);/, "자료가 없으면 AI 를 부르지 않는다");
-  assert.match(source, /message = checked\.ok \? `\$\{result\.message\.trim\(\)\}\$\{factsFooter\(grounding\.matches\)\}` : factFallbackReply\(grounding\.matches\);/, "숫자가 어긋나면 항목 원문");
+  assert.match(source, /if \(grounding\.topic && !grounding\.matches\.length\) message = noFactReply\(grounding\.kind\);/, "자료가 없으면 AI 를 부르지 않는다");
+  assert.match(source, /message = checked\.ok \? `\$\{result\.message\.trim\(\)\}\$\{factsFooter\(grounding\.matches\)\}` : factFallbackReply\(grounding\.matches, grounding\.kind\);/, "숫자가 어긋나면 항목 원문");
   assert.match(source, /if \(!grounding\.topic\) throw new IntakeError\(result\.reason/, "세금 질문은 AI 가 실패해도 항목 원문으로 답한다");
 }
 
