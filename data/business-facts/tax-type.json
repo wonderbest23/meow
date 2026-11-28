@@ -37,6 +37,17 @@
         "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2272&cntntsId=7693",
         "title": "국세청 · 부가가치세 개요"
       }
+    ],
+    "cautions": [
+      {
+        "text": "다만 제조업·도매업·전문직처럼 매출이 적어도 간이과세가 안 되는 업종도 있어요.",
+        "mention": [
+          "안 되",
+          "안 돼",
+          "배제",
+          "제외"
+        ]
+      }
     ]
   },
   {
@@ -71,6 +82,17 @@
       {
         "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2444&cntntsId=7777",
         "title": "국세청 · 사업자등록 신청"
+      }
+    ],
+    "cautions": [
+      {
+        "text": "매출이 기준보다 적어도 간이과세가 안 되는 경우가 있어요.",
+        "mention": [
+          "안 되",
+          "안 돼",
+          "배제",
+          "제외"
+        ]
       }
     ]
   },

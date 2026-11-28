@@ -137,4 +137,13 @@ assert.equal(seoulToday(new Date("2026-11-30T16:00:00Z")), "2026-12-01", "서울
   assert.doesNotMatch(source, /fetch\(|\/api\/|supabase|completeJson|streamText/i);
 }
 
+// 꼭 지킬 문장 — 답 안의 문장이어야 하고, mention 중 하나는 그 문장에 있어야 한다
+{
+  const bad = checkFacts({ permit: [base({ id: "test.caution.outside", cautions: [{ text: "답에 없는 지어낸 경고 문장이에요.", mention: ["경고"] }] }), base({ id: "test.caution.mention", answer: "TEST 반찬가게는 즉석판매제조·가공업으로 구청에 신고해요. 만들 반찬이 해당하는지 먼저 확인하세요.", cautions: [{ text: "만들 반찬이 해당하는지 먼저 확인하세요.", mention: ["처벌"] }] })] }, TODAY).issues.map(issue => issue.message);
+  assert.match(bad[0], /꼭 지킬 문장이 답에 없어요/);
+  assert.match(bad[1], /mention 중 어느 말도 꼭 지킬 문장에 없어요/);
+  const ok = checkFacts({ permit: [base({ id: "test.caution.ok", answer: "TEST 반찬가게는 즉석판매제조·가공업으로 구청에 신고해요. 만들 반찬이 해당하는지 먼저 확인하세요.", cautions: [{ text: "만들 반찬이 해당하는지 먼저 확인하세요.", mention: ["먼저 확인", "해당하는지"] }] })] }, TODAY);
+  assert.deepEqual(ok.issues, []); assert.equal(ok.facts[0].cautions.length, 1);
+}
+
 console.log("business facts: shape, official sources, stale/recheck, draft/period exclusion, industry search, prompt block passed");

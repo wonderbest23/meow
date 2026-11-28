@@ -680,6 +680,10 @@ export function ConversationText({ text }: { text: string }) {
 /** 답 아래 '출처' — 문서 이름을 누르면 공식 누리집이 새 창으로 열린다(https 만, footer.ts 가 거른다) */
 function FactSources({ footer }: { footer: FactsFooter }) {
   return <div className={styles.factSources} data-fact-sources>
+    {!!footer.cautions?.length && <div className={styles.factCautions} data-fact-cautions>
+      <p className={styles.factSourcesLabel}>꼭 확인</p>
+      <ul>{footer.cautions.map(caution => <li key={caution}>{caution}</li>)}</ul>
+    </div>}
     <p className={styles.factSourcesLabel}>출처</p>
     <ul>
       {footer.sources.map(source => <li key={source.url}>

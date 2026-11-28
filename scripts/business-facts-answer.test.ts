@@ -5,6 +5,7 @@ import { checkFacts, siteFacts, type BusinessFactInput } from "../lib/business-f
 import { checkGroundedReply, factFallbackReply, factsFooter, GOV24_HOME, GROUNDED_RULES, groundTaxQuestion, isPermitQuestion, isTaxQuestion, noFactReply, NTS_HOME } from "../lib/business-facts/answer";
 import { helpIntake } from "../lib/plan-builder/intake-extraction";
 import { splitFactsFooter } from "../lib/business-facts/footer";
+import { finalizeGroundedReply } from "../lib/business-facts/answer";
 
 /*
  * 3단계 — 세금·등록 질문은 사이트 자료(국세청 원문 대조)만 근거로. 가짜 AI 로만 시험한다(바깥 네트워크 없음).
@@ -183,6 +184,49 @@ for (const q of ["부가세 신고해야 해요?", "사업자 신고해야 해�
   assert.match(ui, /<a href=\{source\.url\} target="_blank" rel="noopener noreferrer">\{source\.title\}<\/a>/, "문서 이름이 링크");
 }
 
+// 4-4) 꼭 지킬 조건·경고 · 자료보다 단정하는 말 — 2026-11-28 실제 AI 답 18개(오퍼스 10 · 하이쿠 8)를 가짜 AI 문장으로
+{
+  const F = JSON.parse(readFileSync(new URL("./fixtures/business-facts-real-answers-2026-11-28.json", import.meta.url), "utf8"));
+  const outcomes = new Map<string, ReturnType<typeof finalizeGroundedReply>>();
+  for (const a of F.answers) {
+    const b = F.businesses[a.business];
+    const ctx = JSON.stringify({ stage: "intake", business: b.name, fields: b.fields.map(([k, v]: [string, string]) => ({ key: k, value: v, basis: "user" })), excerpted: true });
+    const g = groundTaxQuestion(a.question, { sector: b.sector, ksic: b.ksic }, "2026-11-28");
+    assert.ok(g.topic && g.matches.length, a.question);
+    if (g.topic) outcomes.set(`${a.name}/${a.model}`, finalizeGroundedReply(a.reply, g.matches, g.kind, [a.question, ctx]));
+  }
+  // 하이쿠가 '간이과세로 시작할 수 있는 업종이에요'라고 단정 → 그 답은 버리고 항목 원문
+  const simplified = outcomes.get("간이과세/claude-haiku-5-5")!;
+  assert.equal(simplified.outcome, "fallback"); assert.ok(simplified.overclaim);
+  assert.ok(!simplified.message.includes("할 수 있는 업종이에요") && simplified.message.includes("간이과세가 안 되는 업종도 있어요"));
+  // 하이쿠가 타투 '시행 전 처벌' 경고를 빠뜨림 → 꼭 확인 줄로 덧붙이고, 화면이 따로 꺼내 보인다
+  const tattoo = outcomes.get("타투샵/claude-haiku-5-5")!;
+  assert.equal(tattoo.outcome, "ai_with_caution");
+  assert.deepEqual(splitFactsFooter(tattoo.message).footer?.cautions, ["보건복지부는 그동안 의료인이 아닌 사람의 문신이 의료법 위반으로 처벌될 수밖에 없었다고 밝혔어요."]);
+  // 오퍼스 10개는 하나도 막히거나 덧붙지 않는다(지나치게 잡지 않는지)
+  for (const [key, value] of outcomes) if (key.endsWith("opus-5-5")) assert.equal(value.outcome, "ai", `${key} ${value.overclaim ?? ""} ${value.missing.join(",")}`);
+  // 그 밖의 하이쿠 답도 그대로
+  for (const [key, value] of outcomes) if (key.endsWith("haiku-5-5") && !/^(간이과세|타투샵)\//.test(key)) assert.equal(value.outcome, "ai", key);
+  // 지어낸 위반 문장 — 도시락 '등록' 빠뜨림, 네일 '무조건 돼요', 상가 공부방 경고 빠뜨림
+  const g = (q: string, b: { sector: string; ksic: string }) => { const r = groundTaxQuestion(q, b, "2026-11-28"); assert.ok(r.topic); return r.topic ? r : null!; };
+  const lunch = g("도시락 가게는 무슨 신고를 해요?", { sector: "food_beverage", ksic: "10701" });
+  assert.equal(finalizeGroundedReply("가게에서 만들어 팔면 음식점 영업신고를 하면 돼요.", lunch.matches, lunch.kind).outcome, "ai_with_caution", "도시락 공급은 '등록' 경고를 덧붙인다");
+  const nail = g("네일숍도 미용사 면허가 있어야 해요?", { sector: "local_service", ksic: "96119" });
+  assert.equal(finalizeGroundedReply("미용사(일반) 면허만 있으면 무조건 네일숍을 할 수 있어요.", nail.matches, nail.kind).outcome, "fallback", "'무조건'은 단정");
+  const tutor = g("집에서 공부방 하려면 신고해야 해요?", { sector: "education", ksic: "85501" });
+  const tutorOut = finalizeGroundedReply("주소지 관할 교육감에게 개인과외교습자로 신고하면 돼요.", tutor.matches, tutor.kind);
+  assert.equal(tutorOut.outcome, "ai_with_caution"); assert.match(tutorOut.missing[0], /교습소 신고나 학원 등록/);
+  // 꼭 지킬 문장이 없는 항목은 단정 검사도 하지 않는다(일반 안내 질문까지 막지 않게)
+  const mail = g("통신판매업 신고 안 해도 되는 경우가 있어요?", { sector: "retail_commerce", ksic: "47912" });
+  assert.equal(finalizeGroundedReply("직전 연도 거래가 50회 미만이면 신고하지 않아도 돼요. 문제없어요.", mail.matches, mail.kind).outcome, "ai");
+  // 출처 줄 왕복 — 꼭 확인 줄이 있어도 없어도
+  assert.equal(splitFactsFooter(tutorOut.message).body, "주소지 관할 교육감에게 개인과외교습자로 신고하면 돼요.");
+  assert.equal(splitFactsFooter(`답${factsFooter(tutor.matches)}`).footer?.cautions, undefined);
+  assert.match(GROUNDED_RULES, /Keep every condition, exception and warning/, "지시문에도 '조건·예외·경고는 빼지 말고 단정하지 말 것'");
+  const ui = readFileSync(new URL("../app/plan/chat/intake-ui/IntakePanels.tsx", import.meta.url), "utf8");
+  assert.match(ui, /data-fact-cautions/, "화면이 꼭 확인 줄을 따로 보인다");
+}
+
 // 5) AI 에게 건네는 모양(가짜 AI) — 근거가 있으면 규칙과 facts 가 붙고, 없으면 예전 그대로
 async function requestShape() {
   const config: LLMConfig = { provider: "anthropic", apiKey: "facts-answer-fixture", model: "fixture-anthropic" };
@@ -210,7 +254,8 @@ async function requestShape() {
   const source = readFileSync(new URL("../lib/plan-builder/intake-service.ts", import.meta.url), "utf8");
   assert.match(source, /const grounding = groundTaxQuestion\(job\.request \?\? "", \{ sector: claimed\.intake\.sector, ksic: claimed\.intake\.ksic \?\? null \}\);/);
   assert.match(source, /if \(grounding\.topic && !grounding\.matches\.length\) message = noFactReply\(grounding\.kind\);/, "자료가 없으면 AI 를 부르지 않는다");
-  assert.match(source, /message = checked\.ok \? `\$\{result\.message\.trim\(\)\}\$\{factsFooter\(grounding\.matches\)\}` : factFallbackReply\(grounding\.matches, grounding\.kind\);/, "숫자가 어긋나면 항목 원문");
+  assert.match(source, /const finalized = finalizeGroundedReply\(result\.message, grounding\.matches, grounding\.kind, \[job\.request \?\? "", context\]\);/, "숫자 · 단정 · 빠진 경고를 한 곳에서");
+  assert.match(source, /message = finalized\.message;/);
   assert.match(source, /if \(!grounding\.topic\) throw new IntakeError\(result\.reason/, "세금 질문은 AI 가 실패해도 항목 원문으로 답한다");
 }
 

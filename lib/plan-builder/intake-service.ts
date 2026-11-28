@@ -1,5 +1,5 @@
 import { patchDocumentAmounts } from "./fact-patch";
-import { checkGroundedReply, factFallbackReply, factsFooter, groundTaxQuestion, noFactReply } from "../business-facts/answer";
+import { factFallbackReply, finalizeGroundedReply, groundTaxQuestion, noFactReply } from "../business-facts/answer";
 import { factsForPrompt } from "../business-facts";
 import { createHash } from "node:crypto";
 import { classifyEditRequest, EDIT_REPLIES, EDIT_REPLIES_BEFORE_DOCUMENT, objectParticle, topicParticle, type EditRoute } from "./intake-edit-filter";
@@ -572,9 +572,9 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
           if (!grounding.topic) throw new IntakeError(result.reason, "AI 답변을 완료하지 못했어요. 질문을 짧게 나눠 다시 요청할 수 있고 사업정보는 그대로 보관되어 있어요");
           message = factFallbackReply(grounding.matches, grounding.kind);
         } else if (grounding.topic) {
-          const checked = checkGroundedReply(result.message, grounding.matches, [job.request ?? "", context]);
-          if (!checked.ok) console.info("[business-intake-job]", JSON.stringify({ event: "tax-reply-replaced", jobId: job.id, stray: checked.stray.slice(0, 5) }));
-          message = checked.ok ? `${result.message.trim()}${factsFooter(grounding.matches)}` : factFallbackReply(grounding.matches, grounding.kind);
+          const finalized = finalizeGroundedReply(result.message, grounding.matches, grounding.kind, [job.request ?? "", context]);
+          if (finalized.outcome !== "ai") console.info("[business-intake-job]", JSON.stringify({ event: finalized.outcome === "fallback" ? "tax-reply-replaced" : "tax-reply-caution-added", jobId: job.id, stray: finalized.stray.slice(0, 5), overclaim: finalized.overclaim, missing: finalized.missing.length }));
+          message = finalized.message;
         } else message = result.message;
       }
       const result = { ok: true as const, message };
