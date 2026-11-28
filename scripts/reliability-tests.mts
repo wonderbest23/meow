@@ -38,7 +38,7 @@ suites.push("schema-readiness");
 suites.push("launch-scope");
 suites.push("synthetic-preview");
 suites.push("business-design");
-suites.push("business-facts");
+suites.push("business-facts", "business-facts-answer");
 suites.push("business-launch-shape");
 suites.push("consult-reply", "homepage-design-carry");
 suites.push("homepage-copy-coverage");
