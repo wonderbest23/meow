@@ -160,8 +160,15 @@ async function guestHasWork(supabase: NonNullable<ReturnType<typeof getServerSup
 
 /** 운영 로그에 남길 실패 이유 — DB 오류 코드와 앞부분만(긴 해시는 가린다). 개인정보는 넣지 않는다 */
 function claimFailureReason(error: unknown) {
-  const record = (error ?? {}) as { code?: unknown; message?: unknown };
-  return { code: typeof record.code === "string" ? record.code : null, message: String(record.message ?? error ?? "").replace(/[0-9a-f]{16,}/gi, "…").slice(0, 160) };
+  const tidy = (value: unknown) => String(value ?? "").replace(/[0-9a-f]{16,}/gi, "…").slice(0, 160);
+  const record = (error ?? {}) as { code?: unknown; message?: unknown; cause?: unknown };
+  // PLAN_CLAIM_* 이름 뒤에 달린 진짜 DB 오류(plan-server-store claimError) — 2026-11-28 운영 로그에 이름만 남아 원인을 몰랐다
+  const cause = (record.cause ?? null) as { code?: unknown; message?: unknown; details?: unknown; hint?: unknown } | null;
+  return {
+    code: typeof record.code === "string" ? record.code : null,
+    message: tidy(record.message ?? error),
+    ...(cause ? { cause: { code: typeof cause.code === "string" ? cause.code : null, message: tidy(cause.message ?? cause), ...(cause.details ? { details: tidy(cause.details) } : {}), ...(cause.hint ? { hint: tidy(cause.hint) } : {}) } } : {}),
+  };
 }
 
 export async function claimGuestProjects(userId: string, previousGuestHash: string | null) {
@@ -199,7 +206,7 @@ export async function claimGuestProjects(userId: string, previousGuestHash: stri
       return;
     }
     if (error instanceof Error && ["PLAN_CLAIM_BUSY", "PLAN_VERSION_CONFLICT", "PLAN_CLAIM_FAILED"].includes(error.message)) throw error;
-    throw new Error("PLAN_CLAIM_FAILED");
+    throw Object.assign(new Error("PLAN_CLAIM_FAILED"), { cause: error });
   }
 }
 

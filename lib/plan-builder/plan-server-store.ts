@@ -86,7 +86,7 @@ export async function planGuestWasClaimed(ownerHash: string): Promise<boolean> {
   const supabase = getServerSupabase();
   if (!supabase) return memoryClaims.has(ownerHash);
   const { data, error } = await supabase.from("plan_owner_claims").select("guest_hash").eq("guest_hash", ownerHash).maybeSingle();
-  if (error) throw new Error("PLAN_CLAIM_FAILED");
+  if (error) throw claimError("PLAN_CLAIM_FAILED", error);
   return !!data;
 }
 
@@ -238,6 +238,11 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
   };
 }
 
+/** 옮기기 실패 — 이름(PLAN_CLAIM_*)은 그대로 두고, 진짜 DB 오류를 cause 로 달아 운영 로그(account-auth claimFailureReason)가 읽게 한다 */
+function claimError(name: "PLAN_CLAIM_FAILED" | "PLAN_CLAIM_BUSY", cause: unknown) {
+  return Object.assign(new Error(name), { cause });
+}
+
 /** Authenticated server code only: the browser cannot submit a source owner or imported state. */
 export async function claimGuestPlanState(guestHash: string, accountHash: string): Promise<"claimed" | "consumed" | "deferred"> {
   if (guestHash === accountHash) return "claimed";
@@ -262,7 +267,7 @@ export async function claimGuestPlanState(guestHash: string, accountHash: string
   for (let attempt = 0; attempt < 5; attempt++) {
     const guestResult = await supabase.from("plan_states").select("data,updated_at").eq("owner_hash", guestHash).maybeSingle();
     const accountResult = await supabase.from("plan_states").select("data,updated_at").eq("owner_hash", accountHash).maybeSingle();
-    if (guestResult.error || accountResult.error) throw new Error("PLAN_CLAIM_FAILED");
+    if (guestResult.error || accountResult.error) throw claimError("PLAN_CLAIM_FAILED", guestResult.error ?? accountResult.error);
     const merged = mergeStates(normalizeState(accountResult.data?.data), normalizeState(guestResult.data?.data));
     const active = merged.plans.find(plan => plan.id === merged.activePlanId) ?? merged.plans[0];
     const { data, error } = await supabase.rpc("claim_plan_state", {
@@ -270,10 +275,10 @@ export async function claimGuestPlanState(guestHash: string, accountHash: string
       p_guest_at: guestResult.data?.updated_at ?? null, p_account_at: accountResult.data?.updated_at ?? null,
       p_data: merged, p_title: merged.business.name || active?.title || "새 플랜", p_plan_type: active?.planType || "창업 초기 · 사업계획서",
     });
-    if (error) throw new Error(error.message.includes("PLAN_CLAIM_BUSY") ? "PLAN_CLAIM_BUSY" : "PLAN_CLAIM_FAILED");
+    if (error) throw claimError(error.message.includes("PLAN_CLAIM_BUSY") ? "PLAN_CLAIM_BUSY" : "PLAN_CLAIM_FAILED", error);
     if (data === "claimed" || data === "consumed") return data;
     if (data === "busy") throw new Error("PLAN_CLAIM_BUSY");
-    if (data !== "conflict") throw new Error("PLAN_CLAIM_FAILED");
+    if (data !== "conflict") throw claimError("PLAN_CLAIM_FAILED", { code: "unexpected_result", message: String(data) });
   }
   throw new Error("PLAN_VERSION_CONFLICT");
 }
