@@ -1,5 +1,6 @@
 import { findFacts, factsForPrompt, normalizeFactText, siteFacts, type FactMatch } from "./index";
 import type { BusinessFact, FactGroup } from "./schema";
+import { formatFactsFooter, type FactSource } from "./footer";
 
 /*
  * 3단계(계획 '한국 사업 정보 사이트 안에 넣어 두기') — 대화에서 손님이 사업자등록 · 과세 유형 · 세금 일정을 물으면
@@ -57,21 +58,23 @@ export function noFactReply(kind: FactTopic = "tax"): string {
 /** 마지막 확인처 — 세금은 국세청, 영업신고는 가장 맞는 항목의 담당 기관(미용실은 시·군·구청, 학원은 교육지원청 …) */
 function finalCheck(matches: FactMatch[]): string {
   if (topicOf(matches) === "tax") return "안내예요. 최종 확인은 국세청(126)이나 관할 세무서에서 해 주세요.";
-  return `안내예요. 최종 확인은 ${matches[0]?.fact.agency || "영업소가 있는 시·군·구청"}에서 해 주세요.`;
+  // 기관 이름이 '교육감' · '…, 외국이면 공정거래위원회'처럼 다양해 '…에서 해 주세요'로 이으면 어색하다 — 이름만 따로 보인다
+  return `안내예요. 최종 확인할 곳: ${matches[0]?.fact.agency || "영업소가 있는 시·군·구청"}`;
 }
 const topicOf = (matches: FactMatch[]): FactTopic => matches.length && matches.every(({ fact }) => fact.group === "permit") ? "permit" : "tax";
 
 /** 답 끝에 붙이는 출처 줄 — 항목마다 첫 출처 제목 · 주소 · 확인한 날. 다시 확인 날이 지난 항목은 표시 */
 export function factsFooter(matches: FactMatch[]): string {
   const seen = new Set<string>();
-  const lines: string[] = [];
+  const sources: FactSource[] = [];
   for (const { fact, stale } of matches) {
     const source = fact.sources[0];
     if (!source || seen.has(source.url)) continue;
     seen.add(source.url);
-    lines.push(`${source.title}(${fact.checkedAt} 확인${stale ? " · 다시 확인 필요" : ""}) ${source.url}`);
+    sources.push({ title: source.title, checkedAt: fact.checkedAt, stale, url: source.url });
   }
-  return `\n\n출처: ${lines.join(" / ")}\n${finalCheck(matches)}`;
+  // 화면은 이 줄을 떼어 '출처' 칸으로 따로 보인다(footer.ts splitFactsFooter) — 모양을 바꾸면 그쪽도 함께
+  return formatFactsFooter({ sources, note: finalCheck(matches) });
 }
 
 /** AI 답을 쓸 수 없을 때 — 가장 맞는 항목의 답 원문 그대로 + 출처 */

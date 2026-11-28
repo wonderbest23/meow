@@ -4,6 +4,7 @@ import type { LLMConfig } from "../lib/llm/complete";
 import { checkFacts, siteFacts, type BusinessFactInput } from "../lib/business-facts";
 import { checkGroundedReply, factFallbackReply, factsFooter, GOV24_HOME, GROUNDED_RULES, groundTaxQuestion, isPermitQuestion, isTaxQuestion, noFactReply, NTS_HOME } from "../lib/business-facts/answer";
 import { helpIntake } from "../lib/plan-builder/intake-extraction";
+import { splitFactsFooter } from "../lib/business-facts/footer";
 
 /*
  * 3단계 — 세금·등록 질문은 사이트 자료(국세청 원문 대조)만 근거로. 가짜 AI 로만 시험한다(바깥 네트워크 없음).
@@ -74,6 +75,14 @@ for (const q of ["세금 빼고 순이익이 얼마 남아요?", "가격은 얼�
   assert.ok(!ids("강아지 미용실 하려면 무슨 신고해요?", { sector: "local_service" }).includes("permit.beauty.hair"), "강아지 미용실에 사람 미용실 답 X");
   assert.ok(!ids("반찬가게 하려면 무슨 신고해요?", {}).some(id => id.startsWith("permit.stay.")), "'반찬가게 하려면'에 게스트하우스 답 X");
   assert.deepEqual([...ids("게스트하우스 하려면 무슨 신고해요?", { sector: "space_hospitality", ksic: "55104" })].sort(), ["permit.stay.city-guesthouse", "permit.stay.farmstay", "permit.stay.lodging"], "게스트하우스는 숙박 세 갈래를 함께");
+  // AI 가 큰 분류를 잘못 골라도(업종 코드 없음) 업종 이름을 말하면 그 항목을 쓴다 — 코드가 있을 때만 분류가 다르다고 뺀다
+  const wrongSector = groundTaxQuestion("카페 차리려면 무슨 신고를 해요?", { sector: "b2b_service" }, TODAY, facts);
+  assert.ok(wrongSector.topic && wrongSector.matches[0]?.fact.id === "permit.food.cafe", "잘못 고른 큰 분류만으로는 빼지 않는다");
+  // 새 대화의 업종 기본값 '일반'은 모른다는 뜻 — 다른 업종으로 보고 빼면 안 된다
+  for (const [q, id] of [["카페 차리려면 무슨 신고를 해요?", "permit.food.cafe"], ["네일숍도 미용사 면허가 있어야 해요?", "permit.beauty.nail"], ["집에서 공부방 하려면 신고해야 해요?", "permit.edu.private-tutor"]] as const) {
+    const g = groundTaxQuestion(q, { sector: "general" }, TODAY, facts);
+    assert.ok(g.topic && g.matches[0]?.fact.id === id, `일반 업종: ${q} → ${id} (${g.topic ? g.matches.map(m => m.fact.id).join() : "-"})`);
+  }
   const pc = groundTaxQuestion("피시방 하려면 무슨 신고를 해요?", { sector: "local_service", ksic: "91223" }, TODAY, facts);
   assert.ok(pc.topic && pc.kind === "permit" && pc.matches.length === 0, "자료 없는 업종은 '아직 확인된 자료가 없어요'");
   const none = groundTaxQuestion("부가세 신고할 때 카드매출은 어떻게 적어요?", {}, TODAY, []);
@@ -120,7 +129,7 @@ for (const q of ["부가세 신고해야 해요?", "사업자 신고해야 해�
   const facts = checkFacts({ registration: [fixture], permit: [permitFixture] }, TODAY).facts;
   const g = groundTaxQuestion("카페 차리려면 무슨 신고를 해요?", { sector: "food_beverage", ksic: "56221" }, TODAY, facts);
   assert.ok(g.topic && g.kind === "permit" && g.matches.map(m => m.fact.id).join() === "test.permit.cafe", "영업신고 질문은 영업신고 묶음에서만 찾는다");
-  assert.match(factsFooter(g.topic ? g.matches : []), /최종 확인은 시·군·구청에서 해 주세요\./, "마지막 확인처는 그 항목의 담당 기관");
+  assert.match(factsFooter(g.topic ? g.matches : []), /최종 확인할 곳: 시·군·구청$/, "마지막 확인처는 그 항목의 담당 기관");
   assert.equal(checkGroundedReply("수수료는 28,000원이에요.", g.topic ? g.matches : []).ok, true);
   assert.equal(checkGroundedReply("수수료는 3만 원쯤이에요.", g.topic ? g.matches : []).ok, false);
   const none = groundTaxQuestion("네일숍은 무슨 신고를 해요?", { sector: "beauty" }, TODAY, facts);
@@ -147,9 +156,29 @@ for (const q of ["부가세 신고해야 해요?", "사업자 신고해야 해�
   // 마지막 확인처는 항목마다 — 학원은 교육지원청
   const academy = checkFacts({ permit: [{ ...permitFixture, id: "test.permit.academy", sectors: ["education"], ksic: ["855"], keywords: ["학원"], questions: ["학원 차리려면 어떻게 해요?"], answer: "학원은 교육감에게 등록해요.", agency: "교육지원청(교육감)" }] }, TODAY).facts;
   const ag = groundTaxQuestion("학원 등록해야 해요?", { sector: "education", ksic: "85501" }, TODAY, academy);
-  assert.match(factsFooter(ag.topic ? ag.matches : []), /최종 확인은 교육지원청\(교육감\)에서 해 주세요\./);
+  assert.match(factsFooter(ag.topic ? ag.matches : []), /최종 확인할 곳: 교육지원청\(교육감\)$/);
   const tax = groundTaxQuestion("사업자등록 언제까지 해요?", {}, TODAY, facts);
   assert.ok(tax.topic && tax.kind === "tax" && tax.matches.every(m => m.fact.group !== "permit"), "세금 질문에는 영업신고 항목이 섞이지 않는다");
+}
+
+// 4-3) 화면은 출처 줄을 떼어 따로 보인다 — 서버가 쓴 그대로 다시 나뉘어야 한다(제목 안 괄호 · 다시 확인 필요 포함)
+{
+  const facts = checkFacts({ registration: [fixture, { ...fixture, id: "test.registration.old", sources: [{ url: "https://www.law.go.kr/test?a=1&b=2", title: "국가법령정보센터 · 식품위생법 시행령 제21조(영업의 종류)" }], checkedAt: "2025-01-01", recheckBy: "2025-06-01", questions: ["사업자등록 언제까지 해요?"] }] }, TODAY).facts;
+  const g = groundTaxQuestion("사업자등록 언제까지 해요?", {}, TODAY, facts);
+  const matches = g.topic ? g.matches : [];
+  assert.equal(matches.length, 2);
+  const text = `20일 안에 신청하세요.${factsFooter(matches)}`;
+  const { body, footer } = splitFactsFooter(text);
+  assert.equal(body, "20일 안에 신청하세요.");
+  assert.deepEqual(footer?.sources.map(s => [s.title, s.stale, s.url]).sort(), [["국가법령정보센터 · 식품위생법 시행령 제21조(영업의 종류)", true, "https://www.law.go.kr/test?a=1&b=2"], ["국세청 · 사업자등록 안내", false, "https://www.nts.go.kr/test"]]);
+  assert.match(footer?.note ?? "", /^안내예요\. 최종 확인은/);
+  assert.deepEqual(splitFactsFooter(factFallbackReply(matches)).body, matches[0].fact.answer, "대신 보일 답도 나뉜다");
+  // 모양이 어긋나면 나누지 않는다(그대로 글) — http 주소, 날짜 없음
+  for (const broken of ["답\n\n출처: 제목(2026-11-28 확인) http://a.b\n안내예요.", "답\n\n출처: 제목 https://a.b\n안내예요.", "답\n\n출처: 제목(2026-11-28 확인) https://a.b"]) assert.equal(splitFactsFooter(broken).footer, null, broken);
+  assert.equal(splitFactsFooter(noFactReply()).footer, null, "'아직 확인된 자료가 없어요'는 출처 칸 없이 글로");
+  const ui = readFileSync(new URL("../app/plan/chat/intake-ui/IntakePanels.tsx", import.meta.url), "utf8");
+  assert.match(ui, /const \{ body, footer \} = splitFactsFooter\(text\);/, "대화 말풍선이 출처 줄을 떼어 낸다");
+  assert.match(ui, /<a href=\{source\.url\} target="_blank" rel="noopener noreferrer">\{source\.title\}<\/a>/, "문서 이름이 링크");
 }
 
 // 5) AI 에게 건네는 모양(가짜 AI) — 근거가 있으면 규칙과 facts 가 붙고, 없으면 예전 그대로
