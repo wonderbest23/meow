@@ -1025,16 +1025,25 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
     if (!plan) {
       const text = entryMessage(draftRef.current);
       if (text.length > 1200) { setError("처음 사업 설명은 1,200자 이내로 나눠 보내 주세요. 입력한 내용은 그대로 보관했어요."); return; }
-      const entry = entrySubmission(text);
-      // 규격 질문은 규칙으로 바로 진행하고, AI 참고 의견은 옆에서 따로 흘러나온다(서버에서 꺼져 있으면 아무 일도 없다).
-      // 인사·맞장구뿐이면('안녕?') 사업 이야기가 없어 참고 의견을 부르지 않는다 — 엉뚱한 의견과 AI 비용만 생겼다(2026-11-27)
-      if (text && !isGreetingOnly(text)) void liveComment.request(text);
+      /*
+       * 앞에 보낸 말('안녕?')이 있으면 이번 말만 따로 본다(2026-11-28 사장님) — 예전엔 둘을 이어 붙여 읽어서 '안녕?\n집 앞에 빵집 열고 싶어'가
+       * 물음표 때문에 다시 '애매한 첫 말'이 되었고, 같은 답과 선택지만 되풀이했다. 이번 말에 사업 이야기가 있으면 그 말로 바로 시작한다.
+       */
+      const current = draftRef.current.memo.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+      const earlier = !!draftRef.current.introMessage?.trim() && !!current;
+      const entry = earlier ? entrySubmission(current) : entrySubmission(text);
+      const said = earlier ? current : text;
+      // 규격 질문은 규칙으로 바로 진행하고, AI 한마디는 진행자 답장으로 흘러나온다(서버에서 꺼져 있으면 아무 일도 없다).
+      // 인사·맞장구뿐이면('안녕?') 사업 이야기가 없어 부르지 않는다 — 정해진 인사로 받는다(AI 비용 0)
+      if (said && !isGreetingOnly(said)) void liveComment.request(said); else liveComment.dismiss();
       if (text && entry.kind === "confirm") {
         editDraft({ ...draftRef.current, memo: "", introMessage: text });
         follow.current = true;
       } else if (text && entry.kind === "send") {
+        // 앞의 말이 인사뿐이었으면 지운다 — 남겨 두면 사업이 만들어진 뒤 '안녕?'이 메모로 저장된다. 물은 말이면 그대로 두어 메모(질문)로 남긴다
+        if (earlier && (draftRef.current.introMessage ?? "").split("\n").every(line => !line.trim() || isGreetingOnly(line))) editDraft({ ...draftRef.current, introMessage: "" });
         // 구체적인 사업 설명이면 뒤에 나올 고객·문제·상품·경로 질문의 맞춤 추천도 미리 받아 둔다.
-        if (entry.command.questionId === "business" && (entry.command.mode === "startup" || entry.command.mode === "operating")) void answerSuggestions.request(text, entry.command.mode);
+        if (entry.command.questionId === "business" && (entry.command.mode === "startup" || entry.command.mode === "operating")) void answerSuggestions.request(said, entry.command.mode);
         void send(entry.command, { text: draftRef.current.memo, intro: draftRef.current.introMessage });
       }
       return;
@@ -2082,7 +2091,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null, focu
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
           {/* '사업계획서 만들기'를 누른 뒤 — 단추가 화면 밖으로 밀려도 알 수 있게 화면 전체에 같은 로딩(얇은 원)을 덮는다 */}
           {preparing && <div className={styles.prepareCover}><PlanLoading fill={!embedded} note="사업계획서를 준비하고 있어요" /></div>}
-          {!loaded ? (onLoadingChange ? null : <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" />) : loginGate ? <LoginGate guestStudio={embedded} wide={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><EmptyIcon icon={FolderOpen} />{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton></>}</section>
+          {!loaded ? (onLoadingChange ? null : <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" />) : loginGate ? <LoginGate guestStudio={embedded} wide={pro} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} depth={startDepth} aiReply={liveComment.comment ? <LiveComment comment={liveComment.comment} /> : undefined} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><EmptyIcon icon={FolderOpen} />{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><AppButton href="/plan" variant="primary" className={styles.primaryButton}>내 사업으로<ChevronRight size={18} aria-hidden="true" /></AppButton></> : <><h1>저장한 사업이 없어요</h1><AppButton href="/plan/chat?new=1" variant="primary" className={styles.primaryButton}>새 사업 기획<ChevronRight size={18} aria-hidden="true" /></AppButton></>}</section>
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.

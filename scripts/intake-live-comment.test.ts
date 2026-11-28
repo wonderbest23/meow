@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { entrySubmission, isGreetingOnly } from "../app/plan/chat/intake-ui/model";
 import assert from "node:assert/strict";
 import { liveCommentConfig, streamLiveComment, tagScrubber } from "../lib/plan-builder/live-comment";
 import type { LLMConfig } from "../lib/llm/complete";
@@ -83,6 +85,19 @@ async function main() {
   assert.equal(run(raw.split("")), "빵집은 영업신고가 필요할 수 있어요.");
   assert.equal(run(["<interp", "retation>첫 고객이 어려울 수 있어요.</interpretation>"]), "첫 고객이 어려울 수 있어요.");
   assert.equal(run(["가격 < 원가면 남지 않아요."]), "가격 < 원가면 남지 않아요.");
+}
+
+/* 화면(2026-11-28): AI 한마디는 따로 뜨는 '참고 의견' 상자가 아니라 진행자 답장 말풍선. 앞에 보낸 말이 있으면 이번 말만 따로 읽는다 */
+{
+  const live = readFileSync(new URL("../app/plan/chat/intake-ui/LiveComment.tsx", import.meta.url), "utf8");
+  assert.match(live, /className=\{styles\.assistantMessage\}[^>]*data-live-reply/, "AI 한마디는 진행자 답장 말풍선");
+  assert.doesNotMatch(live, /AI 참고 의견<\/strong>|저장되지 않는 참고용/, "참고 의견 상자·딱지는 없앴다");
+  const intake = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
+  assert.match(intake, /const entry = earlier \? entrySubmission\(current\) : entrySubmission\(text\)/, "두 번째 말은 앞 말과 붙이지 않고 따로 읽는다");
+  assert.match(intake, /aiReply=\{liveComment\.comment \?/, "선택지 화면에서도 AI 한마디는 손님 말 바로 아래(선택지 위)");
+  assert.equal(entrySubmission("안녕?\n집앞에 1억짜리가게가있는데 거기 빵집열고싶어").kind, "confirm", "붙여 읽으면 물음표 때문에 다시 애매한 말이 된다(고치기 전 버그)");
+  assert.equal(entrySubmission("집앞에 1억짜리가게가있는데 거기 빵집열고싶어").kind, "send", "이번 말만 읽으면 사업 이야기로 바로 시작");
+  assert.equal(isGreetingOnly("안녕?"), true);
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

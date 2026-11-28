@@ -60,7 +60,7 @@ function CoachGreeting({ onReady }: { onReady: () => void }) {
   </div>;
 }
 
-export function EntryChoices({ disabled, onStart, initialMessage, coach = false, depth = "easy" }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null; coach?: boolean;
+export function EntryChoices({ disabled, onStart, initialMessage, coach = false, depth = "easy", aiReply }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null; coach?: boolean; aiReply?: ReactNode;
   /** 대화 방식 — 입력창 안 작은 전환(일반 | 전문가)이 고른다. 예전의 큰 카드 두 장과 입력창 잠금은 없앴다(대표 승인 2026-11-14) — 처음부터 일반 모드로 바로 적는다 */
   depth?: "easy" | "expert" }) {
   const [greeted, setGreeted] = useState(false);
@@ -75,9 +75,12 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false,
      * 빈 새 대화는 인사부터 — 질문 말풍선 하나만 덩그러니 떠서 허전했다(대표 피드백 2026-10-29). 입력 중 점 → 인사가 글자 단위로 나타남 →
      * 한 박자 뒤 첫 질문과 선택지. 첫 화면에서 글을 적어 들어온 경우는 내 말풍선 뒤에 바로 질문(인사는 건너뜀). 고르는 것이 단계라 질문도 단계를 묻는다(대화 기록 첫 줄과 같은 말)
      */}
-    {initialMessage ? <><article className={styles.userMessage} data-coach-message="user"><p>{initialMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p>
-      {/* 첫 말에 답 없이 선택지만 뜨던 것(2026-11-27 사장님: '안녕?'에 아무 대응이 없다) — 먼저 한마디로 받고 사업 이야기를 꺼내게 한다 */}
-      {depth === "easy" && <div className={styles.assistantMessage}><ChatSpeaker /><p>{isGreetingOnly(initialMessage) ? <>안녕하세요! 오늘은 어떤 사업을 해 볼까요?<br />생각하고 있는 사업을 편하게 적어 주세요.</> : <>네, 이어서 도와드릴게요.<br />어떤 사업인지 한 줄로 적어 주시면 바로 시작할게요.</>}</p></div>}</> : <CoachGreeting onReady={() => setGreeted(true)} />}
+    {initialMessage ? <>{/* 손님이 보낸 말마다 따로 말풍선과 답(메신저처럼) — 예전엔 두 번째 말이 첫 말풍선에 이어 붙었다(2026-11-28 사장님). 마지막 말의 답은 AI 한마디가 오면 그것, 아니면 정해진 한 줄 */}
+      {initialMessage.split("\n").filter(line => line.trim()).map((line, index, lines) => <Fragment key={index}>
+        <article className={styles.userMessage} data-coach-message="user"><p>{line}</p></article>
+        {index === lines.length - 1 && <p className={styles.messageStatus}>이 기기에 보관 중</p>}
+        {depth === "easy" && (index === lines.length - 1 && aiReply ? aiReply : <div className={styles.assistantMessage}><ChatSpeaker /><p>{isGreetingOnly(line) ? <>안녕하세요! 오늘은 어떤 사업을 해 볼까요?<br />생각하고 있는 사업을 편하게 적어 주세요.</> : <>네, 이어서 도와드릴게요.<br />어떤 사업인지 한 줄로 적어 주시면 바로 시작할게요.</>}</p></div>)}
+      </Fragment>)}</> : <CoachGreeting onReady={() => setGreeted(true)} />}
     {/*
       * 일반 모드는 단계 · 업종을 고르게 하지 않고 하고 싶은 말을 바로 적게 한다(대표 결정 2026-11-14) — 적은 문장에서 업종을 찾고 나머지를 채우는 길은
       * 이미 있다(입력창에 적으면 '생각한 사업이 있어요'로 시작). 정한 사업이 없거나 이미 운영 중인 사람을 위한 길만 작은 단추로 남긴다.

@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { ChatSpeaker } from "./IntakePanels";
 import styles from "../intake.module.css";
 
 export type LiveCommentState = { text: string; streaming: boolean } | null;
@@ -62,14 +62,14 @@ export function useLiveComment() {
   return { comment, request, dismiss };
 }
 
-export function LiveComment({ comment, onDismiss }: { comment: LiveCommentState; onDismiss: () => void }) {
+/*
+ * AI 한마디는 따로 뜨는 '참고 의견' 상자가 아니라 진행자의 답장 말풍선으로 보인다(2026-11-28 사장님: 자체 모델 전까지는 AI 가 바로 답하는 게 맞다).
+ * 글이 오기 전에는 입력 중 점, 오면 글자가 흘러나온다. 저장하지 않는 것은 그대로(대화 기록에 남지 않는다).
+ */
+export function LiveComment({ comment }: { comment: LiveCommentState; onDismiss?: () => void }) {
   if (!comment) return null;
-  return <aside className={styles.liveComment} aria-label="AI 참고 의견" aria-live="polite" aria-busy={comment.streaming}>
-    <div className={styles.liveCommentHead}>
-      <strong>AI 참고 의견</strong>
-      <small>저장되지 않는 참고용이에요</small>
-      <button type="button" className={styles.iconButton} aria-label="AI 참고 의견 닫기" title="닫기" onClick={onDismiss}><X size={15} aria-hidden="true" /></button>
-    </div>
-    <p>{comment.text || "의견을 쓰고 있어요"}{comment.streaming && <span className={styles.liveCaret} aria-hidden="true" />}</p>
-  </aside>;
+  return <div className={styles.assistantMessage} data-live-reply aria-live="polite" aria-busy={comment.streaming}>
+    <ChatSpeaker />
+    {comment.text ? <p>{comment.text}{comment.streaming && <span className={styles.liveCaret} aria-hidden="true" />}</p> : <span className={styles.typingBubble} aria-label="답을 쓰고 있어요"><i /><i /><i /></span>}
+  </div>;
 }
