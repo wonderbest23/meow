@@ -1,1 +1,145 @@
-[]
+[
+  {
+    "sectors": [],
+    "ksic": [],
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude(초안 · 사장님 확인 전)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-01-31",
+    "status": "draft",
+    "id": "registration.when",
+    "group": "registration",
+    "keywords": [
+      "사업자등록",
+      "사업자 등록",
+      "사업자"
+    ],
+    "questions": [
+      "사업자등록은 언제까지 해야 해요?",
+      "가게 열기 전에 사업자등록 해도 돼요?",
+      "사업자등록 꼭 해야 해요?"
+    ],
+    "answer": "사업장마다 사업을 시작한 날부터 20일 안에 사업장 관할 세무서에 사업자등록을 신청해야 해요. 새로 사업을 시작한다면 시작하기 전에 미리 신청해도 돼요. 다른 사람 명의를 빌려 등록하면 세금과 처벌이 명의를 빌려준 사람에게도 돌아가니 실제로 사업하는 사람 이름으로 해야 해요.",
+    "agency": "사업장 관할 세무서(국세상담센터 국번없이 126)",
+    "basis": [
+      {
+        "law": "부가가치세법",
+        "article": "제8조"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2443&cntntsId=7776",
+        "title": "국세청 · 사업자등록 안내"
+      },
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2444&cntntsId=7777",
+        "title": "국세청 · 사업자등록 신청"
+      }
+    ]
+  },
+  {
+    "sectors": [],
+    "ksic": [],
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude(초안 · 사장님 확인 전)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-01-31",
+    "status": "draft",
+    "id": "registration.how",
+    "group": "registration",
+    "keywords": [
+      "사업자등록",
+      "홈택스",
+      "세무서"
+    ],
+    "questions": [
+      "사업자등록 어떻게 신청해요?",
+      "사업자등록 온라인으로 할 수 있어요?",
+      "세무서 안 가고 사업자등록 돼요?"
+    ],
+    "answer": "홈택스에 가입하고 공동인증서가 있으면 세무서에 가지 않고 인터넷으로 신청하고 서류도 전자로 낼 수 있어요. 등록이 끝나면 사업자등록증도 홈택스에서 받을 수 있어요. 홈택스 메뉴는 신청/제출 → 사업자등록신청/정정 등이에요. 세무서 민원봉사실을 찾아가 신청해도 돼요.",
+    "agency": "홈택스 또는 관할·가까운 세무서 민원봉사실",
+    "basis": [
+      {
+        "law": "부가가치세법",
+        "article": "제8조"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2444&cntntsId=7777",
+        "title": "국세청 · 사업자등록 신청"
+      }
+    ]
+  },
+  {
+    "sectors": [],
+    "ksic": [],
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude(초안 · 사장님 확인 전)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-01-31",
+    "status": "draft",
+    "id": "registration.signature-and-agent",
+    "group": "registration",
+    "keywords": [
+      "사업자등록",
+      "대리인",
+      "공동사업"
+    ],
+    "questions": [
+      "사업자등록을 가족이 대신 해 줄 수 있어요?",
+      "동업하면 사업자등록은 누구 이름으로 해요?"
+    ],
+    "answer": "사업자등록신청서에는 사업자 본인이 직접 서명해야 해요. 대리인이 신청하면 대리인과 본인의 신분증을 함께 가져가고, 신청서에 두 사람 인적사항을 적고 둘 다 직접 서명해요. 두 사람 이상이 함께 사업하면 그중 한 명을 대표자로 정해 대표자 이름으로 신청해요.",
+    "agency": "관할·가까운 세무서 민원봉사실",
+    "basis": [
+      {
+        "law": "부가가치세법",
+        "article": "제8조"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2444&cntntsId=7777",
+        "title": "국세청 · 사업자등록 신청"
+      }
+    ]
+  },
+  {
+    "sectors": [],
+    "ksic": [],
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude(초안 · 사장님 확인 전)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-01-31",
+    "status": "draft",
+    "id": "registration.multiple-sites",
+    "group": "registration",
+    "keywords": [
+      "사업장",
+      "지점",
+      "매장 두 곳",
+      "두 번째 가게"
+    ],
+    "questions": [
+      "가게를 두 곳 하면 사업자등록도 두 번 해요?",
+      "매장이 여러 개면 사업자등록은 어떻게 해요?"
+    ],
+    "answer": "사업장이 여러 곳이면 원칙적으로 사업장마다 따로 사업자등록을 해요. 본점에서 한꺼번에 신고·납부하고 싶다면 '사업자단위과세'로 등록할 수 있는데, 새로 여러 사업장을 열면서 적용받으려면 사업을 시작한 날부터 20일 안에 본점(주사무소) 관할 세무서에 등록해야 해요.",
+    "agency": "본점 또는 각 사업장 관할 세무서",
+    "basis": [
+      {
+        "law": "부가가치세법",
+        "article": "제8조"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2444&cntntsId=7777",
+        "title": "국세청 · 사업자등록 신청"
+      }
+    ]
+  }
+]
