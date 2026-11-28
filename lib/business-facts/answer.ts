@@ -20,7 +20,7 @@ export const TAX_GROUPS: FactGroup[] = ["registration", "tax-type", "tax-calenda
  * 세금·등록 '절차'를 묻는 말만 — '세금 빼고 순이익이 얼마예요?' 같은 계산 질문은 지금처럼 일반 답변으로 둔다.
  * 낱말이 붙어 있어도(사업자등록) 띄어 써도(사업자 등록) 걸리게 띄어쓰기를 걷은 글에서 찾는다.
  */
-const TAX_WORDS = /사업자등록|사업자신청|간이과세|일반과세|과세유형|부가세|부가가치세|종합소득세|종소세|원천세|원천징수|세금계산서|세금신고|신고기한|신고기간|납부기한|세무서|홈택스|예정고지|성실신고/;
+const TAX_WORDS = /사업자등록|사업자신청|사업자신고|간이과세|일반과세|과세유형|부가세|부가가치세|종합소득세|종소세|원천세|원천징수|세금계산서|세금신고|신고기한|신고기간|납부기한|세무서|홈택스|예정고지|성실신고/;
 export function isTaxQuestion(question: string): boolean {
   return TAX_WORDS.test(normalizeFactText(question));
 }
@@ -28,9 +28,9 @@ export function isTaxQuestion(question: string): boolean {
 export const PERMIT_GROUPS: FactGroup[] = ["permit"];
 /*
  * 영업신고·허가 '절차'를 묻는 말 — 세금 낱말이 먼저 걸리면 세금으로 본다('부가세 신고해야 해요?').
- * '신고'만으로는 걸지 않는다(세금 신고와 헷갈림). 무슨/어떤 신고 · 영업신고 · 허가 · 위생교육 · 영업 종류 이름.
+ * '신고'만으로는 걸지 않는다(세금 신고와 헷갈림). 무슨/어떤 신고 · 신고해야 · 영업신고 · 허가 · 면허 · 위생교육 · 영업 종류 이름(교습소 · 통신판매 등).
  */
-const PERMIT_WORDS = /영업신고|영업허가|영업등록|무슨신고|어떤신고|신고는어디|어디에신고|어디서신고|허가를받|허가받|인허가|위생교육|식품위생|보건증|건강진단|휴게음식점|일반음식점|제과점영업|즉석판매/;
+const PERMIT_WORDS = /영업신고|영업허가|영업등록|무슨신고|어떤신고|신고는어디|어디에신고|어디서신고|신고해야|신고안해도|신고하지않아도|신고는어떻게|어떻게신고|허가를받|허가받|인허가|등록해야|위생교육|식품위생|보건증|건강진단|휴게음식점|일반음식점|제과점영업|즉석판매|공중위생|면허|교습소|개인과외|과외신고|공부방|학원등록|학원설립|학원차리|학원창업|학원오픈|학원열|통신판매/;
 export function isPermitQuestion(question: string): boolean {
   return !isTaxQuestion(question) && PERMIT_WORDS.test(normalizeFactText(question));
 }
@@ -51,13 +51,14 @@ export const NTS_HOME = "https://www.nts.go.kr";
 export const GOV24_HOME = "https://www.gov.kr";
 /** 맞는 항목이 없을 때 — AI 를 부르지 않는다(지어낸 세금·인허가 안내가 가장 위험하다) */
 export function noFactReply(kind: FactTopic = "tax"): string {
-  if (kind === "permit") return `아직 확인된 자료가 없어요. 영업신고·허가는 사업장 주소지 시·군·구청 담당 부서나 정부24(${GOV24_HOME})에서 확인해 주세요.`;
+  if (kind === "permit") return `아직 확인된 자료가 없어요. 영업신고·허가는 영업소가 있는 시·군·구청(학원·교습소는 교육지원청)이나 정부24(${GOV24_HOME})에서 확인해 주세요.`;
   return `아직 확인된 자료가 없어요. 이 내용은 국세상담센터(국번없이 126)나 국세청 누리집(${NTS_HOME})에서 확인해 주세요. 관할 세무서 민원봉사실에서도 물어볼 수 있어요.`;
 }
-const FINAL_CHECK: Record<FactTopic, string> = {
-  tax: "안내예요. 최종 확인은 국세청(126)이나 관할 세무서에서 해 주세요.",
-  permit: "안내예요. 최종 확인은 사업장 주소지 시·군·구청 위생 담당 부서에서 해 주세요.",
-};
+/** 마지막 확인처 — 세금은 국세청, 영업신고는 가장 맞는 항목의 담당 기관(미용실은 시·군·구청, 학원은 교육지원청 …) */
+function finalCheck(matches: FactMatch[]): string {
+  if (topicOf(matches) === "tax") return "안내예요. 최종 확인은 국세청(126)이나 관할 세무서에서 해 주세요.";
+  return `안내예요. 최종 확인은 ${matches[0]?.fact.agency || "영업소가 있는 시·군·구청"}에서 해 주세요.`;
+}
 const topicOf = (matches: FactMatch[]): FactTopic => matches.length && matches.every(({ fact }) => fact.group === "permit") ? "permit" : "tax";
 
 /** 답 끝에 붙이는 출처 줄 — 항목마다 첫 출처 제목 · 주소 · 확인한 날. 다시 확인 날이 지난 항목은 표시 */
@@ -70,7 +71,7 @@ export function factsFooter(matches: FactMatch[]): string {
     seen.add(source.url);
     lines.push(`${source.title}(${fact.checkedAt} 확인${stale ? " · 다시 확인 필요" : ""}) ${source.url}`);
   }
-  return `\n\n출처: ${lines.join(" / ")}\n${FINAL_CHECK[topicOf(matches)]}`;
+  return `\n\n출처: ${lines.join(" / ")}\n${finalCheck(matches)}`;
 }
 
 /** AI 답을 쓸 수 없을 때 — 가장 맞는 항목의 답 원문 그대로 + 출처 */

@@ -36,8 +36,29 @@ for (const q of ["세금 빼고 순이익이 얼마 남아요?", "가격은 얼�
     const g = groundTaxQuestion(q, business, TODAY, facts);
     assert.ok(g.topic && g.kind === "permit" && g.matches[0]?.fact.id === id, `${q} → ${id} (${g.topic ? g.matches.map(m => m.fact.id).join() : "-"})`);
   }
-  const nail = groundTaxQuestion("네일숍은 무슨 신고를 해요?", { sector: "local_service", ksic: "96113" }, TODAY, facts);
-  assert.ok(nail.topic && nail.kind === "permit" && nail.matches.length === 0, "음식 밖 업종은 아직 자료 없음");
+  // 음식 밖 업종(확인됨 8개) — 미용 · 학원 · 통신판매
+  for (const [q, business, id] of [
+    ["미용실 차리려면 무슨 신고를 해요?", { sector: "local_service", ksic: "96112" }, "permit.beauty.hair"],
+    ["네일숍은 무슨 신고를 해요?", { sector: "local_service", ksic: "96119" }, "permit.beauty.nail"],
+    ["미용사 면허는 어디서 받아요?", { sector: "local_service" }, "permit.beauty.license"],
+    ["미용실 위생교육은 몇 시간이에요?", { sector: "local_service", ksic: "96112" }, "permit.beauty.education"],
+    ["학원 차리려면 어떻게 해요?", { sector: "education", ksic: "85501" }, "permit.edu.hakwon"],
+    ["교습소는 어떻게 신고해요?", { sector: "education", ksic: "85501" }, "permit.edu.gyoseup"],
+    ["집에서 공부방 하려면 신고해야 해요?", { sector: "education", ksic: "85501" }, "permit.edu.private-tutor"],
+    ["스마트스토어 하려면 통신판매업 신고해야 해요?", { sector: "retail_commerce", ksic: "47912" }, "permit.commerce.mail-order"],
+  ] as const) {
+    const g = groundTaxQuestion(q, business, TODAY, facts);
+    assert.ok(g.topic && g.kind === "permit" && g.matches[0]?.fact.id === id, `${q} → ${id} (${g.topic ? g.matches.map(m => m.fact.id).join() : "-"})`);
+  }
+  // 엉뚱한 업종에 나가지 않는다
+  const ids = (q: string, business: { sector?: string; ksic?: string }) => { const g = groundTaxQuestion(q, business, TODAY, facts); return g.topic ? g.matches.map(m => m.fact.id) : []; };
+  assert.deepEqual(ids("태권도장 하려면 신고해야 해요?", { sector: "education", ksic: "85611" }), [], "태권도장에 학원·과외 답 X");
+  assert.ok(!ids("속눈썹 연장샵 하려면 무슨 신고해요?", { sector: "local_service", ksic: "96119" }).includes("permit.beauty.nail"), "속눈썹 가게에 네일 답 X");
+  assert.ok(!ids("이발소 하려면 무슨 신고해요?", { sector: "local_service", ksic: "96111" }).some(id => id === "permit.beauty.hair" || id === "permit.beauty.nail"), "이발소에 미용실·네일 답 X");
+  assert.ok(!ids("대학원 다니면서 무슨 신고해야 해요?", {}).includes("permit.edu.hakwon"), "'대학원'에 학원 답 X");
+  assert.ok(!ids("위생교육 몇 시간이에요?", { sector: "local_service", ksic: "96112" }).includes("permit.food.hygiene-education"), "미용실에 식품 위생교육 답 X");
+  const tattoo = groundTaxQuestion("타투샵 하려면 무슨 신고를 해요?", { sector: "local_service", ksic: "96119" }, TODAY, facts);
+  assert.ok(tattoo.topic && tattoo.kind === "permit" && tattoo.matches.length === 0, "자료 없는 업종은 '아직 확인된 자료가 없어요'");
   const none = groundTaxQuestion("부가세 신고할 때 카드매출은 어떻게 적어요?", {}, TODAY, []);
   assert.ok(none.topic && none.matches.length === 0, "자료가 없으면 빈 목록");
 }
@@ -74,20 +95,36 @@ const fixture: BusinessFactInput = {
 
 // 4-2) 영업신고·위생교육 질문 — 세금과 따로 가르고, 없을 때 · 마지막 확인처가 시·군·구청
 for (const q of ["카페 차리려면 무슨 신고를 해요?", "반찬가게 영업신고는 어디서 해요?", "위생교육 몇 시간 받아요?", "일반음식점이랑 휴게음식점 차이가 뭐예요?", "보건증 있어야 해요?"]) assert.equal(isPermitQuestion(q), true, q);
-for (const q of ["부가세 신고해야 해요?", "가격은 얼마로 할까요?", "세금 빼고 순이익이 얼마예요?"]) assert.equal(isPermitQuestion(q), false, q);
+for (const q of ["미용사 면허는 어디서 받아요?", "교습소는 어떻게 신고해요?", "집에서 공부방 하려면 신고해야 해요?", "통신판매업 신고 안 해도 되는 경우가 있어요?", "학원 등록해야 해요?"]) assert.equal(isPermitQuestion(q), true, q);
+for (const q of ["부가세 신고해야 해요?", "사업자 신고해야 해요?", "가격은 얼마로 할까요?", "세금 빼고 순이익이 얼마예요?"]) assert.equal(isPermitQuestion(q), false, q);
 {
   const permitFixture: BusinessFactInput = { ...fixture, id: "test.permit.cafe", group: "permit", sectors: ["food_beverage"], ksic: ["5622"], keywords: ["카페", "휴게음식점"], questions: ["카페 차리려면 무슨 신고를 해요?"],
     answer: "술을 팔지 않는 카페는 휴게음식점영업이에요. 수수료는 방문·우편 28,000원이에요.", agency: "시·군·구청", sources: [{ url: "https://www.gov.kr/test", title: "정부24 · 식품관련영업신고" }] };
   const facts = checkFacts({ registration: [fixture], permit: [permitFixture] }, TODAY).facts;
   const g = groundTaxQuestion("카페 차리려면 무슨 신고를 해요?", { sector: "food_beverage", ksic: "56221" }, TODAY, facts);
   assert.ok(g.topic && g.kind === "permit" && g.matches.map(m => m.fact.id).join() === "test.permit.cafe", "영업신고 질문은 영업신고 묶음에서만 찾는다");
-  assert.match(factsFooter(g.topic ? g.matches : []), /최종 확인은 사업장 주소지 시·군·구청 위생 담당 부서/);
+  assert.match(factsFooter(g.topic ? g.matches : []), /최종 확인은 시·군·구청에서 해 주세요\./, "마지막 확인처는 그 항목의 담당 기관");
   assert.equal(checkGroundedReply("수수료는 28,000원이에요.", g.topic ? g.matches : []).ok, true);
   assert.equal(checkGroundedReply("수수료는 3만 원쯤이에요.", g.topic ? g.matches : []).ok, false);
   const none = groundTaxQuestion("네일숍은 무슨 신고를 해요?", { sector: "beauty" }, TODAY, facts);
   assert.ok(none.topic && none.kind === "permit" && none.matches.length === 0, "다른 업종 영업신고는 자료 없음");
   assert.ok(noFactReply("permit").startsWith("아직 확인된 자료가 없어요.") && noFactReply("permit").includes(GOV24_HOME) && !noFactReply("permit").includes("126"));
   assert.equal(factFallbackReply([], "permit"), noFactReply("permit"));
+  // 영업신고는 업종이 맞아야 — 큰 분류만 같거나(교육) 낱말만 맞고 분류가 다르면(미용실 사장님의 '위생교육') 빼기
+  const foodEdu = { ...permitFixture, id: "test.permit.food-edu", ksic: [], keywords: ["위생교육"], questions: ["위생교육 몇 시간이에요?"], answer: "식품 위생교육은 6시간이에요." };
+  const tutor = { ...permitFixture, id: "test.permit.tutor", sectors: ["education" as const], ksic: ["85501"], keywords: ["공부방"], questions: ["공부방 하려면 신고해야 해요?"], answer: "공부방은 교육감에게 신고해요." };
+  const mixed = checkFacts({ permit: [foodEdu, tutor] }, TODAY).facts;
+  const beautyEdu = groundTaxQuestion("위생교육 몇 시간이에요?", { sector: "local_service", ksic: "96112" }, TODAY, mixed);
+  assert.ok(beautyEdu.topic && beautyEdu.matches.length === 0, "미용실 사장님에게 식품 위생교육 답이 나가지 않는다");
+  const foodOwner = groundTaxQuestion("위생교육 몇 시간이에요?", { sector: "food_beverage" }, TODAY, mixed);
+  assert.ok(foodOwner.topic && foodOwner.matches[0]?.fact.id === "test.permit.food-edu", "음식 사장님은 업종 코드가 없어도 낱말로 찾는다");
+  const taekwondo = groundTaxQuestion("태권도장 하려면 신고해야 해요?", { sector: "education", ksic: "85611" }, TODAY, mixed);
+  assert.ok(taekwondo.topic && taekwondo.matches.length === 0, "큰 분류(교육)만 같아서는 과외 답이 나가지 않는다");
+
+  // 마지막 확인처는 항목마다 — 학원은 교육지원청
+  const academy = checkFacts({ permit: [{ ...permitFixture, id: "test.permit.academy", sectors: ["education"], ksic: ["855"], keywords: ["학원"], questions: ["학원 차리려면 어떻게 해요?"], answer: "학원은 교육감에게 등록해요.", agency: "교육지원청(교육감)" }] }, TODAY).facts;
+  const ag = groundTaxQuestion("학원 등록해야 해요?", { sector: "education", ksic: "85501" }, TODAY, academy);
+  assert.match(factsFooter(ag.topic ? ag.matches : []), /최종 확인은 교육지원청\(교육감\)에서 해 주세요\./);
   const tax = groundTaxQuestion("사업자등록 언제까지 해요?", {}, TODAY, facts);
   assert.ok(tax.topic && tax.kind === "tax" && tax.matches.every(m => m.fact.group !== "permit"), "세금 질문에는 영업신고 항목이 섞이지 않는다");
 }
