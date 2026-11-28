@@ -108,6 +108,8 @@ const fixture: BusinessFactInput = {
   assert.deepEqual(checkGroundedReply("30일 안에 신청하면 돼요.", matches), { ok: false, stray: ["30"] }, "항목에 없는 숫자");
   assert.equal(checkGroundedReply("3월에 열면 20일 안에 하세요.", matches, ["3월에 문 열 예정이에요"]).ok, true, "질문·사업 정보의 숫자는 써도 된다");
   assert.equal(checkGroundedReply("기한은 2주 정도예요.", matches).ok, false, "다른 꼴로 바꾼 숫자도 걸린다");
+  assert.equal(checkGroundedReply("20일 안에 신청하고, 궁금하면 국세상담센터 126에 물어보세요.", matches).ok, true, "규칙이 안내하라고 한 126 은 써도 된다");
+  assert.equal(checkGroundedReply("국세상담센터 127에 물어보세요.", matches).ok, false, "다른 번호는 여전히 걸린다");
   // 출처 줄 · 대신 보일 답
   const footer = factsFooter(matches);
   assert.match(footer, /출처: 국세청 · 사업자등록 안내\(2026-11-28 확인\) https:\/\/www\.nts\.go\.kr\/test/);

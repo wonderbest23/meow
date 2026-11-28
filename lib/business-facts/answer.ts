@@ -93,7 +93,8 @@ function numbers(text: string): string[] {
  * 숫자를 다른 꼴로 바꿔 쓴 것('1억 400만원')도 걸린다 — 엄격한 쪽이 안전하다(그때는 항목 원문을 보인다).
  */
 export function checkGroundedReply(reply: string, matches: FactMatch[], extra: string[] = []): { ok: boolean; stray: string[] } {
-  const allowed = new Set([...numbers(factsForPrompt(matches)), ...extra.flatMap(numbers)]);
+  // 규칙이 안내하라고 시킨 번호(국세상담센터 126)는 항상 써도 된다 — 2026-11-28 실제 AI 시험에서 이 번호 때문에 멀쩡한 답 4개가 버려졌다
+  const allowed = new Set([...numbers(factsForPrompt(matches)), ...extra.flatMap(numbers), ...numbers(GROUNDED_RULES)]);
   const stray = [...new Set(numbers(reply).filter(value => !allowed.has(value)))];
   return { ok: stray.length === 0, stray };
 }
