@@ -96,6 +96,7 @@ export type FactMatch = { fact: BusinessFact; score: number; stale: boolean; why
  * 업종과 질문으로 맞는 항목을 찾는다. 답에 쓸 수 있는 항목만, 점수 높은 순으로 limit 개.
  *  - 업종: KSIC 앞자리가 맞으면 +5, 큰 분류가 맞으면 +3. 업종이 정해진 항목인데 다른 업종이면 뺀다(반찬가게 질문에 네일숍 항목이 나오지 않게)
  *  - 말: 업종을 부르는 말이 질문에 있으면 +4(한 번만), 손님 질문 예시와 닮은 만큼 최대 +6
+ *  - 영업신고·허가 항목은 업종 코드나 업종을 부르는 말이 맞아야 한다(큰 분류만으로는 안 됨)
  *  - 점수 4 미만은 버린다 — 맞는 항목이 없으면 빈 목록(AI 는 '아직 확인된 자료가 없어요'로 답한다)
  */
 export function findFacts(query: FactQuery, facts: BusinessFact[], today: string, limit = 3): FactMatch[] {
@@ -117,6 +118,10 @@ export function findFacts(query: FactQuery, facts: BusinessFact[], today: string
     if (keyword) { score += 4; why.push(`말 '${keyword}'`); }
     // 업종이 정해진 항목: 업종이 다르다고 알려졌으면(코드나 분류가 있는데 안 맞음) 말이 맞지 않는 한 뺀다
     if (industrySpecific && !ksicHit && !sectorHit && !keyword && (ksic || query.sector)) continue;
+    // 영업신고·허가는 업종마다 다르다 — 큰 분류(동네 서비스 · 교육)만 같아서는 안 된다(속눈썹 가게에 네일숍 답, 태권도장에 과외 답이 나가지 않게).
+    // 손님 업종 코드가 맞거나, 질문에 그 업종을 부르는 말이 있어야 한다. 말이 맞아도 손님 큰 분류가 다르면 뺀다(미용실 사장님의 '위생교육'에 식품 위생교육 답 X)
+    const sectorConflict = !!query.sector && fact.sectors.length > 0 && !sectorHit;
+    if (fact.group === "permit" && !ksicHit && (!keyword || sectorConflict)) continue;
     if (text) {
       const best = Math.max(0, ...fact.questions.map(question => questionSimilarity(text, question)));
       if (best >= 0.2) { score += Math.round(best * 6 * 10) / 10; why.push(`질문 닮음 ${best.toFixed(2)}`); }
