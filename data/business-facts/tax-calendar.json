@@ -1,1 +1,182 @@
-[]
+[
+  {
+    "sectors": [],
+    "ksic": [],
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-01-31",
+    "status": "verified",
+    "id": "tax-calendar.vat-general-individual",
+    "group": "tax-calendar",
+    "keywords": [
+      "부가세",
+      "부가가치세",
+      "일반과세",
+      "확정신고",
+      "예정고지"
+    ],
+    "questions": [
+      "부가세 신고는 언제 해요?",
+      "일반과세자 부가세 신고 기간이 언제예요?",
+      "4월에 부가세 고지서가 왔어요"
+    ],
+    "answer": "개인 일반과세자는 1년에 두 번 신고해요. 1~6월 몫은 7월 1~25일, 7~12월 몫은 다음 해 1월 1~25일이에요. 그 사이 4월과 10월에는 직전 6개월 납부세액의 50%가 예정고지서로 나와서 그 돈을 내요(따로 신고할 의무는 없어요). 낸 돈은 다음 확정신고 때 이미 낸 세금으로 빼 줘요. 고지할 금액이 50만원 미만이거나, 그 과세기간이 시작될 때 간이과세자에서 일반과세자로 바뀐 사업자는 예정고지가 나오지 않아요. 휴업이나 사업 부진으로 실적이 나빠졌거나 조기환급을 받고 싶으면 예정신고를 할 수 있고, 그러면 예정고지는 취소돼요.",
+    "agency": "홈택스 또는 관할 세무서",
+    "basis": [
+      {
+        "law": "부가가치세법"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2272&cntntsId=7693",
+        "title": "국세청 · 부가가치세 개요"
+      },
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2273&cntntsId=7694",
+        "title": "국세청 · 부가가치세 신고납부기한"
+      }
+    ]
+  },
+  {
+    "sectors": [],
+    "ksic": [],
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-01-31",
+    "status": "verified",
+    "id": "tax-calendar.vat-simplified",
+    "group": "tax-calendar",
+    "keywords": [
+      "부가세",
+      "부가가치세",
+      "간이과세"
+    ],
+    "questions": [
+      "간이과세자는 부가세 신고 언제 해요?",
+      "간이과세자 부가세 1년에 몇 번 내요?"
+    ],
+    "answer": "간이과세자는 1년(1월 1일~12월 31일)을 한 번에 신고해서, 다음 해 1월 1~25일에 신고·납부해요. 다만 7월 1일에 일반과세자로 바뀐 사업자와 1~6월에 세금계산서를 발급한 간이과세자는 1~6월 몫을 7월 25일까지 신고·납부해야 해요.",
+    "agency": "홈택스 또는 관할 세무서",
+    "basis": [
+      {
+        "law": "부가가치세법"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2273&cntntsId=7694",
+        "title": "국세청 · 부가가치세 신고납부기한"
+      },
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2272&cntntsId=7693",
+        "title": "국세청 · 부가가치세 개요"
+      }
+    ]
+  },
+  {
+    "sectors": [],
+    "ksic": [],
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-01-31",
+    "status": "verified",
+    "id": "tax-calendar.vat-new-business",
+    "group": "tax-calendar",
+    "keywords": [
+      "부가세",
+      "신규사업자",
+      "첫 신고",
+      "개업"
+    ],
+    "questions": [
+      "처음 사업 시작하면 첫 부가세 신고는 언제예요?",
+      "개업한 해에도 부가세 신고해요?"
+    ],
+    "answer": "새로 시작한 사업자의 첫 과세기간은 사업을 시작한 날부터 그날이 속한 과세기간이 끝나는 날까지예요. 신고·납부 기간은 계속 사업하던 사업자와 같아요(개인 일반과세자는 1~6월에 시작하면 7월, 7~12월에 시작하면 다음 해 1월에 신고하고, 간이과세자는 다음 해 1월에 신고해요).",
+    "agency": "홈택스 또는 관할 세무서",
+    "basis": [
+      {
+        "law": "부가가치세법"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2273&cntntsId=7694",
+        "title": "국세청 · 부가가치세 신고납부기한"
+      }
+    ]
+  },
+  {
+    "sectors": [],
+    "ksic": [],
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-01-31",
+    "status": "verified",
+    "id": "tax-calendar.income-tax",
+    "group": "tax-calendar",
+    "keywords": [
+      "종합소득세",
+      "종소세",
+      "소득세",
+      "5월"
+    ],
+    "questions": [
+      "종합소득세는 언제 신고해요?",
+      "사업 소득세 신고 기간이 언제예요?"
+    ],
+    "answer": "종합소득세는 다음 해 5월 1일부터 5월 31일까지 신고하고 세금도 내요. 성실신고확인서를 내는 사업자는 6월 30일까지예요. 마감일이 토요일이나 공휴일이면 그다음 날까지 할 수 있어요. 국세청 안내로는 2025년 몫 종합소득세가 2026년 6월 1일까지였어요.",
+    "agency": "홈택스 또는 관할 세무서",
+    "basis": [
+      {
+        "law": "소득세법"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2225&cntntsId=7665",
+        "title": "국세청 · 종합소득세 신고납부기한"
+      }
+    ]
+  },
+  {
+    "sectors": [],
+    "ksic": [],
+    "checkedAt": "2026-11-28",
+    "checkedBy": "Claude 독립 대조 2회(사장님 위임)",
+    "validFrom": "2026-11-28",
+    "recheckBy": "2027-01-31",
+    "status": "verified",
+    "id": "tax-calendar.withholding",
+    "group": "tax-calendar",
+    "keywords": [
+      "원천세",
+      "원천징수",
+      "알바",
+      "직원 월급",
+      "아르바이트"
+    ],
+    "questions": [
+      "알바생 월급 주면 세금 신고해야 해요?",
+      "원천세는 언제까지 내요?"
+    ],
+    "answer": "알바나 직원에게 급여 같은 소득을 주면, 준 날이 속한 달의 다음 달 10일까지 원천징수 이행상황 신고서를 내고 원천세를 납부해요. 반기납부를 하는 경우에는 1~6월 몫을 7월 10일까지, 7~12월 몫을 다음 해 1월 10일까지 내요.",
+    "agency": "홈택스 또는 관할 세무서",
+    "basis": [
+      {
+        "law": "소득세법"
+      }
+    ],
+    "sources": [
+      {
+        "url": "https://www.nts.go.kr/nts/cm/cntnts/cntntsView.do?mi=2290&cntntsId=7702",
+        "title": "국세청 · 원천세 신고납부기한"
+      }
+    ]
+  }
+]
