@@ -57,8 +57,25 @@ for (const q of ["세금 빼고 순이익이 얼마 남아요?", "가격은 얼�
   assert.ok(!ids("이발소 하려면 무슨 신고해요?", { sector: "local_service", ksic: "96111" }).some(id => id === "permit.beauty.hair" || id === "permit.beauty.nail"), "이발소에 미용실·네일 답 X");
   assert.ok(!ids("대학원 다니면서 무슨 신고해야 해요?", {}).includes("permit.edu.hakwon"), "'대학원'에 학원 답 X");
   assert.ok(!ids("위생교육 몇 시간이에요?", { sector: "local_service", ksic: "96112" }).includes("permit.food.hygiene-education"), "미용실에 식품 위생교육 답 X");
-  const tattoo = groundTaxQuestion("타투샵 하려면 무슨 신고를 해요?", { sector: "local_service", ksic: "96119" }, TODAY, facts);
-  assert.ok(tattoo.topic && tattoo.kind === "permit" && tattoo.matches.length === 0, "자료 없는 업종은 '아직 확인된 자료가 없어요'");
+  // 추가 업종(확인됨 7개) — 피부 · 속눈썹 · 반영구/타투 · 반려동물 미용 · 숙박 3갈래
+  for (const [q, business, id] of [
+    ["피부관리실 차리려면 무슨 신고를 해요?", { sector: "local_service", ksic: "96113" }, "permit.beauty.skin"],
+    ["속눈썹 연장샵 하려면 무슨 신고를 해요?", { sector: "local_service", ksic: "96119" }, "permit.beauty.eyelash"],
+    ["반영구 화장샵 하려면 무슨 신고를 해요?", { sector: "local_service", ksic: "96119" }, "permit.beauty.tattoo"],
+    ["타투샵 하려면 무슨 신고를 해요?", { sector: "local_service", ksic: "96119" }, "permit.beauty.tattoo"],
+    ["애견미용실 하려면 무슨 신고를 해요?", { sector: "local_service", ksic: "96995" }, "permit.pet.grooming"],
+    ["모텔 하려면 무슨 신고를 해요?", { sector: "space_hospitality", ksic: "55102" }, "permit.stay.lodging"],
+    ["시골에서 민박 하려면 무슨 신고를 해요?", { sector: "space_hospitality", ksic: "55104" }, "permit.stay.farmstay"],
+    ["에어비앤비 하려면 신고해야 해요?", { sector: "space_hospitality" }, "permit.stay.city-guesthouse"],
+  ] as const) {
+    const g = groundTaxQuestion(q, business, TODAY, facts);
+    assert.ok(g.topic && g.kind === "permit" && g.matches[0]?.fact.id === id, `${q} → ${id} (${g.topic ? g.matches.map(m => m.fact.id).join() : "-"})`);
+  }
+  assert.ok(!ids("강아지 미용실 하려면 무슨 신고해요?", { sector: "local_service" }).includes("permit.beauty.hair"), "강아지 미용실에 사람 미용실 답 X");
+  assert.ok(!ids("반찬가게 하려면 무슨 신고해요?", {}).some(id => id.startsWith("permit.stay.")), "'반찬가게 하려면'에 게스트하우스 답 X");
+  assert.deepEqual([...ids("게스트하우스 하려면 무슨 신고해요?", { sector: "space_hospitality", ksic: "55104" })].sort(), ["permit.stay.city-guesthouse", "permit.stay.farmstay", "permit.stay.lodging"], "게스트하우스는 숙박 세 갈래를 함께");
+  const pc = groundTaxQuestion("피시방 하려면 무슨 신고를 해요?", { sector: "local_service", ksic: "91223" }, TODAY, facts);
+  assert.ok(pc.topic && pc.kind === "permit" && pc.matches.length === 0, "자료 없는 업종은 '아직 확인된 자료가 없어요'");
   const none = groundTaxQuestion("부가세 신고할 때 카드매출은 어떻게 적어요?", {}, TODAY, []);
   assert.ok(none.topic && none.matches.length === 0, "자료가 없으면 빈 목록");
 }
@@ -120,6 +137,12 @@ for (const q of ["부가세 신고해야 해요?", "사업자 신고해야 해�
   assert.ok(foodOwner.topic && foodOwner.matches[0]?.fact.id === "test.permit.food-edu", "음식 사장님은 업종 코드가 없어도 낱말로 찾는다");
   const taekwondo = groundTaxQuestion("태권도장 하려면 신고해야 해요?", { sector: "education", ksic: "85611" }, TODAY, mixed);
   assert.ok(taekwondo.topic && taekwondo.matches.length === 0, "큰 분류(교육)만 같아서는 과외 답이 나가지 않는다");
+
+  // 긴 낱말 안에 든 짧은 낱말은 무시 — '애견미용실'의 '미용실'로 미용실 항목이 끌려오지 않는다
+  const salon = { ...permitFixture, id: "test.permit.salon", sectors: ["local_service" as const], ksic: ["96112"], keywords: ["미용실"], questions: ["미용실 차리려면 무슨 신고를 해요?"], answer: "미용실은 신고해요." };
+  const pet = { ...permitFixture, id: "test.permit.pet", sectors: ["local_service" as const], ksic: [], keywords: ["애견미용실"], questions: ["애견미용실 하려면 무슨 신고를 해요?"], answer: "애견미용실은 등록해요." };
+  const shadow = groundTaxQuestion("애견미용실 하려면 무슨 신고를 해요?", { sector: "local_service" }, TODAY, checkFacts({ permit: [salon, pet] }, TODAY).facts);
+  assert.deepEqual(shadow.topic ? shadow.matches.map(m => m.fact.id) : [], ["test.permit.pet"]);
 
   // 마지막 확인처는 항목마다 — 학원은 교육지원청
   const academy = checkFacts({ permit: [{ ...permitFixture, id: "test.permit.academy", sectors: ["education"], ksic: ["855"], keywords: ["학원"], questions: ["학원 차리려면 어떻게 해요?"], answer: "학원은 교육감에게 등록해요.", agency: "교육지원청(교육감)" }] }, TODAY).facts;

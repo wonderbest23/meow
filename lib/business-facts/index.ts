@@ -103,6 +103,9 @@ export function findFacts(query: FactQuery, facts: BusinessFact[], today: string
   const text = normalizeFactText(query.text ?? "");
   const ksic = (query.ksic ?? "").replace(/\D/g, "");
   const matches: FactMatch[] = [];
+  // 질문에 걸린 낱말 중 더 긴 낱말 안에 든 짧은 낱말은 무시한다('애견미용실'의 '미용실'로 미용실 항목이 끌려오지 않게)
+  const hits = text ? [...new Set(facts.flatMap(fact => fact.keywords.map(normalizeFactText)).filter(word => word && text.includes(word)))] : [];
+  const shadowed = new Set(hits.filter(word => hits.some(longer => longer.length > word.length && longer.includes(word))));
   for (const fact of facts) {
     const state = factState(fact, today);
     if (state === "unusable") continue;
@@ -114,7 +117,7 @@ export function findFacts(query: FactQuery, facts: BusinessFact[], today: string
     const sectorHit = !!query.sector && fact.sectors.includes(query.sector as BusinessFact["sectors"][number]);
     if (ksicHit) { score += 5; why.push("업종 코드"); }
     else if (sectorHit) { score += 3; why.push("업종 분류"); }
-    const keyword = text ? fact.keywords.find(word => text.includes(normalizeFactText(word))) : undefined;
+    const keyword = text ? fact.keywords.find(word => { const normalized = normalizeFactText(word); return text.includes(normalized) && !shadowed.has(normalized); }) : undefined;
     if (keyword) { score += 4; why.push(`말 '${keyword}'`); }
     // 업종이 정해진 항목: 업종이 다르다고 알려졌으면(코드나 분류가 있는데 안 맞음) 말이 맞지 않는 한 뺀다
     if (industrySpecific && !ksicHit && !sectorHit && !keyword && (ksic || query.sector)) continue;
